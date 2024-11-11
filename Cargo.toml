@@ -37,6 +37,10 @@ authors.workspace = true
 license.workspace = true
 version.workspace = true
 edition.workspace = true
+build = "src/build.rs"
+
+[build-dependencies]
+winres = "*"
 
 [features]
 default = ["hook", "oodle_platform_dependent"]
