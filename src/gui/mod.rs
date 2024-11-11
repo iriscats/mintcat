@@ -1,4 +1,5 @@
 mod find_string;
+mod fonts_fix;
 mod message;
 mod named_combobox;
 mod request_counter;
@@ -36,6 +37,7 @@ use tokio::{
 use tracing::{debug, trace};
 
 use crate::gui::find_string::searchable_text;
+use crate::gui::fonts_fix::load_fonts;
 use crate::mod_lints::{LintId, LintReport, SplitAssetPair};
 use crate::providers::ProviderError;
 use crate::state::SortingConfig;
@@ -1710,6 +1712,8 @@ impl eframe::App for App {
         // do some init things that depend on ctx so cannot be done earlier
         if !self.has_run_init {
             self.has_run_init = true;
+
+            load_fonts(ctx);
 
             let theme = GuiTheme::into_egui_theme(self.state.config.gui_theme);
             ctx.memory_mut(|m| m.options.theme_preference = theme);
