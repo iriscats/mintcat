@@ -3142,7 +3142,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "mint"
+name = "mint_lib"
+version = "0.2.11"
+dependencies = [
+ "anyhow",
+ "fs-err",
+ "itertools 0.13.0",
+ "repak",
+ "reqwest 0.11.27",
+ "serde",
+ "snafu",
+ "steamlocate",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "mintcat"
 version = "0.2.11"
 dependencies = [
  "ansi_term",
@@ -3198,23 +3215,6 @@ dependencies = [
  "winres",
  "workspace_hack",
  "zip",
-]
-
-[[package]]
-name = "mint_lib"
-version = "0.2.11"
-dependencies = [
- "anyhow",
- "fs-err",
- "itertools 0.13.0",
- "repak",
- "reqwest 0.11.27",
- "serde",
- "snafu",
- "steamlocate",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]

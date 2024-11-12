@@ -5,10 +5,10 @@ use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand};
 use tracing::{debug, info};
 
-use mint::mod_lints::{run_lints, LintId};
-use mint::providers::ProviderFactory;
-use mint::{gui::gui, providers::ModSpecification, state::State};
-use mint::{
+use mintcat::mod_lints::{run_lints, LintId};
+use mintcat::providers::ProviderFactory;
+use mintcat::{gui::gui, providers::ModSpecification, state::State};
+use mintcat::{
     resolve_ordered_with_provider_init, resolve_unordered_and_integrate_with_provider_init, Dirs,
     MintError,
 };
