@@ -4168,8 +4168,8 @@ checksum = "afbdc74edc00b6f6a218ca6a5364d6226a259d4b8ea1af4a0ea063f27e179f4d"
 
 [[package]]
 name = "proxy_dll"
-version = "0.1.0"
-source = "git+https://github.com/iriscats/proxy_dll.git#48e3668dfbbe3dfc4fbd2354e5c3213245baad7a"
+version = "0.1.1"
+source = "git+https://github.com/iriscats/proxy_dll.git?rev=18d6be2#18d6be20c8cdd00587fd62927a842f3d60764edf"
 dependencies = [
  "msvc_def",
  "proxy_dll_proc",
@@ -4179,7 +4179,7 @@ dependencies = [
 [[package]]
 name = "proxy_dll_proc"
 version = "0.1.0"
-source = "git+https://github.com/iriscats/proxy_dll.git#48e3668dfbbe3dfc4fbd2354e5c3213245baad7a"
+source = "git+https://github.com/iriscats/proxy_dll.git?rev=18d6be2#18d6be20c8cdd00587fd62927a842f3d60764edf"
 dependencies = [
  "msvc_def",
  "proc-macro2",
@@ -4263,7 +4263,7 @@ dependencies = [
  "once_cell",
  "socket2 0.5.5",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
