@@ -1,3 +1,5 @@
+mod ue4ss;
+
 use std::collections::{HashMap, HashSet};
 use std::io::{BufReader, BufWriter, Cursor, ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
@@ -50,7 +52,7 @@ pub fn uninstall<P: AsRef<Path>>(path_pak: P, modio_mods: HashSet<u32>) -> Resul
         Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e),
     }
-    .with_whatever_context(|_| format!("failed to remove {}", path_mods_pak.display()))?;
+        .with_whatever_context(|_| format!("failed to remove {}", path_mods_pak.display()))?;
     #[cfg(feature = "hook")]
     {
         let path_hook_dll = installation
@@ -61,9 +63,12 @@ pub fn uninstall<P: AsRef<Path>>(path_pak: P, modio_mods: HashSet<u32>) -> Resul
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
             Err(e) => Err(e),
         }
-        .with_whatever_context(|_| format!("failed to remove {}", path_hook_dll.display()))?;
+            .with_whatever_context(|_| format!("failed to remove {}", path_hook_dll.display()))?;
     }
     uninstall_modio(&installation, modio_mods).ok();
+
+
+    ue4ss::uninstall_ue4ss(&installation.binaries_directory());
     Ok(())
 }
 
@@ -89,7 +94,7 @@ fn uninstall_modio(
         fs::File::open(modio_dir.join("metadata/state.json"))
             .whatever_context("failed to read mod.io metadata/state.json")?,
     ))
-    .whatever_context("failed to parse mod.io metadata/state.json")?;
+        .whatever_context("failed to parse mod.io metadata/state.json")?;
     let config_path = installation
         .root
         .join("Saved/Config/WindowsNoEditor/GameUserSettings.ini");
@@ -216,6 +221,7 @@ impl IntegrationError {
     }
 }
 
+
 #[tracing::instrument(skip_all)]
 pub fn integrate<P: AsRef<Path>>(
     path_pak: P,
@@ -228,6 +234,7 @@ pub fn integrate<P: AsRef<Path>>(
         });
     };
     let path_mod_pak = installation.paks_path().join("mods_P.pak");
+    info!("installation path {:?}",installation.paks_path());
 
     let mut fsd_pak_reader = BufReader::new(fs::File::open(path_pak.as_ref())?);
     let fsd_pak = repak::PakBuilder::new().reader(&mut fsd_pak_reader)?;
@@ -244,8 +251,8 @@ pub fn integrate<P: AsRef<Path>>(
                 Cursor::new(self.uasset.as_ref().unwrap()),
                 EngineVersion::VER_UE4_27,
             )
-            .bulk(Cursor::new(self.uexp.as_ref().unwrap()))
-            .build()?)
+                .bulk(Cursor::new(self.uexp.as_ref().unwrap()))
+                .build()?)
         }
     }
 
@@ -320,18 +327,33 @@ pub fn integrate<P: AsRef<Path>>(
         {
             fs::write(&path_hook_dll, hook_dll)?;
         }
+
+        ue4ss::uninstall_ue4ss(&installation.binaries_directory());
+        ue4ss::install_ue4ss(&installation.binaries_directory());
     }
 
     let mut init_spacerig_assets = HashSet::new();
     let mut init_cave_assets = HashSet::new();
-
     let mut added_paths = HashSet::new();
 
     for (mod_info, path) in &mods {
         let raw_mod_file = fs::File::open(path).with_context(|_| CtxtIoSnafu {
             mod_info: mod_info.clone(),
         })?;
-        let mut buf = get_pak_from_data(Box::new(BufReader::new(raw_mod_file))).map_err(|e| {
+
+        // let mut buf = get_pak_from_data(Box::new(BufReader::new(raw_mod_file))).map_err(|e| {
+        //     if let IntegrationError::IoError { source } = e {
+        //         IntegrationError::CtxtIoError {
+        //             source,
+        //             mod_info: mod_info.clone(),
+        //         }
+        //     } else {
+        //         e
+        //     }
+        // })?;
+
+        info!("process mod {:?}",  mod_info.name);
+        let buf = get_pak_and_dll_from_data(Box::new(BufReader::new(raw_mod_file))).map_err(|e| {
             if let IntegrationError::IoError { source } = e {
                 IntegrationError::CtxtIoError {
                     source,
@@ -341,8 +363,13 @@ pub fn integrate<P: AsRef<Path>>(
                 e
             }
         })?;
+
+        let mut pak_buf = buf.0.unwrap();
+        let mut dll_buf = buf.1.unwrap();
+        ue4ss::install_ue4ss_mod(&installation.binaries_directory(), &mod_info.name, &mut dll_buf);
+
         let pak = repak::PakBuilder::new()
-            .reader(&mut buf)
+            .reader(&mut pak_buf)
             .with_context(|_| CtxtRepakSnafu {
                 mod_info: mod_info.clone(),
             })?;
@@ -369,34 +396,34 @@ pub fn integrate<P: AsRef<Path>>(
         for (normalized, pak_path) in &pak_files {
             match normalized.extension() {
                 Some("uasset" | "umap")
-                    if pak_files.contains_key(&normalized.with_extension("uexp")) =>
-                {
-                    let uasset = pak
-                        .get(pak_path, &mut buf)
-                        .with_context(|_| CtxtRepakSnafu {
-                            mod_info: mod_info.clone(),
-                        })?;
+                if pak_files.contains_key(&normalized.with_extension("uexp")) =>
+                    {
+                        let uasset = pak
+                            .get(pak_path, &mut pak_buf)
+                            .with_context(|_| CtxtRepakSnafu {
+                                mod_info: mod_info.clone(),
+                            })?;
 
-                    let uexp = pak
-                        .get(
-                            PakPath::new(pak_path).with_extension("uexp").as_str(),
-                            &mut buf,
-                        )
-                        .with_context(|_| CtxtRepakSnafu {
-                            mod_info: mod_info.clone(),
-                        })?;
+                        let uexp = pak
+                            .get(
+                                PakPath::new(pak_path).with_extension("uexp").as_str(),
+                                &mut pak_buf,
+                            )
+                            .with_context(|_| CtxtRepakSnafu {
+                                mod_info: mod_info.clone(),
+                            })?;
 
-                    let asset = AssetBuilder::new(Cursor::new(uasset), EngineVersion::VER_UE4_27)
-                        .bulk(Cursor::new(uexp))
-                        .skip_data(true)
-                        .build()?;
-                    asset_registry
-                        .populate(normalized.with_extension("").as_str(), &asset)
-                        .map_err(|e| IntegrationError::CtxtGenericError {
-                            source: e.into(),
-                            mod_info: mod_info.clone(),
-                        })?;
-                }
+                        let asset = AssetBuilder::new(Cursor::new(uasset), EngineVersion::VER_UE4_27)
+                            .bulk(Cursor::new(uexp))
+                            .skip_data(true)
+                            .build()?;
+                        asset_registry
+                            .populate(normalized.with_extension("").as_str(), &asset)
+                            .map_err(|e| IntegrationError::CtxtGenericError {
+                                source: e.into(),
+                                mod_info: mod_info.clone(),
+                            })?;
+                    }
                 _ => {}
             }
         }
@@ -424,7 +451,7 @@ pub fn integrate<P: AsRef<Path>>(
             }
 
             let file_data = pak
-                .get(&pak_path, &mut buf)
+                .get(&pak_path, &mut pak_buf)
                 .with_context(|_| CtxtRepakSnafu {
                     mod_info: mod_info.clone(),
                 })?;
@@ -455,7 +482,7 @@ pub fn integrate<P: AsRef<Path>>(
 
     let mut patch_deferred = |path_str: &str,
                               f: fn(&mut _) -> Result<(), IntegrationError>|
-     -> Result<(), IntegrationError> {
+                              -> Result<(), IntegrationError> {
         let mut asset = deferred_assets[path_str].parse()?;
         f(&mut asset)?;
         bundle.write_asset(asset, path_str)
@@ -639,37 +666,55 @@ struct Dir {
     children: HashMap<String, Dir>,
 }
 
-pub(crate) fn get_pak_from_data(
+
+pub(crate) fn get_pak_and_dll_from_data(
     mut data: Box<dyn ReadSeek>,
-) -> Result<Box<dyn ReadSeek>, IntegrationError> {
+) -> Result<(Option<Box<dyn ReadSeek>>, Option<Box<dyn ReadSeek>>), IntegrationError> {
     if let Ok(mut archive) = zip::ZipArchive::new(&mut data) {
-        (0..archive.len())
-            .map(|i| -> Result<Option<Box<dyn ReadSeek>>, IntegrationError> {
-                let mut file = archive
-                    .by_index(i)
-                    .map_err(|_| IntegrationError::GenericError {
-                        msg: "failed to extract file in zip archive".to_string(),
-                    })?;
-                match file.enclosed_name() {
-                    Some(p) => {
-                        if file.is_file() && p.extension() == Some(std::ffi::OsStr::new("pak")) {
+        let mut pak_file: Option<Box<dyn ReadSeek>> = None;
+        let mut dll_file: Option<Box<dyn ReadSeek>> = None;
+
+        for i in 0..archive.len() {
+            let mut file = archive
+                .by_index(i)
+                .map_err(|_| IntegrationError::GenericError {
+                    msg: "failed to extract file in zip archive".to_string(),
+                })?;
+
+            info!(
+                "get_pak_and_dll_from_data {:?}",
+                file.enclosed_name()
+            );
+
+            if let Some(p) = file.enclosed_name() {
+                if file.is_file() {
+                    match p.extension() {
+                        Some(e) if e == "pak" && pak_file.is_none() => {
                             let mut buf = vec![];
                             file.read_to_end(&mut buf)?;
-                            Ok(Some(Box::new(Cursor::new(buf))))
-                        } else {
-                            Ok(None)
+                            pak_file = Some(Box::new(Cursor::new(buf)));
                         }
+                        Some(e) if e == "dll" && dll_file.is_none() => {
+                            let mut buf = vec![];
+                            file.read_to_end(&mut buf)?;
+                            dll_file = Some(Box::new(Cursor::new(buf)));
+                        }
+                        _ => {}
                     }
-                    None => Ok(None),
                 }
-            })
-            .find_map(Result::transpose)
-            .context(GenericSnafu {
-                msg: "zip archive does not contain pak",
-            })?
+            }
+        }
+
+        if pak_file.is_none() || dll_file.is_none() {
+            return Err(IntegrationError::GenericError {
+                msg: "zip archive does not contain pak and/or dll".to_string(),
+            });
+        }
+
+        Ok((pak_file, dll_file))
     } else {
         data.rewind()?;
-        Ok(data)
+        Ok((Some(data), None))
     }
 }
 
@@ -783,12 +828,12 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                     0f64.into(),
                 ),
             }
-            .into(),
+                .into(),
             ExRotationConst {
                 token: EExprToken::ExVectorConst,
                 rotator: Vector::new(0f64.into(), 0f64.into(), 0f64.into()),
             }
-            .into(),
+                .into(),
             ExVectorConst {
                 token: EExprToken::ExVectorConst,
                 value: unreal_asset::types::vector::Vector::new(
@@ -797,7 +842,7 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                     1f64.into(),
                 ),
             }
-            .into(),
+                .into(),
         ],
     };
     let prop_class_name = asset.add_fname("begin_spawn");
@@ -888,7 +933,7 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                .into(),
+                    .into(),
             ),
             assignment_expression: Box::new(
                 ExCallMath {
@@ -904,13 +949,13 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                                 }.into()
                             )
                         }
-                        .into()
-                    ]
+                            .into()
+                    ],
                 }
-                .into(),
+                    .into(),
             ),
         }
-        .into(),
+            .into(),
     );
     inst.insert(
         1,
@@ -934,11 +979,11 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                .into(),
+                    .into(),
             ),
             expression: Box::new(ex_transform.into()),
         }
-        .into(),
+            .into(),
     );
 
     inst.insert(
@@ -956,7 +1001,7 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                .into(),
+                    .into(),
             ),
             assignment_expression: Box::new(
                 ExCallMath {
@@ -966,7 +1011,7 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         ExSelf {
                             token: EExprToken::ExSelf,
                         }
-                        .into(),
+                            .into(),
                         ExLocalVariable {
                             token: EExprToken::ExLocalVariable,
                             variable: KismetPropertyPointer {
@@ -977,7 +1022,7 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                                 }),
                             },
                         }
-                        .into(),
+                            .into(),
                         ExLocalVariable {
                             token: EExprToken::ExLocalVariable,
                             variable: KismetPropertyPointer {
@@ -988,22 +1033,22 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                                 }),
                             },
                         }
-                        .into(),
+                            .into(),
                         ExByteConst {
                             token: EExprToken::ExByteConst,
                             value: 1,
                         }
-                        .into(),
+                            .into(),
                         ExSelf {
                             token: EExprToken::ExSelf,
                         }
-                        .into(),
+                            .into(),
                     ],
                 }
-                .into(),
+                    .into(),
             ),
         }
-        .into(),
+            .into(),
     );
 
     inst.insert(
@@ -1022,7 +1067,7 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                .into(),
+                    .into(),
                 ExLocalVariable {
                     token: EExprToken::ExLocalVariable,
                     variable: KismetPropertyPointer {
@@ -1033,10 +1078,10 @@ fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                .into(),
+                    .into(),
             ],
         }
-        .into(),
+            .into(),
     );
 }
 
@@ -1203,7 +1248,7 @@ fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), I
                         cm.parameters[1] = ExFalse {
                             token: EExprToken::ExFalse,
                         }
-                        .into();
+                            .into();
                         info!("patched server list entry");
                     }
                     if swap_platform && Some(cm.stack_node) == fsd_target_platform {
@@ -1211,7 +1256,7 @@ fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), I
                             token: EExprToken::ExByteConst,
                             value: 0,
                         }
-                        .into();
+                            .into();
                     }
                 }
             });
