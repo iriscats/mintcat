@@ -7,10 +7,10 @@ members = [
 ]
 
 [workspace.package]
-repository = "https://github.com/trumank/mint"
-authors = ["trumank", "jieyouxu"]
+repository = "https://github.com/iriscats/mint"
+authors = ["trumank", "jieyouxu", "iriscats"]
 license = "MIT OR Apache-2.0"
-version = "0.2.11"
+version = "0.3.0"
 edition = "2021"
 
 [workspace.dependencies]
