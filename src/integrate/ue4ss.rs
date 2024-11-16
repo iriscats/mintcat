@@ -27,13 +27,13 @@ pub fn install_ue4ss_mod(install_path: &PathBuf, mod_name: &String, mod_data: &m
     let mod_path = mods_home_path.join(mod_name);
     fs::create_dir(&mod_path).unwrap();
 
-    let enable_txt_path = mod_path.join("enable.txt");
+    let enable_txt_path = mod_path.join("enabled.txt");
     fs::write(enable_txt_path, "").unwrap();
 
-    let dll_dir_path = mod_path.join("dll");
+    let dll_dir_path = mod_path.join("dlls");
     fs::create_dir(&dll_dir_path).unwrap();
 
-    let dll_path = dll_dir_path.join(format!("{}.dll", mod_name));
+    let dll_path = dll_dir_path.join("main.dll");
 
     let mut content = Vec::new();
     mod_data.read_to_end(&mut content).unwrap();

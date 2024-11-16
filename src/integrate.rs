@@ -365,8 +365,12 @@ pub fn integrate<P: AsRef<Path>>(
         })?;
 
         let mut pak_buf = buf.0.unwrap();
-        let mut dll_buf = buf.1.unwrap();
-        ue4ss::install_ue4ss_mod(&installation.binaries_directory(), &mod_info.name, &mut dll_buf);
+        let dll_buf = buf.1;
+        if dll_buf.is_none() {
+            info!("mod {:?} no dll",  mod_info.name);
+        } else {
+            ue4ss::install_ue4ss_mod(&installation.binaries_directory(), &mod_info.name, &mut dll_buf.unwrap());
+        }
 
         let pak = repak::PakBuilder::new()
             .reader(&mut pak_buf)
@@ -705,9 +709,9 @@ pub(crate) fn get_pak_and_dll_from_data(
             }
         }
 
-        if pak_file.is_none() || dll_file.is_none() {
+        if pak_file.is_none()  {
             return Err(IntegrationError::GenericError {
-                msg: "zip archive does not contain pak and/or dll".to_string(),
+                msg: "zip archive does not contain pak ".to_string(),
             });
         }
 
