@@ -77,11 +77,11 @@ where
     let mut modified = false;
     ui.push_id(name, |ui| {
         ui.horizontal(|ui| {
-            mk_add(ui, name, entries, &mut modified);
-            mk_delete(ui, name, entries, &mut modified);
-            mk_rename(ui, name, entries, &mut modified);
-
             ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+
+                mk_add(ui, name, entries, &mut modified);
+                mk_delete(ui, name, entries, &mut modified);
+                mk_rename(ui, name, entries, &mut modified);
                 mk_duplicate(ui, name, entries, &mut modified);
 
                 if let Some(additional_ui) = additional_ui {
@@ -156,7 +156,7 @@ where
 {
     ui.add_enabled_ui(true, |ui| {
         let response = ui
-            .button("Rename")
+            .button(" ✏ ")
             .on_hover_text_at_pointer(format!("Rename {name}"));
         let popup_id = ui.make_persistent_id(format!("rename-{name}"));
         if response.clicked() {
@@ -182,7 +182,7 @@ where
     N: NamedEntries<E>,
 {
     let response = ui
-        .button("🗐")
+        .button(" 🗐 ")
         .on_hover_text_at_pointer(format!("Duplicate {name}"));
     let popup_id = ui.make_persistent_id(format!("duplicate-{name}"));
     if response.clicked() {
@@ -207,7 +207,6 @@ where
     N: NamedEntries<E>,
 {
     let mut selected = entries.selected_name().to_owned();
-
     egui::ComboBox::from_id_salt(format!("dropdown-{name}"))
         .width(ui.available_width())
         .selected_text(selected.clone())
