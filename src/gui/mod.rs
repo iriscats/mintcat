@@ -1768,7 +1768,9 @@ impl eframe::App for App {
                         }
 
                         ui.add_enabled_ui(self.state.config.drg_pak_path.is_some(), |ui| {
-                            let mut button = ui.button("Install mods");
+                            let mut button = ui.button("Apply changes").on_hover_text(
+                                "Install the hook dll to game folder and regenerate mod bundle",
+                            );
                             if self.state.config.drg_pak_path.is_none() {
                                 button = button.on_disabled_hover_text(
                                     "DRG install not found. Configure it in the settings menu.",
@@ -1806,7 +1808,9 @@ impl eframe::App for App {
                         });
 
                         ui.add_enabled_ui(self.state.config.drg_pak_path.is_some(), |ui| {
-                            let mut button = ui.button("Uninstall mods");
+                            let mut button = ui.button("Uninstall all").on_hover_text(
+                                "Remove the hook dll and mod bundle from game folder",
+                            );
                             if self.state.config.drg_pak_path.is_none() {
                                 button = button.on_disabled_hover_text(
                                     "DRG install not found. Configure it in the settings menu.",
@@ -1930,7 +1934,7 @@ impl eframe::App for App {
 
             let buttons = |ui: &mut Ui, mod_data: &mut ModData| {
                 if ui
-                    .button("📋")
+                    .button(" 📋 ")
                     .on_hover_text_at_pointer("Copy profile mods")
                     .clicked()
                 {
@@ -2007,25 +2011,57 @@ impl eframe::App for App {
                     .map(|c| (Some(c.sort_category), c.is_ascending))
                     .unwrap_or_default();
 
-                let mut clicked = ui.radio_value(&mut sort_category, None, "Manual").clicked();
-                for category in SortBy::iter() {
-                    let mut radio_label = category.as_str().to_owned();
-                    if sort_category == Some(category) {
-                        radio_label.push_str(if is_ascending { " ⏶" } else { " ⏷" });
-                    }
-                    let resp = ui.radio_value(&mut sort_category, Some(category), radio_label);
-                    if resp.clicked() {
-                        clicked = true;
-                        if resp.changed() {
-                            is_ascending = true;
-                        } else {
-                            is_ascending = !is_ascending;
+                egui::ComboBox::from_id_salt("sort_cat")
+                    .selected_text(
+                        {
+                            match sort_category {
+                                None => "Manual",
+                                Some(category) => category.as_str(),
+                            }
                         }
-                    };
-                }
-                if clicked {
-                    self.update_sorting_config(sort_category, is_ascending);
-                }
+                            .to_string(),
+                    )
+                    .show_ui(ui, |ui| {
+                        if ui
+                            .selectable_value(&mut sort_category, None, "Manual")
+                            .clicked()
+                        {
+                            self.update_sorting_config(sort_category, is_ascending);
+                        };
+                        for category in SortBy::iter() {
+                            let combo_label = category.as_str().to_owned();
+                            if ui
+                                .selectable_value(&mut sort_category, Some(category), combo_label)
+                                .clicked()
+                            {
+                                self.update_sorting_config(sort_category, is_ascending);
+                            };
+                        }
+                    });
+
+                ui.label("Order: ");
+
+                ui.add_enabled_ui(sort_category.is_some(), |ui| {
+                    egui::ComboBox::from_id_salt("order")
+                        .selected_text(match is_ascending {
+                            true => "Ascending",
+                            false => "Descending",
+                        })
+                        .show_ui(ui, |ui| {
+                            if ui
+                                .selectable_value(&mut is_ascending, true, "Ascending")
+                                .clicked()
+                            {
+                                self.update_sorting_config(sort_category, is_ascending);
+                            }
+                            if ui
+                                .selectable_value(&mut is_ascending, false, "Descending")
+                                .clicked()
+                            {
+                                self.update_sorting_config(sort_category, is_ascending);
+                            }
+                        });
+                });
 
                 ui.add_space(16.);
                 // TODO: actually implement mod groups.
