@@ -28,10 +28,13 @@ pub struct AccessToken {
 }
 
 /// See the [Message Object](https://docs.mod.io/#message-object) docs for more information.
+
 #[derive(Debug, Deserialize)]
 #[non_exhaustive]
 pub struct Message {
+    #[allow(dead_code)]
     pub code: u16,
+    #[allow(dead_code)]
     pub message: String,
 }
 
@@ -91,6 +94,7 @@ pub struct ErrorResponse {
 #[derive(Debug, Deserialize)]
 #[non_exhaustive]
 pub struct Error {
+    #[allow(dead_code)]
     pub code: u16,
     pub error_ref: u16,
     pub message: String,

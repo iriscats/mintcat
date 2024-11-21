@@ -5,7 +5,7 @@ use ::reqwest::Proxy;
 use http::header::USER_AGENT;
 use http::header::{HeaderMap, HeaderValue};
 use reqwest_middleware::ClientWithMiddleware as Client;
-
+use tracing::info;
 use crate::auth::{Auth, Credentials, Token};
 use crate::download::{DownloadAction, Downloader};
 use crate::error::{self, Error, Result};
@@ -17,7 +17,11 @@ use crate::routing::Route;
 use crate::user::Me;
 use crate::{TargetPlatform, TargetPortal};
 
-const DEFAULT_HOST: &str = "https://v1st.net/https://api.mod.io/v1";
+
+const LOCAL_HOST: &str = "https://127.0.0.1/v1";
+const PROXY_HOST: &str = "https://api.v1st.net/https://api.mod.io/v1";
+const DEFAULT_HOST: &str = "https://api.mod.io/v1";
+
 const TEST_HOST: &str = "https://api.test.mod.io/v1";
 
 /// A `Builder` can be used to create a `Modio` client with custom configuration.
@@ -126,13 +130,38 @@ impl Builder {
 
     /// Returns a `Modio` client that uses this `Builder` configuration.
     pub fn build(self) -> Result<Modio> {
-        let config = self.config;
+        use reqwest::blocking::Client;
+        use std::time::Duration;
 
+        let config = self.config;
         if let Some(e) = config.error {
             return Err(e);
         }
 
-        let host = config.host.unwrap_or_else(|| DEFAULT_HOST.to_string());
+        let client = Client::new();
+        let mut host = config.host.unwrap_or_else(|| DEFAULT_HOST.to_string());
+        let resp = client.get(DEFAULT_HOST)
+            .timeout(Duration::from_secs(1))
+            .send();
+
+        match resp {
+            Ok(_) => {}
+            Err(_) => {
+                host = LOCAL_HOST.parse().unwrap();
+                let resp = client.get(DEFAULT_HOST)
+                    .timeout(Duration::from_secs(1))
+                    .send();
+
+                match resp {
+                    Ok(_) => {}
+                    Err(_) => {
+                        host = PROXY_HOST.parse().unwrap();
+                    }
+                }
+            }
+        }
+        info!("Host {}", host);
+
         let credentials = config.credentials;
 
         Ok(Modio {
