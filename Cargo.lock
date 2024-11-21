@@ -2445,7 +2445,7 @@ dependencies = [
 
 [[package]]
 name = "hook"
-version = "0.2.11"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "bitflags 2.6.0",
@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "hook_resolvers"
-version = "0.2.11"
+version = "0.3.0"
 dependencies = [
  "patternsleuth",
  "serde",
@@ -3143,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "mint_lib"
-version = "0.2.11"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "fs-err",
@@ -3160,7 +3160,7 @@ dependencies = [
 
 [[package]]
 name = "mintcat"
-version = "0.2.11"
+version = "0.3.0"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -3213,7 +3213,6 @@ dependencies = [
  "unreal_asset",
  "url",
  "winres",
- "workspace_hack",
  "zip",
 ]
 
@@ -6868,13 +6867,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
 dependencies = [
  "toml",
-]
-
-[[package]]
-name = "workspace_hack"
-version = "0.2.11"
-dependencies = [
- "repak",
 ]
 
 [[package]]
