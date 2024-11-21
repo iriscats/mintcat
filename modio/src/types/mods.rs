@@ -223,7 +223,7 @@ impl<'de> Deserialize<'de> for Statistics {
             RatingsWeightedAggregate,
             RatingsDisplayText,
             DateExpires,
-            Other(String),
+            Other(()),
         }
 
         struct StatisticsVisitor;

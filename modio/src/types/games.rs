@@ -206,7 +206,7 @@ impl<'de> Deserialize<'de> for Statistics {
             ModsDownloadsToday,
             ModsDownloadsDailyAverage,
             DateExpires,
-            Other(String),
+            Other(()),
         }
 
         struct StatisticsVisitor;

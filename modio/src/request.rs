@@ -4,7 +4,7 @@ use reqwest::multipart::Form;
 use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
-use tracing::{debug, level_enabled, trace};
+use tracing::{debug, info, level_enabled, trace};
 use url::Url;
 
 use crate::auth::Token;
@@ -108,7 +108,7 @@ impl RequestBuilder {
             );
         }
 
-        debug!("request: {} {}", req.method(), req.url());
+        info!("request: {} {}", req.method(), req.url());
         let response = self
             .modio
             .inner
@@ -125,7 +125,7 @@ impl RequestBuilder {
             headers::parse_headers(response.headers())
         };
 
-        trace!("response headers: {:?}", response.headers());
+        debug!("response headers: {:?}", response.headers());
 
         let body = response.bytes().map_err(error::request).await?;
 
