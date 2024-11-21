@@ -1,4 +1,4 @@
-use super::{colors, custom_popup_above_or_below_widget, is_committed};
+use super::super::{colors, custom_popup_above_or_below_widget, is_committed};
 
 use crate::state::{ModData_v0_1_0 as ModData, ModProfile_v0_1_0 as ModProfile};
 

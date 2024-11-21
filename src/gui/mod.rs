@@ -1,10 +1,9 @@
 mod find_string;
 mod fonts_fix;
 mod message;
-mod named_combobox;
 mod request_counter;
-mod toggle_switch;
-
+mod controls;
+mod components;
 //#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use std::cmp::Ordering;
@@ -54,7 +53,8 @@ use crate::{
 use message::MessageHandle;
 use request_counter::{RequestCounter, RequestID};
 
-use self::toggle_switch::toggle_switch;
+use controls::toggle_switch::toggle_switch;
+use crate::gui::components::profile_bar;
 
 pub fn gui(dirs: Dirs, args: Option<Vec<String>>) -> Result<(), MintError> {
     let options = eframe::NativeOptions {
@@ -1959,7 +1959,7 @@ impl eframe::App for App {
                 */
             };
 
-            if named_combobox::ui(
+            if profile_bar::ui(
                 ui,
                 "profile",
                 self.state.mod_data.deref_mut().deref_mut(),

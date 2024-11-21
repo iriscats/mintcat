@@ -1,6 +1,4 @@
 
-
-
 pub(crate) fn load_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
     fonts.font_data.insert("my_font".to_owned(),
