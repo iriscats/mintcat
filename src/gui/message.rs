@@ -399,7 +399,7 @@ async fn integrate_async(
     let paths = store.fetch_mods_ordered(&urls, update, Some(tx)).await?;
 
     tokio::task::spawn_blocking(|| {
-        crate::integrate::integrate(
+        integrate::integrate(
             fsd_pak,
             config,
             to_integrate.into_iter().zip(paths).collect(),
