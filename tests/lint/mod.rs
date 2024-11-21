@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::str::FromStr;
-
-use mint::mod_lints::{LintId, LintReport, SplitAssetPair};
-use mint::providers::ModSpecification;
+use mintcat::mod_lints;
+use mintcat::mod_lints::{LintId, LintReport, SplitAssetPair};
+use mintcat::providers::ModSpecification;
 
 #[test]
 pub fn test_lint_conflicting_files() {
@@ -23,7 +23,7 @@ pub fn test_lint_conflicting_files() {
 
     let LintReport {
         conflicting_mods, ..
-    } = mint::mod_lints::run_lints(&[LintId::CONFLICTING].into(), mods.into(), None).unwrap();
+    } = mod_lints::run_lints(&[LintId::CONFLICTING].into(), mods.into(), None).unwrap();
 
     println!("{:#?}", conflicting_mods);
 
@@ -51,7 +51,7 @@ pub fn test_lint_shader() {
 
     let LintReport {
         shader_file_mods, ..
-    } = mint::mod_lints::run_lints(&[LintId::SHADER_FILES].into(), mods.into(), None).unwrap();
+    } = mod_lints::run_lints(&[LintId::SHADER_FILES].into(), mods.into(), None).unwrap();
 
     println!("{:#?}", shader_file_mods);
 
@@ -80,7 +80,7 @@ pub fn test_lint_asset_registry_bin() {
     let LintReport {
         asset_register_bin_mods,
         ..
-    } = mint::mod_lints::run_lints(&[LintId::ASSET_REGISTRY_BIN].into(), mods.into(), None)
+    } = mod_lints::run_lints(&[LintId::ASSET_REGISTRY_BIN].into(), mods.into(), None)
         .unwrap();
 
     println!("{:#?}", asset_register_bin_mods);
@@ -105,7 +105,7 @@ pub fn test_lint_outdated_pak_version() {
     let LintReport {
         outdated_pak_version_mods,
         ..
-    } = mint::mod_lints::run_lints(&[LintId::OUTDATED_PAK_VERSION].into(), mods.into(), None)
+    } = mod_lints::run_lints(&[LintId::OUTDATED_PAK_VERSION].into(), mods.into(), None)
         .unwrap();
 
     println!("{:#?}", outdated_pak_version_mods);
@@ -129,7 +129,7 @@ pub fn test_lint_empty_archive() {
 
     let LintReport {
         empty_archive_mods, ..
-    } = mint::mod_lints::run_lints(&[LintId::EMPTY_ARCHIVE].into(), mods.into(), None).unwrap();
+    } = mod_lints::run_lints(&[LintId::EMPTY_ARCHIVE].into(), mods.into(), None).unwrap();
 
     println!("{:#?}", empty_archive_mods);
 
@@ -158,7 +158,7 @@ pub fn test_lint_only_non_pak_files() {
     let LintReport {
         archive_with_only_non_pak_files_mods,
         ..
-    } = mint::mod_lints::run_lints(
+    } = mod_lints::run_lints(
         &[LintId::ARCHIVE_WITH_ONLY_NON_PAK_FILES].into(),
         mods.into(),
         None,
@@ -186,7 +186,7 @@ pub fn test_lint_multi_pak_archive() {
     let LintReport {
         archive_with_multiple_paks_mods,
         ..
-    } = mint::mod_lints::run_lints(
+    } = mod_lints::run_lints(
         &[LintId::ARCHIVE_WITH_MULTIPLE_PAKS].into(),
         mods.into(),
         None,
@@ -214,7 +214,7 @@ pub fn test_lint_non_asset_files() {
     let LintReport {
         non_asset_file_mods,
         ..
-    } = mint::mod_lints::run_lints(&[LintId::NON_ASSET_FILES].into(), mods.into(), None).unwrap();
+    } = mod_lints::run_lints(&[LintId::NON_ASSET_FILES].into(), mods.into(), None).unwrap();
 
     println!("{:#?}", non_asset_file_mods);
 
@@ -238,7 +238,7 @@ pub fn test_lint_split_asset_pairs() {
     let LintReport {
         split_asset_pairs_mods,
         ..
-    } = mint::mod_lints::run_lints(&[LintId::SPLIT_ASSET_PAIRS].into(), mods.into(), None).unwrap();
+    } = mod_lints::run_lints(&[LintId::SPLIT_ASSET_PAIRS].into(), mods.into(), None).unwrap();
 
     println!("{:#?}", split_asset_pairs_mods);
 
@@ -279,7 +279,7 @@ pub fn test_lint_unmodified_game_assets() {
     let LintReport {
         unmodified_game_assets_mods,
         ..
-    } = mint::mod_lints::run_lints(
+    } = mod_lints::run_lints(
         &[LintId::UNMODIFIED_GAME_ASSETS].into(),
         mods.into(),
         Some(reference_pak_path),
