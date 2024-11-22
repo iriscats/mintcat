@@ -15,7 +15,9 @@ use std::{
     ops::DerefMut,
     path::PathBuf,
 };
-
+use eframe::egui::IconData;
+use std::sync::Arc;
+use image;
 use eframe::egui::{Button, CollapsingHeader, RichText};
 use eframe::epaint::{Pos2, Vec2};
 use eframe::{
@@ -57,14 +59,22 @@ use controls::toggle_switch::toggle_switch;
 use crate::gui::components::profile_bar;
 
 pub fn gui(dirs: Dirs, args: Option<Vec<String>>) -> Result<(), MintError> {
-    let options = eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([900.0, 500.0])
             .with_drag_and_drop(true),
         ..Default::default()
     };
+
+    let icon_data = include_bytes!("../../assets/modio-cog-blue.png");
+    let img = image::load_from_memory_with_format(icon_data, image::ImageFormat::Png).unwrap();
+    let rgba_data = img.into_rgba8();
+    let (w,h)=(rgba_data.width(),rgba_data.height());
+    let raw_data: Vec<u8> = rgba_data.into_raw();
+    options.viewport.icon=Some(Arc::<IconData>::new(IconData { rgba:  raw_data, width: w, height: h }));
+
     eframe::run_native(
-        &format!("mint {}", env!("CARGO_PKG_VERSION")),
+        &format!("mintcat {}", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| Ok(Box::new(App::new(cc, dirs, args)?))),
     )
@@ -819,6 +829,8 @@ impl App {
         {
             let now = SystemTime::now();
             let wait_time = Duration::from_secs(10);
+            let inner_rect = ctx.input(|i| i.viewport().inner_rect.unwrap_or(egui::Rect::ZERO));
+
             egui::Area::new("available-update-overlay".into())
                 .movable(false)
                 .fixed_pos(Pos2::ZERO)
@@ -827,7 +839,7 @@ impl App {
                     egui::Frame::none()
                         .fill(Color32::from_rgba_unmultiplied(0, 0, 0, 127))
                         .show(ui, |ui| {
-                            ui.allocate_space(ui.available_size());
+                            ui.allocate_space(egui::Vec2::new(inner_rect.width(), inner_rect.height()));
                         })
                 });
             if let Some(MessageHandle { state, .. }) = &self.self_update_rid {
@@ -1872,13 +1884,14 @@ impl eframe::App for App {
                     }
                     ui.spinner();
                 }
-                if ui
-                    .button("Lint mods")
-                    .on_hover_text("Lint mods in the current profile")
-                    .clicked()
-                {
-                    self.lints_toggle_window = Some(WindowLintsToggle);
-                }
+                // if ui
+                //     .button("Lint mods")
+                //     .on_hover_text("Lint mods in the current profile")
+                //     .clicked()
+                // {
+                //     self.lints_toggle_window = Some(WindowLintsToggle);
+                // }
+
                 if ui.button("⚙").on_hover_text("Open settings").clicked() {
                     self.settings_window = Some(WindowSettings::new(&self.state));
                 }

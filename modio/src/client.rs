@@ -18,7 +18,6 @@ use crate::user::Me;
 use crate::{TargetPlatform, TargetPortal};
 
 
-const LOCAL_HOST: &str = "https://127.0.0.1/v1";
 const PROXY_HOST: &str = "https://api.v1st.net/https://api.mod.io/v1";
 const DEFAULT_HOST: &str = "https://api.mod.io/v1";
 
@@ -141,26 +140,17 @@ impl Builder {
         let client = Client::new();
         let mut host = config.host.unwrap_or_else(|| DEFAULT_HOST.to_string());
         let resp = client.get(DEFAULT_HOST)
-            .timeout(Duration::from_secs(1))
+            .timeout(Duration::from_secs(2))
             .send();
 
         match resp {
             Ok(_) => {}
             Err(_) => {
-                host = LOCAL_HOST.parse().unwrap();
-                let resp = client.get(DEFAULT_HOST)
-                    .timeout(Duration::from_secs(1))
-                    .send();
-
-                match resp {
-                    Ok(_) => {}
-                    Err(_) => {
-                        host = PROXY_HOST.parse().unwrap();
-                    }
-                }
+                host = PROXY_HOST.parse().unwrap();
+                info!("Use MintCat Proxy Server Connect mod.io!");
             }
         }
-        info!("Host {}", host);
+       
 
         let credentials = config.credentials;
 
