@@ -45,7 +45,7 @@ impl<'de> Deserialize<'de> for File {
             MetadataBlob,
             Download,
             Platforms,
-            Other(()),
+            Other(String),
         }
 
         struct FileVisitor;
