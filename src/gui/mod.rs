@@ -371,7 +371,7 @@ impl App {
                     match approval_status {
                         ApprovalStatus::Verified => {
                             mk_searchable_modio_tag(
-                                "Verified",
+                                "V",
                                 ui,
                                 Some(egui::Color32::LIGHT_GREEN),
                                 Some("Does not contain any gameplay affecting features or changes"),
@@ -379,14 +379,19 @@ impl App {
                         }
                         ApprovalStatus::Approved => {
                             mk_searchable_modio_tag(
-                                "Approved",
+                                "A",
                                 ui,
                                 Some(egui::Color32::LIGHT_BLUE),
                                 Some("Contains gameplay affecting features or changes"),
                             );
                         }
                         ApprovalStatus::Sandbox => {
-                            mk_searchable_modio_tag("Sandbox", ui, Some(egui::Color32::LIGHT_YELLOW), Some("Contains significant, possibly progression breaking, changes to gameplay"));
+                            mk_searchable_modio_tag(
+                                "S",
+                                ui, 
+                                Some(egui::Color32::LIGHT_YELLOW), 
+                                Some("Contains significant, possibly progression breaking, changes to gameplay")
+                            );
                         }
                     }
 
@@ -490,6 +495,7 @@ impl App {
 
                 if let Some(info) = &info {
                     egui::ComboBox::from_id_salt(row_index)
+                        .width(20.)
                         .selected_text(
                             self.state
                                 .store
@@ -828,7 +834,7 @@ impl App {
             (self.available_update.as_ref(), self.show_update_time)
         {
             let now = SystemTime::now();
-            let wait_time = Duration::from_secs(10);
+            let wait_time = Duration::from_secs(1);
             let inner_rect = ctx.input(|i| i.viewport().inner_rect.unwrap_or(egui::Rect::ZERO));
 
             egui::Area::new("available-update-overlay".into())
