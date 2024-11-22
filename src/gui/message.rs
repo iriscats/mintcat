@@ -308,6 +308,7 @@ pub struct CheckUpdates {
 
 impl CheckUpdates {
     pub fn send(app: &mut App, ctx: &egui::Context) {
+        info!("Start Check Update ....");
         let rid = app.request_counter.next();
         let tx = app.tx.clone();
         let ctx = ctx.clone();
@@ -625,7 +626,7 @@ async fn self_update_async(
     let client = reqwest::Client::new();
 
     let asset_name = if cfg!(target_os = "windows") {
-        "mint-x86_64-pc-windows-msvc.zip"
+        "mintcat-x86_64-pc-windows-msvc.zip"
     } else if cfg!(target_os = "linux") {
         "mint-x86_64-unknown-linux-gnu.zip"
     } else {
@@ -685,7 +686,7 @@ async fn self_update_async(
     let original_exe_path =
         tokio::task::spawn_blocking(move || -> Result<PathBuf, IntegrationError> {
             let bin_name = if cfg!(target_os = "windows") {
-                "mint.exe"
+                "mintcat.exe"
             } else if cfg!(target_os = "linux") {
                 "mint"
             } else {
