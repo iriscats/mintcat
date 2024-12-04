@@ -1,7 +1,7 @@
-import {Avatar, Flex, Image} from "antd";
 import React from "react";
-import {BellOutlined, QuestionCircleOutlined, SkinOutlined, TranslationOutlined, UserOutlined} from '@ant-design/icons';
-
+import {Avatar, Flex, Image, Popconfirm} from "antd";
+import {QuestionCircleOutlined, SkinOutlined, UserOutlined} from '@ant-design/icons';
+import packageJson from '../../package.json';
 
 const TitleBar: React.FC = () => (
     <Flex justify={"space-between"}>
@@ -12,12 +12,18 @@ const TitleBar: React.FC = () => (
                 preview={false}
                 src="icon.ico"
             />
-            <h1>MintCat 0.4.0</h1>
+            <h1>MintCat {packageJson.version}</h1>
         </Flex>
         <Flex gap="middle" justify={"flex-end"} wrap>
-            {/*<BellOutlined/>*/}
-            <SkinOutlined />
-            {/*<TranslationOutlined />*/}
+            <Popconfirm
+                placement="bottom"
+                title={"text"}
+                description={"description"}
+                okText="Yes"
+                cancelText="No"
+            >
+                <SkinOutlined/>
+            </Popconfirm>
             <QuestionCircleOutlined/>
             <Avatar className={"app-header-avatar"} icon={<UserOutlined/>}/>
         </Flex>
