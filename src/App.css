@@ -25,7 +25,6 @@
     height: 48px;
     line-height: 48px;
     padding: 0;
-    background-color: transparent;
     vertical-align: center;
     margin: 0;
 }
@@ -69,5 +68,4 @@
 
 .ant-tree {
     border-radius: 0 0 6px 6px;
-    background: transparent !important;
 }
