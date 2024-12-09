@@ -1,26 +1,41 @@
 import React from "react";
 import {Menu, MenuProps} from "antd";
-import {SettingOutlined, UnorderedListOutlined} from "@ant-design/icons";
+import {AppstoreAddOutlined, SettingOutlined, UnorderedListOutlined} from "@ant-design/icons";
 
 
 type MenuItem = Required<MenuProps>['items'][number];
 
 const items: MenuItem[] = [
-    {key: '1', icon: <UnorderedListOutlined/>, label: 'Option 1'},
-    {key: '3', icon: <SettingOutlined/>, label: 'Option 3'}
+    {key: 'mod_list', icon: <UnorderedListOutlined/>, label: 'Mod List'},
+    {key: 'modio', icon: <AppstoreAddOutlined/>, label: 'mod.io'},
+    {key: 'settings', icon: <SettingOutlined/>, label: 'Settings'}
 ];
 
+interface MenuBarProps {
+    onClick: (key: string) => void;
+}
 
-const MenuBar: React.FC = () => (
-    <Menu
-        defaultSelectedKeys={['1']}
-        defaultOpenKeys={['sub1']}
-        mode="inline"
-        inlineCollapsed={true}
-        inlineIndent={14}
-        items={items}
-        style={{backgroundColor: 'transparent', height: '100%'}}
-    />
-)
+class MenuBar extends React.Component<MenuBarProps, any> {
+
+    public constructor(props: any, context: any) {
+        super(props, context);
+    }
+
+    render() {
+        return (
+            <Menu
+                defaultSelectedKeys={['1']}
+                defaultOpenKeys={['sub1']}
+                mode="inline"
+                inlineIndent={14}
+                items={items}
+                style={{backgroundColor: 'transparent', height: '100%'}}
+                onClick={({key}) => {
+                    this.props.onClick(key);
+                }}
+            />
+        );
+    }
+}
 
 export default MenuBar;

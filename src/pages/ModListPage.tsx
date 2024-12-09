@@ -1,11 +1,16 @@
 import React from "react";
-import {Button, Checkbox, ConfigProviderProps, Flex, Select, SelectProps, Tree} from 'antd';
-import {GetProps} from 'antd';
+import {Button, Card, Checkbox, Flex, Select, SelectProps, Tree, GetProps} from 'antd';
 import Search from "antd/es/input/Search";
 import {
-    DeleteOutlined, EditOutlined, PlayCircleOutlined, PlusCircleOutlined,
-    RedoOutlined, SaveOutlined
+    DeleteOutlined,
+    EditOutlined,
+    PlayCircleOutlined,
+    PlusCircleOutlined,
+    RedoOutlined,
+    SaveOutlined
 } from "@ant-design/icons";
+import AddModDialog from "../dialogs/AddModDialog.tsx";
+
 
 type DirectoryTreeProps = GetProps<typeof Tree.DirectoryTree>;
 
@@ -63,63 +68,80 @@ const handleChange = (value: string | string[]) => {
 
 const customTitleRender = (nodeData) => {
     return (
-        <spen>
+        <span>
             <span>{nodeData.title}</span>
-        </spen>
+        </span>
     );
 }
 
-const ModListPage: React.FC = () => (
-    <div>
-        <div style={{marginTop: "5px"}}>
-            <Button type="text"><SaveOutlined/>Apply Changes</Button>
-            <Button type="text"><DeleteOutlined/>Uninstall All</Button>
-            <Button type="text"><PlayCircleOutlined/>Launch Game</Button>
-            <Button type="text"><PlusCircleOutlined/>Add Mod</Button>
-        </div>
-        <div style={{
-            height: "90%",
-            margin: "5px 10px",
-            backgroundColor: "white",
-        }}>
-            <Flex style={{
-                borderBottom: "1px solid #eee",
-                borderRadius: "6px 6px 0 0",
-                margin: "5px 0px",
-            }}>
-                <Select
-                    size={"middle"}
-                    defaultValue="Visual"
-                    onChange={handleChange}
-                    style={{width: "90%"}}
-                    options={options}
-                    mode="tags"
-                />
-                <Button type="text"><EditOutlined /></Button>
-                <Search placeholder="Search" onChange={onChange}/>
-            </Flex>
-            <DirectoryTree
-                style={{
-                    height: "370px",
-                    marginTop: "10px",
-                }}
-                multiple
-                draggable
-                checkable
-                defaultExpandAll
-                onSelect={onSelect}
-                onExpand={onExpand}
-                treeData={treeData}
-                titleRender={customTitleRender}
-            />
-            <Flex
-                style={{borderTop: "1px solid #eee"}}
-            >
-                <Checkbox style={{margin: "0 10px 0 10px"}}></Checkbox>
-                <Button type="text" size={"small"}><RedoOutlined/>Update All</Button>
-            </Flex>
-        </div>
-    </div>
-)
+
+class ModListPage extends React.Component<any, any> {
+    private readonly addModDialogRef: React.RefObject<unknown>;
+
+    public constructor(props: any, context: any) {
+        super(props, context);
+
+        this.addModDialogRef = React.createRef();
+        this.state = {}
+
+        this.onAddModClick = this.onAddModClick.bind(this);
+    }
+
+    private onAddModClick() {
+        this.addModDialogRef.current?.show();
+    }
+
+    render() {
+        return (
+            <>
+                <AddModDialog ref={this.addModDialogRef}/>
+                <div style={{marginTop: "5px"}}>
+                    <Button type="text" onClick={this.onAddModClick}>
+                        <PlusCircleOutlined/>Add Mod
+                    </Button>
+                    <Button type="text"><SaveOutlined/>Apply Changes</Button>
+                    <Button type="text"><DeleteOutlined/>Uninstall All</Button>
+                    <Button type="text"><PlayCircleOutlined/>Launch Game</Button>
+                </div>
+                <Card style={{
+                    height: "94%",
+                    marginRight: "5px"
+                }}>
+                    <Flex style={{}}>
+                        <Select
+                            size={"middle"}
+                            defaultValue="Visual"
+                            onChange={handleChange}
+                            style={{width: "90%"}}
+                            options={options}
+                            mode="tags"
+                        />
+                        <Button type="text"><EditOutlined/></Button>
+                        <Search placeholder="Search" onChange={onChange}/>
+                    </Flex>
+                    <DirectoryTree
+                        style={{
+                            height: "370px",
+                            marginTop: "10px",
+                        }}
+                        multiple
+                        draggable
+                        checkable
+                        defaultExpandAll
+                        onSelect={onSelect}
+                        onExpand={onExpand}
+                        treeData={treeData}
+                        titleRender={customTitleRender}
+                    />
+                    <Flex style={{borderTop: "1px solid #eee", paddingTop:"8px"}}>
+                        <Checkbox style={{margin: "0 10px 0 10px"}}></Checkbox>
+                        <Button type="text" size={"small"}><RedoOutlined/>Update All</Button>
+                    </Flex>
+                </Card>
+            </>
+        )
+    }
+}
+
 
 export default ModListPage;

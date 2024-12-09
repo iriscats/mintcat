@@ -8,7 +8,6 @@ const TitleBar: React.FC = () => (
         <Flex gap="middle" wrap>
             <Image
                 width={30}
-                mask={false}
                 preview={false}
                 src="icon.ico"
             />
