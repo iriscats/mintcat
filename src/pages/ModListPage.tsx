@@ -10,6 +10,9 @@ import {
     SaveOutlined
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
+import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
+import ConfigApi from "../apis/ConfigApi.ts";
+import unifiedModListData from "../models/ModListData.ts";
 
 
 type DirectoryTreeProps = GetProps<typeof Tree.DirectoryTree>;
@@ -76,25 +79,44 @@ const customTitleRender = (nodeData) => {
 
 
 class ModListPage extends React.Component<any, any> {
-    private readonly addModDialogRef: React.RefObject<unknown>;
+
+    private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
+
+    private readonly profileEditDialogRef: React.RefObject<AddModDialog> = React.createRef();
 
     public constructor(props: any, context: any) {
         super(props, context);
-
-        this.addModDialogRef = React.createRef();
         this.state = {}
-
         this.onAddModClick = this.onAddModClick.bind(this);
+        this.onEditProfileClick = this.onEditProfileClick.bind(this);
+
+        console.log("ModListPage");
+    }
+
+    private async initViewModel() {
+        const data = await ConfigApi.loadModListData();
+        const modListData = unifiedModListData(data);
+        console.log(JSON.stringify(modListData));
     }
 
     private onAddModClick() {
         this.addModDialogRef.current?.show();
     }
 
-    render() {
+    private onEditProfileClick() {
+        this.profileEditDialogRef.current?.show();
+    }
+
+    private componentDidMount() {
+        this.initViewModel().then(() => {
+        })
+    }
+
+    private render() {
         return (
             <>
                 <AddModDialog ref={this.addModDialogRef}/>
+                <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <div style={{marginTop: "5px"}}>
                     <Button type="text" onClick={this.onAddModClick}>
                         <PlusCircleOutlined/>Add Mod
@@ -104,10 +126,11 @@ class ModListPage extends React.Component<any, any> {
                     <Button type="text"><PlayCircleOutlined/>Launch Game</Button>
                 </div>
                 <Card style={{
-                    height: "94%",
-                    marginRight: "5px"
+                    height: "92%",
+                    margin: "4px 5px 0 5px",
+                    padding: "0",
                 }}>
-                    <Flex style={{}}>
+                    <Flex>
                         <Select
                             size={"middle"}
                             defaultValue="Visual"
@@ -116,7 +139,9 @@ class ModListPage extends React.Component<any, any> {
                             options={options}
                             mode="tags"
                         />
-                        <Button type="text"><EditOutlined/></Button>
+                        <Button type="text" onClick={this.onEditProfileClick}>
+                            <EditOutlined/>
+                        </Button>
                         <Search placeholder="Search" onChange={onChange}/>
                     </Flex>
                     <DirectoryTree
@@ -133,8 +158,8 @@ class ModListPage extends React.Component<any, any> {
                         treeData={treeData}
                         titleRender={customTitleRender}
                     />
-                    <Flex style={{borderTop: "1px solid #eee", paddingTop:"8px"}}>
-                        <Checkbox style={{margin: "0 10px 0 10px"}}></Checkbox>
+                    <Flex style={{borderTop: "1px solid #eee", paddingTop: "8px"}}>
+                        <Checkbox style={{margin: "0 10px 0 10px"}}/>
                         <Button type="text" size={"small"}><RedoOutlined/>Update All</Button>
                     </Flex>
                 </Card>

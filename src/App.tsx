@@ -29,6 +29,7 @@ class App extends React.Component<any, any> {
 
     public constructor(props: any, context: any) {
         super(props, context);
+        console.log("App");
     }
 
     renderContent() {
@@ -37,7 +38,7 @@ class App extends React.Component<any, any> {
                 return <ModListPage/>;
             case "modio":
                 return <ModioPage/>;
-            case "setting":
+            case "settings":
                 return <SettingPage/>;
             default:
                 return null;
@@ -61,7 +62,7 @@ class App extends React.Component<any, any> {
                                     this.forceUpdate();
                                 }}/>
                             </Sider>
-                            <Content style={{borderRadius: "8px"}}>
+                            <Content>
                                 {this.renderContent()}
                             </Content>
                         </Layout>
