@@ -4,6 +4,20 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+async fn save_file(file_data: Vec<u8>, filename: String) -> Result<(), String> {
+    match File::create(&filename) {
+        Ok(mut file) => {
+            if let Err(e) = file.write_all(&file_data) {
+                return Err(format!("Failed to write to file: {}", e));
+            }
+        }
+        Err(e) => return Err(format!("Failed to create file: {}", e)),
+    }
+    Ok(())
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
