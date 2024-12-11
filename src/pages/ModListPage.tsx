@@ -11,92 +11,40 @@ import {
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
-import ConfigApi from "../apis/ConfigApi.ts";
-import unifiedModListData from "../models/ModListData.ts";
+import ModListViewModel from "../models/ModListPageVM.ts";
 
 
 type DirectoryTreeProps = GetProps<typeof Tree.DirectoryTree>;
 
 const {DirectoryTree} = Tree;
 
-const treeData: (any)[] = [
-    {
-        title: 'Local',
-        key: '0-0',
-        children: [
-            {title: 'Mod1.pak', key: '0-0-0', isLeaf: true},
-            {
-                title: 'Mod2.pak',
-                key: '0-0-1',
-                isLeaf: true,
 
-            },
-        ],
-    },
-    {
-        title: 'mod.io',
-        key: '0-1',
-        children: [
-            {title: 'Mod 3', key: '0-1-0', isLeaf: true},
-            {title: 'Mod 4', key: '0-1-1', isLeaf: true},
-        ],
-    },
-];
-
-const onSelect: DirectoryTreeProps['onSelect'] = (keys, info) => {
-    console.log('Trigger Select', keys, info);
-};
-
-const onExpand: DirectoryTreeProps['onExpand'] = (keys, info) => {
-    console.log('Trigger Expand', keys, info);
-};
-
-
-const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+interface ModListPageState {
+    options?: SelectProps['options'];
+    treeData?: DirectoryTreeProps['treeData'];
+    expandedKeys?: any[];
+    defaultProfile?: string;
 }
 
-
-const options: SelectProps['options'] = [];
-
-for (let i = 10; i < 36; i++) {
-    options.push({
-        value: i.toString(36) + i,
-        label: i.toString(36) + i,
-    });
-}
-
-const handleChange = (value: string | string[]) => {
-    console.log(`Selected: ${value}`);
-};
-
-const customTitleRender = (nodeData) => {
-    return (
-        <span>
-            <span>{nodeData.title}</span>
-        </span>
-    );
-}
-
-
-class ModListPage extends React.Component<any, any> {
+class ModListPage extends React.Component<any, ModListPageState> {
 
     private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
 
     private readonly profileEditDialogRef: React.RefObject<AddModDialog> = React.createRef();
 
-    public constructor(props: any, context: any) {
+    public constructor(props: any, context: ModListPageState) {
         super(props, context);
-        this.state = {}
+
+        this.state = {
+            options: [],
+            defaultProfile: "",
+        }
+
         this.onAddModClick = this.onAddModClick.bind(this);
         this.onEditProfileClick = this.onEditProfileClick.bind(this);
-
-        console.log("ModListPage");
-    }
-
-    private async initViewModel() {
-        const data = await ConfigApi.loadModListData();
-        const modListData = unifiedModListData(data);
-        console.log(JSON.stringify(modListData));
+        this.onSelectChange = this.onSelectChange.bind(this);
+        this.onTreeNodeSelect = this.onTreeNodeSelect.bind(this);
+        this.onTreeNodeExpand = this.onTreeNodeExpand.bind(this);
     }
 
     private onAddModClick() {
@@ -107,9 +55,90 @@ class ModListPage extends React.Component<any, any> {
         this.profileEditDialogRef.current?.show();
     }
 
-    private componentDidMount() {
-        this.initViewModel().then(() => {
+    private async onSelectChange(value: string) {
+        console.log(`Selected: ${value}`);
+        const vm = await ModListViewModel.getViewModel();
+        vm.activeProfile = value;
+        await this.loadModListTree();
+        this.setState({
+            defaultProfile: value as string,
         })
+    };
+
+    private onTreeNodeSelect(keys, info) {
+    }
+
+    private onTreeNodeExpand(keys, info) {
+        this.setState({
+            expandedKeys: keys,
+        })
+    };
+
+    private async loadProfile() {
+        const vm = await ModListViewModel.getViewModel();
+        if (vm.profiles === undefined) {
+            return;
+        }
+
+        let options: SelectProps['options'] = [];
+        for (const profileKey in vm.profiles) {
+            options.push({
+                value: profileKey,
+                label: profileKey,
+            });
+        }
+        this.setState({
+            options,
+            defaultProfile: vm.activeProfile,
+        })
+    }
+
+    private async loadModListTree() {
+        const vm = await ModListViewModel.getViewModel();
+        if (vm.profiles === undefined) {
+            return;
+        }
+
+        const treeData = [];
+        const expandedKeys = [];
+        const profile = vm.profiles[vm.activeProfile];
+        for (const category of profile) {
+            const categoryKey = Object.keys(category)[0];
+            const mods = [];
+            for (const modItem: any of category[categoryKey]) {
+                mods.push({
+                    title: modItem.url,
+                    key: modItem.url,
+                    isLeaf: true
+                });
+            }
+
+            expandedKeys.push(categoryKey);
+            treeData.push({
+                title: categoryKey,
+                key: categoryKey,
+                children: mods
+            })
+        }
+        this.setState({
+            treeData,
+            expandedKeys
+        })
+    }
+
+    private override componentDidMount(): void {
+        this.loadProfile().then(() => {
+            this.loadModListTree().then(() => {
+            })
+        });
+    }
+
+    private customTitleRender = (nodeData) => {
+        return (
+            <span>
+            <span>{nodeData.title}</span>
+        </span>
+        );
     }
 
     private render() {
@@ -125,38 +154,34 @@ class ModListPage extends React.Component<any, any> {
                     <Button type="text"><DeleteOutlined/>Uninstall All</Button>
                     <Button type="text"><PlayCircleOutlined/>Launch Game</Button>
                 </div>
-                <Card style={{
-                    height: "92%",
-                    margin: "4px 5px 0 5px",
-                    padding: "0",
-                }}>
+                <Card className="mod-list-page-card">
                     <Flex>
                         <Select
                             size={"middle"}
-                            defaultValue="Visual"
-                            onChange={handleChange}
                             style={{width: "90%"}}
-                            options={options}
-                            mode="tags"
+                            value={this.state.defaultProfile}
+                            options={this.state.options}
+                            onChange={this.onSelectChange}
                         />
                         <Button type="text" onClick={this.onEditProfileClick}>
                             <EditOutlined/>
                         </Button>
-                        <Search placeholder="Search" onChange={onChange}/>
+                        <Search placeholder="Search"/>
                     </Flex>
                     <DirectoryTree
                         style={{
                             height: "370px",
                             marginTop: "10px",
                         }}
+                        height={370}
                         multiple
                         draggable
                         checkable
-                        defaultExpandAll
-                        onSelect={onSelect}
-                        onExpand={onExpand}
-                        treeData={treeData}
-                        titleRender={customTitleRender}
+                        expandedKeys={this.state.expandedKeys}
+                        treeData={this.state.treeData}
+                        onSelect={this.onTreeNodeSelect}
+                        onExpand={this.onTreeNodeExpand}
+                        titleRender={this.customTitleRender}
                     />
                     <Flex style={{borderTop: "1px solid #eee", paddingTop: "8px"}}>
                         <Checkbox style={{margin: "0 10px 0 10px"}}/>
