@@ -52,6 +52,12 @@
     vertical-align: top;
 }
 
+.mod-list-page-card {
+    height: 92%;
+    margin: 4px 5px 0 5px;
+    padding: 0
+}
+
 .ant-progress {
     line-height: 0 !important;
 }
@@ -66,3 +72,4 @@
 .ant-tree {
     border-radius: 0 0 6px 6px;
 }
+
