@@ -29,6 +29,7 @@ class App extends React.Component<any, any> {
 
     public constructor(props: any, context: any) {
         super(props, context);
+        console.log("App constructor");
     }
 
     renderContent() {

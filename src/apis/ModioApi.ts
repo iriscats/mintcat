@@ -9,7 +9,7 @@ class ModioApi {
     }
 
     private static buildRequestUrl(): string {
-        //https://api.v1st.net/https://api.mod.io/v1/games/2475/mods?api_key=&=10iron-will-recharge-10-minutes
+        //https://api.v1st.net/https://api.mod.io/v1/games/2475/mods?api_key=1a5a60521b97f65481a5ddb8f1b8486d&=10iron-will-recharge-10-minutes
         return PROXY_MODIO_API_URL + "v1/games/2475/mods?api_key=" + MODIO_API_KEY;
     }
 

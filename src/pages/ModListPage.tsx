@@ -1,7 +1,22 @@
 import React from "react";
-import {Button, Card, Checkbox, Flex, Select, SelectProps, Tree, GetProps} from 'antd';
+import {
+    Button,
+    Card,
+    Checkbox,
+    Flex,
+    Dropdown,
+    Switch,
+    Tag,
+    Tree,
+    TreeProps,
+    Select,
+    SelectProps,
+    MenuProps,
+} from 'antd';
 import Search from "antd/es/input/Search";
 import {
+    ArrowUpOutlined,
+    CloseCircleOutlined,
     DeleteOutlined,
     EditOutlined,
     PlayCircleOutlined,
@@ -12,16 +27,14 @@ import {
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
 import ModListViewModel from "../models/ModListPageVM.ts";
-
-
-type DirectoryTreeProps = GetProps<typeof Tree.DirectoryTree>;
-
-const {DirectoryTree} = Tree;
+import {CheckboxChangeEvent} from "antd/es/checkbox";
 
 
 interface ModListPageState {
     options?: SelectProps['options'];
-    treeData?: DirectoryTreeProps['treeData'];
+    treeData?: TreeProps['treeData'];
+    contextMenus?: MenuProps['items'];
+    isMultiSelect?: boolean;
     expandedKeys?: any[];
     defaultProfile?: string;
 }
@@ -37,6 +50,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
         this.state = {
             options: [],
+            contextMenus: [],
             defaultProfile: "",
         }
 
@@ -45,6 +59,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
         this.onSelectChange = this.onSelectChange.bind(this);
         this.onTreeNodeSelect = this.onTreeNodeSelect.bind(this);
         this.onTreeNodeExpand = this.onTreeNodeExpand.bind(this);
+        this.onCheckboxChange = this.onCheckboxChange.bind(this);
     }
 
     private onAddModClick() {
@@ -53,6 +68,13 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private onEditProfileClick() {
         this.profileEditDialogRef.current?.show();
+    }
+
+    private onCheckboxChange(e: CheckboxChangeEvent) {
+        console.log(e.target.checked);
+        this.setState({
+            isMultiSelect: e.target.checked
+        })
     }
 
     private async onSelectChange(value: string) {
@@ -109,6 +131,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
                 mods.push({
                     title: modItem.url,
                     key: modItem.url,
+                    required: modItem.required,
+                    enabled: modItem.enabled,
                     isLeaf: true
                 });
             }
@@ -133,13 +157,34 @@ class ModListPage extends React.Component<any, ModListPageState> {
         });
     }
 
-    private customTitleRender = (nodeData) => {
-        return (
-            <span>
-            <span>{nodeData.title}</span>
-        </span>
-        );
+    private customTitleRender(nodeData) {
+        if (nodeData.isLeaf) {
+            return (
+                <span style={{width: "100%", display: "block"}}>
+                    <Switch checked={nodeData.enabled} size={"small"} style={{marginRight: "8px", marginTop: "-3px"}}/>
+                    <a>{nodeData.title}</a>
+                    <Tag color="blue" style={{float: "right"}}>Verify</Tag>
+                </span>
+            );
+        } else {
+            return (
+                <span style={{width: "100%", display: "block"}}>
+                    {nodeData.title}
+                </span>
+            );
+        }
     }
+
+    private contextMenus: MenuProps['items'] = [
+        {
+            label: 'Add Group',
+            key: '1',
+        },
+        {
+            label: 'Delete',
+            key: '2',
+        }
+    ];
 
     private render() {
         return (
@@ -147,50 +192,83 @@ class ModListPage extends React.Component<any, ModListPageState> {
                 <AddModDialog ref={this.addModDialogRef}/>
                 <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <div style={{marginTop: "5px"}}>
-                    <Button type="text" onClick={this.onAddModClick}>
-                        <PlusCircleOutlined/>Add Mod
+                    <Button type="text">
+                        <SaveOutlined/>Apply Changes
                     </Button>
-                    <Button type="text"><SaveOutlined/>Apply Changes</Button>
-                    <Button type="text"><DeleteOutlined/>Uninstall All</Button>
-                    <Button type="text"><PlayCircleOutlined/>Launch Game</Button>
+                    <Button type="text">
+                        <DeleteOutlined/>Uninstall All
+                    </Button>
+                    <Button type="text">
+                        <PlayCircleOutlined/>Launch Game
+                    </Button>
+                    {/*<Button type="text" onClick={this.onAddModClick}>*/}
+                    {/*    <PlusCircleOutlined/>Add Mod*/}
+                    {/*</Button>*/}
                 </div>
                 <Card className="mod-list-page-card">
                     <Flex>
+                        <Button type="text" size={"small"} onClick={this.onAddModClick}>
+                            <PlusCircleOutlined/>
+                        </Button>
+                        <Button type="text" size={"small"} onClick={this.onEditProfileClick}>
+                            <ArrowUpOutlined/>
+                        </Button>
                         <Select
-                            size={"middle"}
+                            size={"small"}
                             style={{width: "90%"}}
                             value={this.state.defaultProfile}
                             options={this.state.options}
                             onChange={this.onSelectChange}
                         />
-                        <Button type="text" onClick={this.onEditProfileClick}>
+                        <Button type="text" size={"small"} onClick={this.onEditProfileClick}>
                             <EditOutlined/>
                         </Button>
-                        <Search placeholder="Search"/>
+                        <Search size={"small"} placeholder="Search"/>
                     </Flex>
-                    <DirectoryTree
-                        style={{
-                            height: "370px",
-                            marginTop: "10px",
-                        }}
-                        height={370}
-                        multiple
-                        draggable
-                        checkable
-                        expandedKeys={this.state.expandedKeys}
-                        treeData={this.state.treeData}
-                        onSelect={this.onTreeNodeSelect}
-                        onExpand={this.onTreeNodeExpand}
-                        titleRender={this.customTitleRender}
-                    />
+                    <Dropdown menu={{
+                        items: this.contextMenus,
+                        onClick: (e) => {
+                            console.log(e);
+                        }
+                    }}
+                              onOpenChange={(open) => {
+                                  if (open) {
+                                      console.log('trigger open');
+                                  } else {
+                                      console.log('trigger close');
+                                  }
+                              }}
+                              trigger={['contextMenu']}>
+                        <Tree
+                            style={{
+                                height: "370px",
+                                marginTop: "10px",
+                            }}
+                            height={370}
+                            draggable
+                            blockNode
+                            checkable={this.state.isMultiSelect}
+                            expandedKeys={this.state.expandedKeys}
+                            treeData={this.state.treeData}
+                            onSelect={this.onTreeNodeSelect}
+                            onRightClick={this.onTreeNodeSelect}
+                            onExpand={this.onTreeNodeExpand}
+                            titleRender={this.customTitleRender}
+                        />
+                    </Dropdown>
                     <Flex style={{borderTop: "1px solid #eee", paddingTop: "8px"}}>
-                        <Checkbox style={{margin: "0 10px 0 10px"}}/>
-                        <Button type="text" size={"small"}><RedoOutlined/>Update All</Button>
+                        <Checkbox style={{margin: "0 10px 0 10px"}}
+                                  onChange={this.onCheckboxChange}
+                        />
+                        <Button type="text" size={"small"}>
+                            <CloseCircleOutlined/>Delete Select
+                        </Button>
                     </Flex>
                 </Card>
             </>
         )
     }
+
 }
 
 
