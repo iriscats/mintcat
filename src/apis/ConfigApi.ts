@@ -1,5 +1,15 @@
 import {invoke} from '@tauri-apps/api/core';
+import {writeTextFile} from '@tauri-apps/plugin-fs';
 
+
+async function saveDataToFile(fileName, data) {
+    try {
+        await writeTextFile(fileName, data);
+        console.log(`Data saved successfully to file ${fileName}`);
+    } catch (error) {
+        console.error(`Failed to save data to file ${fileName}: ${error}`);
+    }
+}
 
 class ConfigApi {
 
@@ -16,6 +26,10 @@ class ConfigApi {
             "gui_theme": null,
             "sorting_config": null
         });
+    }
+
+    public static async saveConfig(data: string) {
+        return await invoke('save_config');
     }
 
     public static async loadModListData() {
@@ -149,6 +163,14 @@ class ConfigApi {
                 }
             }
         }));
+    }
+
+    public static async loadUserData(data: string) {
+        return await invoke('save_mod_list_data');
+    }
+
+    public static async loadSettings(): Promise<void> {
+
     }
 
 }

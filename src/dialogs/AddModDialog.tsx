@@ -39,8 +39,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         // https://mod.io/g/drg/m/10iron-will-recharge-10-minutes
         if (this.state.tabActiveKey === "modio") {
             const values = this.modioFormRef.current.getFieldsValue();
-            const modInfo = this.parseModLinks(values["modLinks"]);
-            const resp = await ModioApi.getModByName(modInfo.nameId);
+            const resp = await ModioApi.getModInfoByLink(values["modLinks"]);
             console.log(resp);
             this.setState({isModalOpen: false});
         } else {
@@ -50,19 +49,6 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     private handleCancel() {
         this.setState({isModalOpen: false});
-    }
-
-    private parseModLinks(link: string) {
-        let regex = new RegExp('^https://mod\.io/g/drg/m/([^/#]+)(?:#(\\d+)(?:/(\\d+))?)?$');
-        let match = link.match(regex);
-        if (match !== null) {
-            let nameId = match[1];
-            let modId = match[2];
-            let modifyId = match[3];
-
-            console.log(`name_id: ${nameId}, mod_id: ${modId}, modify_id: ${modifyId}`);
-            return {nameId, modId, modifyId};
-        }
     }
 
     private tabsItems: TabsProps['items'] = [
@@ -90,7 +76,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         }
     ];
 
-    private render() {
+    render() {
         return (
             <Modal title="Add Mod"
                    open={this.state.isModalOpen}
