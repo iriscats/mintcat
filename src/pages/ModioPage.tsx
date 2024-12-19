@@ -37,6 +37,9 @@ const ModioPage: React.FC = () => (
                 loader={<Skeleton avatar paragraph={{rows: 1}} active/>}
                 endMessage={<Divider plain>It is all, nothing more 🤐</Divider>}
                 scrollableTarget="scrollableDiv"
+                next={() => {
+                    console.log('next');
+                }}
             >
                 <List
                     itemLayout="vertical"

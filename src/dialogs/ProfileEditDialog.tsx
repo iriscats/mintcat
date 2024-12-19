@@ -36,7 +36,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         this.setState({isModalOpen: false});
     }
 
-    public render() {
+    render() {
         return (
             <Modal title="Edit Profile"
                    open={this.state.isModalOpen}
