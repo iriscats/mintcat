@@ -445,6 +445,8 @@ impl DrgModio for modio::Modio {
             .mods()
             .events(
                 EventType::not_in(vec![
+                    EventTypes::ModDeleted,
+                    EventTypes::ModUnavailable,
                     EventTypes::ModCommentAdded,
                     EventTypes::ModCommentDeleted,
                 ])

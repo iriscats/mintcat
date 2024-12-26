@@ -398,7 +398,7 @@ impl App {
                     match required_status {
                         RequiredStatus::RequiredByAll => {
                             mk_searchable_modio_tag(
-                                "RequiredByAll",
+                                "R",
                                 ui,
                                 Some(egui::Color32::LIGHT_RED),
                                 Some(
@@ -408,7 +408,7 @@ impl App {
                         }
                         RequiredStatus::Optional => {
                             mk_searchable_modio_tag(
-                                "Optional",
+                                "O",
                                 ui,
                                 None,
                                 Some("Clients are not required to install this mod to function"),

@@ -637,7 +637,7 @@ async fn self_update_async(
 
     let response = client
         .get(format!(
-            "https://github.com/iriscats/mint/releases/latest/download/{asset_name}"
+            "https://api.v1st.net/https://github.com/iriscats/mint/releases/latest/download/{asset_name}"
         ))
         .send()
         .await

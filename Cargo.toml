@@ -9,7 +9,7 @@ members = [
 repository = "https://github.com/iriscats/mint"
 authors = ["trumank", "jieyouxu", "iriscats"]
 license = "MIT OR Apache-2.0"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 
 [workspace.dependencies]
@@ -36,7 +36,7 @@ authors.workspace = true
 license.workspace = true
 version.workspace = true
 edition.workspace = true
-# build = "src/build.rs"
+build = "src/build.rs"
 
 [build-dependencies]
 winres = "*"
