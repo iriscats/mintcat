@@ -77,3 +77,11 @@
     display: block !important;
     width: 100% !important;
 }
+
+.ant-tree-node-content-wrapper {
+    padding-inline: 4px !important;
+}
+
+.ant-tree-switcher{
+    width: 18px !important;
+}

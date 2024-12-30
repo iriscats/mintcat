@@ -5,6 +5,9 @@ export default {
             footerBg: 'transparent',
             headerBg: 'transparent',
             siderBg: 'transparent'
+        },
+        Tree: {
+            indentSize: 8
         }
     }
 };

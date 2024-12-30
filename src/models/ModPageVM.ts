@@ -20,7 +20,10 @@ class ModListItem {
     public fileVersion: string = "-";
     public tags: string[] = [];
     public versions: string[] = [];
+    public approval: string = "";
     public type: string = "";
+    public downloadUrl: string = "";
+    public cachePath: string = "";
 
     public constructor(modInfo?: ModInfo) {
         if (modInfo) {
@@ -28,11 +31,13 @@ class ModListItem {
             this.modName = modInfo.name_id;
             this.name = modInfo.name;
             this.fileVersion = modInfo.modfile.version === null ? "-" : modInfo.modfile.version;
+            this.downloadUrl = modInfo.modfile.download.binary_url;
+
             for (const tag of modInfo.tags) {
                 this.tags.push(tag.name);
             }
             this.convertModVersion();
-            this.convertModType();
+            this.convertModApprovalType();
             this.convertModRequired();
         }
     }
@@ -50,15 +55,15 @@ class ModListItem {
         this.tags = tags;
     }
 
-    private convertModType() {
+    private convertModApprovalType() {
         const tags = [];
         for (const tag of this.tags) {
             if (tag === "Verified" || tag === "Auto-Verified") {
-                this.type = "Verified";
+                this.approval = "Verified";
             } else if (tag === "Approved") {
-                this.type = "Approved";
+                this.approval = "Approved";
             } else if (tag === "Sandbox") {
-                this.type = "Sandbox";
+                this.approval = "Sandbox";
             } else {
                 tags.push(tag);
             }
@@ -88,32 +93,58 @@ class ModListDataV02 {
     public mods: ModListItem[];
 
 
-    public async setProfile(): Promise<void> {
+    public async setActiveProfile(name: string): Promise<void> {
+        this.activeProfile = name;
+    }
 
+    public async addProfile(name: string): Promise<void> {
+        this.profiles[name] = [];
+    }
+
+    public async removeProfile(name: string): Promise<void> {
+        delete this.profiles[name];
     }
 
     public async setModName(id: number, name: string): Promise<void> {
-
+        this.mods = this.mods.map(item => {
+            if (item.id === id) {
+                item.name = name;
+            }
+            return item;
+        });
     }
 
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
-
+        this.mods = this.mods.map(item => {
+            if (item.id === id) {
+                item.enabled = enable;
+            }
+            return item;
+        });
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
 
     }
 
-    public async setModPriority(id: number, priority: number): Promise<void> {
+    public async addModFromUrl(url: string): Promise<void> {
+        const resp = await ModioApi.getModInfoByLink(url);
+        console.log(resp);
+    }
+
+    public async addModFromPath(path: string): Promise<void> {
 
     }
 
-    public async addMod(): Promise<void> {
-
-    }
-
-    public async removeMod(): Promise<void> {
-
+    public async removeMod(id: number): Promise<void> {
+        this.mods = this.mods.filter(m => m.id !== id);
+        const profile = this.profiles[this.activeProfile];
+        const newProfile: ModCategory[] = [];
+        for (const category of profile) {
+            const categoryKey = Object.keys(category)[0];
+            newProfile[categoryKey] = category[categoryKey].filter(_id => _id !== id);
+        }
+        this.profiles[this.activeProfile] = newProfile;
     }
 
 }
@@ -151,7 +182,7 @@ class ModListViewModel {
                 ids.push(id);
             }
         }
-        console.log(ModListViewModel.viewModel);
+
         for (const id of ids) {
             const modItem = ModListViewModel.viewModel.mods[id];
             if (modItem.modId == -1) {
@@ -162,6 +193,7 @@ class ModListViewModel {
                     newModItem.id = id;
                     newModItem.enabled = modItem.enabled;
                     newModItem.url = modItem.url;
+                    newModItem.type = modItem.type;
                     ModListViewModel.viewModel.mods[id] = newModItem;
                 } catch (e) {
                     console.log(e);
@@ -171,10 +203,10 @@ class ModListViewModel {
     }
 
     private convertModListDataV01ToV02(data: any): ModListDataV02 {
-        const dataV02 = new ModListDataV02();
-        dataV02.activeProfile = data.active_profile;
-        dataV02.profiles = {};
-        dataV02.mods = [];
+        const modListData = new ModListDataV02();
+        modListData.activeProfile = data.active_profile;
+        modListData.profiles = {};
+        modListData.mods = [];
 
         for (const profile in data.profiles) {
             const mods = data.profiles[profile]["mods"];
@@ -182,22 +214,23 @@ class ModListViewModel {
             const modioCategory: number[] = [];
             for (const modItem of mods) {
                 const url = modItem["spec"]["url"];
-                const id = dataV02.mods.length;
-
+                const id = modListData.mods.length;
                 const item = new ModListItem();
                 item.url = url;
                 item.enabled = modItem["enabled"];
-                dataV02.mods.push(item);
 
+                modListData.mods.push(item);
                 if (url.startsWith("https")) {
+                    item.type = "modio";
                     modioCategory.push(id);
                 } else {
+                    item.type = "local";
                     localCategory.push(id);
                 }
             }
-            dataV02.profiles[profile] = [{"local": localCategory}, {"modio": modioCategory}];
+            modListData.profiles[profile] = [{"local": localCategory}, {"modio": modioCategory}];
         }
-        return dataV02;
+        return modListData;
     }
 
     private unifiedModListData(config: string) {

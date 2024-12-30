@@ -11,7 +11,8 @@ import {
     TreeProps,
     Select,
     SelectProps,
-    MenuProps, Input,
+    MenuProps,
+    message,
 } from 'antd';
 import Search from "antd/es/input/Search";
 import {
@@ -27,7 +28,6 @@ import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
 import ModListViewModel from "../models/ModPageVM.ts";
 import {CheckboxChangeEvent} from "antd/es/checkbox";
-import ModioApi from "../apis/ModioApi.ts";
 
 
 interface ModListPageState {
@@ -56,6 +56,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
         this.onAddModClick = this.onAddModClick.bind(this);
         this.onEditProfileClick = this.onEditProfileClick.bind(this);
+        this.onUpdateClick = this.onUpdateClick.bind(this);
         this.onSelectChange = this.onSelectChange.bind(this);
         this.onTreeNodeSelect = this.onTreeNodeSelect.bind(this);
         this.onTreeNodeExpand = this.onTreeNodeExpand.bind(this);
@@ -66,12 +67,15 @@ class ModListPage extends React.Component<any, ModListPageState> {
         this.addModDialogRef.current?.show();
     }
 
+    private async onUpdateClick() {
+        await message.info("Updating...");
+    }
+
     private onEditProfileClick() {
         this.profileEditDialogRef.current?.show();
     }
 
     private onCheckboxChange(e: CheckboxChangeEvent) {
-        console.log(e.target.checked);
         this.setState({
             isMultiSelect: e.target.checked
         })
@@ -144,6 +148,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     required: modItem.required,
                     enabled: modItem.enabled,
                     type: modItem.type,
+                    approval: modItem.approval,
                     versions: modItem.versions,
                     fileVersion: modItem.fileVersion,
                 });
@@ -162,20 +167,24 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
 
-    private customTitleRender(nodeData) {
+    private customTitleRender(nodeData: any) {
 
         if (nodeData.isLeaf) {
             return (
                 <span style={{width: "100%", display: "block"}}>
                     <Switch checked={nodeData.enabled} size={"small"} style={{marginRight: "8px", marginTop: "-3px"}}/>
-                    <Select size={"small"} style={{marginRight: "8px", minWidth: "78px"}} value={nodeData.fileVersion}>
-                        <Select.Option value="1">{nodeData.fileVersion}</Select.Option>
-                    </Select>
+
+                    {nodeData.type === "modio" &&
+                        <Select size={"small"} style={{marginRight: "8px", minWidth: "78px"}}
+                                value={nodeData.fileVersion}>
+                            <Select.Option value="1">{nodeData.fileVersion}</Select.Option>
+                        </Select>}
+
                     <a>{nodeData.title}</a>
 
-                    {nodeData.type === "Verified" ? (<Tag color="blue" style={{float: "right"}}>V</Tag>) :
-                        nodeData.type === "Approved" ? (<Tag color="green" style={{float: "right"}}>A</Tag>) :
-                            nodeData.type === "Sandbox" ? (<Tag color="orange" style={{float: "right"}}>S</Tag>) :
+                    {nodeData.approval === "Verified" ? (<Tag color="blue" style={{float: "right"}}>V</Tag>) :
+                        nodeData.approval === "Approved" ? (<Tag color="green" style={{float: "right"}}>A</Tag>) :
+                            nodeData.approval === "Sandbox" ? (<Tag color="orange" style={{float: "right"}}>S</Tag>) :
                                 (<></>)}
 
                     {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
@@ -226,21 +235,24 @@ class ModListPage extends React.Component<any, ModListPageState> {
                 <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <div style={{marginTop: "5px"}}>
                     <Button type="text">
-                        <SaveOutlined/>Apply Changes
+                        <SaveOutlined/>
+                        Apply Changes
                     </Button>
                     <Button type="text">
-                        <DeleteOutlined/>Uninstall All
+                        <DeleteOutlined/>
+                        Uninstall All
                     </Button>
                     <Button type="text">
-                        <PlayCircleOutlined/>Launch Game
+                        <PlayCircleOutlined/>
+                        Launch Game
                     </Button>
                 </div>
-                <Card className="mod-list-page-card">
+                <Card className="mod-list-page-card" size={"small"}>
                     <Flex>
                         <Button type="text" size={"small"} onClick={this.onAddModClick}>
                             <PlusCircleOutlined/>
                         </Button>
-                        <Button type="text" size={"small"} onClick={this.onEditProfileClick}>
+                        <Button type="text" size={"small"} onClick={this.onUpdateClick}>
                             <ArrowUpOutlined/>
                         </Button>
                         <Select
@@ -291,7 +303,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
                                   onChange={this.onCheckboxChange}
                         />
                         <Button type="text" size={"small"}>
-                            <CloseCircleOutlined/>Delete Select
+                            <CloseCircleOutlined/>
+                            Delete Select
                         </Button>
                     </Flex>
                 </Card>
