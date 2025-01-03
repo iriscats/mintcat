@@ -39,7 +39,7 @@ edition.workspace = true
 build = "src/build.rs"
 
 [build-dependencies]
-winres = "*"
+winresource = "*"
 
 [features]
 default = ["hook"]
