@@ -54,6 +54,11 @@ pub fn uninstall_ue4ss(install_path: &PathBuf) {
         fs::remove_file(&ue4ss_dll).unwrap();
     }
 
+    let proxy_dll = install_path.join("dwmapi.dll");
+    if fs::exists(&proxy_dll).expect("REASON") {
+        fs::remove_file(&proxy_dll).unwrap();
+    }
+
     let ue4ss_mods = install_path.join("mods");
     if fs::exists(&ue4ss_mods).expect("REASON") {
         fs::remove_dir_all(&ue4ss_mods).unwrap();
