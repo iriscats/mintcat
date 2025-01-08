@@ -27,6 +27,7 @@ use crate::{
 use mint_lib::error::GenericError;
 use mint_lib::mod_info::MetaConfig;
 use mint_lib::update::GitHubRelease;
+use crate::integrate::error::SelfUpdateFailedSnafu;
 
 #[derive(Debug)]
 pub struct MessageHandle<S> {

@@ -14,11 +14,12 @@ use std::{
 
 use directories::ProjectDirs;
 use fs_err as fs;
-use integrate::IntegrationError;
+
 use providers::{ModResolution, ModSpecification, ProviderError, ProviderFactory};
 use snafu::prelude::*;
 use state::{State, StateError};
 use tracing::*;
+use crate::integrate::error::IntegrationError;
 
 #[derive(Debug, Snafu)]
 pub enum MintError {
