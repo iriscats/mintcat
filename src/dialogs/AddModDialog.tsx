@@ -2,7 +2,6 @@ import React from 'react';
 import {Form, Input, Modal, Tabs, TabsProps} from 'antd';
 import TextArea from "antd/es/input/TextArea";
 import {FolderAddOutlined} from "@ant-design/icons";
-import ModioApi from "../apis/ModioApi.ts";
 import ModListViewModel from "../models/ModPageVM.ts";
 
 interface AddModDialogStates {
@@ -43,11 +42,11 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         if (this.state.tabActiveKey === "modio") {
             const links = values["modLinks"].toString().split("\n");
             for (const link of links) {
-                await vm.addMod(link);
+                await vm.addModFromUrl(link);
             }
             this.setState({isModalOpen: false});
         } else {
-            await vm.addMod(values["path"]);
+            await vm.addModFromPath(values["path"]);
         }
     }
 

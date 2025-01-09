@@ -1,6 +1,6 @@
 [package]
 name = "mintcat"
-version = "0.1.0"
+version = "0.4.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -22,4 +22,9 @@ tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
+steamlocate = "2.0.0"
+snafu = "0.8.5"
+repak = { git = "https://github.com/trumank/repak" }
+patternsleuth = { git = "https://github.com/trumank/patternsleuth" }
+retour = { git = "https://github.com/Hpmason/retour-rs", features = ["static-detour"] }
+proxy_dll = { git = "https://github.com/iriscats/proxy_dll.git", rev = "5930441", version = "0.1.1" }

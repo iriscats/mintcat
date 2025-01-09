@@ -92,6 +92,9 @@ class ModListDataV02 {
     public profiles: ProfileData;
     public mods: ModListItem[];
 
+    public getModInfo(id: number): ModListItem {
+        return this.mods.find(m => m.id === id);
+    }
 
     public async setActiveProfile(name: string): Promise<void> {
         this.activeProfile = name;
@@ -138,13 +141,23 @@ class ModListDataV02 {
 
     public async removeMod(id: number): Promise<void> {
         this.mods = this.mods.filter(m => m.id !== id);
+
         const profile = this.profiles[this.activeProfile];
         const newProfile: ModCategory[] = [];
         for (const category of profile) {
             const categoryKey = Object.keys(category)[0];
-            newProfile[categoryKey] = category[categoryKey].filter(_id => _id !== id);
+            const tmp = {};
+            tmp[categoryKey] = category[categoryKey].filter(_id => _id !== id);
+            newProfile.push(tmp);
         }
         this.profiles[this.activeProfile] = newProfile;
+    }
+
+    public async addCategory(categoryKey: string): Promise<void> {
+        const profile = this.profiles[this.activeProfile];
+        const tmp = {};
+        tmp[categoryKey] = [];
+        profile.push(tmp)
     }
 
 }
@@ -216,6 +229,7 @@ class ModListViewModel {
                 const url = modItem["spec"]["url"];
                 const id = modListData.mods.length;
                 const item = new ModListItem();
+                item.id = id;
                 item.url = url;
                 item.enabled = modItem["enabled"];
 
