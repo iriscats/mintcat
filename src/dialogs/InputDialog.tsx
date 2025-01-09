@@ -38,7 +38,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     private async handleOk() {
         const values = this.localFormRef.current.getFieldsValue();
-        this.callback?.call(values["text"]);
+        this.callback?.call(this, values["text"]);
         this.setState({isModalOpen: false});
     }
 

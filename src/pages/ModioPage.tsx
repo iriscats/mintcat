@@ -1,20 +1,11 @@
 import React from 'react';
 import {Avatar, Card, Divider, List, Skeleton, Space} from 'antd';
-import {LikeOutlined, MessageOutlined, StarOutlined} from '@ant-design/icons';
+import {DownloadOutlined, LikeOutlined, MessageOutlined, StarOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
 import ModioApi from "../apis/ModioApi.ts";
+import {ModInfo} from "../models/ModInfo.ts";
 
-
-const data = Array.from({length: 23}).map((_, i) => ({
-    href: 'https://ant.design',
-    title: `Mod Title ${i}`,
-    avatar: `https://api.dicebear.com/7.x/miniavs/svg?seed=${i}`,
-    description:
-        'mod description',
-    content:
-        'mod content this is a very very very very very very very long description',
-}));
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
     <Space>
@@ -24,21 +15,26 @@ const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
 );
 
 interface ModioPageState {
-    dataSource: []
+    dataSource: ModInfo[]
 }
 
 class ModioPage extends React.Component<any, ModioPageState> {
 
     public constructor(props: any, context: ModioPageState) {
         super(props, context);
+
+        this.state = {
+            dataSource: []
+        }
     }
 
     componentDidMount() {
-
-        ModioApi.getModList().then(res => {
-            console.log(res);
+        ModioApi.getModList().then((res: any) => {
+            console.log(res.data);
+            this.setState({
+                dataSource: res.data
+            })
         })
-
     }
 
     render() {
@@ -47,17 +43,17 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 <div
                     id="scrollableDiv"
                     style={{
-                        height: 450,
+                        height: 464,
                         overflow: 'auto',
                     }}
                 >
-                    <div>
+                    <div style={{paddingBottom: '20px', paddingRight: '16px'}}>
                         <Search placeholder="Search"/>
                     </div>
 
                     <InfiniteScroll
-                        dataLength={data.length}
-                        hasMore={data.length < 50}
+                        dataLength={this.state.dataSource.length}
+                        hasMore={this.state.dataSource.length < 100}
                         loader={<Skeleton avatar paragraph={{rows: 1}} active/>}
                         endMessage={<Divider plain>It is all, nothing more 🤐</Divider>}
                         scrollableTarget="scrollableDiv"
@@ -67,7 +63,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                     >
                         <List
                             itemLayout="vertical"
-                            dataSource={data}
+                            dataSource={this.state.dataSource}
                             size={"small"}
                             footer={
                                 <div>
@@ -76,31 +72,33 @@ class ModioPage extends React.Component<any, ModioPageState> {
                             }
                             renderItem={(item) => (
                                 <List.Item
-                                    key={item.title}
-
+                                    key={item.name}
                                     actions={[
-                                        <IconText icon={StarOutlined} text="156" key="list-vertical-star-o"/>,
-                                        <IconText icon={LikeOutlined} text="156" key="list-vertical-like-o"/>,
-                                        <IconText icon={MessageOutlined} text="2" key="list-vertical-message"/>,
+                                        <IconText icon={DownloadOutlined}
+                                                  text={item.stats.downloads_total.toString()}/>,
+                                        <IconText icon={LikeOutlined}
+                                                  text={item.stats.subscribers_total.toString()}/>
                                     ]}
                                     extra={
                                         <img
                                             width={100}
                                             alt="logo"
-                                            src="https://gw.alipayobjects.com/zos/rmsportal/mqaQswcyDLcXyDKnZfES.png"
+                                            src={"https://api.v1st.net/" + item.logo.thumb_320x180}
                                         />
                                     }
                                 >
                                     <List.Item.Meta
-                                        avatar={<Avatar src={item.avatar}/>}
-                                        title={<a href={item.href}>{item.title}</a>}
-                                        description={item.description}
+                                        avatar={<Avatar
+                                            src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}/>}
+                                        title={<a href={item.name_id}>{item.name}</a>}
+                                        description={item.summary}
                                     />
-                                    {item.content}
+
                                 </List.Item>
                             )}
                         />
                     </InfiniteScroll>
+
                 </div>
             </Card>
         );

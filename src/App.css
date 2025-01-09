@@ -73,7 +73,12 @@
     border-radius: 0 0 6px 6px;
 }
 
-.ant-tree-title{
+.ant-tree-content {
+    height: 370px;
+    margin-top: 10px;
+}
+
+.ant-tree-title {
     display: block !important;
     width: 100% !important;
 }
@@ -82,6 +87,7 @@
     padding-inline: 4px !important;
 }
 
-.ant-tree-switcher{
+.ant-tree-switcher {
     width: 18px !important;
 }
+

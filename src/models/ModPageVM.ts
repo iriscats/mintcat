@@ -157,7 +157,7 @@ class ModListDataV02 {
         const profile = this.profiles[this.activeProfile];
         const tmp = {};
         tmp[categoryKey] = [];
-        profile.push(tmp)
+        profile.unshift(tmp);
     }
 
 }
