@@ -14,7 +14,6 @@ import {
     MenuProps,
     message, TreeDataNode,
 } from 'antd';
-import Search from "antd/es/input/Search";
 import {
     ArrowUpOutlined,
     CloseCircleOutlined,
@@ -22,7 +21,8 @@ import {
     EditOutlined, FolderOutlined,
     PlayCircleOutlined,
     PlusCircleOutlined,
-    SaveOutlined
+    SaveOutlined,
+    SearchOutlined
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
@@ -49,6 +49,29 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
 
+    private contextMenus: MenuProps['items'] = [
+        {
+            label: 'Add Group',
+            key: 'add_group',
+        },
+        {
+            label: 'Rename',
+            key: 'rename',
+        },
+        {
+            label: 'Delete',
+            key: 'delete',
+        }
+    ];
+
+    private filterOptions: SelectProps['options'] = [
+        {value: '1', label: 'Verified'},
+        {value: '2', label: 'Approved'},
+        {value: '3', label: 'Sandbox'},
+        {value: '3', label: 'RequiredByAll'},
+        {value: '3', label: 'Optional'}
+    ]
+
     public constructor(props: any, context: ModListPageState) {
         super(props, context);
 
@@ -65,7 +88,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
         this.onTreeNodeSelect = this.onTreeNodeSelect.bind(this);
         this.onTreeNodeExpand = this.onTreeNodeExpand.bind(this);
         this.onTreeRightClick = this.onTreeRightClick.bind(this);
-        this.onCheckboxChange = this.onCheckboxChange.bind(this);
+        this.onMultiCheckboxChange = this.onMultiCheckboxChange.bind(this);
         this.onMenuClick = this.onMenuClick.bind(this);
         this.onDrop = this.onDrop.bind(this);
         this.onSwitchChange = this.onSwitchChange.bind(this);
@@ -84,15 +107,13 @@ class ModListPage extends React.Component<any, ModListPageState> {
         this.profileEditDialogRef.current?.show();
     }
 
-    private onCheckboxChange(e: CheckboxChangeEvent) {
+    private onMultiCheckboxChange(e: CheckboxChangeEvent) {
         this.setState({
             isMultiSelect: e.target.checked
         })
     }
 
     private onDrop(info) {
-        console.log(info);
-
         const dropKey = info.node.key;
         const dragKey = info.dragNode.key;
         const dropPos = info.node.pos.split('-');
@@ -186,20 +207,23 @@ class ModListPage extends React.Component<any, ModListPageState> {
         const vm = await ModListViewModel.getViewModel();
         if (e.key === "add_group") {
             this.inputDialogRef.current.setCallback(async (text) => {
+                console.log(text);
                 await vm.addCategory(text);
+                await this.updateModListTree();
             })
             this.inputDialogRef.current?.show();
-        } else if (e.key === "edit") {
+        } else if (e.key === "rename") {
             this.inputDialogRef.current.setCallback(async (text) => {
-                //await vm.addCategory(text);
+                await vm.setModName(0, text);
+                await this.updateModListTree();
             })
             this.inputDialogRef.current?.show();
         } else if (e.key === "delete") {
             for (const item of this.state.selectedKeys!) {
                 await vm.removeMod(item);
+                await this.updateModListTree();
             }
         }
-        await this.updateModListTree();
     }
 
     private async updateProfileSelect() {
@@ -306,20 +330,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
         }
     }
 
-    private contextMenus: MenuProps['items'] = [
-        {
-            label: 'Add Group',
-            key: 'add_group',
-        },
-        {
-            label: 'Edit',
-            key: 'edit',
-        },
-        {
-            label: 'Delete',
-            key: 'delete',
-        }
-    ];
 
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
@@ -363,7 +373,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
                         </Button>
                         <Select
                             size={"small"}
-                            style={{width: "90%"}}
+                            style={{width: "50%"}}
                             value={this.state.defaultProfile}
                             options={this.state.options}
                             onChange={this.onSelectChange}
@@ -371,40 +381,50 @@ class ModListPage extends React.Component<any, ModListPageState> {
                         <Button type="text" size={"small"} onClick={this.onEditProfileClick}>
                             <EditOutlined/>
                         </Button>
-                        <Search size={"small"} placeholder="Search"/>
+                        <Select size={"small"}
+                                showSearch
+                                style={{width: "50%"}}
+                                suffixIcon={<SearchOutlined/>}
+                                options={this.filterOptions}
+                        />
                     </Flex>
-                    <Dropdown menu={{
-                        items: this.contextMenus,
-                        onClick: this.onMenuClick
-                    }}
-                              trigger={['contextMenu']}>
-                        <Tree
-                            style={{
-                                height: "370px",
-                                marginTop: "10px",
-                            }}
-                            height={370}
-                            draggable
-                            blockNode
-                            checkable={this.state.isMultiSelect}
-                            expandedKeys={this.state.expandedKeys}
-                            selectedKeys={this.state.selectedKeys}
-                            treeData={this.state.treeData}
-                            onSelect={this.onTreeNodeSelect}
-                            onRightClick={this.onTreeRightClick}
-                            onExpand={this.onTreeNodeExpand}
-                            onDrop={this.onDrop}
-                            titleRender={this.onCustomTitleRender}
+                    <Dropdown trigger={['contextMenu']}
+                              menu={{
+                                  items: this.contextMenus,
+                                  onClick: this.onMenuClick
+                              }}>
+                        <Tree className="ant-tree-content"
+                              height={370}
+                              draggable
+                              blockNode
+                              checkable={this.state.isMultiSelect}
+                              expandedKeys={this.state.expandedKeys}
+                              selectedKeys={this.state.selectedKeys}
+                              treeData={this.state.treeData}
+                              onSelect={this.onTreeNodeSelect}
+                              onRightClick={this.onTreeRightClick}
+                              onExpand={this.onTreeNodeExpand}
+                              onDrop={this.onDrop}
+                              titleRender={this.onCustomTitleRender}
                         />
                     </Dropdown>
                     <Flex style={{borderTop: "1px solid #eee", paddingTop: "8px"}}>
                         <Checkbox style={{margin: "0 10px 0 10px"}}
-                                  onChange={this.onCheckboxChange}
+                                  onChange={this.onMultiCheckboxChange}
                         />
-                        <Button type="text" size={"small"}>
-                            <CloseCircleOutlined/>
-                            Delete Select
-                        </Button>
+                        {
+                            this.state.isMultiSelect === true &&
+                            <>
+                                <Button type="text" size={"small"}>
+                                    <CloseCircleOutlined/>
+                                    Delete Selected
+                                </Button>
+                                <Button type="text" size={"small"}>
+                                    <CloseCircleOutlined/>
+                                    Update Selected
+                                </Button>
+                            </>
+                        }
                     </Flex>
                 </Card>
             </>
