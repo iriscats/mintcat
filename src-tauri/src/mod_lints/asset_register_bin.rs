@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-
-use crate::providers::ModSpecification;
+use crate::mod_info::ModSpecification;
 
 use super::{Lint, LintCtxt, LintError};
 

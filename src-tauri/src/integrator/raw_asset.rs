@@ -1,6 +1,7 @@
-use crate::integrate::error::IntegrationError;
+
 use unreal_asset::{Asset, AssetBuilder};
 use unreal_asset::engine_version::EngineVersion;
+use crate::integrator::error::IntegrationError;
 
 #[derive(Debug, Default)]
 pub struct RawAsset {

@@ -1,6 +1,5 @@
-use crate::{globals, ue::FString};
-
-use super::UEHash;
+use crate::capability::ue_hook_lib::globals::globals;
+use super::{FString, UEHash};
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u32)]

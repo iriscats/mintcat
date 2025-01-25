@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use tracing::info;
-use crate::providers::ReadSeek;
+use crate::integrator::ReadSeek;
 
 pub fn install_ue4ss(install_path: &PathBuf) {
     info!("install_ue4ss");

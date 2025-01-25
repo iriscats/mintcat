@@ -5,6 +5,7 @@ mod map;
 mod name;
 mod object;
 mod string;
+pub(crate) mod globals;
 
 pub use array::*;
 pub use malloc::*;
@@ -14,8 +15,6 @@ pub use object::*;
 pub use string::*;
 
 use std::ffi::c_void;
-
-use crate::globals;
 
 pub type FnFFrameStep =
     unsafe extern "system" fn(stack: &mut kismet::FFrame, *mut UObject, result: *mut c_void);

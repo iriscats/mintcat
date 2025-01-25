@@ -165,6 +165,12 @@ class ConfigApi {
         }));
     }
 
+
+    public static async saveModListData(data: string) {
+        return Promise.resolve();
+    }
+
+
     public static async loadUserData(data: string) {
         return await invoke('save_mod_list_data');
     }

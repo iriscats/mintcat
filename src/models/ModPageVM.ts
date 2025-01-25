@@ -133,6 +133,18 @@ class ModListDataV02 {
     public async addModFromUrl(url: string): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
         console.log(resp);
+
+        const profile = this.profiles[this.activeProfile];
+        const modListItem = new ModListItem(resp);
+        modListItem.id = this.mods.length;
+        this.mods.push(modListItem);
+
+        for (const category of profile) {
+            const categoryKey = Object.keys(category)[0];
+            if (categoryKey === "modio") {
+                category[categoryKey].unshift(modListItem.id);
+            }
+        }
     }
 
     public async addModFromPath(path: string): Promise<void> {

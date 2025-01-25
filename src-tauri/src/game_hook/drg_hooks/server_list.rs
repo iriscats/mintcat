@@ -1,14 +1,13 @@
 use std::ffi::c_void;
 
+use crate::capability::ue_hook_lib::globals::globals;
+use crate::capability::ue_hook_lib::{kismet, FName, FString, TArray, TMap, UObject};
+use crate::game_hook::drg_hooks::ExecFn;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::globals;
-use crate::hooks::ExecFn;
-use crate::ue::{self, FName, FString, TArray, TMap};
-
 retour::static_detour! {
-    static GetServerName: unsafe extern "system" fn(*const c_void, *const c_void) -> *const ue::FString;
+    static GetServerName: unsafe extern "system" fn(*const c_void, *const c_void) -> *const FString;
     static USessionHandlingFSDFillSessionSetting: unsafe extern "system" fn(*const c_void, *mut c_void, bool, *mut c_void, *mut c_void);
 }
 
@@ -41,7 +40,7 @@ pub unsafe fn init_hooks() -> Result<()> {
     Ok(())
 }
 
-fn detour_get_server_name(a: *const c_void, b: *const c_void) -> *const ue::FString {
+fn detour_get_server_name(a: *const c_void, b: *const c_void) -> *const FString {
     unsafe {
         let name = GetServerName.call(a, b).cast_mut().as_mut().unwrap();
 
@@ -84,7 +83,7 @@ fn detour_fill_session_setting(
         .as_str()
         .into();
 
-        type Fn = unsafe extern "system" fn(*const c_void, ue::FName, *const ue::FString, u32);
+        type Fn = unsafe extern "system" fn(*const c_void, FName, *const FString, u32);
 
         let f: Fn = std::mem::transmute(
             globals()
@@ -96,7 +95,7 @@ fn detour_fill_session_setting(
                 .0,
         );
 
-        f(game_settings, ue::FName::new(&"Mods".into()), &s, 3);
+        f(game_settings, FName::new(&"Mods".into()), &s, 3);
     }
 }
 
@@ -251,8 +250,8 @@ struct TSharedPtr {
 }
 
 unsafe extern "system" fn exec_get_mods_installed(
-    _context: *mut ue::UObject,
-    stack: *mut ue::kismet::FFrame,
+    _context: *mut UObject,
+    stack: *mut kismet::FFrame,
     result: *mut c_void,
 ) {
     let stack = stack.as_mut().unwrap();

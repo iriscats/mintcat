@@ -15,7 +15,7 @@ import {
 const {RangePicker} = DatePicker;
 
 
-class SettingPage extends React.Component {
+class SettingPage extends React.Component<any, any> {
 
     public constructor(props: any, context: any) {
         super(props, context);
@@ -23,7 +23,7 @@ class SettingPage extends React.Component {
 
 
     render() {
-        const [form] = Form.useForm();
+
         return (
             <Card>
                 <div
@@ -34,7 +34,6 @@ class SettingPage extends React.Component {
                     }}
                 >
                     <Form
-                        form={form}
                         style={{maxWidth: 600}}
                         initialValues={{variant: 'filled'}}
                     >

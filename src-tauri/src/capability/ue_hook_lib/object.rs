@@ -1,3 +1,4 @@
+use crate::capability::ue_hook_lib::globals::globals;
 use super::*;
 
 bitflags::bitflags! {

@@ -11,34 +11,24 @@ use std::{
 
 use anyhow::{Context, Result};
 use fs_err as fs;
-use mint_lib::DRGInstallationType;
-use windows::Win32::System::Memory::{VirtualProtect, PAGE_EXECUTE_READWRITE};
 
-use crate::{
-    globals,
-    ue::{self, FLinearColor, UObject},
-    LOG_GUARD,
+use crate::capability::ue_hook_lib::globals::{globals, USaveGame, LOG_GUARD};
+use crate::capability::ue_hook_lib::{
+    kismet, EFunctionFlags, FLinearColor, FString, TArray, UFunction, UObject,
 };
+use crate::installation::DRGInstallationType;
 
 retour::static_detour! {
-    static HookUFunctionBind: unsafe extern "system" fn(*mut ue::UFunction);
-    static SaveGameToSlot: unsafe extern "system" fn(*const USaveGame, *const ue::FString, i32) -> bool;
-    static LoadGameFromSlot: unsafe extern "system" fn(*const ue::FString, i32) -> *const USaveGame;
-    static DoesSaveGameExist: unsafe extern "system" fn(*const ue::FString, i32) -> bool;
+    static HookUFunctionBind: unsafe extern "system" fn(*mut UFunction);
+    static SaveGameToSlot: unsafe extern "system" fn(*const USaveGame, *const FString, i32) -> bool;
+    static LoadGameFromSlot: unsafe extern "system" fn(*const FString, i32) -> *const USaveGame;
+    static DoesSaveGameExist: unsafe extern "system" fn(*const FString, i32) -> bool;
     static UObjectTemperatureComponentTimerCallback: unsafe extern "system" fn(*mut c_void);
     static WinMain: unsafe extern "system" fn(*mut (), *mut (), *mut (), i32, *const ()) -> i32;
 
 }
 
-#[repr(C)]
-pub struct USaveGame;
-
-pub type FnSaveGameToMemory =
-    unsafe extern "system" fn(*const USaveGame, *mut ue::TArray<u8>) -> bool;
-pub type FnLoadGameFromMemory =
-    unsafe extern "system" fn(*const ue::TArray<u8>) -> *const USaveGame;
-
-type ExecFn = unsafe extern "system" fn(*mut ue::UObject, *mut ue::kismet::FFrame, *mut c_void);
+type ExecFn = unsafe extern "system" fn(*mut UObject, *mut kismet::FFrame, *mut c_void);
 
 pub unsafe fn initialize() -> Result<()> {
     let hooks = [
@@ -75,9 +65,7 @@ pub unsafe fn initialize() -> Result<()> {
                     .uobject_base
                     .get_path_name(None);
                 if let Some(hook) = hooks.get(path.as_str()) {
-                    function
-                        .function_flags
-                        .insert(ue::EFunctionFlags::FUNC_Native);
+                    function.function_flags.insert(EFunctionFlags::FUNC_Native);
                     function.func = *hook;
                 }
             }
@@ -136,7 +124,15 @@ pub unsafe fn initialize() -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 unsafe fn patch_mem(address: *mut u8, patch: impl AsRef<[u8]>) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+unsafe fn patch_mem(address: *mut u8, patch: impl AsRef<[u8]>) -> Result<()> {
+    use windows::Win32::System::Memory::{VirtualProtect, PAGE_EXECUTE_READWRITE};
+
     let patch = patch.as_ref();
     let patch_mem = std::slice::from_raw_parts_mut(address, patch.len());
 
@@ -162,7 +158,7 @@ unsafe fn patch_mem(address: *mut u8, patch: impl AsRef<[u8]>) -> Result<()> {
 
 static SAVES_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-fn get_path_for_slot(slot_name: &ue::FString) -> Option<PathBuf> {
+fn get_path_for_slot(slot_name: &FString) -> Option<PathBuf> {
     let mut str_path = slot_name.to_string();
     str_path.push_str(".sav");
 
@@ -180,7 +176,7 @@ fn get_path_for_slot(slot_name: &ue::FString) -> Option<PathBuf> {
 
 fn save_game_to_slot_detour(
     save_game_object: *const USaveGame,
-    slot_name: *const ue::FString,
+    slot_name: *const FString,
     user_index: i32,
 ) -> bool {
     unsafe {
@@ -188,7 +184,7 @@ fn save_game_to_slot_detour(
         if slot_name.to_string() == "Player" {
             SaveGameToSlot.call(save_game_object, slot_name, user_index)
         } else {
-            let mut data: ue::TArray<u8> = Default::default();
+            let mut data: TArray<u8> = Default::default();
 
             if !(globals().save_game_to_memory())(save_game_object, &mut data) {
                 return false;
@@ -208,21 +204,21 @@ fn save_game_to_slot_detour(
     }
 }
 
-fn load_game_from_slot_detour(slot_name: *const ue::FString, user_index: i32) -> *const USaveGame {
+fn load_game_from_slot_detour(slot_name: *const FString, user_index: i32) -> *const USaveGame {
     unsafe {
         let slot_name = &*slot_name;
         if slot_name.to_string() == "Player" {
             LoadGameFromSlot.call(slot_name, user_index)
         } else if let Some(data) = get_path_for_slot(slot_name).and_then(|path| fs::read(path).ok())
         {
-            (globals().load_game_from_memory())(&ue::TArray::from(data.as_slice()))
+            (globals().load_game_from_memory())(&TArray::from(data.as_slice()))
         } else {
             std::ptr::null()
         }
     }
 }
 
-fn does_save_game_exist_detour(slot_name: *const ue::FString, user_index: i32) -> bool {
+fn does_save_game_exist_detour(slot_name: *const FString, user_index: i32) -> bool {
     unsafe {
         let slot_name = &*slot_name;
         if slot_name.to_string() == "Player" {
@@ -259,17 +255,17 @@ fn detour_main(
 }
 
 unsafe extern "system" fn exec_get_mod_json(
-    _context: *mut ue::UObject,
-    stack: *mut ue::kismet::FFrame,
+    _context: *mut UObject,
+    stack: *mut kismet::FFrame,
     _result: *mut c_void,
 ) {
     let stack = stack.as_mut().unwrap();
 
-    let _ctx: Option<&ue::UObject> = stack.arg();
+    let _ctx: Option<&UObject> = stack.arg();
 
     stack.most_recent_property_address = std::ptr::null();
-    let ret: Option<ue::FString> = stack.arg();
-    let ret_address = (stack.most_recent_property_address as *mut ue::FString)
+    let ret: Option<FString> = stack.arg();
+    let ret_address = (stack.most_recent_property_address as *mut FString)
         .as_mut()
         .unwrap();
 
@@ -284,14 +280,14 @@ unsafe extern "system" fn exec_get_mod_json(
 }
 
 unsafe extern "system" fn exec_print_string(
-    _context: *mut ue::UObject,
-    stack: *mut ue::kismet::FFrame,
+    _context: *mut UObject,
+    stack: *mut kismet::FFrame,
     _result: *mut c_void,
 ) {
     let stack = stack.as_mut().unwrap();
 
     let _ctx: Option<NonNull<UObject>> = stack.arg();
-    let string: ue::FString = stack.arg();
+    let string: FString = stack.arg();
     let _print_to_screen: bool = stack.arg();
     let _print_to_log: bool = stack.arg();
     let _color: FLinearColor = stack.arg();

@@ -1,8 +1,9 @@
 use crate::mod_lints::LintError;
-use crate::providers::ProviderError;
-use mint_lib::mod_info::ModInfo;
+
 use snafu::Snafu;
 use std::path::PathBuf;
+use crate::error::ProviderError;
+use crate::mod_info::ModInfo;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
