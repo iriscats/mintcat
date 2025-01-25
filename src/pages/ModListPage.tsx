@@ -65,11 +65,11 @@ class ModListPage extends React.Component<any, ModListPageState> {
     ];
 
     private filterOptions: SelectProps['options'] = [
-        {value: '1', label: 'Verified'},
-        {value: '2', label: 'Approved'},
-        {value: '3', label: 'Sandbox'},
-        {value: '3', label: 'RequiredByAll'},
-        {value: '3', label: 'Optional'}
+        {value: 'Verified', label: 'Verified'},
+        {value: 'Approved', label: 'Approved'},
+        {value: 'Sandbox', label: 'Sandbox'},
+        {value: 'RequiredByAll', label: 'RequiredByAll'},
+        {value: 'Optional', label: 'Optional'}
     ]
 
     public constructor(props: any, context: ModListPageState) {
@@ -334,11 +334,11 @@ class ModListPage extends React.Component<any, ModListPageState> {
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
             this.updateModListTree().then(() => {
-                // ModListViewModel.updateModList().then(() => {
-                //     this.updateModListTree().then(() => {
-                //         this.forceUpdate();
-                //     });
-                // })
+                ModListViewModel.updateModList().then(() => {
+                    this.updateModListTree().then(() => {
+                        this.forceUpdate();
+                    });
+                })
             })
         });
     }

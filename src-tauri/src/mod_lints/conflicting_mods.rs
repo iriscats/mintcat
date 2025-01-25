@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexSet;
-
-use crate::providers::ModSpecification;
+use crate::mod_info::ModSpecification;
 
 use super::{Lint, LintCtxt, LintError};
 

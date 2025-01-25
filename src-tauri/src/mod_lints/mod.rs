@@ -18,7 +18,8 @@ use indexmap::IndexSet;
 use repak::PakReader;
 use snafu::prelude::*;
 use tracing::trace;
-
+use crate::integrator::ReadSeek;
+use crate::mod_info::ModSpecification;
 use self::archive_multiple_paks::ArchiveMultiplePaksLint;
 use self::archive_only_non_pak_files::ArchiveOnlyNonPakFilesLint;
 use self::asset_register_bin::AssetRegisterBinLint;
@@ -30,7 +31,6 @@ pub use self::split_asset_pairs::SplitAssetPair;
 use self::split_asset_pairs::SplitAssetPairsLint;
 use self::unmodified_game_assets::UnmodifiedGameAssetsLint;
 use crate::mod_lints::conflicting_mods::ConflictingModsLint;
-use crate::providers::{ModSpecification, ReadSeek};
 
 #[derive(Debug, Snafu)]
 pub enum LintError {

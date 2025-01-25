@@ -231,7 +231,8 @@ impl<K: PartialEq + UEHash, V> TMap<K, V> {
 
 #[cfg(test)]
 mod test {
-    use crate::ue::FName;
+    use crate::capability::ue_hook_lib::FName;
+    use FName;
 
     use super::*;
     const _: [u8; 0x50] = [0; std::mem::size_of::<TMap<FName, [u8; 0x20]>>()];

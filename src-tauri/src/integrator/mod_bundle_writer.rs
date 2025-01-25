@@ -1,5 +1,5 @@
-use crate::integrate::error::IntegrationError;
-use mint_lib::mod_info::{ApprovalStatus, Meta, MetaConfig, MetaMod, ModInfo, SemverVersion};
+use crate::integrator::error::IntegrationError;
+use crate::mod_info::{ApprovalStatus, Meta, MetaConfig, MetaMod, ModInfo, SemverVersion};
 use repak::PakWriter;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, Write};
@@ -59,7 +59,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
 
     pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<(), IntegrationError> {
         self.pak_writer
-            .write_file(self.normalize_path(path).as_str(), data)?;
+            .write_file(self.normalize_path(path).as_str(), true, data)?;
         Ok(())
     }
 

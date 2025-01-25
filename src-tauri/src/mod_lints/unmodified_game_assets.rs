@@ -8,8 +8,8 @@ use path_slash::PathExt;
 use rayon::prelude::*;
 use sha2::Digest;
 use tracing::trace;
+use crate::mod_info::ModSpecification;
 
-use crate::providers::ModSpecification;
 
 use super::{InvalidGamePathSnafu, Lint, LintCtxt, LintError};
 

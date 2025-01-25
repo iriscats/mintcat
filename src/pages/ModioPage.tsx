@@ -47,7 +47,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                         overflow: 'auto',
                     }}
                 >
-                    <div style={{paddingBottom: '20px', paddingRight: '16px'}}>
+                    <div style={{paddingBottom: '20px', paddingRight: '16px', position: "fixed"}}>
                         <Search placeholder="Search"/>
                     </div>
 

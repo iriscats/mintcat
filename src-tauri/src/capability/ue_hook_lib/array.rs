@@ -1,6 +1,5 @@
 use std::ffi::c_void;
-
-use crate::globals;
+use crate::capability::ue_hook_lib::globals::globals;
 
 #[derive(Debug)]
 #[repr(C)]

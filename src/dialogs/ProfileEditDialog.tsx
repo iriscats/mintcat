@@ -1,6 +1,5 @@
 import React from "react";
-import {Form, Input, Modal, Tabs} from "antd";
-import {FolderAddOutlined} from "@ant-design/icons";
+import {List, Modal} from "antd";
 
 
 interface ProfileEditDialogStates {
@@ -44,7 +43,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
             >
-
+                <List
+                />
             </Modal>
         );
     }
