@@ -1,8 +1,8 @@
-use mint_lib::DRGInstallation;
 use serde::Deserialize;
 use snafu::{ResultExt, Whatever};
 use std::collections::HashSet;
 use std::fs;
+use crate::installation::DRGInstallation;
 
 #[tracing::instrument(level = "debug")]
 pub fn uninstall_modio(

@@ -4,7 +4,6 @@ mod error;
 mod mod_info;
 mod logging;
 mod installation;
-//mod integrator;
 mod mod_lints;
 mod integrator;
 
@@ -33,6 +32,7 @@ async fn save_file(file_data: Vec<u8>, filename: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![greet])

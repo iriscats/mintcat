@@ -58,7 +58,7 @@ pub fn setup_logging<P: AsRef<Path>>(
         .with(stderr_log)
         .with(debug_file_log);
 
-    tracing::subscriber::set_global_default(subscriber)?;
+    subscriber::set_global_default(subscriber)?;
 
     debug!("tracing subscriber setup");
     info!("writing logs to {:?}", log_path.as_ref().display());

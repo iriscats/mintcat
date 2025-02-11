@@ -2,7 +2,7 @@
 name = "mintcat"
 version = "0.4.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["iriscat"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -37,6 +37,10 @@ bitflags = "2.6.0"
 widestring = "1.1.0"
 itertools = "0.14.0"
 
+rust-ini = "0.21.1"
+zip = { version = "2.2.0", default-features = false, features = ["aes-crypto", "deflate", "time"] }
+include_dir = "0.7.4"
+
 tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "env-filter", "std", "registry"] }
@@ -69,4 +73,3 @@ uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
 proxy_dll = { git = "https://github.com/iriscats/proxy_dll.git", rev = "5930441", version = "0.1.1" }
 retour = { git = "https://github.com/Hpmason/retour-rs", features = ["static-detour"] }
 
-zip = { version = "2.2.0", default-features = false, features = ["aes-crypto", "deflate", "time"] }

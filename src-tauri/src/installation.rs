@@ -1,8 +1,9 @@
-use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
+use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum DRGInstallationType {
+    #[default]
     Steam,
     Xbox,
 }
@@ -21,9 +22,7 @@ impl DRGInstallationType {
             _ => bail!("unrecognized exe file name: {exe_name}"),
         })
     }
-}
 
-impl DRGInstallationType {
     pub fn from_pak_path<P: AsRef<Path>>(pak: P) -> Result<Self> {
         let pak_name = pak
             .as_ref()
@@ -57,7 +56,7 @@ impl DRGInstallationType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DRGInstallation {
     pub root: PathBuf,
     pub installation_type: DRGInstallationType,
@@ -69,8 +68,8 @@ impl DRGInstallation {
     pub fn find() -> Option<Self> {
         steamlocate::SteamDir::locate()
             .ok()
-            .and_then(|steamdir| {
-                steamdir
+            .and_then(|steam_dir| {
+                steam_dir
                     .find_app(548430)
                     .ok()
                     .flatten()
