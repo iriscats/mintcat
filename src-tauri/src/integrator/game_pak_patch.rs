@@ -1,7 +1,9 @@
+use crate::integrator::error::IntegrationError;
 use std::io::{Read, Seek};
 use tracing::info;
-use uasset_utils::splice::{extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement};
-use crate::integrate::IntegrationError;
+use uasset_utils::splice::{
+    extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement,
+};
 use unreal_asset::{
     exports::ExportBaseTrait,
     flags::EObjectFlags,
@@ -14,6 +16,19 @@ use unreal_asset::{
     types::PackageIndex,
     Asset,
 };
+
+static pcb_path: &str = "FSD/Content/Game/BP_PlayerControllerBase";
+static patch_paths: [&str; 6] = [
+    "FSD/Content/Game/BP_GameInstance",
+    "FSD/Content/Game/SpaceRig/BP_PlayerController_SpaceRig",
+    "FSD/Content/Game/StartMenu/Bp_StartMenu_PlayerController",
+    "FSD/Content/UI/Menu_DeepDives/ITM_DeepDives_Join",
+    "FSD/Content/UI/Menu_ServerList/_MENU_ServerList",
+    "FSD/Content/UI/Menu_ServerList/WND_JoiningModded",
+];
+static escape_menu_path: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
+static modding_tab_path: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
+static server_list_entry_path: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
 
 type ImportChain<'a> = Vec<Import<'a>>;
 
@@ -62,7 +77,7 @@ fn get_import<R: Read + Seek>(asset: &mut Asset<R>, import: ImportChain) -> Pack
 
 /// "it's only 3 instructions"
 /// "how much boilerplate could there possibly be"
-pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
+pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), IntegrationError> {
     let transform = get_import(
         asset,
         vec![
@@ -125,12 +140,12 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                     0f64.into(),
                 ),
             }
-                .into(),
+            .into(),
             ExRotationConst {
                 token: EExprToken::ExVectorConst,
                 rotator: Vector::new(0f64.into(), 0f64.into(), 0f64.into()),
             }
-                .into(),
+            .into(),
             ExVectorConst {
                 token: EExprToken::ExVectorConst,
                 value: unreal_asset::types::vector::Vector::new(
@@ -139,7 +154,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                     1f64.into(),
                 ),
             }
-                .into(),
+            .into(),
         ],
     };
     let prop_class_name = asset.add_fname("begin_spawn");
@@ -276,11 +291,11 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                    .into(),
+                .into(),
             ),
             expression: Box::new(ex_transform.into()),
         }
-            .into(),
+        .into(),
     );
 
     inst.insert(
@@ -298,7 +313,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         }),
                     },
                 }
-                    .into(),
+                .into(),
             ),
             assignment_expression: Box::new(
                 ExCallMath {
@@ -308,7 +323,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                         ExSelf {
                             token: EExprToken::ExSelf,
                         }
-                            .into(),
+                        .into(),
                         ExLocalVariable {
                             token: EExprToken::ExLocalVariable,
                             variable: KismetPropertyPointer {
@@ -319,7 +334,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                                 }),
                             },
                         }
-                            .into(),
+                        .into(),
                         ExLocalVariable {
                             token: EExprToken::ExLocalVariable,
                             variable: KismetPropertyPointer {
@@ -330,25 +345,25 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
                                 }),
                             },
                         }
-                            .into(),
+                        .into(),
                         ExByteConst {
                             token: EExprToken::ExByteConst,
                             value: 1,
                         }
-                            .into(),
+                        .into(),
                         ExSelf {
                             token: EExprToken::ExSelf,
                         }
-                            .into(),
+                        .into(),
                     ],
                 }
-                    .into(),
+                .into(),
             ),
         }
-            .into(),
+        .into(),
     );
 
-    inst.insert(
+    Ok(inst.insert(
         3,
         ExCallMath {
             token: EExprToken::ExCallMath,
@@ -379,10 +394,10 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) {
             ],
         }
             .into(),
-    );
+    ))
 }
 
-pub fn patch<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), IntegrationError> {
+pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), IntegrationError> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
 
@@ -449,7 +464,9 @@ pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Int
     Ok(())
 }
 
-pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), IntegrationError> {
+pub fn patch_modding_tab_item<C: Seek + Read>(
+    asset: &mut Asset<C>,
+) -> Result<(), IntegrationError> {
     let itm_tab_modding = get_import(
         asset,
         vec![
@@ -502,7 +519,9 @@ pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<()
     Ok(())
 }
 
-pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), IntegrationError> {
+pub fn patch_server_list_entry<C: Seek + Read>(
+    asset: &mut Asset<C>,
+) -> Result<(), IntegrationError> {
     let get_mods_installed = asset
         .imports
         .iter()
@@ -545,7 +564,7 @@ pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(
                         cm.parameters[1] = ExFalse {
                             token: EExprToken::ExFalse,
                         }
-                            .into();
+                        .into();
                         info!("patched server list entry");
                     }
                     if swap_platform && Some(cm.stack_node) == fsd_target_platform {
@@ -553,7 +572,7 @@ pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(
                             token: EExprToken::ExByteConst,
                             value: 0,
                         }
-                            .into();
+                        .into();
                     }
                 }
             });

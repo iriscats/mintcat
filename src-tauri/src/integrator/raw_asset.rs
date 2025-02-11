@@ -3,6 +3,8 @@ use unreal_asset::{Asset, AssetBuilder};
 use unreal_asset::engine_version::EngineVersion;
 use crate::integrator::error::IntegrationError;
 
+
+
 #[derive(Debug, Default)]
 pub struct RawAsset {
     pub uasset: Option<Vec<u8>>,
@@ -18,4 +20,5 @@ impl RawAsset {
         .bulk(std::io::Cursor::new(self.uexp.as_ref().unwrap()))
         .build()?)
     }
+
 }

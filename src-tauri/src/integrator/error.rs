@@ -55,6 +55,7 @@ pub(crate) enum IntegrationError {
     SelfUpdateFailed {
         source: Box<dyn std::error::Error + Send + Sync>,
     },
+    MissingPakFile { mod_info: ModInfo },
 }
 
 impl IntegrationError {

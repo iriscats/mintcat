@@ -1,17 +1,8 @@
-pub(crate) mod error;
-mod game_patch;
-mod mod_bundle_writer;
-mod modio;
-mod raw_asset;
-mod ue4ss;
-
 use fs_err as fs;
 use std::collections::{HashMap, HashSet};
 use std::io::{BufReader, BufWriter, Cursor, ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
-use mint_lib::mod_info::{ApprovalStatus, Meta, MetaConfig, MetaMod, SemverVersion};
-use mint_lib::DRGInstallation;
 use serde::Deserialize;
 use snafu::{prelude::*, Whatever};
 use tracing::info;
@@ -23,15 +14,19 @@ use uasset_utils::splice::{
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::{Asset, AssetBuilder};
 use zip::ZipArchive;
-
-use crate::integrate::error::{CtxtIoSnafu, CtxtRepakSnafu, GenericSnafu, IntegrationError};
-use crate::integrate::mod_bundle_writer::ModBundleWriter;
-use crate::integrate::raw_asset::RawAsset;
+use crate::installation::DRGInstallation;
+use crate::integrator::error::{CtxtIoSnafu, CtxtRepakSnafu, IntegrationError};
+use crate::integrator::{game_pak_patch, ReadSeek};
+use crate::integrator::mod_bundle_writer::ModBundleWriter;
+use crate::integrator::modio_patch::uninstall_modio;
+use crate::integrator::raw_asset::RawAsset;
+use crate::integrator::ue4ss_integrate::{install_ue4ss_mod, uninstall_ue4ss};
+use crate::mod_info::{MetaConfig, ModInfo};
 use crate::mod_lints::LintError;
-use crate::providers::{ModInfo, ProviderError, ReadSeek};
 
 static INTEGRATION_DIR: include_dir::Dir<'_> =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/assets/integration");
+
 
 #[tracing::instrument(skip_all)]
 pub fn integrate<P: AsRef<Path>>(
@@ -39,6 +34,8 @@ pub fn integrate<P: AsRef<Path>>(
     config: MetaConfig,
     mods: Vec<(ModInfo, PathBuf)>,
 ) -> Result<(), IntegrationError> {
+
+
     let Ok(installation) = DRGInstallation::from_pak_path(&path_pak) else {
         return Err(IntegrationError::DrgInstallationNotFound {
             path: path_pak.as_ref().to_path_buf(),
@@ -143,7 +140,7 @@ pub fn integrate<P: AsRef<Path>>(
         })?;
 
         // is zip file
-        let mut pak_buf;
+        let mut pak_buf: Option<Box<dyn ReadSeek>> = None;
         let mut dll_buf: Option<Box<dyn ReadSeek>> = None;
         if magic == [0x50, 0x4B, 0x03, 0x04] {
             let raw_mod_file = fs::File::open(path).with_context(|_| CtxtIoSnafu {
@@ -190,7 +187,7 @@ pub fn integrate<P: AsRef<Path>>(
         if dll_buf.is_none() {
             info!("mod {:?} no dll", mod_info.name);
         } else {
-            ue4ss::install_ue4ss_mod(
+            install_ue4ss_mod(
                 &installation.binaries_directory(),
                 &mod_info.name,
                 &mut dll_buf.unwrap(),
@@ -305,7 +302,7 @@ pub fn integrate<P: AsRef<Path>>(
 
     {
         let mut pcb_asset = deferred_assets[&pcb_path].parse()?;
-        game_patch::hook_pcb(&mut pcb_asset);
+        game_pak_patch::hook_pcb(&mut pcb_asset);
         bundle.write_asset(pcb_asset, pcb_path)?;
     }
 
@@ -319,11 +316,11 @@ pub fn integrate<P: AsRef<Path>>(
 
     // apply patches to base assets
     for patch_path in patch_paths {
-        patch_deferred(patch_path, game_patch::patch)?;
+        patch_deferred(patch_path, game_pak_patch::patch_sandbox)?;
     }
-    patch_deferred(escape_menu_path, game_patch::patch_modding_tab)?;
-    patch_deferred(modding_tab_path, game_patch::patch_modding_tab_item)?;
-    patch_deferred(server_list_entry_path, game_patch::patch_server_list_entry)?;
+    patch_deferred(escape_menu_path, game_pak_patch::patch_modding_tab)?;
+    patch_deferred(modding_tab_path, game_pak_patch::patch_modding_tab_item)?;
+    patch_deferred(server_list_entry_path, game_pak_patch::patch_server_list_entry)?;
 
     let mut int_files = HashMap::new();
     collect_dir_files(&INTEGRATION_DIR, &mut int_files);
@@ -446,7 +443,7 @@ pub fn uninstall<P: AsRef<Path>>(path_pak: P, modio_mods: HashSet<u32>) -> Resul
         .with_whatever_context(|_| format!("failed to remove {}", path_hook_dll.display()))?;
     }
 
-    crate::integrate::modio::uninstall_modio(&installation, modio_mods).ok();
-    ue4ss::uninstall_ue4ss(&installation.binaries_directory());
+    uninstall_modio(&installation, modio_mods).ok();
+    uninstall_ue4ss(&installation.binaries_directory());
     Ok(())
 }
