@@ -1,11 +1,11 @@
-mod capability;
-mod game_hook;
+pub mod capability;
+//mod game_hook;
 mod error;
-mod mod_info;
+pub mod mod_info;
 mod logging;
 mod installation;
-mod mod_lints;
-mod integrator;
+//mod mod_lints;
+pub mod integrator;
 
 use std::fs::File;
 use std::io::Write;

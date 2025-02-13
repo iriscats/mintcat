@@ -102,7 +102,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
                     version: "TODO".into(), // TODO
                     author: "TODO".into(),  // TODO
                     required: info.suggested_require,
-                    url: info.resolution.get_resolvable_url_or_name().to_string(),
+                    url: "https://".into(),
                     approval: info
                         .modio_tags
                         .as_ref()

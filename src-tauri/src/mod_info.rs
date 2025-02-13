@@ -40,9 +40,9 @@ pub enum ResolvableStatus {
 pub struct ModInfo {
     pub provider: &'static str,
     pub name: String,
-    pub spec: ModSpecification,          // unpinned version
+    //pub spec: ModSpecification,          // unpinned version
     pub versions: Vec<ModSpecification>, // pinned versions TODO make this a different type
-    pub resolution: ModResolution,
+    //pub resolution: ModResolution,
     pub suggested_require: bool,
     pub suggested_dependencies: Vec<ModSpecification>, // ModResponse
     pub modio_tags: Option<ModioTags>,                 // only available for mods from mod.io
