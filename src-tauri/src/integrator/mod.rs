@@ -6,7 +6,7 @@ mod error;
 mod ue4ss_integrate;
 mod game_pak_patch;
 mod modio_patch;
-mod pak_integrator;
+pub mod pak_integrator;
 
 pub trait ReadSeek: Read + Seek + Send {}
 

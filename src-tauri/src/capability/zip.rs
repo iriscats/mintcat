@@ -7,7 +7,7 @@ use std::path::Path;
 use zip::read::ZipArchive;
 use anyhow::{Result, Context};
 
-pub(crate) fn read_files_from_zip_by_extension(zip_path: &str, extension: &str) -> Result<Vec<(String, Vec<u8>)>> {
+pub fn read_files_from_zip_by_extension(zip_path: &str, extension: &str) -> Result<Vec<(String, Vec<u8>)>> {
     // 规范化扩展名格式（自动补全开头的点）
     let normalized_ext = if extension.starts_with('.') {
         extension.to_string()

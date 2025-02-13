@@ -17,18 +17,18 @@ use unreal_asset::{
     Asset,
 };
 
-static pcb_path: &str = "FSD/Content/Game/BP_PlayerControllerBase";
-static patch_paths: [&str; 6] = [
-    "FSD/Content/Game/BP_GameInstance",
-    "FSD/Content/Game/SpaceRig/BP_PlayerController_SpaceRig",
-    "FSD/Content/Game/StartMenu/Bp_StartMenu_PlayerController",
-    "FSD/Content/UI/Menu_DeepDives/ITM_DeepDives_Join",
-    "FSD/Content/UI/Menu_ServerList/_MENU_ServerList",
-    "FSD/Content/UI/Menu_ServerList/WND_JoiningModded",
-];
-static escape_menu_path: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
-static modding_tab_path: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
-static server_list_entry_path: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
+// static pcb_path: &str = "FSD/Content/Game/BP_PlayerControllerBase";
+// static patch_paths: [&str; 6] = [
+//     "FSD/Content/Game/BP_GameInstance",
+//     "FSD/Content/Game/SpaceRig/BP_PlayerController_SpaceRig",
+//     "FSD/Content/Game/StartMenu/Bp_StartMenu_PlayerController",
+//     "FSD/Content/UI/Menu_DeepDives/ITM_DeepDives_Join",
+//     "FSD/Content/UI/Menu_ServerList/_MENU_ServerList",
+//     "FSD/Content/UI/Menu_ServerList/WND_JoiningModded",
+// ];
+// static escape_menu_path: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
+// static modding_tab_path: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
+// static server_list_entry_path: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
 
 type ImportChain<'a> = Vec<Import<'a>>;
 

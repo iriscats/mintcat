@@ -1,4 +1,4 @@
-use crate::mod_lints::LintError;
+//use crate::mod_lints::LintError;
 
 use snafu::Snafu;
 use std::path::PathBuf;
@@ -7,7 +7,7 @@ use crate::mod_info::ModInfo;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
-pub(crate) enum IntegrationError {
+pub enum IntegrationError {
     #[snafu(display("unable to determine DRG installation at provided path {}", path.display()))]
     DrgInstallationNotFound { path: PathBuf },
     #[snafu(transparent)]
@@ -49,8 +49,8 @@ pub(crate) enum IntegrationError {
     GenericError { msg: String },
     #[snafu(transparent)]
     JoinError { source: tokio::task::JoinError },
-    #[snafu(transparent)]
-    LintError { source: LintError },
+    //#[snafu(transparent)]
+    //LintError { source: LintError },
     #[snafu(display("self update failed: {source:?}"))]
     SelfUpdateFailed {
         source: Box<dyn std::error::Error + Send + Sync>,
