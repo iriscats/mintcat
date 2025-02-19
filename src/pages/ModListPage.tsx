@@ -26,10 +26,11 @@ import {
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
-import ModListViewModel from "../models/ModPageVM.ts";
+import {ModListViewModel} from "../vm/ModPageVM.ts";
 import {CheckboxChangeEvent} from "antd/es/checkbox";
 import InputDialog from "../dialogs/InputDialog.tsx";
-
+import ConfigApi from "../apis/ConfigApi.ts";
+import {ModListPageContext} from "../AppContext.ts"
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -42,6 +43,9 @@ interface ModListPageState {
 }
 
 class ModListPage extends React.Component<any, ModListPageState> {
+
+    declare context: React.ContextType<typeof ModListPageContext>;
+    static contextType = ModListPageContext;
 
     private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
 
@@ -82,6 +86,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
         }
 
         this.onAddModClick = this.onAddModClick.bind(this);
+        this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
         this.onEditProfileClick = this.onEditProfileClick.bind(this);
         this.onUpdateClick = this.onUpdateClick.bind(this);
         this.onSelectChange = this.onSelectChange.bind(this);
@@ -105,6 +110,11 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private onEditProfileClick() {
         this.profileEditDialogRef.current?.show();
+    }
+
+    private async onLaunchGameClick() {
+        const vm = await ModListViewModel.getInstance();
+        await ConfigApi.loadConfig(JSON.stringify(vm));
     }
 
     private onMultiCheckboxChange(e: CheckboxChangeEvent) {
@@ -171,8 +181,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onSelectChange(value: string) {
         console.log(`Selected: ${value}`);
-        const vm = await ModListViewModel.getViewModel();
-        vm.activeProfile = value;
+        const vm = await ModListViewModel.getInstance();
+        await vm.setActiveProfile(value);
         await this.updateModListTree();
         this.setState({
             defaultProfile: value as string,
@@ -181,7 +191,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onSwitchChange(checked: boolean, node: any) {
         console.log(`Switch: ${checked}`, node);
-        const vm = await ModListViewModel.getViewModel();
+        const vm = await ModListViewModel.getInstance();
         await vm.setModEnabled(node.id, checked);
         await this.updateModListTree();
     }
@@ -204,7 +214,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
     };
 
     private async onMenuClick(e) {
-        const vm = await ModListViewModel.getViewModel();
+        const vm = await ModListViewModel.getInstance();
         if (e.key === "add_group") {
             this.inputDialogRef.current.setCallback(async (text) => {
                 console.log(text);
@@ -214,7 +224,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
             this.inputDialogRef.current?.show();
         } else if (e.key === "rename") {
             this.inputDialogRef.current.setCallback(async (text) => {
-                await vm.setModName(0, text);
+                await vm.setDisplayName(0, text);
                 await this.updateModListTree();
             })
             this.inputDialogRef.current?.show();
@@ -227,13 +237,13 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private async updateProfileSelect() {
-        const vm = await ModListViewModel.getViewModel();
-        if (vm.profiles === undefined) {
+        const vm = await ModListViewModel.getInstance();
+        if (vm.ActiveProfile === undefined) {
             return;
         }
 
         let options: SelectProps['options'] = [];
-        for (const profileKey in vm.profiles) {
+        for (const profileKey in vm.ActiveProfile) {
             options.push({
                 value: profileKey,
                 label: profileKey,
@@ -241,25 +251,23 @@ class ModListPage extends React.Component<any, ModListPageState> {
         }
         this.setState({
             options,
-            defaultProfile: vm.activeProfile,
+            defaultProfile: this.context.ActiveProfileName,
         })
     }
 
     private async updateModListTree() {
-        const vm = await ModListViewModel.getViewModel();
-        if (vm.profiles === undefined) {
+        if (this.context.ActiveProfile === undefined) {
             return;
         }
-
         const treeData = [];
         const expandedKeys = [];
-        const profile = vm.profiles[vm.activeProfile];
+        const profile = this.context.ActiveProfile[this.context.ActiveProfileName];
         for (const category of profile) {
             const categoryKey = Object.keys(category)[0];
             const mods = [];
             for (const id of category[categoryKey]) {
-                const modItem = vm.getModInfo(id);
-                const title = modItem.name === "" ? modItem.url : modItem.name;
+                const modItem = this.context.ModList.get(id);
+                const title = modItem.nameId === "" ? modItem.url : modItem.nameId;
                 mods.push({
                     id: id,
                     key: id,
@@ -334,7 +342,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
             this.updateModListTree().then(() => {
-                ModListViewModel.updateModList().then(() => {
+                this.context.updateModList().then(() => {
                     this.updateModListTree().then(() => {
                         this.forceUpdate();
                     });
@@ -350,15 +358,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
                 <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <InputDialog ref={this.inputDialogRef}/>
                 <div style={{marginTop: "5px"}}>
-                    <Button type="text">
-                        <SaveOutlined/>
-                        Apply Changes
-                    </Button>
-                    <Button type="text">
-                        <DeleteOutlined/>
-                        Uninstall All
-                    </Button>
-                    <Button type="text">
+                    <Button type="text" onClick={this.onLaunchGameClick}>
                         <PlayCircleOutlined/>
                         Launch Game
                     </Button>

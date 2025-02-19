@@ -14,7 +14,6 @@ import i18n from "./locales/i18n"
 
 import './App.css';
 
-
 const {
     Header,
     Footer,
