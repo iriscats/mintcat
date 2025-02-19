@@ -1,0 +1,53 @@
+export class ProfileList {
+    public version: string = "0.2.0";
+    public activeProfile: string = "default";
+    private profiles: string[] = [];
+
+    public get Profiles(): string[] {
+        return this.profiles;
+    }
+
+    public add(profile: string) {
+        this.profiles.push(profile);
+    }
+
+    public remove(profile: string) {
+        this.profiles.splice(this.profiles.indexOf(profile), 1);
+    }
+
+    public static fromJson(json_str: string): ProfileList {
+        const json = JSON.parse(json_str);
+        let profile = new ProfileList();
+        profile.version = json.version;
+        profile.activeProfile = json.active_profile;
+        profile.profiles = json.profiles;
+        return profile;
+    }
+
+    public toJson() {
+        const profile = {
+            "version": this.version,
+            "active_profile": this.activeProfile,
+            "profiles": this.profiles
+        }
+        return JSON.stringify(profile);
+    }
+
+}
+
+enum ProfileTreeType {
+    DIR = "dir",
+    ITEM = "item"
+}
+
+export class ProfileTree {
+    public version: string = "0.2.0";
+    public name: string = "";
+    public children: ProfileTreeItem[] = [];
+}
+
+export class ProfileTreeItem {
+    public id: number = 0;
+    public type: ProfileTreeType = ProfileTreeType.ITEM;
+    public children: ProfileTreeItem[] = [];
+}

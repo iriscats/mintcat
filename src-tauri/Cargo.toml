@@ -49,27 +49,26 @@ postcard = { version = "1.0.10", default-features = false, features = ["alloc"] 
 reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls", "blocking", "json"] }
 anyhow = { version = "1.0.92", features = ["backtrace"] }
 
-windows = { version = "0.58.0", features = [
-    "Win32_Foundation",
-    "Win32_System_SystemServices",
-    "Win32_System_LibraryLoader",
-    "Win32_System_Memory",
-    "Win32_System_Threading",
-] }
 
 # mod_lines
-indexmap = { version = "2.6.0", features = ["serde"] }
-sha2 = "0.10.8"
-path-slash = "0.2.1"
-rayon = "1.10.0"
 tokio = "1.41.1"
+#indexmap = { version = "2.6.0", features = ["serde"] }
+#sha2 = "0.10.8"
+#path-slash = "0.2.1"
+#rayon = "1.10.0"
+
 
 # trumank
-repak = { git = "https://github.com/trumank/repak" }
-# patternsleuth = { git = "https://github.com/trumank/patternsleuth", features = ["process-internal", "image-pe"]}
+repak = { git = "https://github.com/trumank/repak", features = ["oodle"] }
 unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "patches" }
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
-
+# patternsleuth = { git = "https://github.com/trumank/patternsleuth", features = ["process-internal", "image-pe"] }
 # proxy_dll = { git = "https://github.com/iriscats/proxy_dll.git", rev = "5930441", version = "0.1.1" }
 # retour = { git = "https://github.com/Hpmason/retour-rs", features = ["static-detour"] }
-
+# windows = { version = "0.58.0", features = [
+#    "Win32_Foundation",
+#    "Win32_System_SystemServices",
+#    "Win32_System_LibraryLoader",
+#    "Win32_System_Memory",
+#    "Win32_System_Threading",
+#] }

@@ -2,7 +2,7 @@ import React from 'react';
 import {Form, Input, Modal, Tabs, TabsProps} from 'antd';
 import TextArea from "antd/es/input/TextArea";
 import {FolderAddOutlined} from "@ant-design/icons";
-import ModListViewModel from "../models/ModPageVM.ts";
+import {ModListViewModel} from "../vm/ModPageVM.ts";
 
 interface AddModDialogStates {
     isModalOpen?: boolean;
@@ -37,17 +37,17 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     private async handleOk() {
         // https://mod.io/g/drg/m/10iron-will-recharge-10-minutes
-        const vm = await ModListViewModel.getViewModel();
-        const values = this.modioFormRef.current.getFieldsValue();
-        if (this.state.tabActiveKey === "modio") {
-            const links = values["modLinks"].toString().split("\n");
-            for (const link of links) {
-                await vm.addModFromUrl(link);
-            }
-            this.setState({isModalOpen: false});
-        } else {
-            await vm.addModFromPath(values["path"]);
-        }
+        // const vm = await ModListViewModel.getViewModel();
+        // const values = this.modioFormRef.current.getFieldsValue();
+        // if (this.state.tabActiveKey === "modio") {
+        //     const links = values["modLinks"].toString().split("\n");
+        //     for (const link of links) {
+        //         await vm.addModFromUrl(link);
+        //     }
+        //     this.setState({isModalOpen: false});
+        // } else {
+        //     await vm.addModFromPath(values["path"]);
+        // }
     }
 
     private handleCancel() {
