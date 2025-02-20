@@ -1,5 +1,5 @@
 import {ModList, ModListItem} from "../config/ModList.ts";
-import {ProfileList, ProfileTree, ProfileTreeItem} from "../config/ProfileList.ts";
+import {ProfileList, ProfileTree, ProfileTreeType} from "../config/ProfileList.ts";
 
 export class ModConfigConverter {
 
@@ -8,11 +8,9 @@ export class ModConfigConverter {
     public modList: ModList = new ModList();
 
     private convertModListDataV01ToV02(data: any) {
+        console.log("convertModListDataV01ToV02");
         for (const profile in data.profiles) {
-            const tree = new ProfileTree();
-            tree.name = profile;
-            tree.children = [];
-
+            const tree = new ProfileTree(profile);
             const mods = data.profiles[profile]["mods"];
             for (const modItem of mods) {
                 const item = new ModListItem();
@@ -21,9 +19,7 @@ export class ModConfigConverter {
                 item.enabled = modItem["enabled"];
 
                 const addedModItem = this.modList.add(item);
-                let treeItem = new ProfileTreeItem();
-                treeItem.id = addedModItem.id;
-                tree.children.push(treeItem);
+                tree.add(addedModItem.id, ProfileTreeType.ITEM);
             }
             this.profileTreeList.push(tree);
             this.profileList.add(profile);
@@ -33,7 +29,6 @@ export class ModConfigConverter {
     }
 
     public convertTo(config: string) {
-
         const data = JSON.parse(config);
         if (data.version === "0.1.0") {
             this.convertModListDataV01ToV02(data);

@@ -98,12 +98,12 @@ export class ModList {
         return modItem;
     }
 
-    public remove(modId: number) {
-        this.mods = this.mods.filter(m => m.id !== modId);
+    public remove(id: number) {
+        this.mods = this.mods.filter(m => m.id !== id);
     }
 
-    public get(modId: number): ModListItem | undefined {
-        return this.mods.find(m => m.modId === modId);
+    public get(id: number): ModListItem | undefined {
+        return this.mods.find(m => m.id === id);
     }
 
     public static fromJson(json_str: string): ModList {
