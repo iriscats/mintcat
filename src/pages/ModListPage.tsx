@@ -113,8 +113,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private async onLaunchGameClick() {
-        const vm = await ModListViewModel.getInstance();
-        await ConfigApi.loadConfig(JSON.stringify(vm));
     }
 
     private onMultiCheckboxChange(e: CheckboxChangeEvent) {
@@ -181,8 +179,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onSelectChange(value: string) {
         console.log(`Selected: ${value}`);
-        const vm = await ModListViewModel.getInstance();
-        await vm.setActiveProfile(value);
+        await this.context.setActiveProfile(value);
         await this.updateModListTree();
         this.setState({
             defaultProfile: value as string,
@@ -191,8 +188,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onSwitchChange(checked: boolean, node: any) {
         console.log(`Switch: ${checked}`, node);
-        const vm = await ModListViewModel.getInstance();
-        await vm.setModEnabled(node.id, checked);
+        await this.context.setModEnabled(node.id, checked);
         await this.updateModListTree();
     }
 
@@ -214,36 +210,30 @@ class ModListPage extends React.Component<any, ModListPageState> {
     };
 
     private async onMenuClick(e) {
-        const vm = await ModListViewModel.getInstance();
         if (e.key === "add_group") {
             this.inputDialogRef.current.setCallback(async (text) => {
                 console.log(text);
-                await vm.addCategory(text);
+                await this.context.addCategory(text);
                 await this.updateModListTree();
             })
             this.inputDialogRef.current?.show();
         } else if (e.key === "rename") {
             this.inputDialogRef.current.setCallback(async (text) => {
-                await vm.setDisplayName(0, text);
+                await this.context.setDisplayName(10000, text);
                 await this.updateModListTree();
             })
             this.inputDialogRef.current?.show();
         } else if (e.key === "delete") {
             for (const item of this.state.selectedKeys!) {
-                await vm.removeMod(item);
+                await this.context.removeMod(item);
                 await this.updateModListTree();
             }
         }
     }
 
     private async updateProfileSelect() {
-        const vm = await ModListViewModel.getInstance();
-        if (vm.ActiveProfile === undefined) {
-            return;
-        }
-
         let options: SelectProps['options'] = [];
-        for (const profileKey in vm.ActiveProfile) {
+        for (const profileKey of this.context.ProfileList) {
             options.push({
                 value: profileKey,
                 label: profileKey,
@@ -256,39 +246,35 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private async updateModListTree() {
-        if (this.context.ActiveProfile === undefined) {
-            return;
-        }
         const treeData = [];
         const expandedKeys = [];
-        const profile = this.context.ActiveProfile[this.context.ActiveProfileName];
-        for (const category of profile) {
-            const categoryKey = Object.keys(category)[0];
-            const mods = [];
-            for (const id of category[categoryKey]) {
-                const modItem = this.context.ModList.get(id);
-                const title = modItem.nameId === "" ? modItem.url : modItem.nameId;
-                mods.push({
-                    id: id,
-                    key: id,
-                    isLeaf: true,
-                    title: title,
-                    tags: modItem.tags,
-                    required: modItem.required,
-                    enabled: modItem.enabled,
-                    type: modItem.type,
-                    approval: modItem.approval,
-                    versions: modItem.versions,
-                    fileVersion: modItem.fileVersion,
-                });
-            }
-            expandedKeys.push(categoryKey);
-            treeData.push({
-                title: categoryKey,
-                key: categoryKey,
-                children: mods
-            })
+        const mods = [];
+
+        for (const item of this.context.ActiveProfile.children) {
+            const modItem = this.context.ModList.get(item.id);
+            const title = modItem.nameId === "" ? modItem.url : modItem.nameId;
+            mods.push({
+                id: modItem.id,
+                key: modItem.id,
+                isLeaf: true,
+                title: title,
+                tags: modItem.tags,
+                required: modItem.required,
+                enabled: modItem.enabled,
+                type: modItem.type,
+                approval: modItem.approval,
+                versions: modItem.versions,
+                fileVersion: modItem.fileVersion,
+            });
         }
+
+        treeData.push({
+            key: "root",
+            title: "Mods",
+            children: mods
+        })
+
+        //expandedKeys.push(categoryKey);
         this.setState({
             treeData,
             expandedKeys
@@ -297,8 +283,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
 
     private onCustomTitleRender(nodeData: any) {
-
-        //console.log(nodeData);
         if (nodeData.isLeaf) {
             return (
                 <span style={{width: "100%", display: "block"}}>
@@ -341,14 +325,14 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
-            this.updateModListTree().then(() => {
-                this.context.updateModList().then(() => {
-                    this.updateModListTree().then(() => {
-                        this.forceUpdate();
-                    });
-                })
-            })
         });
+        this.updateModListTree().then(() => {
+        });
+        this.context.updateModList().then(() => {
+/*            this.updateModListTree().then(() => {
+                this.forceUpdate();
+            });*/
+        })
     }
 
     render() {

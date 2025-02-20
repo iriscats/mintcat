@@ -2,7 +2,7 @@ import ConfigApi from "../apis/ConfigApi.ts";
 import ModioApi from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {ModList, ModListItem} from "./config/ModList.ts";
-import {ProfileList, ProfileTree, ProfileTreeItem} from "./config/ProfileList.ts";
+import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "./config/ProfileList.ts";
 
 export class ModListViewModel {
 
@@ -12,8 +12,8 @@ export class ModListViewModel {
         return this.converter.modList;
     }
 
-    public get ProfileList(): ProfileList {
-        return this.converter.profileList;
+    public get ProfileList(): string[] {
+        return this.converter.profileList.Profiles;
     }
 
     public get ActiveProfileName(): string {
@@ -21,7 +21,7 @@ export class ModListViewModel {
     }
 
     public get ActiveProfile(): ProfileTree {
-        return new ProfileTree();
+        return this.converter.profileTreeList.find(p => p.name === this.converter.profileList.activeProfile)!;
     }
 
     public constructor() {
@@ -29,22 +29,15 @@ export class ModListViewModel {
 
     public async addModFromUrl(url: string): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
-        console.log(resp);
         const addedModItem = this.converter.modList.add(new ModListItem(resp));
-
-        const profileTreeItem = new ProfileTreeItem();
-        profileTreeItem.id = addedModItem.id;
-        this.ActiveProfile.children.push(profileTreeItem);
+        this.ActiveProfile.add(addedModItem.id, ProfileTreeType.ITEM);
     }
 
     public async addModFromPath(path: string): Promise<void> {
         let modListItem = new ModListItem();
         modListItem.cachePath = path;
         const addedModItem = this.converter.modList.add(modListItem);
-
-        const profileTreeItem = new ProfileTreeItem();
-        profileTreeItem.id = addedModItem.id;
-        this.ActiveProfile.children.push(profileTreeItem);
+        this.ActiveProfile.add(addedModItem.id, ProfileTreeType.ITEM);
     }
 
     public async removeMod(id: number): Promise<void> {
@@ -96,7 +89,7 @@ export class ModListViewModel {
     public static async getInstance() {
         const vm = new ModListViewModel();
         let config = await ConfigApi.loadModListData();
-        if (config !== undefined) {
+        if (config === undefined) {
             config = await ConfigApi.loadModListDataV1();
             if (config !== undefined) {
                 vm.converter.convertTo(config);

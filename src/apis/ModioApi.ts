@@ -1,4 +1,4 @@
-import {ModInfo} from "../models/ModInfo.ts";
+import {ModInfo} from "../vm/modio/ModInfo.ts";
 
 const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io/";
 const MODIO_API_URL = "https://api.mod.io/";
