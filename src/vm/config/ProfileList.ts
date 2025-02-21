@@ -36,42 +36,34 @@ export class ProfileList {
 }
 
 export enum ProfileTreeType {
-    DIR = "dir",
+    FOLDER = "folder",
     ITEM = "item"
 }
 
 export class ProfileTree {
     public version: string = "0.2.0";
     public name: string = "";
-    public children: ProfileTreeItem[] = [];
+    public root: ProfileTreeItem = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
 
     public constructor(name: string) {
         this.name = name;
     }
 
-    public add(id: number, type: ProfileTreeType) {
-        this.children.push(new ProfileTreeItem(id, type));
-    }
-
-    public remove(id: number) {
-        this.children = this.children.filter(m => m.id !== id);
-        for (const child of this.children) {
-            child.remove(id);
-        }
-    }
 }
 
 export class ProfileTreeItem {
     public id: number = 0;
     public type: ProfileTreeType = ProfileTreeType.ITEM;
+    public name: string = "";
     public children: ProfileTreeItem[] = [];
 
-    public constructor(id: number, type: ProfileTreeType) {
+    public constructor(id: number, type: ProfileTreeType, name: string = "") {
         this.id = id;
         this.type = type;
+        this.name = name;
     }
 
-    public add(id: number, type: ProfileTreeType) {
+    public add(id: number, type: ProfileTreeType, name: string = "") {
         this.children.push(new ProfileTreeItem(id, type));
     }
 
@@ -82,3 +74,5 @@ export class ProfileTreeItem {
         }
     }
 }
+
+

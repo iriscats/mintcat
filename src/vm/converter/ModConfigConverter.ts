@@ -1,5 +1,5 @@
 import {ModList, ModListItem} from "../config/ModList.ts";
-import {ProfileList, ProfileTree, ProfileTreeType} from "../config/ProfileList.ts";
+import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "../config/ProfileList.ts";
 
 export class ModConfigConverter {
 
@@ -8,10 +8,14 @@ export class ModConfigConverter {
     public modList: ModList = new ModList();
 
     private convertModListDataV01ToV02(data: any) {
-        console.log("convertModListDataV01ToV02");
+
         for (const profile in data.profiles) {
             const tree = new ProfileTree(profile);
             const mods = data.profiles[profile]["mods"];
+
+            const localFolder = new ProfileTreeItem(90000, ProfileTreeType.FOLDER, "Local");
+            const modioFolder = new ProfileTreeItem(90001, ProfileTreeType.FOLDER, "mod.io");
+
             for (const modItem of mods) {
                 const item = new ModListItem();
                 item.url = modItem["spec"]["url"];
@@ -19,8 +23,16 @@ export class ModConfigConverter {
                 item.enabled = modItem["enabled"];
 
                 const addedModItem = this.modList.add(item);
-                tree.add(addedModItem.id, ProfileTreeType.ITEM);
+                if (item.url.startsWith("http")) {
+                    modioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
+                }else{
+                    localFolder.add(addedModItem.id, ProfileTreeType.ITEM);
+                }
             }
+
+            tree.root.children.push(localFolder);
+            tree.root.children.push(modioFolder);
+
             this.profileTreeList.push(tree);
             this.profileList.add(profile);
         }

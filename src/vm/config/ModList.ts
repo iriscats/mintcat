@@ -14,7 +14,7 @@ export class ModListItem {
     public usedVersion: string = "";
     public versions: string[] = [];
     public approval: string = "";
-    public type: string = "";
+    public isLocal: boolean = true;
     public downloadUrl: string = "";
     public cachePath: string = "";
 
@@ -29,6 +29,11 @@ export class ModListItem {
             for (const tag of modInfo.tags) {
                 this.tags.push(tag.name);
             }
+
+            if (this.url.startsWith("http") === true) {
+                this.isLocal = false;
+            }
+
             this.convertModVersion();
             this.convertModApprovalType();
             this.convertModRequired();
@@ -106,6 +111,22 @@ export class ModList {
         return this.mods.find(m => m.id === id);
     }
 
+    public update(oldItem: ModListItem, newItem: ModListItem) {
+        const index = this.mods.findIndex(m => m.id === oldItem.id);
+        if (index !== -1) {
+            newItem.id = oldItem.id;
+            newItem.enabled = oldItem.enabled;
+            newItem.url = oldItem.url;
+            if(oldItem.displayName !== ""){
+                newItem.displayName = oldItem.displayName;
+            }
+            if (newItem.url.startsWith("http") === true) {
+                newItem.isLocal = false;
+            }
+            this.mods[index] = newItem;
+        }
+    }
+
     public static fromJson(json_str: string): ModList {
         const json = JSON.parse(json_str);
         let modList = new ModList();
@@ -124,7 +145,7 @@ export class ModList {
             modItem.tags = mod.tags;
             modItem.versions = mod.versions;
             modItem.approval = mod.approval;
-            modItem.type = mod.type;
+            modItem.isLocal = mod.isLocal;
             modItem.downloadUrl = mod.download_url;
             modItem.cachePath = mod.cache_path;
             modList.mods.push(modItem);
@@ -148,7 +169,7 @@ export class ModList {
                 "tags": mod.tags,
                 "versions": mod.versions,
                 "approval": mod.approval,
-                "type": mod.type,
+                "is_local": mod.isLocal,
                 "download_url": mod.downloadUrl,
                 "cache_path": mod.cachePath
             }
