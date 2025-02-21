@@ -1,6 +1,6 @@
 import React from "react";
 import {Avatar, Flex, Image, Popconfirm} from "antd";
-import {QuestionCircleOutlined, SkinOutlined, UserOutlined} from '@ant-design/icons';
+import {BellOutlined, CloudSyncOutlined, QuestionCircleOutlined, SkinOutlined, UserOutlined} from '@ant-design/icons';
 import packageJson from '../../package.json';
 
 class TitleBar extends React.Component {
@@ -22,6 +22,7 @@ class TitleBar extends React.Component {
                     <h1>MintCat {packageJson.version}</h1>
                 </Flex>
                 <Flex gap="middle" justify={"flex-end"} wrap>
+                    <BellOutlined />
                     <Popconfirm
                         placement="bottom"
                         title={"text"}

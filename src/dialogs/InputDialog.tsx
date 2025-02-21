@@ -3,6 +3,8 @@ import {Form, Input, Modal} from 'antd';
 
 interface AddModDialogStates {
     isModalOpen?: boolean;
+    title?: string;
+    defaultValue?: any;
 }
 
 type InputCallback = (name: string) => void;
@@ -24,6 +26,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         this.show = this.show.bind(this);
         this.handleOk = this.handleOk.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
+        this.setCallback = this.setCallback.bind(this);
     }
 
     public show() {
@@ -32,8 +35,15 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         });
     }
 
-    public setCallback(callback: InputCallback) {
+    public setCallback(title: string, defaultValue: string, callback: InputCallback) {
         this.callback = callback;
+        this.localFormRef.current?.setFieldsValue({
+            text: defaultValue
+        })
+        this.setState({
+            title,
+            defaultValue
+        })
     }
 
     private async handleOk() {
@@ -48,14 +58,16 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     render() {
         return (
-            <Modal title="Input Name"
+            <Modal title={this.state.title}
                    open={this.state.isModalOpen}
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
             >
                 <Form ref={this.localFormRef} layout="vertical">
-                    <Form.Item name="text" label="Name" rules={[{required: true}]}>
-                        <Input/>
+                    <Form.Item name="text" label="Input Text" rules={[{required: true}]}>
+                        <Input defaultValue={this.state.defaultValue}
+                        allowClear
+                        />
                     </Form.Item>
                 </Form>
             </Modal>

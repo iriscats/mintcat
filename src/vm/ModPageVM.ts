@@ -30,19 +30,19 @@ export class ModListViewModel {
     public async addModFromUrl(url: string): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
         const addedModItem = this.converter.modList.add(new ModListItem(resp));
-        this.ActiveProfile.add(addedModItem.id, ProfileTreeType.ITEM);
+        this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
     }
 
     public async addModFromPath(path: string): Promise<void> {
         let modListItem = new ModListItem();
         modListItem.cachePath = path;
         const addedModItem = this.converter.modList.add(modListItem);
-        this.ActiveProfile.add(addedModItem.id, ProfileTreeType.ITEM);
+        this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
     }
 
     public async removeMod(id: number): Promise<void> {
         this.converter.modList.remove(id);
-        this.ActiveProfile.children = this.ActiveProfile.children.filter(m => m.id !== id);
+        this.ActiveProfile.root.remove(id);
     }
 
     public async setActiveProfile(activeProfile: string): Promise<void> {
@@ -83,7 +83,14 @@ export class ModListViewModel {
     }
 
     public async updateModList() {
-
+        for (const mod of this.converter.modList.Mods) {
+            if (mod.url.startsWith("http")) {
+                const resp = await ModioApi.getModInfoByLink(mod.url);
+                if (resp) {
+                    this.converter.modList.update(mod, new ModListItem(resp));
+                }
+            }
+        }
     }
 
     public static async getInstance() {
