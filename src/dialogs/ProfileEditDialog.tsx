@@ -1,14 +1,18 @@
 import React from "react";
 import {List, Modal} from "antd";
+import {ModListPageContext} from "../AppContext.ts";
 
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
-
+    dataSource?: any;
 }
 
 
 class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
+
+    declare context: React.ContextType<typeof ModListPageContext>;
+    static contextType = ModListPageContext;
 
     public constructor(props: any, context: ProfileEditDialogStates) {
         super(props, context);
@@ -36,6 +40,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         this.setState({isModalOpen: false});
     }
 
+
     render() {
         return (
             <Modal title="Edit Profile"
@@ -43,7 +48,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
             >
-                <List
+                <List dataSource={this.context.ProfileList}
                 />
             </Modal>
         );
