@@ -1,6 +1,6 @@
 import React from 'react';
 import {Avatar, Button, Card, Divider, Flex, List, Skeleton, Space} from 'antd';
-import {DownloadOutlined, LikeOutlined, MessageOutlined, PlusCircleOutlined, StarOutlined} from '@ant-design/icons';
+import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
 import ModioApi from "../apis/ModioApi.ts";
@@ -29,12 +29,14 @@ class ModioPage extends React.Component<any, ModioPageState> {
     }
 
     componentDidMount() {
-        ModioApi.getModList().then((res: any) => {
-            console.log(res.data);
-            this.setState({
-                dataSource: res.data
+        if (this.state.dataSource.length == 0) {
+            ModioApi.getModList().then((resp: any) => {
+                console.log(resp.data);
+                this.setState({
+                    dataSource: resp.data
+                })
             })
-        })
+        }
     }
 
     render() {

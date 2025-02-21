@@ -12,7 +12,6 @@ import {
     Switch,
     Tag,
     Tree,
-    TreeDataNode,
     TreeProps,
 } from 'antd';
 import {
@@ -29,7 +28,6 @@ import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
 import {CheckboxChangeEvent} from "antd/es/checkbox";
 import InputDialog from "../dialogs/InputDialog.tsx";
 import {ModListPageContext} from "../AppContext.ts"
-import {ProfileTreeType} from "../vm/config/ProfileList.ts";
 import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 
@@ -297,20 +295,23 @@ class ModListPage extends React.Component<any, ModListPageState> {
                                   items: this.contextMenus,
                                   onClick: this.onMenuClick
                               }}>
-                        <Tree className="ant-tree-content"
-                              height={400}
-                              draggable
-                              blockNode
-                              checkable={this.state.isMultiSelect}
-                              expandedKeys={this.state.expandedKeys}
-                              selectedKeys={this.state.selectedKeys}
-                              treeData={this.state.treeData}
-                              onSelect={this.onTreeNodeSelect}
-                              onRightClick={this.onTreeRightClick}
-                              onExpand={this.onTreeNodeExpand}
-                              onDrop={this.onDrop}
-                              titleRender={this.onCustomTitleRender}
-                        />
+                        {/*这里必须有一个 div 包裹，否则会出现无法 contextMenu 报错问题 https://github.com/ant-design/ant-design/issues/48709*/}
+                        <div>
+                            <Tree className="ant-tree-content"
+                                  height={400}
+                                  draggable
+                                  blockNode
+                                  checkable={this.state.isMultiSelect}
+                                  expandedKeys={this.state.expandedKeys}
+                                  selectedKeys={this.state.selectedKeys}
+                                  treeData={this.state.treeData}
+                                  onSelect={this.onTreeNodeSelect}
+                                  onRightClick={this.onTreeRightClick}
+                                  onExpand={this.onTreeNodeExpand}
+                                  onDrop={this.onDrop}
+                                  titleRender={this.onCustomTitleRender}
+                            />
+                        </div>
                     </Dropdown>
                     <Flex style={{borderTop: "1px solid #eee"}}>
                         <span style={{margin: "4px 10px 0 10px"}}>
