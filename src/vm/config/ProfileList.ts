@@ -45,6 +45,20 @@ export class ProfileTree {
     public name: string = "";
     public root: ProfileTreeItem = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
 
+    public get ModioFolder(): ProfileTreeItem | undefined {
+        const index = this.root.children.findIndex(p => p.id === 90001);
+        if (index >= 0) {
+            return this.root.children[index];
+        }
+    }
+
+    public get LocalFolder(): ProfileTreeItem | undefined {
+        const index = this.root.children.findIndex(p => p.id === 90001);
+        if (index >= 0) {
+            return this.root.children[index];
+        }
+    }
+
     public constructor(name: string) {
         this.name = name;
     }

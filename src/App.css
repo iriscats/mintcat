@@ -1,6 +1,6 @@
 :root {
-    width: 1112px;
-    height: 588px;
+    width: 100%;
+    height: 100%;
     background-color: #F5F8FF;
 }
 
@@ -46,6 +46,23 @@
     margin-right: 10px;
 }
 
+.ant-header-start-button {
+    margin-top: 8px;
+    border: none;
+}
+
+.ant-header-start-button::before {
+    inset: -1px;
+    opacity: 1;
+    transition: all 0.3s;
+    background: linear-gradient(135deg, #6253e1, #04befe);
+}
+
+.ant-header-start-button:hover::before {
+    opacity: 0;
+    background: linear-gradient(135deg, #04befe, #6253e1);
+}
+
 .ant-layout-footer {
     margin: 0 !important;
     padding: 0 !important;
@@ -54,9 +71,11 @@
 }
 
 .mod-list-page-card {
-    height: 92%;
-    margin: 4px 5px 0 5px;
-    padding: 0
+    padding: 2px;
+    border-radius: 0;
+    border: none;
+    height: 100%;
+    background-color: white;
 }
 
 .ant-progress {
@@ -70,12 +89,8 @@
     height: 1px;
 }
 
-.ant-tree {
-    border-radius: 0 0 6px 6px;
-}
-
 .ant-tree-content {
-    height: 400px;
+    height: 100%;
     margin-top: 10px;
 }
 

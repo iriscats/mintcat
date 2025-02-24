@@ -50,7 +50,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 >
                     <Flex vertical={true}>
 
-                        <Search placeholder="Search"/>
+                        <Search placeholder="Search on mod.io"/>
 
                         <InfiniteScroll
                             dataLength={this.state.dataSource.length}
@@ -82,7 +82,8 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                         ]}
                                         extra={
                                             <img
-                                                width={100}
+                                                width={180}
+                                                style={{border: '1px solid #eee'}}
                                                 alt="logo"
                                                 src={"https://api.v1st.net/" + item.logo.thumb_320x180}
                                             />
@@ -90,7 +91,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                     >
                                         <List.Item.Meta
                                             avatar={
-                                                <Avatar
+                                                <Avatar style={{width:'60px',height:'60px', marginTop:'4px'}}
                                                     src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
                                                 />
                                             }
