@@ -30,7 +30,16 @@ export class ModListViewModel {
     public async addModFromUrl(url: string): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
         const addedModItem = this.converter.modList.add(new ModListItem(resp));
-        this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
+
+        const modioItem = this.ActiveProfile.ModioFolder;
+        if (modioItem) {
+            this.ActiveProfile.ModioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
+        } else {
+            this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
+        }
+
+        console.log(this.ActiveProfile.root, this.ModList,"add mod from url");
+
     }
 
     public async addModFromPath(path: string): Promise<void> {
@@ -78,16 +87,17 @@ export class ModListViewModel {
         }
     }
 
-    public async addCategory(categoryKey: string): Promise<void> {
-
+    public async addGroup(parentId: number, groupName: string): Promise<void> {
+        this.ActiveProfile.root.add(90003, ProfileTreeType.FOLDER, groupName);
     }
 
-    public async updateModList() {
+    public async updateModList(onProgress: () => void): Promise<void> {
         for (const mod of this.converter.modList.Mods) {
             if (mod.url.startsWith("http")) {
                 const resp = await ModioApi.getModInfoByLink(mod.url);
                 if (resp) {
                     this.converter.modList.update(mod, new ModListItem(resp));
+                    onProgress()
                 }
             }
         }

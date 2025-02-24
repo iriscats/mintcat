@@ -1,6 +1,13 @@
 import React from "react";
-import {Avatar, Flex, Image, Popconfirm} from "antd";
-import {BellOutlined, CloudSyncOutlined, QuestionCircleOutlined, SkinOutlined, UserOutlined} from '@ant-design/icons';
+import {Avatar, Button, Flex, Image, Popconfirm} from "antd";
+import {
+    BellOutlined,
+    CloudSyncOutlined,
+    PlayCircleOutlined,
+    QuestionCircleOutlined,
+    SkinOutlined,
+    UserOutlined
+} from '@ant-design/icons';
 import packageJson from '../../package.json';
 
 class TitleBar extends React.Component {
@@ -9,6 +16,8 @@ class TitleBar extends React.Component {
         super(props, context);
     }
 
+    private async onLaunchGameClick() {
+    }
 
     render() {
         return (
@@ -22,7 +31,14 @@ class TitleBar extends React.Component {
                     <h1>MintCat {packageJson.version}</h1>
                 </Flex>
                 <Flex gap="middle" justify={"flex-end"} wrap>
-                    <BellOutlined />
+                    <Button
+                        type="primary"
+                        onClick={this.onLaunchGameClick}
+                        className={"ant-header-start-button"}>
+                        <PlayCircleOutlined/>
+                        Launch Game
+                    </Button>
+                    <BellOutlined/>
                     <Popconfirm
                         placement="bottom"
                         title={"text"}
@@ -36,7 +52,8 @@ class TitleBar extends React.Component {
                     <Avatar className={"app-header-avatar"} icon={<UserOutlined/>}/>
                 </Flex>
             </Flex>
-        );
+        )
+            ;
     }
 }
 

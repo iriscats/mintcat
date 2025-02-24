@@ -2,26 +2,28 @@ import React from "react";
 import {
     Button,
     Card,
-    Checkbox,
+    Checkbox, Divider,
     Dropdown,
     Flex,
     MenuProps,
     message,
     Select,
     SelectProps,
+    Space,
     Switch,
-    Tag,
+    Tag, Tooltip,
     Tree,
     TreeProps,
+    Typography,
 } from 'antd';
 import {
     ArrowUpOutlined,
-    CloseCircleOutlined,
-    EditOutlined,
-    FolderOutlined,
+    CloseCircleOutlined, CommentOutlined, DownloadOutlined,
+    EditOutlined, EllipsisOutlined,
+    FolderOutlined, GroupOutlined, HeartOutlined, LikeOutlined, MailOutlined, MobileOutlined,
     PlayCircleOutlined,
     PlusCircleOutlined,
-    SearchOutlined
+    SearchOutlined, ShareAltOutlined, StarOutlined, SyncOutlined, UnorderedListOutlined, WarningOutlined
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
@@ -30,6 +32,7 @@ import InputDialog from "../dialogs/InputDialog.tsx";
 import {ModListPageContext} from "../AppContext.ts"
 import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
+import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -76,7 +79,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
         }
 
         this.onAddModClick = this.onAddModClick.bind(this);
-        this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
         this.onEditProfileClick = this.onEditProfileClick.bind(this);
         this.onUpdateClick = this.onUpdateClick.bind(this);
         this.onSelectChange = this.onSelectChange.bind(this);
@@ -92,6 +94,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private onAddModClick() {
         this.addModDialogRef.current?.show();
+        console.log("AddModDialog");
     }
 
     private async onUpdateClick() {
@@ -100,9 +103,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private onEditProfileClick() {
         this.profileEditDialogRef.current?.show();
-    }
-
-    private async onLaunchGameClick() {
     }
 
     private onMultiCheckboxChange(e: CheckboxChangeEvent) {
@@ -115,6 +115,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
         this.setState({
             treeData: dragAndDrop(info, this.state.treeData),
         })
+        //TODO：treeData to vm
     }
 
     private async onSelectChange(value: string) {
@@ -150,18 +151,20 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onMenuClick(e) {
         if (e.key === "add_group") {
+            const parentId = this.state.selectedKeys[0];
             this.inputDialogRef.current.setCallback(
                 "Add Group",
                 "New Group",
                 async (text) => {
-                    await this.context.addCategory(text);
+                    await this.context.addGroup(parentId, text);
                     await this.updateModListTree();
                 });
             this.inputDialogRef.current?.show();
         } else if (e.key === "rename") {
+            const modName = this.context.ModList.get(this.state.selectedKeys[0])?.displayName;
             this.inputDialogRef.current.setCallback(
                 "Rename Mod",
-                this.context.ModList.get(this.state.selectedKeys[0])?.displayName,
+                modName,
                 async (text) => {
                     const key = this.state.selectedKeys[0];
                     await this.context.setDisplayName(key, text);
@@ -228,7 +231,10 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     {nodeData.required === "RequiredByAll" && (
                         <Tag color="orange" style={{float: "right"}}>RequiredByAll</Tag>)}
 
-                    {nodeData.tags.map(tag => (<Tag style={{float: "right"}}>{tag}</Tag>))}
+                    {nodeData.tags.map(tagName => (
+                        <Tag key={tagName} style={{float: "right"}}>{tagName}</Tag>
+                    ))}
+
                 </span>
             );
         } else {
@@ -246,59 +252,70 @@ class ModListPage extends React.Component<any, ModListPageState> {
         });
         this.updateModListTree().then(() => {
         });
-        this.context.updateModList().then(() => {
-            this.updateModListTree().then(() => {
-                this.forceUpdate();
-            });
-        })
+
+        // this.context.updateModList(() => {
+        //     this.updateModListTree().then(() => {
+        //     });
+        // }).then(() => {
+        // })
     }
 
     render() {
         return (
-            <>
+            <div className="mod-list-page-card">
                 <AddModDialog ref={this.addModDialogRef}/>
                 <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <InputDialog ref={this.inputDialogRef}/>
-                <div style={{marginTop: "5px"}}>
-                    <Button type="text" onClick={this.onLaunchGameClick}>
-                        <PlayCircleOutlined/>
-                        Launch Game
-                    </Button>
-                </div>
-                <Card className="mod-list-page-card" size={"small"}>
-                    <Flex>
-                        <Button type="text" size={"small"} onClick={this.onAddModClick}>
-                            <PlusCircleOutlined/>
-                        </Button>
-                        <Button type="text" size={"small"} onClick={this.onUpdateClick}>
-                            <ArrowUpOutlined/>
-                        </Button>
-                        <Select
-                            size={"small"}
-                            style={{width: "50%"}}
-                            value={this.state.defaultProfile}
-                            options={this.state.options}
-                            onChange={this.onSelectChange}
-                        />
-                        <Button type="text" size={"small"} onClick={this.onEditProfileClick}>
-                            <EditOutlined/>
-                        </Button>
-                        <Select size={"small"}
-                                showSearch
-                                style={{width: "50%"}}
-                                suffixIcon={<SearchOutlined/>}
-                                options={this.filterOptions}
-                        />
-                    </Flex>
+                <Flex vertical={true}>
+                    <Space split={<Divider type="vertical"/>} size={2}
+                           style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
+                        <Typography.Link>
+                            <Tooltip title="Like">
+                                <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
+                            </Tooltip>
+                            <Tooltip title="Comment">
+                                <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onUpdateClick}/>
+                            </Tooltip>
+                        </Typography.Link>
+                        <Typography.Link>
+                            <Tooltip title="Star">
+                                <Button icon={<UnorderedListOutlined/>} type={"text"}/>
+                            </Tooltip>
+                            <Tooltip title="Star">
+                                <Button icon={<TreeViewOutlined/>} type={"text"}/>
+                            </Tooltip>
+                        </Typography.Link>
+                        <Typography.Link>
+                            <Select
+                                size={"small"}
+                                style={{width: "150px"}}
+                                value={this.state.defaultProfile}
+                                options={this.state.options}
+                                onChange={this.onSelectChange}
+                            />
+                            <Tooltip title="Comment">
+                                <Button icon={<EditOutlined/>} type={"text"} onClick={this.onEditProfileClick}/>
+                            </Tooltip>
+                        </Typography.Link>
+                        <Typography.Link>
+                            <Select size={"small"}
+                                    showSearch
+                                    style={{width: "300px"}}
+                                    suffixIcon={<SearchOutlined/>}
+                                    options={this.filterOptions}
+                            />
+                        </Typography.Link>
+                    </Space>
                     <Dropdown trigger={['contextMenu']}
                               menu={{
                                   items: this.contextMenus,
                                   onClick: this.onMenuClick
                               }}>
-                        {/*这里必须有一个 div 包裹，否则会出现无法 contextMenu 报错问题 https://github.com/ant-design/ant-design/issues/48709*/}
+                        {/*这里必须有一个 div 包裹，否则会出现无法 contextMenu 报错问题
+                        https://github.com/ant-design/ant-design/issues/48709*/}
                         <div>
                             <Tree className="ant-tree-content"
-                                  height={400}
+                                  height={440}
                                   draggable
                                   blockNode
                                   checkable={this.state.isMultiSelect}
@@ -332,8 +349,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
                             }
                         </span>
                     </Flex>
-                </Card>
-            </>
+                </Flex>
+            </div>
         )
     }
 

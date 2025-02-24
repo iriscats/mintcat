@@ -30,7 +30,7 @@ export function dragAndDrop(nodeInfo: any, treeData: TreeDataNode[]) {
         dragObj = item;
     });
 
-    if (!nodeInfo.dropToGap) {
+    if (!nodeInfo.dropToGap && nodeInfo.node.isLeaf === false) {
         // Drop on the content
         loop(data, dropKey, (item) => {
             item.children = item.children || [];

@@ -1,13 +1,14 @@
 import React from "react";
 import {Menu, MenuProps} from "antd";
-import {AppstoreAddOutlined, SettingOutlined, UnorderedListOutlined} from "@ant-design/icons";
+import {AppstoreAddOutlined, HomeOutlined, SettingOutlined, UnorderedListOutlined} from "@ant-design/icons";
+import {ModioOutlined} from "./SvgIcon.tsx";
 
 
 type MenuItem = Required<MenuProps>['items'][number];
 
 const items: MenuItem[] = [
-    {key: 'mod_list', icon: <UnorderedListOutlined/>, label: 'Mod List'},
-    {key: 'modio', icon: <AppstoreAddOutlined/>, label: 'mod.io'},
+    {key: 'mod_list', icon: <HomeOutlined/>, label: 'Mod List'},
+    {key: 'modio', icon: <ModioOutlined/>, label: 'mod.io'},
     {key: 'settings', icon: <SettingOutlined/>, label: 'Settings'}
 ];
 
