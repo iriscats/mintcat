@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Button, Flex, Image, Popconfirm} from "antd";
+import {Avatar, Button, Flex, Image, Popconfirm, Tag} from "antd";
 import {
     BellOutlined,
     CloudSyncOutlined,
@@ -28,7 +28,19 @@ class TitleBar extends React.Component {
                         preview={false}
                         src="icon.ico"
                     />
-                    <h1>MintCat {packageJson.version}</h1>
+                    <h1>
+                        <b>
+                            <span style={{
+                                backgroundImage: "linear-gradient(to right, blue, purple)",
+                                backgroundClip: "text",
+                                color: "transparent"
+                            }}>MINT</span>
+                            <span style={{color: "purple"}}>CAT</span>
+                        </b>
+                    </h1>
+                    <span style={{fontSize: "12px", color: "gray", lineHeight: "54px", verticalAlign: "bottom"}}>
+                        v{packageJson.version}
+                    </span>
                 </Flex>
                 <Flex gap="middle" justify={"flex-end"} wrap>
                     <Button
