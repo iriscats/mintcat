@@ -1,29 +1,16 @@
 import React from "react";
 import {
-    Button,
-    Card,
-    Checkbox, Divider,
-    Dropdown,
-    Flex,
-    MenuProps,
-    message,
-    Select,
-    SelectProps,
-    Space,
-    Switch,
-    Tag, Tooltip,
-    Tree,
-    TreeProps,
-    Typography,
+    Button, Checkbox, Divider,
+    Dropdown, Flex, MenuProps, message, Select, SelectProps, Space, Switch, Tag, Tooltip, Tree, TreeProps, Typography,
 } from 'antd';
 import {
-    ArrowUpOutlined,
-    CloseCircleOutlined, CommentOutlined, DownloadOutlined,
-    EditOutlined, EllipsisOutlined,
-    FolderOutlined, GroupOutlined, HeartOutlined, LikeOutlined, MailOutlined, MobileOutlined,
-    PlayCircleOutlined,
+    CloseCircleOutlined,
+    EditOutlined,
+    FolderOutlined,
     PlusCircleOutlined,
-    SearchOutlined, ShareAltOutlined, StarOutlined, SyncOutlined, UnorderedListOutlined, WarningOutlined
+    SearchOutlined,
+    SyncOutlined,
+    UnorderedListOutlined
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
@@ -33,6 +20,7 @@ import {ModListPageContext} from "../AppContext.ts"
 import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
+import {TreeViewItem} from "../components/TreeViewItem.tsx";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -54,12 +42,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
     private readonly profileEditDialogRef: React.RefObject<ProfileEditDialog> = React.createRef();
 
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
-
-    private contextMenus: MenuProps['items'] = [
-        {label: 'Add Group', key: 'add_group'},
-        {label: 'Rename', key: 'rename'},
-        {label: 'Delete', key: 'delete'}
-    ];
 
     private filterOptions: SelectProps['options'] = [
         {value: 'Verified', label: 'Verified'},
@@ -150,32 +132,63 @@ class ModListPage extends React.Component<any, ModListPageState> {
     };
 
     private async onMenuClick(e) {
-        if (e.key === "add_group") {
-            const parentId = this.state.selectedKeys[0];
-            this.inputDialogRef.current.setCallback(
-                "Add Group",
-                "New Group",
-                async (text) => {
-                    await this.context.addGroup(parentId, text);
+        switch (e.key) {
+            case "add_mod":
+                this.addModDialogRef.current?.show();
+                break;
+            case "add_sub_group":
+                const parentId = this.state.selectedKeys[0];
+                this.inputDialogRef.current.setCallback(
+                    "Add Sub Group",
+                    "New Group",
+                    async (text) => {
+                        await this.context.addGroup(parentId, text);
+                        await this.updateModListTree();
+                    });
+                this.inputDialogRef.current?.show();
+                break;
+            case "delete_group":
+                for (const item of this.state.selectedKeys!) {
+                    await this.context.deleteGroup(item);
                     await this.updateModListTree();
-                });
-            this.inputDialogRef.current?.show();
-        } else if (e.key === "rename") {
-            const modName = this.context.ModList.get(this.state.selectedKeys[0])?.displayName;
-            this.inputDialogRef.current.setCallback(
-                "Rename Mod",
-                modName,
-                async (text) => {
-                    const key = this.state.selectedKeys[0];
-                    await this.context.setDisplayName(key, text);
+                }
+                break;
+            case "rename":
+                const modName = this.context.ModList.get(this.state.selectedKeys[0])?.displayName;
+                this.inputDialogRef.current.setCallback(
+                    "Rename Mod",
+                    modName,
+                    async (text) => {
+                        const key = this.state.selectedKeys[0];
+                        await this.context.setDisplayName(key, text);
+                        await this.updateModListTree();
+                    });
+                this.inputDialogRef.current?.show();
+                break;
+            case "rename_group":
+                const groupName = this.state.selectedKeys[0];
+                this.inputDialogRef.current.setCallback(
+                    "Rename Group",
+                    groupName,
+                    async (text) => {
+                        const key = this.state.selectedKeys[0];
+                        await this.context.setDisplayName(key, text);
+                        await this.updateModListTree();
+                    });
+                this.inputDialogRef.current?.show();
+                break;
+            case "delete":
+                for (const item of this.state.selectedKeys!) {
+                    await this.context.removeMod(item);
                     await this.updateModListTree();
-                });
-            this.inputDialogRef.current?.show();
-        } else if (e.key === "delete") {
-            for (const item of this.state.selectedKeys!) {
-                await this.context.removeMod(item);
-                await this.updateModListTree();
-            }
+                }
+                break;
+            case "copy_link":
+                break;
+            case "export":
+                break;
+            default:
+                break;
         }
     }
 
@@ -204,46 +217,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
 
     private onCustomTitleRender(nodeData: any) {
-        if (nodeData.isLeaf) {
-            return (
-                <span style={{width: "100%", display: "block"}}>
-                    <Switch checked={nodeData.enabled} size={"small"}
-                            onChange={(checked) => this.onSwitchChange(checked, nodeData)}
-                            style={{marginRight: "8px", marginTop: "-3px"}}
-                    />
-
-                    {nodeData.isLocal === false &&
-                        <Select size={"small"} style={{marginRight: "8px", minWidth: "78px"}}
-                                value={nodeData.fileVersion}>
-                            <Select.Option value={nodeData.fileVersion}>{nodeData.fileVersion}</Select.Option>
-                        </Select>}
-
-                    <a>{nodeData.title}</a>
-
-                    {nodeData.approval === "Verified" ? (<Tag color="blue" style={{float: "right"}}>V</Tag>) :
-                        nodeData.approval === "Approved" ? (<Tag color="green" style={{float: "right"}}>A</Tag>) :
-                            nodeData.approval === "Sandbox" ? (<Tag color="orange" style={{float: "right"}}>S</Tag>) :
-                                (<></>)}
-
-                    {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
-                        <Tag color="red" style={{float: "right"}}>{nodeData.versions[0]}</Tag>)}
-
-                    {nodeData.required === "RequiredByAll" && (
-                        <Tag color="orange" style={{float: "right"}}>RequiredByAll</Tag>)}
-
-                    {nodeData.tags.map(tagName => (
-                        <Tag key={tagName} style={{float: "right"}}>{tagName}</Tag>
-                    ))}
-
-                </span>
-            );
-        } else {
-            return (
-                <span style={{width: "100%", display: "block"}}>
-                   <FolderOutlined/> {nodeData.title}
-                </span>
-            );
-        }
+        return TreeViewItem(nodeData, this.onMenuClick);
     }
 
 
@@ -253,11 +227,11 @@ class ModListPage extends React.Component<any, ModListPageState> {
         this.updateModListTree().then(() => {
         });
 
-        // this.context.updateModList(() => {
-        //     this.updateModListTree().then(() => {
-        //     });
-        // }).then(() => {
-        // })
+        this.context.updateModList(() => {
+            this.updateModListTree().then(() => {
+            });
+        }).then(() => {
+        })
     }
 
     render() {
@@ -270,7 +244,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     <Space split={<Divider type="vertical"/>} size={2}
                            style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
                         <Typography.Link>
-                            <Tooltip title="Like">
+                            <Tooltip title="Add Mod">
                                 <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
                             </Tooltip>
                             <Tooltip title="Comment">
@@ -288,7 +262,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
                         <Typography.Link>
                             <Select
                                 size={"small"}
-                                style={{width: "150px"}}
+                                style={{width: "300px"}}
                                 value={this.state.defaultProfile}
                                 options={this.state.options}
                                 onChange={this.onSelectChange}
@@ -306,30 +280,21 @@ class ModListPage extends React.Component<any, ModListPageState> {
                             />
                         </Typography.Link>
                     </Space>
-                    <Dropdown trigger={['contextMenu']}
-                              menu={{
-                                  items: this.contextMenus,
-                                  onClick: this.onMenuClick
-                              }}>
-                        {/*这里必须有一个 div 包裹，否则会出现无法 contextMenu 报错问题
-                        https://github.com/ant-design/ant-design/issues/48709*/}
-                        <div>
-                            <Tree className="ant-tree-content"
-                                  height={440}
-                                  draggable
-                                  blockNode
-                                  checkable={this.state.isMultiSelect}
-                                  expandedKeys={this.state.expandedKeys}
-                                  selectedKeys={this.state.selectedKeys}
-                                  treeData={this.state.treeData}
-                                  onSelect={this.onTreeNodeSelect}
-                                  onRightClick={this.onTreeRightClick}
-                                  onExpand={this.onTreeNodeExpand}
-                                  onDrop={this.onDrop}
-                                  titleRender={this.onCustomTitleRender}
-                            />
-                        </div>
-                    </Dropdown>
+                    <Tree className="ant-tree-content"
+                          style={{minHeight: window.innerHeight - 155}}
+                          height={window.innerHeight - 155}
+                          draggable
+                          blockNode
+                          checkable={this.state.isMultiSelect}
+                          expandedKeys={this.state.expandedKeys}
+                          selectedKeys={this.state.selectedKeys}
+                          treeData={this.state.treeData}
+                          onSelect={this.onTreeNodeSelect}
+                          onRightClick={this.onTreeRightClick}
+                          onExpand={this.onTreeNodeExpand}
+                          onDrop={this.onDrop}
+                          titleRender={this.onCustomTitleRender}
+                    />
                     <Flex style={{borderTop: "1px solid #eee"}}>
                         <span style={{margin: "4px 10px 0 10px"}}>
                             <Checkbox onChange={this.onMultiCheckboxChange}
@@ -339,11 +304,11 @@ class ModListPage extends React.Component<any, ModListPageState> {
                                 <span>
                                     <Button type="text" size={"small"}>
                                         <CloseCircleOutlined/>
-                                        Delete Selected
+                                        Delete
                                     </Button>
                                     <Button type="text" size={"small"}>
                                         <CloseCircleOutlined/>
-                                        Update Selected
+                                        Update
                                     </Button>
                                 </span>
                             }

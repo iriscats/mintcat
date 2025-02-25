@@ -54,6 +54,10 @@ export class ModListViewModel {
         this.ActiveProfile.root.remove(id);
     }
 
+    public async deleteGroup(groupId: number): Promise<void> {
+        this.ActiveProfile.root.remove(groupId);
+    }
+
     public async setActiveProfile(activeProfile: string): Promise<void> {
         this.converter.profileList.activeProfile = activeProfile;
     }
