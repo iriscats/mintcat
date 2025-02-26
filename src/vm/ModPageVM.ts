@@ -27,18 +27,19 @@ export class ModListViewModel {
     public constructor() {
     }
 
-    public async addModFromUrl(url: string): Promise<void> {
+    public async addModFromUrl(url: string, groupId: number): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
-        const addedModItem = this.converter.modList.add(new ModListItem(resp));
+        const addedModItem = this.ModList.add(new ModListItem(resp));
+        addedModItem.enabled = true;
+        addedModItem.isLocal = false;
 
-        const modioItem = this.ActiveProfile.ModioFolder;
-        if (modioItem) {
+        if (this.ActiveProfile.ModioFolder) {
             this.ActiveProfile.ModioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
         } else {
             this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
         }
 
-        console.log(this.ActiveProfile.root, this.ModList,"add mod from url");
+        console.log(this.ActiveProfile.root, this.ModList, "add mod from url");
 
     }
 
@@ -52,10 +53,6 @@ export class ModListViewModel {
     public async removeMod(id: number): Promise<void> {
         this.converter.modList.remove(id);
         this.ActiveProfile.root.remove(id);
-    }
-
-    public async deleteGroup(groupId: number): Promise<void> {
-        this.ActiveProfile.root.remove(groupId);
     }
 
     public async setActiveProfile(activeProfile: string): Promise<void> {
@@ -77,6 +74,10 @@ export class ModListViewModel {
         }
     }
 
+    public async setGroupName(id: number, name: string): Promise<void> {
+        this.ActiveProfile.setGroupName(id, name);
+    }
+
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
         let modItem = this.converter.modList.get(id);
         if (modItem) {
@@ -91,8 +92,12 @@ export class ModListViewModel {
         }
     }
 
-    public async addGroup(parentId: number, groupName: string): Promise<void> {
-        this.ActiveProfile.root.add(90003, ProfileTreeType.FOLDER, groupName);
+    public async addGroup(groupId: number, groupName: string): Promise<void> {
+        this.ActiveProfile.addGroup(groupName, groupId);
+    }
+
+    public async removeGroup(groupId: number): Promise<void> {
+        this.ActiveProfile.removeGroup(groupId);
     }
 
     public async updateModList(onProgress: () => void): Promise<void> {

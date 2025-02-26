@@ -10,11 +10,11 @@ export class ModConfigConverter {
     private convertModListDataV01ToV02(data: any) {
 
         for (const profile in data.profiles) {
-            const tree = new ProfileTree(profile);
+            const profileTree = new ProfileTree(profile);
             const mods = data.profiles[profile]["mods"];
 
-            const localFolder = new ProfileTreeItem(90000, ProfileTreeType.FOLDER, "Local");
-            const modioFolder = new ProfileTreeItem(90001, ProfileTreeType.FOLDER, "mod.io");
+            const localFolder = profileTree.LocalFolder;
+            const modioFolder =  profileTree.ModioFolder;
 
             for (const modItem of mods) {
                 const item = new ModListItem();
@@ -30,10 +30,7 @@ export class ModConfigConverter {
                 }
             }
 
-            tree.root.children.push(localFolder);
-            tree.root.children.push(modioFolder);
-
-            this.profileTreeList.push(tree);
+            this.profileTreeList.push(profileTree);
             this.profileList.add(profile);
         }
 
