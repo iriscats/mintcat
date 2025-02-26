@@ -40,20 +40,29 @@ export enum ProfileTreeType {
     ITEM = "item"
 }
 
+export enum ProfileTreeGroupType {
+    MODIO = 90000,
+    LOCAL = 90001
+}
+
+
 export class ProfileTree {
     public version: string = "0.2.0";
     public name: string = "";
     public root: ProfileTreeItem = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
+    public groupNameMap: Map<number, string> = new Map<number, string>();
 
     public get ModioFolder(): ProfileTreeItem | undefined {
-        const index = this.root.children.findIndex(p => p.id === 90001);
+        const index = this.root.children
+            .findIndex(p => p.id === ProfileTreeGroupType.MODIO);
         if (index >= 0) {
             return this.root.children[index];
         }
     }
 
     public get LocalFolder(): ProfileTreeItem | undefined {
-        const index = this.root.children.findIndex(p => p.id === 90001);
+        const index = this.root.children
+            .findIndex(p => p.id === ProfileTreeGroupType.LOCAL);
         if (index >= 0) {
             return this.root.children[index];
         }
@@ -61,6 +70,59 @@ export class ProfileTree {
 
     public constructor(name: string) {
         this.name = name;
+
+        this.root.add(ProfileTreeGroupType.MODIO, ProfileTreeType.FOLDER, "mod.io");
+        this.root.add(ProfileTreeGroupType.LOCAL, ProfileTreeType.FOLDER, "Local");
+        this.groupNameMap.set(ProfileTreeGroupType.MODIO, "mod.io");
+        this.groupNameMap.set(ProfileTreeGroupType.LOCAL, "Local");
+    }
+
+    private makeId() {
+        return 90000 + this.groupNameMap.size;
+    }
+
+    private findNode(items: ProfileTreeItem[], targetId: number): ProfileTreeItem | undefined {
+        if (targetId === 0) {
+            return undefined;
+        }
+        for (const item of items) {
+            if (item.id === targetId)
+                return item;
+            const found = this.findNode(item.children, targetId);
+            if (found)
+                return found;
+        }
+        return undefined;
+    };
+
+    public setGroupName(id: number, name: string) {
+        const parent = this.findNode(this.root.children, id);
+        if (parent) {
+            parent.name = name;
+            this.groupNameMap.set(id, name);
+        }
+    }
+
+    public addGroup(name: string, parentId: number = 0) {
+        const parent = this.findNode(this.root.children, parentId);
+        if (parent) {
+            const newId = this.makeId();
+            parent.children.push(new ProfileTreeItem(newId, ProfileTreeType.FOLDER, name));
+            this.groupNameMap.set(newId, name);
+        } else {
+            // 默认添加到根目录
+            const newId = this.makeId();
+            this.root.add(newId, ProfileTreeType.FOLDER, name);
+            this.groupNameMap.set(newId, name);
+        }
+    }
+
+    public removeGroup(id: number) {
+        this.groupNameMap.delete(id);
+        const parent = this.findNode(this.root.children, id);
+        this.root.remove(id);
+
+        return parent;
     }
 
 }
@@ -78,7 +140,7 @@ export class ProfileTreeItem {
     }
 
     public add(id: number, type: ProfileTreeType, name: string = "") {
-        this.children.push(new ProfileTreeItem(id, type));
+        this.children.push(new ProfileTreeItem(id, type, name)); // 补上name参数
     }
 
     public remove(id: number) {

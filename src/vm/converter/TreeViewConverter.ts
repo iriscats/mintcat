@@ -19,7 +19,6 @@ export class TreeViewConverter {
                 const modItem = this.modList.get(item.id);
                 const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
                 parent.children.push({
-                    id: modItem.id,
                     key: modItem.id,
                     isLeaf: true,
                     title: title,

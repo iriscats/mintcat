@@ -1,14 +1,13 @@
 import React from "react";
 import {
     Button, Checkbox, Divider,
-    Dropdown, Flex, MenuProps, message, Select, SelectProps, Space, Switch, Tag, Tooltip, Tree, TreeProps, Typography,
+    Flex, MenuProps, message, Select, SelectProps, Space, Tooltip, Tree, TreeProps, Typography,
 } from 'antd';
 import {
     CloseCircleOutlined,
     EditOutlined,
-    FolderOutlined,
     PlusCircleOutlined,
-    SearchOutlined,
+    SearchOutlined, SortAscendingOutlined, SortDescendingOutlined,
     SyncOutlined,
     UnorderedListOutlined
 } from "@ant-design/icons";
@@ -75,8 +74,9 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private onAddModClick() {
-        this.addModDialogRef.current?.show();
-        console.log("AddModDialog");
+        this.addModDialogRef.current?.setCallback(0, async () => {
+            await this.updateTreeData();
+        }).show();
     }
 
     private async onUpdateClick() {
@@ -103,7 +103,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
     private async onSelectChange(value: string) {
         console.log(`Selected: ${value}`);
         await this.context.setActiveProfile(value);
-        await this.updateModListTree();
+        await this.updateTreeData();
         this.setState({
             defaultProfile: value as string,
         })
@@ -112,7 +112,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
     private async onSwitchChange(checked: boolean, node: any) {
         console.log(`Switch: ${checked}`, node);
         await this.context.setModEnabled(node.id, checked);
-        await this.updateModListTree();
+        await this.updateTreeData();
     }
 
     private onTreeNodeSelect(keys, info) {
@@ -131,67 +131,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
         })
     };
 
-    private async onMenuClick(e) {
-        switch (e.key) {
-            case "add_mod":
-                this.addModDialogRef.current?.show();
-                break;
-            case "add_sub_group":
-                const parentId = this.state.selectedKeys[0];
-                this.inputDialogRef.current.setCallback(
-                    "Add Sub Group",
-                    "New Group",
-                    async (text) => {
-                        await this.context.addGroup(parentId, text);
-                        await this.updateModListTree();
-                    });
-                this.inputDialogRef.current?.show();
-                break;
-            case "delete_group":
-                for (const item of this.state.selectedKeys!) {
-                    await this.context.deleteGroup(item);
-                    await this.updateModListTree();
-                }
-                break;
-            case "rename":
-                const modName = this.context.ModList.get(this.state.selectedKeys[0])?.displayName;
-                this.inputDialogRef.current.setCallback(
-                    "Rename Mod",
-                    modName,
-                    async (text) => {
-                        const key = this.state.selectedKeys[0];
-                        await this.context.setDisplayName(key, text);
-                        await this.updateModListTree();
-                    });
-                this.inputDialogRef.current?.show();
-                break;
-            case "rename_group":
-                const groupName = this.state.selectedKeys[0];
-                this.inputDialogRef.current.setCallback(
-                    "Rename Group",
-                    groupName,
-                    async (text) => {
-                        const key = this.state.selectedKeys[0];
-                        await this.context.setDisplayName(key, text);
-                        await this.updateModListTree();
-                    });
-                this.inputDialogRef.current?.show();
-                break;
-            case "delete":
-                for (const item of this.state.selectedKeys!) {
-                    await this.context.removeMod(item);
-                    await this.updateModListTree();
-                }
-                break;
-            case "copy_link":
-                break;
-            case "export":
-                break;
-            default:
-                break;
-        }
-    }
-
     private async updateProfileSelect() {
         let options: SelectProps['options'] = [];
         for (const profileKey of this.context.ProfileList) {
@@ -206,7 +145,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
         })
     }
 
-    private async updateModListTree() {
+    private async updateTreeData() {
         const converter = new TreeViewConverter(this.context.ModList);
         converter.convertTo(this.context.ActiveProfile);
         this.setState({
@@ -215,20 +154,93 @@ class ModListPage extends React.Component<any, ModListPageState> {
         })
     }
 
-
     private onCustomTitleRender(nodeData: any) {
         return TreeViewItem(nodeData, this.onMenuClick);
     }
 
+    private async onMenuClick(key: string, id: number) {
+        switch (key) {
+            case "add_new_group": {
+                this.inputDialogRef.current?.setCallback(
+                    "Add New Group",
+                    "New Group",
+                    async (text) => {
+                        await this.context.addGroup(0, text);
+                        await this.updateTreeData();
+                    })
+                    .show();
+            }
+                break;
+            case "add_sub_group":
+                this.inputDialogRef.current?.setCallback(
+                    "Add Sub Group",
+                    "New Group",
+                    async (text) => {
+                        await this.context.addGroup(id, text);
+                        await this.updateTreeData();
+                    }).show();
+                break;
+            case "delete_group":
+                await this.context.removeGroup(id);
+                await this.updateTreeData();
+                break;
+            case "rename_group":
+                const groupName = this.context.ActiveProfile.groupNameMap.get(id);
+                this.inputDialogRef.current?.setCallback(
+                    "Rename Group",
+                    groupName,
+                    async (text) => {
+                        await this.context.setGroupName(id, text);
+                        await this.updateTreeData();
+                    }).show();
+                break;
+            case "add_mod": {
+                this.addModDialogRef.current?.setCallback(id,
+                    async () => {
+                        await this.updateTreeData();
+                    }).show();
+            }
+                break;
+            case "rename":
+                const modName = this.context.ModList.get(id)?.displayName;
+                this.inputDialogRef.current.setCallback(
+                    "Rename Mod",
+                    modName,
+                    async (text) => {
+                        await this.context.setDisplayName(id, text);
+                        await this.updateTreeData();
+                    }).show();
+                break;
+            case "delete":
+                await this.context.removeMod(id);
+                await this.updateTreeData();
+                break;
+            case "copy_link":
+                try {
+                    const mod = this.context.ModList.get(id);
+                    if (mod?.url) {
+                        await navigator.clipboard.writeText(mod.url);
+                        message.success(`已复制到剪贴板: ${mod.url} `);
+                    }
+                } catch (err) {
+                    message.error('复制失败');
+                }
+                break;
+            case "export":
+                break;
+            default:
+                break;
+        }
+    }
 
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
         });
-        this.updateModListTree().then(() => {
+        this.updateTreeData().then(() => {
         });
 
         this.context.updateModList(() => {
-            this.updateModListTree().then(() => {
+            this.updateTreeData().then(() => {
             });
         }).then(() => {
         })
@@ -247,16 +259,24 @@ class ModListPage extends React.Component<any, ModListPageState> {
                             <Tooltip title="Add Mod">
                                 <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
                             </Tooltip>
-                            <Tooltip title="Comment">
+                            <Tooltip title="Update All Mods">
                                 <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onUpdateClick}/>
                             </Tooltip>
                         </Typography.Link>
                         <Typography.Link>
-                            <Tooltip title="Star">
+                            <Tooltip title="List View">
                                 <Button icon={<UnorderedListOutlined/>} type={"text"}/>
                             </Tooltip>
-                            <Tooltip title="Star">
+                            <Tooltip title="Group View">
                                 <Button icon={<TreeViewOutlined/>} type={"text"}/>
+                            </Tooltip>
+                        </Typography.Link>
+                        <Typography.Link>
+                            <Tooltip title="Sort Ascending">
+                                <Button icon={<SortAscendingOutlined/>} type={"text"}/>
+                            </Tooltip>
+                            <Tooltip title="Sort Descending">
+                                <Button icon={<SortDescendingOutlined/>} type={"text"}/>
                             </Tooltip>
                         </Typography.Link>
                         <Typography.Link>
@@ -296,18 +316,16 @@ class ModListPage extends React.Component<any, ModListPageState> {
                           titleRender={this.onCustomTitleRender}
                     />
                     <Flex style={{borderTop: "1px solid #eee"}}>
-                        <span style={{margin: "4px 10px 0 10px"}}>
+                        <span style={{margin: "2px 10px 0 10px"}}>
                             <Checkbox onChange={this.onMultiCheckboxChange}
                             />
                             {
                                 this.state.isMultiSelect === true &&
                                 <span>
-                                    <Button type="text" size={"small"}>
-                                        <CloseCircleOutlined/>
+                                    <Button type="text" size={"small"} icon={<CloseCircleOutlined/>}>
                                         Delete
                                     </Button>
-                                    <Button type="text" size={"small"}>
-                                        <CloseCircleOutlined/>
+                                    <Button type="text" size={"small"} icon={<SyncOutlined/>}>
                                         Update
                                     </Button>
                                 </span>

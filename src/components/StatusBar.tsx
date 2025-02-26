@@ -20,9 +20,8 @@ class StatusBar extends React.Component {
                           size={"small"}
                           style={{width: "100%", margin: 0, border: 0, padding: 0, borderRadius: 0}}
                 />*/}
-                <div></div>
-                {/* <div style={{lineHeight: "28px", marginLeft: "10px", color: "#666"}}>
-                </div>*/}
+                <div style={{lineHeight: "28px", marginLeft: "10px", color: "#666"}}>
+                </div>
             </Flex>
         );
     }

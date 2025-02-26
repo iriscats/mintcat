@@ -44,7 +44,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
             <Card>
                 <div id="scrollableDiv"
                      style={{
-                         height: 464,
+                         height: window.innerHeight - 130,
                          overflow: 'auto',
                      }}
                 >

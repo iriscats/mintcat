@@ -44,6 +44,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
             title,
             defaultValue
         })
+        return this;
     }
 
     private async handleOk() {
@@ -63,11 +64,12 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
             >
-                <Form ref={this.localFormRef} layout="vertical">
+                <Form ref={this.localFormRef} layout="vertical"
+                      initialValues={{
+                          text: this.state.defaultValue,
+                      }}>
                     <Form.Item name="text" label="Input Text" rules={[{required: true}]}>
-                        <Input defaultValue={this.state.defaultValue}
-                        allowClear
-                        />
+                        <Input allowClear/>
                     </Form.Item>
                 </Form>
             </Modal>

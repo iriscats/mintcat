@@ -4,19 +4,19 @@ import {FolderOutlined} from "@ant-design/icons";
 
 const contextMenus: MenuProps['items'] = [
     {label: 'Rename', key: 'rename'},
+    {label: 'Update', key: 'update'},
     {label: 'Delete', key: 'delete'},
     {label: 'Copy Link', key: 'copy_link'},
     {label: 'Export', key: 'export'}
 ];
 
 const contextMenusGroup: MenuProps['items'] = [
+    {label: 'Add Mod', key: 'add_mod'},
     {label: 'Add New Group', key: 'add_new_group'},
     {label: 'Add Sub Group', key: 'add_sub_group'},
-    {label: 'Add Mod', key: 'add_mod'},
-    {label: 'Rename Group', key: 'rename'},
+    {label: 'Rename Group', key: 'rename_group'},
     {label: 'Delete Group', key: 'delete_group'}
 ];
-
 
 export function TreeViewItem(nodeData: any, onMenuClick: any) {
     if (nodeData.isLeaf) {
@@ -24,7 +24,9 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
             <Dropdown trigger={['contextMenu']}
                       menu={{
                           items: contextMenus,
-                          onClick: onMenuClick
+                          onClick: (e) => {
+                              onMenuClick(e.key, nodeData.key);
+                          }
                       }}>
                     <span style={{width: "100%", display: "block"}}>
                         <Switch checked={nodeData.enabled} size={"small"}
@@ -67,7 +69,9 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
             <Dropdown trigger={['contextMenu']}
                       menu={{
                           items: contextMenusGroup,
-                          onClick: onMenuClick
+                          onClick: (e) => {
+                              onMenuClick(e.key, nodeData.key);
+                          }
                       }}>
                     <span style={{
                         width: "100%",

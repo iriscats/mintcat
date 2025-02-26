@@ -33,9 +33,13 @@ class TitleBar extends React.Component {
                             <span style={{
                                 backgroundImage: "linear-gradient(to right, blue, purple)",
                                 backgroundClip: "text",
-                                color: "transparent"
+                                color: "transparent",
                             }}>MINT</span>
-                            <span style={{color: "purple"}}>CAT</span>
+                            <span style={{
+                                backgroundImage: "linear-gradient(to right, purple, deeppink)",
+                                backgroundClip: "text",
+                                color: "transparent",
+                            }}>CAT</span>
                         </b>
                     </h1>
                     <span style={{fontSize: "12px", color: "gray", lineHeight: "54px", verticalAlign: "bottom"}}>
@@ -61,7 +65,9 @@ class TitleBar extends React.Component {
                         <SkinOutlined/>
                     </Popconfirm>
                     <QuestionCircleOutlined/>
-                    <Avatar className={"app-header-avatar"} icon={<UserOutlined/>}/>
+                    <Avatar className={"app-header-avatar"}
+                            icon={<UserOutlined/>}
+                    />
                 </Flex>
             </Flex>
         )
