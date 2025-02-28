@@ -1,7 +1,7 @@
-use crate::integrator::error::IntegrationError;
 use crate::mod_info::{ApprovalStatus, Meta, MetaConfig, MetaMod, ModInfo, SemverVersion};
 use repak::PakWriter;
 use std::collections::HashMap;
+use std::error::Error;
 use std::io::{Cursor, Read, Seek, Write};
 use std::path::PathBuf;
 use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
@@ -19,7 +19,7 @@ pub struct ModBundleWriter<W: Write + Seek> {
 }
 
 impl<W: Write + Seek> ModBundleWriter<W> {
-    pub fn new(writer: W, fsd_paths: &[String]) -> Result<Self, IntegrationError> {
+    pub fn new(writer: W, fsd_paths: &[String]) -> Result<Self, Box<dyn Error>> {
         let mut directories: HashMap<String, Dir> = HashMap::new();
         for f in fsd_paths {
             let mut dir = &mut directories;
@@ -57,7 +57,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         normalized_path
     }
 
-    pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<(), IntegrationError> {
+    pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<(), Box<dyn Error>> {
         self.pak_writer
             .write_file(self.normalize_path(path).as_str(), true, data)?;
         Ok(())
@@ -67,7 +67,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         &mut self,
         asset: Asset<C>,
         path: &str,
-    ) -> Result<(), IntegrationError> {
+    ) -> Result<(), Box<dyn Error>> {
         let mut data_out = (Cursor::new(vec![]), Cursor::new(vec![]));
 
         asset.write_data(&mut data_out.0, Some(&mut data_out.1))?;
@@ -84,7 +84,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         &mut self,
         config: MetaConfig,
         mods: &[(ModInfo, PathBuf)],
-    ) -> Result<(), IntegrationError> {
+    ) -> Result<(), Box<dyn Error>> {
         let mut split = env!("CARGO_PKG_VERSION").split('.');
         let version = SemverVersion {
             major: split.next().unwrap().parse().unwrap(),
@@ -98,24 +98,20 @@ impl<W: Write + Seek> ModBundleWriter<W> {
             mods: mods
                 .iter()
                 .map(|(info, _)| MetaMod {
-                    name: info.name.clone(),
+                    name: "TODO".into(),
                     version: "TODO".into(), // TODO
                     author: "TODO".into(),  // TODO
-                    required: info.suggested_require,
                     url: "https://".into(),
-                    approval: info
-                        .modio_tags
-                        .as_ref()
-                        .map(|t| t.approval_status)
-                        .unwrap_or(ApprovalStatus::Sandbox),
+                    approval: ApprovalStatus::Sandbox,
+                    required: false,
                 })
                 .collect(),
         };
-        self.write_file(&postcard::to_allocvec(&meta).unwrap(), "meta")?;
+        //self.write_file(&postcard::to_allocvec(&meta).unwrap(), "meta")?;
         Ok(())
     }
 
-    pub fn finish(self) -> Result<(), IntegrationError> {
+    pub fn finish(self) -> Result<(), Box<dyn Error>> {
         self.pak_writer.write_index()?;
         Ok(())
     }

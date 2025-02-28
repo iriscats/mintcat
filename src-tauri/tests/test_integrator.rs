@@ -20,13 +20,9 @@ fn test_pak_integrator() {
                     if path.is_file() {
                         mods.push((
                             ModInfo {
-                                provider: "",
-                                name: "test".to_string(),
-                                modio_tags: None,
-                                suggested_require: false,
-                                versions: vec![],
-                                suggested_dependencies: vec![],
+                                name: Option::from("test".to_string()),
                                 modio_id: None,
+                                pak_path: "test".to_string(),
                             },
                             path,
                         ));

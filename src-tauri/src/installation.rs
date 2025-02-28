@@ -1,65 +1,9 @@
-use anyhow::{bail, Context, Result};
+use std::error::Error;
 use std::path::{Path, PathBuf};
-
-#[derive(Debug, Default)]
-pub enum DRGInstallationType {
-    #[default]
-    Steam,
-    Xbox,
-}
-
-impl DRGInstallationType {
-    pub fn from_exe_path() -> Result<Self> {
-        let exe_name = std::env::current_exe()
-            .context("could not determine running exe")?
-            .file_name()
-            .context("failed to get exe path")?
-            .to_string_lossy()
-            .to_lowercase();
-        Ok(match exe_name.as_str() {
-            "fsd-win64-shipping.exe" => Self::Steam,
-            "fsd-wingdk-shipping.exe" => Self::Xbox,
-            _ => bail!("unrecognized exe file name: {exe_name}"),
-        })
-    }
-
-    pub fn from_pak_path<P: AsRef<Path>>(pak: P) -> Result<Self> {
-        let pak_name = pak
-            .as_ref()
-            .file_name()
-            .context("failed to get pak file name")?
-            .to_string_lossy()
-            .to_lowercase();
-        Ok(match pak_name.as_str() {
-            "fsd-windowsnoeditor.pak" => Self::Steam,
-            "fsd-wingdk.pak" => Self::Xbox,
-            _ => bail!("unrecognized pak file name: {pak_name}"),
-        })
-    }
-    pub fn binaries_directory_name(&self) -> &'static str {
-        match self {
-            Self::Steam => "Win64",
-            Self::Xbox => "WinGDK",
-        }
-    }
-    pub fn main_pak_name(&self) -> &'static str {
-        match self {
-            Self::Steam => "FSD-WindowsNoEditor.pak",
-            Self::Xbox => "FSD-WinGDK.pak",
-        }
-    }
-    pub fn hook_dll_name(&self) -> &'static str {
-        match self {
-            Self::Steam => "x3daudio1_7.dll",
-            Self::Xbox => "d3d9.dll",
-        }
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct DRGInstallation {
     pub root: PathBuf,
-    pub installation_type: DRGInstallationType,
 }
 
 impl DRGInstallation {
@@ -81,23 +25,18 @@ impl DRGInstallation {
             })
             .and_then(|path| Self::from_pak_path(path).ok())
     }
-    pub fn from_pak_path<P: AsRef<Path>>(pak: P) -> Result<Self> {
+    pub fn from_pak_path<P: AsRef<Path>>(pak: P) -> Result<Self, Box<dyn Error>> {
         let root = pak
             .as_ref()
             .parent()
             .and_then(Path::parent)
             .and_then(Path::parent)
-            .context("failed to get pak parent directory")?
+            .expect("failed to get pak parent directory")
             .to_path_buf();
-        Ok(Self {
-            root,
-            installation_type: DRGInstallationType::from_pak_path(pak)?,
-        })
+        Ok(Self { root })
     }
     pub fn binaries_directory(&self) -> PathBuf {
-        self.root
-            .join("Binaries")
-            .join(self.installation_type.binaries_directory_name())
+        self.root.join("Binaries").join("Bin64")
     }
     pub fn paks_path(&self) -> PathBuf {
         self.root.join("Content").join("Paks")
@@ -106,31 +45,25 @@ impl DRGInstallation {
         self.root
             .join("Content")
             .join("Paks")
-            .join(self.installation_type.main_pak_name())
+            .join("FSD-WindowsNoEditor.pak")
     }
     pub fn modio_directory(&self) -> Option<PathBuf> {
-        match self.installation_type {
-            DRGInstallationType::Steam => {
-                #[cfg(target_os = "windows")]
-                {
-                    Some(PathBuf::from("C:\\Users\\Public\\mod.io\\2475"))
-                }
-                #[cfg(target_os = "linux")]
-                {
-                    steamlocate::SteamDir::locate()
-                        .map(|s| {
-                            s.path().join(
-                                "steamapps/compatdata/548430/pfx/drive_c/users/Public/mod.io/2475",
-                            )
-                        })
-                        .ok()
-                }
-                #[cfg(not(any(target_os = "windows", target_os = "linux")))]
-                {
-                    None // TODO
-                }
-            }
-            DRGInstallationType::Xbox => None,
+        #[cfg(target_os = "windows")]
+        {
+            Some(PathBuf::from("C:\\Users\\Public\\mod.io\\2475"))
+        }
+        #[cfg(target_os = "linux")]
+        {
+            steamlocate::SteamDir::locate()
+                .map(|s| {
+                    s.path()
+                        .join("steamapps/compatdata/548430/pfx/drive_c/users/Public/mod.io/2475")
+                })
+                .ok()
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+        {
+            None // TODO
         }
     }
 }

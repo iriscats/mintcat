@@ -1,5 +1,5 @@
 import React from "react";
-import {Dropdown, MenuProps, Select, Switch, Tag} from "antd";
+import {Dropdown, MenuProps, Progress, Select, Switch, Tag} from "antd";
 import {FolderOutlined} from "@ant-design/icons";
 
 const contextMenus: MenuProps['items'] = [
@@ -33,6 +33,8 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
                                 onChange={(checked) => this.onSwitchChange(checked, nodeData)}
                                 style={{marginRight: "8px", marginTop: "-3px"}}
                         />
+
+                        {nodeData.isLocal === false && <Progress type="circle" percent={100} size={20}/>}
 
                         {nodeData.isLocal === false &&
                             <Select size={"small"}

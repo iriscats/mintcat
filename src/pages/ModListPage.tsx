@@ -74,9 +74,10 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private onAddModClick() {
-        this.addModDialogRef.current?.setCallback(0, async () => {
-            await this.updateTreeData();
-        }).show();
+        this.addModDialogRef.current?.setValue()
+            .setCallback(async () => {
+                await this.updateTreeData();
+            }).show();
     }
 
     private async onUpdateClick() {
@@ -195,7 +196,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     }).show();
                 break;
             case "add_mod": {
-                this.addModDialogRef.current?.setCallback(id,
+                this.addModDialogRef.current?.setValue(id).setCallback(
                     async () => {
                         await this.updateTreeData();
                     }).show();

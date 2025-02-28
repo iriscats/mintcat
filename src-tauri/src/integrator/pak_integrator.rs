@@ -1,6 +1,6 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::installation::DRGInstallation;
-use crate::integrator::error::{CtxtIoSnafu, CtxtRepakSnafu, IntegrationError};
+
 use crate::integrator::mod_bundle_writer::ModBundleWriter;
 use crate::integrator::modio_patch::uninstall_modio;
 use crate::integrator::raw_asset::RawAsset;
@@ -8,11 +8,10 @@ use crate::integrator::ue4ss_integrate::{install_ue4ss_mod, uninstall_ue4ss};
 use crate::integrator::{game_pak_patch, ReadSeek};
 use crate::mod_info::{MetaConfig, ModInfo};
 
-use fs_err as fs;
-use itertools::Itertools;
 use serde::Deserialize;
-use snafu::{prelude::*, Whatever};
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -36,20 +35,15 @@ pub struct PakIntegrator {
 }
 
 impl PakIntegrator {
-    pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self, IntegrationError> {
-        let installation = DRGInstallation::from_pak_path(&fsd_path_pak).map_err(|_| {
-            IntegrationError::DrgInstallationNotFound {
-                path: fsd_path_pak.as_ref().to_path_buf(),
-            }
-        })?;
+    pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self, Box<dyn Error>> {
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
 
         let mut fsd_pak_reader = BufReader::new(fs::File::open(fsd_path_pak.as_ref())?);
         let fsd_pak = repak::PakBuilder::new().reader(&mut fsd_pak_reader)?;
 
         let ar_path = "FSD/AssetRegistry.bin";
         let mut asset_registry =
-            AssetRegistry::read(&mut Cursor::new(fsd_pak.get(ar_path, &mut fsd_pak_reader)?))
-                .map_err(|e| IntegrationError::GenericError { msg: e.to_string() })?;
+            AssetRegistry::read(&mut Cursor::new(fsd_pak.get(ar_path, &mut fsd_pak_reader)?))?;
 
         let mut deferred_assets = Self::init_deferred_assets();
         Self::collect_game_assets(&fsd_pak, &mut fsd_pak_reader, &mut deferred_assets)?;
@@ -92,7 +86,7 @@ impl PakIntegrator {
         pak: &repak::PakReader,
         reader: &mut (impl Read + Seek),
         assets: &mut HashMap<&str, RawAsset>,
-    ) -> Result<(), IntegrationError> {
+    ) -> Result<(), Box<dyn Error>> {
         for (path, asset) in assets.iter_mut() {
             asset.uasset = match pak.get(&format!("{path}.uasset"), reader) {
                 Ok(f) => Some(f),
@@ -109,9 +103,9 @@ impl PakIntegrator {
     }
 
     #[tracing::instrument(skip_all)]
-    pub fn install(mut self, mods: Vec<(ModInfo, PathBuf)>) -> Result<(), IntegrationError> {
-        for (mod_info, path) in &mods {
-            self.process_mod(mod_info, path)?;
+    pub fn install(mut self, mods: Vec<(ModInfo)>) -> Result<(), Box<dyn Error>> {
+        for (mod_info) in &mods {
+            self.process_mod(mod_info)?;
         }
 
         self.apply_pcb_patch()?;
@@ -128,25 +122,20 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn process_mod(&mut self, mod_info: &ModInfo, path: &Path) -> Result<(), IntegrationError> {
-        let (mut pak_buf, dll_buf) = self.load_mod_files(mod_info, path)?;
-        self.process_pak_files(mod_info, &mut pak_buf)?;
+    fn process_mod(&mut self, mod_info: &ModInfo) -> Result<(), Box<dyn Error>> {
+        let (mut pak_buf, dll_buf) = self.load_mod_files(mod_info.pak_path.as_ref())?;
+        self.process_pak_files(&mut pak_buf)?;
         //self.process_dll_files(mod_info, &mut dll_buf)?;
         Ok(())
     }
 
     fn load_mod_files(
         &self,
-        mod_info: &ModInfo,
         path: &Path,
-    ) -> Result<(Box<dyn ReadSeek>, Option<Box<dyn ReadSeek>>), IntegrationError> {
+    ) -> Result<(Box<dyn ReadSeek>, Option<Box<dyn ReadSeek>>), Box<dyn Error>> {
         let mut buf = [0; 4];
-        let mut file = fs::File::open(path).with_context(|_| CtxtIoSnafu {
-            mod_info: mod_info.clone(),
-        })?;
-        file.read_exact(&mut buf).with_context(|_| CtxtIoSnafu {
-            mod_info: mod_info.clone(),
-        })?;
+        let mut file = fs::File::open(path)?;
+        file.read_exact(&mut buf)?;
 
         if buf == [0x50, 0x4B, 0x03, 0x04] {
             let mut pak: Option<Box<dyn ReadSeek>> = None;
@@ -167,59 +156,38 @@ impl PakIntegrator {
             if let Some(pak_data) = pak {
                 Ok((pak_data, dll))
             } else {
-                Err(IntegrationError::MissingPakFile {
-                    mod_info: mod_info.clone(),
-                })
+                Ok((Box::new(BufReader::new(file)), None))
             }
         } else {
             Ok((Box::new(BufReader::new(file)), None))
         }
     }
 
-    fn process_pak_files(
-        &mut self,
-        mod_info: &ModInfo,
-        pak_buf: &mut Box<dyn ReadSeek>,
-    ) -> Result<(), IntegrationError> {
-        let pak = repak::PakBuilder::new()
-            .reader(pak_buf)
-            .with_context(|_| CtxtRepakSnafu {
-                mod_info: mod_info.clone(),
-            })?;
+    fn process_pak_files(&mut self, pak_buf: &mut Box<dyn ReadSeek>) -> Result<(), Box<dyn Error>> {
+        let pak = repak::PakBuilder::new().reader(pak_buf)?;
 
         let mount = PakPath::new(pak.mount_point());
-        let pak_files = self.normalize_pak_paths(mod_info, &pak, &mount)?;
+        let pak_files = self.normalize_pak_paths(&pak, &mount)?;
 
-        self.process_asset_registry(mod_info, &pak, &pak_files, pak_buf)?;
-        self.write_mod_assets(mod_info, pak, pak_files, pak_buf)?;
+        self.process_asset_registry(&pak, &pak_files, pak_buf)?;
+        self.write_mod_assets(pak, pak_files, pak_buf)?;
         Ok(())
     }
 
-    fn process_dll_files(
-        &mut self,
-        mod_info: &ModInfo,
-        dll_buf: &mut Box<dyn ReadSeek>,
-    ) -> Result<(), IntegrationError> {
-
+    fn process_dll_files(&mut self, dll_buf: &mut Box<dyn ReadSeek>) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
     fn normalize_pak_paths(
         &self,
-        mod_info: &ModInfo,
         pak: &repak::PakReader,
         mount: &PakPath,
-    ) -> Result<HashMap<PathBuf, String>, IntegrationError> {
+    ) -> Result<HashMap<PathBuf, String>, Box<dyn Error>> {
         pak.files()
             .into_iter()
             .map(|p| {
                 let full_path = mount.join(&p);
-                let normalized = full_path.strip_prefix("../../../").map_err(|_| {
-                    IntegrationError::ModfileInvalidPrefix {
-                        mod_info: mod_info.clone(),
-                        modfile_path: full_path.to_string(),
-                    }
-                })?;
+                let normalized = full_path.strip_prefix("../../../")?;
 
                 // 将 UTF-8 Path 转换为标准 PathBuf
                 let std_path = PathBuf::from(normalized.as_str());
@@ -231,30 +199,19 @@ impl PakIntegrator {
 
     fn process_asset_registry(
         &mut self,
-        mod_info: &ModInfo,
         pak: &repak::PakReader,
         pak_files: &HashMap<PathBuf, String>,
-        pak_buf: &mut Box<dyn ReadSeek>
-    ) -> Result<(), IntegrationError> {
+        pak_buf: &mut Box<dyn ReadSeek>,
+    ) -> Result<(), Box<dyn Error>> {
         for (normalized, pak_path) in pak_files {
             if let Some("uasset" | "umap") = normalized.extension().and_then(|e| e.to_str()) {
-
                 if pak_files.contains_key(&normalized.with_extension("uexp")) {
+                    let uasset = pak.get(pak_path, pak_buf)?;
 
-                    let uasset =
-                        pak.get(pak_path,  pak_buf)
-                            .with_context(|_| CtxtRepakSnafu {
-                                mod_info: mod_info.clone(),
-                            })?;
-
-                    let uexp = pak
-                        .get(
-                            &PakPath::new(pak_path).with_extension("uexp").to_string(),
-                             pak_buf,
-                        )
-                        .with_context(|_| CtxtRepakSnafu {
-                            mod_info: mod_info.clone(),
-                        })?;
+                    let uexp = pak.get(
+                        &PakPath::new(pak_path).with_extension("uexp").to_string(),
+                        pak_buf,
+                    )?;
 
                     let asset = AssetBuilder::new(Cursor::new(uasset), EngineVersion::VER_UE4_27)
                         .bulk(Cursor::new(uexp))
@@ -263,10 +220,7 @@ impl PakIntegrator {
 
                     self.asset_registry
                         .populate(normalized.with_extension("").to_str().unwrap(), &asset)
-                        .map_err(|e| IntegrationError::CtxtGenericError {
-                            source: e.into(),
-                            mod_info: mod_info.clone(),
-                        })?;
+                        .expect("TODO: panic message");
                 }
             }
         }
@@ -275,22 +229,17 @@ impl PakIntegrator {
 
     fn write_mod_assets(
         &mut self,
-        mod_info: &ModInfo,
         pak: repak::PakReader,
         pak_files: HashMap<PathBuf, String>,
         pak_buf: &mut Box<dyn ReadSeek>,
-    ) -> Result<(), IntegrationError> {
+    ) -> Result<(), Box<dyn Error>> {
         for (normalized, pak_path) in pak_files {
             let lowercase = normalized.to_str().unwrap().to_lowercase();
             if self.added_paths.contains(&lowercase) {
                 continue;
             }
 
-            let file_data = pak
-                .get(&pak_path, pak_buf)
-                .with_context(|_| CtxtRepakSnafu {
-                    mod_info: mod_info.clone(),
-                })?;
+            let file_data = pak.get(&pak_path, pak_buf)?;
 
             self.bundle
                 .write_file(&file_data, normalized.to_str().unwrap())?;
@@ -299,21 +248,18 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn apply_pcb_patch(&mut self) -> Result<(), IntegrationError> {
+    fn apply_pcb_patch(&mut self) -> Result<(), Box<dyn Error>> {
         let path = "FSD/Content/Game/BP_PlayerControllerBase";
         let mut asset = self.deferred_assets[path].parse()?;
 
-        game_pak_patch::hook_pcb(&mut asset)
-            .map_err(|e| IntegrationError::GenericError { msg: e.to_string() })?;
+        game_pak_patch::hook_pcb(&mut asset);
 
-        self.bundle
-            .write_asset(asset, &path)
-            .map_err(|e| IntegrationError::GenericError { msg: e.to_string() })?;
+        self.bundle.write_asset(asset, &path);
 
         Ok(())
     }
 
-    fn write_mint_files(&mut self) -> Result<(), IntegrationError> {
+    fn write_mint_files(&mut self) -> Result<(), Box<dyn Error>> {
         let integration_dir = include_dir::include_dir!("$CARGO_MANIFEST_DIR/assets/integration");
 
         let mut int_files = HashMap::new();
@@ -339,11 +285,11 @@ impl PakIntegrator {
         }
     }
 
-    fn serialize_asset_registry(&mut self) -> Result<(), IntegrationError> {
+    fn serialize_asset_registry(&mut self) -> Result<(), Box<dyn Error>> {
         let mut buf = Vec::new();
         self.asset_registry
             .write(&mut buf)
-            .map_err(|e| IntegrationError::GenericError { msg: e.to_string() })?;
+            .expect("Failed to serialize asset registry");
 
         self.bundle.write_file(&buf, "FSD/AssetRegistry.bin")?;
 
@@ -353,9 +299,7 @@ impl PakIntegrator {
 
 impl PakIntegrator {
     #[tracing::instrument(level = "debug", skip(path_pak))]
-    pub fn uninstall<P: AsRef<Path>>(
-        path_pak: P,
-    ) -> Result<(), Whatever> {
+    pub fn uninstall<P: AsRef<Path>>(path_pak: P) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }

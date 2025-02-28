@@ -1,4 +1,4 @@
-use crate::integrator::error::IntegrationError;
+use std::error::Error;
 use std::io::{Read, Seek};
 use tracing::info;
 use uasset_utils::splice::{
@@ -77,7 +77,7 @@ fn get_import<R: Read + Seek>(asset: &mut Asset<R>, import: ImportChain) -> Pack
 
 /// "it's only 3 instructions"
 /// "how much boilerplate could there possibly be"
-pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), IntegrationError> {
+pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Error>> {
     let transform = get_import(
         asset,
         vec![
@@ -397,7 +397,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), IntegrationE
     ))
 }
 
-pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), IntegrationError> {
+pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
 
@@ -442,7 +442,7 @@ pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Integra
     Ok(())
 }
 
-pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), IntegrationError> {
+pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
 
@@ -466,7 +466,7 @@ pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Int
 
 pub fn patch_modding_tab_item<C: Seek + Read>(
     asset: &mut Asset<C>,
-) -> Result<(), IntegrationError> {
+) -> Result<(), Box<dyn Error>> {
     let itm_tab_modding = get_import(
         asset,
         vec![
@@ -521,7 +521,7 @@ pub fn patch_modding_tab_item<C: Seek + Read>(
 
 pub fn patch_server_list_entry<C: Seek + Read>(
     asset: &mut Asset<C>,
-) -> Result<(), IntegrationError> {
+) -> Result<(), Box<dyn Error>> {
     let get_mods_installed = asset
         .imports
         .iter()

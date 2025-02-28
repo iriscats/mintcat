@@ -1,10 +1,11 @@
 import React from 'react';
-import {Avatar, Button, Card, Divider, Flex, List, Skeleton, Space} from 'antd';
+import {Avatar, Button, Card, Divider, Flex, List, message, Skeleton, Space} from 'antd';
 import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
 import ModioApi from "../apis/ModioApi.ts";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
+import AddModDialog from "../dialogs/AddModDialog.tsx";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -15,10 +16,12 @@ const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
 );
 
 interface ModioPageState {
-    dataSource: ModInfo[]
+    dataSource?: ModInfo[]
 }
 
 class ModioPage extends React.Component<any, ModioPageState> {
+
+    private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
 
     public constructor(props: any, context: ModioPageState) {
         super(props, context);
@@ -26,6 +29,15 @@ class ModioPage extends React.Component<any, ModioPageState> {
         this.state = {
             dataSource: []
         }
+
+        this.onAddClick = this.onAddClick.bind(this);
+    }
+
+    private onAddClick(url: string) {
+        this.addModDialogRef.current?.setValue(0, url)
+            .setCallback(async () => {
+                await message.info("Add Successfully");
+            }).show();
     }
 
     componentDidMount() {
@@ -41,17 +53,19 @@ class ModioPage extends React.Component<any, ModioPageState> {
 
     render() {
         return (
-            <Card>
+            <>
                 <div id="scrollableDiv"
                      style={{
-                         height: window.innerHeight - 130,
+                         height: window.innerHeight - 81,
                          overflow: 'auto',
+                         backgroundColor: '#fff',
+                         padding: '10px',
                      }}
                 >
+                    <AddModDialog ref={this.addModDialogRef}/>
+
                     <Flex vertical={true}>
-
                         <Search placeholder="Search on mod.io"/>
-
                         <InfiniteScroll
                             dataLength={this.state.dataSource.length}
                             hasMore={this.state.dataSource.length < 100}
@@ -73,6 +87,9 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                 renderItem={(item) => (
                                     <List.Item
                                         key={item.name}
+                                        onDoubleClick={() => {
+
+                                        }}
                                         actions={[
                                             <IconText icon={DownloadOutlined}
                                                       text={item.stats.downloads_total.toString()}/>,
@@ -91,14 +108,20 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                     >
                                         <List.Item.Meta
                                             avatar={
-                                                <Avatar style={{width:'60px',height:'60px', marginTop:'4px'}}
-                                                    src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
+                                                <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
+                                                        src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
                                                 />
                                             }
                                             title={
                                                 <>
                                                     <a href={item.name_id}>{item.name}</a>
-                                                    <Button type={"text"}><PlusCircleOutlined/></Button>
+                                                    <Button type={"text"}
+                                                            onClick={() => {
+                                                                console.log(item)
+                                                                this.onAddClick(item.profile_url)
+                                                            }}>
+                                                        <PlusCircleOutlined/>
+                                                    </Button>
                                                 </>
                                             }
                                             description={item.summary}
@@ -108,10 +131,9 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                 )}
                             />
                         </InfiniteScroll>
-
                     </Flex>
                 </div>
-            </Card>
+            </>
         );
     }
 

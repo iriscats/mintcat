@@ -33,25 +33,20 @@ export class ModListViewModel {
         addedModItem.enabled = true;
         addedModItem.isLocal = false;
 
-        if (this.ActiveProfile.ModioFolder) {
-            this.ActiveProfile.ModioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
-        } else {
-            this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
-        }
-
+        this.ActiveProfile.addMod(addedModItem.id, groupId);
         console.log(this.ActiveProfile.root, this.ModList, "add mod from url");
-
     }
 
-    public async addModFromPath(path: string): Promise<void> {
+    public async addModFromPath(path: string, groupId: number): Promise<void> {
         let modListItem = new ModListItem();
         modListItem.cachePath = path;
-        const addedModItem = this.converter.modList.add(modListItem);
-        this.ActiveProfile.root.add(addedModItem.id, ProfileTreeType.ITEM);
+        const addedModItem = this.ModList.add(modListItem);
+
+        this.ActiveProfile.addMod(addedModItem.id, groupId);
     }
 
     public async removeMod(id: number): Promise<void> {
-        this.converter.modList.remove(id);
+        this.ModList.remove(id);
         this.ActiveProfile.root.remove(id);
     }
 
@@ -68,7 +63,7 @@ export class ModListViewModel {
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
-        let modItem = this.converter.modList.get(id);
+        let modItem = this.ModList.get(id);
         if (modItem) {
             modItem.displayName = name;
         }
@@ -79,14 +74,14 @@ export class ModListViewModel {
     }
 
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
-        let modItem = this.converter.modList.get(id);
+        let modItem = this.ModList.get(id);
         if (modItem) {
             modItem.enabled = enable;
         }
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
-        let modItem = this.converter.modList.get(id);
+        let modItem = this.ModList.get(id);
         if (modItem) {
             modItem.usedVersion = version;
         }
@@ -101,16 +96,17 @@ export class ModListViewModel {
     }
 
     public async updateModList(onProgress: () => void): Promise<void> {
-        for (const mod of this.converter.modList.Mods) {
+        for (const mod of this.ModList.Mods) {
             if (mod.url.startsWith("http")) {
                 const resp = await ModioApi.getModInfoByLink(mod.url);
                 if (resp) {
-                    this.converter.modList.update(mod, new ModListItem(resp));
-                    onProgress()
+                    this.ModList.update(mod, new ModListItem(resp));
+                    onProgress();
                 }
             }
         }
     }
+
 
     public static async getInstance() {
         const vm = new ModListViewModel();
