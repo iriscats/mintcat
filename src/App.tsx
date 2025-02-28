@@ -24,23 +24,10 @@ const {
 
 class App extends React.Component<any, any> {
 
-    private currentPage: string = "mod_list";
+    private currentPage: string = "home";
 
     public constructor(props: any, context: any) {
         super(props, context);
-    }
-
-    renderContent() {
-        switch (this.currentPage) {
-            case "mod_list":
-                return <ModListPage/>;
-            case "modio":
-                return <ModioPage/>;
-            case "settings":
-                return <SettingPage/>;
-            default:
-                return null;
-        }
     }
 
     render() {
@@ -61,7 +48,9 @@ class App extends React.Component<any, any> {
                                 }}/>
                             </Sider>
                             <Content>
-                                {this.renderContent()}
+                                {this.currentPage === "home" && <ModListPage/>}
+                                {this.currentPage === "modio" && <ModioPage/>}
+                                {this.currentPage === "settings" && <SettingPage/>}
                             </Content>
                         </Layout>
                         <Footer style={{height: "30px"}}>

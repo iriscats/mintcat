@@ -10,6 +10,7 @@ interface AddModDialogStates {
     tabActiveKey?: string;
     groupOptions?: any[];
     groupId?: number;
+    url?: string;
 }
 
 type InputCallback = (name: string) => void;
@@ -29,7 +30,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     private readonly localFormRef: any = React.createRef();
 
-    private callback: InputCallback;
+    private callback?: InputCallback;
 
     public constructor(props: any, context: AddModDialogStates) {
         super(props, context);
@@ -46,33 +47,32 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         this.handleTabChange = this.handleTabChange.bind(this);
     }
 
-    public setCallback(groupId: number, callback: any) {
-        this.callback = callback;
+    public setValue(groupId: number = 0, url: string = undefined) {
+        let tabActiveKey = AddModType.MODIO;
         switch (groupId) {
             case ProfileTreeGroupType.MODIO:
-                this.setState({
-                    groupId: groupId,
-                    tabActiveKey: AddModType.MODIO,
-                });
+                tabActiveKey = AddModType.MODIO;
                 break;
             case ProfileTreeGroupType.LOCAL:
-                this.setState({
-                    groupId: groupId,
-                    tabActiveKey: AddModType.LOCAL
-                });
+                tabActiveKey = AddModType.LOCAL;
                 break;
             case 0:
-                this.setState({
-                    groupId: this.state.groupOptions[0].value,
-                })
+                groupId = this.state.groupOptions[0].value;
                 break;
             default:
-                this.setState({
-                    groupId: groupId,
-                })
                 break;
         }
+        this.setState({
+            groupId,
+            tabActiveKey,
+            url
+        });
         this.updateGroupList();
+        return this;
+    }
+
+    public setCallback(callback: any = undefined) {
+        this.callback = callback;
         return this;
     }
 
@@ -91,7 +91,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                 await this.context.addModFromUrl(link, this.state.groupId);
             }
         } else {
-            await this.context.addModFromPath(values["path"]);
+            await this.context.addModFromPath(values["path"], this.state.groupId);
         }
         this.setState({
             isModalOpen: false
@@ -156,10 +156,19 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                   label: 'mod.io',
                                   children: <>
                                       <Form ref={this.modioFormRef} layout="vertical">
-                                          <Form.Item name="modLinks" label="Mod Links" rules={[{required: true}]}>
-                                              <TextArea rows={4}/>
+                                          <Form.Item name="modLinks"
+                                                     label="Mod Links"
+                                                     rules={[{required: true}]}
+                                          >
+                                              <TextArea defaultValue={this.state.url}
+                                                        value={this.state.url}
+                                                        rows={4}
+                                              />
                                           </Form.Item>
-                                          <Form.Item name="group" label="Group" rules={[{required: true}]}>
+                                          <Form.Item name="group"
+                                                     label="Group"
+                                                     rules={[{required: true}]}
+                                          >
                                               <Select defaultValue={this.state.groupId}
                                                       options={this.state.groupOptions}/>
                                           </Form.Item>

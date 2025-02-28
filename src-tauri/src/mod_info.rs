@@ -1,6 +1,5 @@
-use std::{collections::BTreeSet, fmt::Display};
-
 use serde::{Deserialize, Serialize};
+use std::{collections::BTreeSet, fmt::Display};
 
 /// Tags from mod.io.
 #[derive(Debug, Clone)]
@@ -35,43 +34,11 @@ pub enum ResolvableStatus {
     Resolvable,
 }
 
-/// Returned from ModStore
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ModInfo {
-    pub provider: &'static str,
-    pub name: String,
-    //pub spec: ModSpecification,          // unpinned version
-    pub versions: Vec<ModSpecification>, // pinned versions TODO make this a different type
-    //pub resolution: ModResolution,
-    pub suggested_require: bool,
-    pub suggested_dependencies: Vec<ModSpecification>, // ModResponse
-    pub modio_tags: Option<ModioTags>,                 // only available for mods from mod.io
-    pub modio_id: Option<u32>,                         // only available for mods from mod.io
-}
-
-/// Returned from ModProvider
-#[derive(Debug, Clone)]
-pub enum ModResponse {
-    Redirect(ModSpecification),
-    Resolve(ModInfo),
-}
-
-/// Points to a mod, optionally a specific version
-#[derive(
-    Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
-pub struct ModSpecification {
-    pub url: String,
-}
-
-impl ModSpecification {
-    pub fn new(url: String) -> Self {
-        Self { url }
-    }
-    pub fn satisfies_dependency(&self, other: &ModSpecification) -> bool {
-        // TODO this hack works surprisingly well but is still a complete hack and should be replaced
-        self.url.starts_with(&other.url) || other.url.starts_with(&self.url)
-    }
+    pub modio_id: Option<u32>,
+    pub name: Option<String>,
+    pub pak_path: String,
 }
 
 /// Points to a specific version of a specific mod
@@ -154,26 +121,7 @@ pub struct MetaMod {
 }
 impl Meta {
     pub fn to_server_list_string(&self) -> String {
-        use itertools::Itertools;
 
-        ["mint".into(), self.version.to_string()]
-            .into_iter()
-            .chain(
-                self.mods
-                    .iter()
-                    .sorted_by_key(|m| (std::cmp::Reverse(m.approval), &m.name))
-                    .flat_map(|m| {
-                        [
-                            match m.approval {
-                                ApprovalStatus::Verified => 'V',
-                                ApprovalStatus::Approved => 'A',
-                                ApprovalStatus::Sandbox => 'S',
-                            }
-                            .into(),
-                            m.name.replace(';', ""),
-                        ]
-                    }),
-            )
-            .join(";")
+        return "".to_owned();
     }
 }

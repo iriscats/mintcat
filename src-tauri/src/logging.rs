@@ -1,16 +1,15 @@
+use std::error::Error;
 use std::fs;
 use std::io::BufWriter;
 use std::path::Path;
-use anyhow::Result;
 
 use tracing::*;
 use tracing_subscriber::fmt::format::FmtSpan;
 
-
 pub fn setup_logging<P: AsRef<Path>>(
     log_path: P,
     target: &str,
-) -> Result<tracing_appender::non_blocking::WorkerGuard> {
+) -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dyn Error>> {
     use tracing::metadata::LevelFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{
@@ -65,4 +64,3 @@ pub fn setup_logging<P: AsRef<Path>>(
 
     Ok(guard)
 }
-

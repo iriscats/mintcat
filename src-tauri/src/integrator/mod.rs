@@ -2,7 +2,6 @@ use std::io::{Read, Seek};
 
 mod mod_bundle_writer;
 mod raw_asset;
-mod error;
 mod ue4ss_integrate;
 mod game_pak_patch;
 mod modio_patch;

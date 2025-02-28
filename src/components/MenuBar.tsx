@@ -1,13 +1,13 @@
 import React from "react";
 import {Menu, MenuProps} from "antd";
-import {AppstoreAddOutlined, HomeOutlined, SettingOutlined, UnorderedListOutlined} from "@ant-design/icons";
+import {HomeOutlined, SettingOutlined} from "@ant-design/icons";
 import {ModioOutlined} from "./SvgIcon.tsx";
 
 
 type MenuItem = Required<MenuProps>['items'][number];
 
 const items: MenuItem[] = [
-    {key: 'mod_list', icon: <HomeOutlined/>, label: 'Mod List'},
+    {key: 'home', icon: <HomeOutlined/>, label: 'Home'},
     {key: 'modio', icon: <ModioOutlined/>, label: 'mod.io'},
     {key: 'settings', icon: <SettingOutlined/>, label: 'Settings'}
 ];
@@ -25,8 +25,7 @@ class MenuBar extends React.Component<MenuBarProps, any> {
     render() {
         return (
             <Menu
-                defaultSelectedKeys={['1']}
-                defaultOpenKeys={['sub1']}
+                defaultSelectedKeys={['home']}
                 mode="inline"
                 inlineIndent={14}
                 items={items}

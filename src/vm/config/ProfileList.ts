@@ -95,6 +95,15 @@ export class ProfileTree {
         return undefined;
     };
 
+    public addMod(id: number, parentId: number = 0) {
+        const parent = this.findNode(this.root.children, parentId);
+        if (parent) {
+            parent.add(id, ProfileTreeType.ITEM);
+        } else {
+            this.root.add(id, ProfileTreeType.ITEM);
+        }
+    }
+
     public setGroupName(id: number, name: string) {
         const parent = this.findNode(this.root.children, id);
         if (parent) {
@@ -140,7 +149,7 @@ export class ProfileTreeItem {
     }
 
     public add(id: number, type: ProfileTreeType, name: string = "") {
-        this.children.push(new ProfileTreeItem(id, type, name)); // 补上name参数
+        this.children.push(new ProfileTreeItem(id, type, name));
     }
 
     public remove(id: number) {
