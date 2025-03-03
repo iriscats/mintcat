@@ -24,6 +24,12 @@ export class ModListViewModel {
         return this.converter.profileTreeList.find(p => p.name === this.converter.profileList.activeProfile)!;
     }
 
+    public set ActiveProfile(activeProfile: string) {
+        this.converter.profileList.activeProfile = activeProfile;
+        ConfigApi.saveProfileData(this.converter.profileList.activeProfile).then(_ => {
+        });
+    }
+
     public constructor() {
     }
 
@@ -35,6 +41,8 @@ export class ModListViewModel {
 
         this.ActiveProfile.addMod(addedModItem.id, groupId);
         console.log(this.ActiveProfile.root, this.ModList, "add mod from url");
+
+        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async addModFromPath(path: string, groupId: number): Promise<void> {
@@ -43,23 +51,28 @@ export class ModListViewModel {
         const addedModItem = this.ModList.add(modListItem);
 
         this.ActiveProfile.addMod(addedModItem.id, groupId);
+
+        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async removeMod(id: number): Promise<void> {
         this.ModList.remove(id);
         this.ActiveProfile.root.remove(id);
-    }
 
-    public async setActiveProfile(activeProfile: string): Promise<void> {
-        this.converter.profileList.activeProfile = activeProfile;
+        await ConfigApi.saveModListData(this.ModList.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ModList.toJson());
     }
 
     public async addProfile(name: string): Promise<void> {
         this.converter.profileList.add(name);
+
+        await ConfigApi.saveProfileData(this.converter.profileList.toJson());
     }
 
     public async removeProfile(name: string): Promise<void> {
         this.converter.profileList.remove(name);
+
+        await ConfigApi.saveProfileData(this.converter.profileList.toJson());
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
@@ -67,10 +80,8 @@ export class ModListViewModel {
         if (modItem) {
             modItem.displayName = name;
         }
-    }
 
-    public async setGroupName(id: number, name: string): Promise<void> {
-        this.ActiveProfile.setGroupName(id, name);
+        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
@@ -78,6 +89,8 @@ export class ModListViewModel {
         if (modItem) {
             modItem.enabled = enable;
         }
+
+        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
@@ -85,14 +98,27 @@ export class ModListViewModel {
         if (modItem) {
             modItem.usedVersion = version;
         }
+
+        await ConfigApi.saveModListData(this.ModList.toJson());
+    }
+
+
+    public async setGroupName(id: number, name: string): Promise<void> {
+        this.ActiveProfile.setGroupName(id, name);
+
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async addGroup(groupId: number, groupName: string): Promise<void> {
         this.ActiveProfile.addGroup(groupName, groupId);
+
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async removeGroup(groupId: number): Promise<void> {
         this.ActiveProfile.removeGroup(groupId);
+
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async updateModList(onProgress: () => void): Promise<void> {
@@ -105,16 +131,40 @@ export class ModListViewModel {
                 }
             }
         }
+
+        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
 
     public static async getInstance() {
         const vm = new ModListViewModel();
         let config = await ConfigApi.loadModListData();
+        console.log(config);
         if (config === undefined) {
             config = await ConfigApi.loadModListDataV1();
             if (config !== undefined) {
+                console.log(vm.converter.modList);
                 vm.converter.convertTo(config);
+                await ConfigApi.saveModListData(vm.converter.modList.toJson());
+                await ConfigApi.saveProfileData(vm.converter.profileList.toJson());
+                await ConfigApi.saveProfileDetails(vm.ActiveProfile.name, vm.ActiveProfile.toJson());
+                return vm;
+            }else   {
+                vm.converter.modList = new ModList();
+                vm.converter.profileList = new ProfileList();
+                vm.converter.profileList.Profiles.push("default");
+                vm.converter.profileTreeList = [];
+                vm.converter.profileTreeList.push(new ProfileTree("default"));
+                return vm;
+            }
+        } else {
+            vm.converter.modList = ModList.fromJson(config);
+            vm.converter.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData()) ;
+            for (const profile of vm.converter.profileList.Profiles) {
+                const profileDetailData = await ConfigApi.loadProfileDetails(profile);
+                if (profileDetailData) {
+                    vm.converter.profileTreeList.push(ProfileTree.fromJson(profileDetailData));
+                }
             }
         }
         return vm;

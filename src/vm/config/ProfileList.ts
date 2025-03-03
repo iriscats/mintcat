@@ -134,6 +134,23 @@ export class ProfileTree {
         return parent;
     }
 
+    public static fromJson(json_str: string): ProfileTree {
+        const json = JSON.parse(json_str);
+        let profile = new ProfileTree("");
+        profile.version = json.version;
+        profile.name = json.name;
+        profile.root = ProfileTreeItem.fromJson(json.root);
+        return profile;
+    }
+
+    public toJson() {
+        const profile = {
+            "version": this.version,
+            "name": this.name,
+            "root": this.root.toJson()
+        }
+        return JSON.stringify(profile);
+    }
 }
 
 export class ProfileTreeItem {
@@ -157,6 +174,22 @@ export class ProfileTreeItem {
         for (const child of this.children) {
             child.remove(id);
         }
+    }
+
+    public static fromJson(json: any) {
+        const item = new ProfileTreeItem(json.id, json.type, json.name);
+        item.children = json.children.map(m => ProfileTreeItem.fromJson(m));
+        return item;
+    }
+
+    public toJson() {
+        const item = {
+            "id": this.id,
+            "type": this.type,
+            "name": this.name,
+            "children": this.children.map(m => m.toJson())
+        }
+        return item;
     }
 }
 

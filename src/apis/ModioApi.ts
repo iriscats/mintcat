@@ -56,18 +56,45 @@ class ModioApi {
         return resp.json();
     }
 
-    public static async downloadModPak(url: string): Promise<ArrayBuffer> {
+    public static async downloadModPak(url: string, onProgress?: (loaded: number, total: number) => void): Promise<ArrayBuffer> {
         const response = await fetch(url);
-
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
 
-        const data = await response.arrayBuffer();
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Failed to get response reader');
+        }
 
-        return data;
-        // await window.__TAURI__.invoke('save_file', { fileData: Array.from(new Uint8Array(data)), filename });
+        const contentLength = Number(response.headers.get('Content-Length')) || 0;
+        let receivedLength = 0;
+        const chunks: Uint8Array[] = [];
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            chunks.push(value);
+            receivedLength += value.length;
+
+            // 触发进度回调
+            if (onProgress) {
+                onProgress(receivedLength, contentLength);
+            }
+        }
+
+        // 合并所有 chunk
+        const data = new Uint8Array(receivedLength);
+        let position = 0;
+        for (const chunk of chunks) {
+            data.set(chunk, position);
+            position += chunk.length;
+        }
+
+        return data.buffer;
     }
+
 
     public static async downloadModList(url: string) {
 
