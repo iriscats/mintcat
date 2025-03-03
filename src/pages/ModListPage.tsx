@@ -103,7 +103,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onSelectChange(value: string) {
         console.log(`Selected: ${value}`);
-        await this.context.setActiveProfile(value);
+        this.context.ActiveProfile = value;
         await this.updateTreeData();
         this.setState({
             defaultProfile: value as string,

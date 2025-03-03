@@ -4,12 +4,11 @@ use std::path::PathBuf;
 
 #[test]
 fn test_pak_integrator() {
-    // ... existing code ...
     let integrator_result =
         PakIntegrator::new("/Users/bytedance/Desktop/data/Content/Paks/FSD-WindowsNoEditor.pak");
     match integrator_result {
         Ok(integrator) => {
-            let mut mods: Vec<(ModInfo, PathBuf)> = Vec::new();
+            let mut mods: Vec<(ModInfo)> = Vec::new();
 
             //遍历 mods文件夹获取全部文件路径
             let mut mod_dir = PathBuf::from("/Users/bytedance/Desktop/data/mods");
@@ -18,14 +17,13 @@ fn test_pak_integrator() {
                     let entry = entry.unwrap();
                     let path = entry.path();
                     if path.is_file() {
-                        mods.push((
-                            ModInfo {
+                        mods.push(
+                            (ModInfo {
                                 name: Option::from("test".to_string()),
                                 modio_id: None,
-                                pak_path: "test".to_string(),
-                            },
-                            path,
-                        ));
+                                pak_path: entry.path().to_str().unwrap().to_string(),
+                            }),
+                        );
                     }
                 }
             }
@@ -38,5 +36,4 @@ fn test_pak_integrator() {
         }
         Err(e) => eprintln!("Failed to create integrator: {}", e),
     }
-    // ... existing code ...
 }

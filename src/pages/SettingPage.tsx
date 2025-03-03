@@ -9,7 +9,7 @@ import {
     Mentions,
     Select,
     TreeSelect,
-    Segmented, Card,
+    Segmented,
 } from 'antd';
 
 const {RangePicker} = DatePicker;
@@ -25,12 +25,13 @@ class SettingPage extends React.Component<any, any> {
     render() {
 
         return (
-            <Card>
                 <div
                     id="scrollableDiv"
                     style={{
                         height: 450,
                         overflow: 'auto',
+                        backgroundColor: '#fff',
+                        padding: '10px',
                     }}
                 >
                     <Form
@@ -116,7 +117,6 @@ class SettingPage extends React.Component<any, any> {
                         </Form.Item>
                     </Form>
                 </div>
-            </Card>
         );
     }
 }
