@@ -18,7 +18,7 @@ const contextMenusGroup: MenuProps['items'] = [
     {label: 'Delete Group', key: 'delete_group'}
 ];
 
-export function TreeViewItem(nodeData: any, onMenuClick: any) {
+export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: any) {
     if (nodeData.isLeaf) {
         return (
             <Dropdown trigger={['contextMenu']}
@@ -30,7 +30,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
                       }}>
                     <span style={{width: "100%", display: "block"}}>
                         <Switch checked={nodeData.enabled} size={"small"}
-                                onChange={(checked) => this.onSwitchChange(checked, nodeData)}
+                                onChange={(checked) => onSwitchChange(checked, nodeData)}
                                 style={{marginRight: "8px", marginTop: "-3px"}}
                         />
 
@@ -39,7 +39,8 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
                                     suffixIcon={null}
                                     popupMatchSelectWidth={false}
                                     style={{marginRight: "8px", width: "60px"}}
-                                    value={nodeData.fileVersion}>
+                                    value={nodeData.fileVersion}
+                                >
                                 <Select.Option value={nodeData.fileVersion}>{nodeData.fileVersion}</Select.Option>
                             </Select>}
 

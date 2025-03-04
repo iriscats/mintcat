@@ -145,7 +145,7 @@ export class ModList {
             modItem.tags = mod.tags;
             modItem.versions = mod.versions;
             modItem.approval = mod.approval;
-            modItem.isLocal = mod.isLocal;
+            modItem.isLocal = mod.is_local;
             modItem.downloadUrl = mod.download_url;
             modItem.cachePath = mod.cache_path;
             modList.mods.push(modItem);

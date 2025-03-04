@@ -1,6 +1,7 @@
 import React from "react";
-import {List, Modal} from "antd";
+import {Button, Card, Flex, Input, List, Modal} from "antd";
 import {ModListPageContext} from "../AppContext.ts";
+import Icon, {CopyOutlined, DeleteOutlined, EditOutlined, FileAddOutlined, PlusCircleOutlined} from "@ant-design/icons";
 
 
 interface ProfileEditDialogStates {
@@ -48,8 +49,47 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
             >
-                <List dataSource={this.context.ProfileList}
-                />
+                <Card size={"small"}>
+                    <List size="small"
+                          dataSource={this.context.ProfileList}
+                          header={
+                              <Flex>
+                                  <Input size="small"
+                                         placeholder="Input New Profile"/>
+                                  <Button type={"text"}
+                                          style={{marginLeft: "8px", marginRight: "20px"}}
+                                          onClick={this.handleOk}
+                                          icon={<PlusCircleOutlined/>}
+                                  />
+                              </Flex>
+                          }
+                          renderItem={
+                              item =>
+                                  <List.Item>
+                                      <Flex style={{width: "100%", display: "block"}}>
+                                          <span style={{lineHeight: "32px"}}>
+                                              {item}
+                                          </span>
+                                          <Button type={"text"}
+                                                  style={{float: "right"}}
+                                                  onClick={this.handleOk}
+                                                  icon={<DeleteOutlined/>}
+                                          />
+                                          <Button type={"text"}
+                                                  style={{float: "right"}}
+                                                  onClick={this.handleOk}
+                                                  icon={<CopyOutlined/>}
+                                          />
+                                          <Button type={"text"}
+                                                  style={{float: "right"}}
+                                                  onClick={this.handleOk}
+                                                  icon={<EditOutlined/>}
+                                          />
+                                      </Flex>
+                                  </List.Item>
+                          }
+                    />
+                </Card>
             </Modal>
         );
     }

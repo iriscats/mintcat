@@ -112,7 +112,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private async onSwitchChange(checked: boolean, node: any) {
         console.log(`Switch: ${checked}`, node);
-        await this.context.setModEnabled(node.id, checked);
+        await this.context.setModEnabled(node.key, checked);
         await this.updateTreeData();
     }
 
@@ -128,7 +128,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
 
     private onTreeRightClick(info) {
         this.setState({
-            selectedKeys: [info.node.id],
+            selectedKeys: [info.node.key],
         })
     };
 
@@ -156,7 +156,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private onCustomTitleRender(nodeData: any) {
-        return TreeViewItem(nodeData, this.onMenuClick);
+        return TreeViewItem(nodeData, this.onMenuClick, this.onSwitchChange);
     }
 
     private async onMenuClick(key: string, id: number) {

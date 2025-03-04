@@ -9,7 +9,7 @@ import {
     Mentions,
     Select,
     TreeSelect,
-    Segmented,
+    Segmented, Card,
 } from 'antd';
 
 const {RangePicker} = DatePicker;
@@ -25,98 +25,60 @@ class SettingPage extends React.Component<any, any> {
     render() {
 
         return (
-                <div
-                    id="scrollableDiv"
-                    style={{
-                        height: 450,
-                        overflow: 'auto',
-                        backgroundColor: '#fff',
-                        padding: '10px',
-                    }}
+            <div
+                id="scrollableDiv"
+                style={{
+                    height: window.innerHeight - 81,
+                    overflow: 'auto',
+                    padding: '30px',
+                }}
+            >
+                <Card title="MintCat Settings"
+                      style={{marginBottom: "10px"}}
                 >
                     <Form
+                        labelCol={{span: 6}}
+                        wrapperCol={{span: 16}}
                         style={{maxWidth: 600}}
-                        initialValues={{variant: 'filled'}}
                     >
-                        <Form.Item label="Form variant" name="variant">
-                            <Segmented options={['outlined', 'filled', 'borderless']}/>
-                        </Form.Item>
-
-                        <Form.Item label="Input" name="Input" rules={[{required: true, message: 'Please input!'}]}>
-                            <Input/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="InputNumber"
-                            name="InputNumber"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <InputNumber style={{width: '100%'}}/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="TextArea"
-                            name="TextArea"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <Input.TextArea/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="Mentions"
-                            name="Mentions"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <Mentions/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="Select"
-                            name="Select"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
+                        <Form.Item label="Language" name="Input" >
                             <Select/>
                         </Form.Item>
-
-                        <Form.Item
-                            label="Cascader"
-                            name="Cascader"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <Cascader/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="TreeSelect"
-                            name="TreeSelect"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <TreeSelect/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="DatePicker"
-                            name="DatePicker"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <DatePicker/>
-                        </Form.Item>
-
-                        <Form.Item
-                            label="RangePicker"
-                            name="RangePicker"
-                            rules={[{required: true, message: 'Please input!'}]}
-                        >
-                            <RangePicker/>
-                        </Form.Item>
-
-                        <Form.Item wrapperCol={{offset: 6, span: 16}}>
-                            <Button type="primary" htmlType="submit">
-                                Submit
-                            </Button>
+                        <Form.Item label="Theme" name="Input">
+                            <Select/>
                         </Form.Item>
                     </Form>
-                </div>
+                </Card>
+
+                <Card title="User Authentication"
+                      style={{marginBottom: "10px"}}
+                >
+                    <Form
+                        labelCol={{span: 6}}
+                        wrapperCol={{span: 16}}
+                        style={{maxWidth: 600}}
+                    >
+                        <Form.Item label="mod.io key" name="Input" >
+                            <Input/>
+                        </Form.Item>
+                    </Form>
+                </Card>
+
+                <Card title="Game Settings"
+                >
+                    <Form
+                        labelCol={{span: 6}}
+                        wrapperCol={{span: 16}}
+                        style={{maxWidth: 600}}
+                    >
+                        <Form.Item label="Game Path" name="Input" >
+                            <Input/>
+                        </Form.Item>
+                    </Form>
+                </Card>
+
+
+            </div>
         );
     }
 }

@@ -67,6 +67,12 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
             tabActiveKey,
             url
         });
+
+        console.log(this.modioFormRef.current);
+        this.modioFormRef.current?.setFieldsValue({
+            modLinks: url,
+            groupId
+        });
         this.updateGroupList();
         return this;
     }
@@ -85,6 +91,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     private async handleOk() {
         // https://mod.io/g/drg/m/10iron-will-recharge-10-minutes
         const values = this.modioFormRef.current?.getFieldsValue();
+        console.log(values);
         if (this.state.tabActiveKey === AddModType.MODIO) {
             const links = values["modLinks"].toString().split("\n");
             for (const link of links) {
@@ -155,22 +162,26 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                   key: AddModType.MODIO,
                                   label: 'mod.io',
                                   children: <>
-                                      <Form ref={this.modioFormRef} layout="vertical">
+                                      <Form ref={this.modioFormRef}
+                                            layout="vertical"
+                                            initialValues={{
+                                                modLinks: this.state.url,
+                                                groupId: this.state.groupId
+                                            }}
+                                      >
                                           <Form.Item name="modLinks"
                                                      label="Mod Links"
                                                      rules={[{required: true}]}
                                           >
-                                              <TextArea defaultValue={this.state.url}
-                                                        value={this.state.url}
+                                              <TextArea value={this.state.url}
                                                         rows={4}
                                               />
                                           </Form.Item>
-                                          <Form.Item name="group"
+                                          <Form.Item name="groupId"
                                                      label="Group"
                                                      rules={[{required: true}]}
                                           >
-                                              <Select defaultValue={this.state.groupId}
-                                                      options={this.state.groupOptions}/>
+                                              <Select options={this.state.groupOptions}/>
                                           </Form.Item>
                                       </Form>
                                   </>,
@@ -179,13 +190,18 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                   key: AddModType.LOCAL,
                                   label: 'Local',
                                   children: <>
-                                      <Form ref={this.localFormRef} layout="vertical">
+                                      <Form ref={this.localFormRef}
+                                            layout="vertical"
+                                            initialValues={{
+                                                path: "",
+                                                groupId: this.state.groupId
+                                            }}
+                                      >
                                           <Form.Item name="path" label="Path" rules={[{required: true}]}>
                                               <Input addonAfter={<FolderAddOutlined/>}/>
                                           </Form.Item>
-                                          <Form.Item name="group" label="Group" rules={[{required: true}]}>
-                                              <Select defaultValue={this.state.groupId}
-                                                      options={this.state.groupOptions}/>
+                                          <Form.Item name="groupId" label="Group" rules={[{required: true}]}>
+                                              <Select options={this.state.groupOptions}/>
                                           </Form.Item>
                                       </Form>
                                   </>,
