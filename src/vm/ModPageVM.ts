@@ -26,7 +26,7 @@ export class ModListViewModel {
 
     public set ActiveProfile(activeProfile: string) {
         this.converter.profileList.activeProfile = activeProfile;
-        ConfigApi.saveProfileData(this.converter.profileList.activeProfile).then(_ => {
+        ConfigApi.saveProfileData(this.converter.profileList.toJson()).then(_ => {
         });
     }
 
@@ -40,27 +40,29 @@ export class ModListViewModel {
         addedModItem.isLocal = false;
 
         this.ActiveProfile.addMod(addedModItem.id, groupId);
-        console.log(this.ActiveProfile.root, this.ModList, "add mod from url");
 
         await ConfigApi.saveModListData(this.ModList.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async addModFromPath(path: string, groupId: number): Promise<void> {
         let modListItem = new ModListItem();
         modListItem.cachePath = path;
+        modListItem.enabled = true;
         const addedModItem = this.ModList.add(modListItem);
 
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async removeMod(id: number): Promise<void> {
         this.ModList.remove(id);
-        this.ActiveProfile.root.remove(id);
+        this.ActiveProfile.removeMod(id);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ModList.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async addProfile(name: string): Promise<void> {
@@ -89,7 +91,6 @@ export class ModListViewModel {
         if (modItem) {
             modItem.enabled = enable;
         }
-
         await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
@@ -123,7 +124,7 @@ export class ModListViewModel {
 
     public async updateModList(onProgress: () => void): Promise<void> {
         for (const mod of this.ModList.Mods) {
-            if (mod.url.startsWith("http")) {
+            if (mod.modId === -1 && mod.url.startsWith("http")) {
                 const resp = await ModioApi.getModInfoByLink(mod.url);
                 if (resp) {
                     this.ModList.update(mod, new ModListItem(resp));
@@ -147,9 +148,12 @@ export class ModListViewModel {
                 vm.converter.convertTo(config);
                 await ConfigApi.saveModListData(vm.converter.modList.toJson());
                 await ConfigApi.saveProfileData(vm.converter.profileList.toJson());
-                await ConfigApi.saveProfileDetails(vm.ActiveProfile.name, vm.ActiveProfile.toJson());
+                for (const profile of vm.converter.profileList.Profiles) {
+                    await ConfigApi.saveProfileDetails(profile,
+                        vm.converter.profileTreeList.find(p => p.name === profile)!.toJson());
+                }
                 return vm;
-            }else   {
+            } else {
                 vm.converter.modList = new ModList();
                 vm.converter.profileList = new ProfileList();
                 vm.converter.profileList.Profiles.push("default");
@@ -159,7 +163,7 @@ export class ModListViewModel {
             }
         } else {
             vm.converter.modList = ModList.fromJson(config);
-            vm.converter.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData()) ;
+            vm.converter.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData());
             for (const profile of vm.converter.profileList.Profiles) {
                 const profileDetailData = await ConfigApi.loadProfileDetails(profile);
                 if (profileDetailData) {

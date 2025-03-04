@@ -104,6 +104,10 @@ export class ProfileTree {
         }
     }
 
+    public removeMod(id: number) {
+        this.root.remove(id);
+    }
+
     public setGroupName(id: number, name: string) {
         const parent = this.findNode(this.root.children, id);
         if (parent) {
@@ -151,6 +155,7 @@ export class ProfileTree {
         }
         return JSON.stringify(profile);
     }
+
 }
 
 export class ProfileTreeItem {
