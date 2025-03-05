@@ -29,6 +29,7 @@ interface ModListPageState {
     expandedKeys?: any[];
     selectedKeys?: any[];
     defaultProfile?: string;
+    displayMode?: string;
 }
 
 class ModListPage extends React.Component<any, ModListPageState> {
@@ -85,7 +86,10 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private onEditProfileClick() {
-        this.profileEditDialogRef.current?.show();
+        this.profileEditDialogRef
+            .current?.setCallback(async () => {
+                await this.updateProfileSelect();
+            }).show();
     }
 
     private onMultiCheckboxChange(e: CheckboxChangeEvent) {
@@ -264,14 +268,17 @@ class ModListPage extends React.Component<any, ModListPageState> {
                                 <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onUpdateClick}/>
                             </Tooltip>
                         </Typography.Link>
-                        <Typography.Link>
-                            <Tooltip title="List View">
-                                <Button icon={<UnorderedListOutlined/>} type={"text"}/>
-                            </Tooltip>
-                            <Tooltip title="Group View">
-                                <Button icon={<TreeViewOutlined/>} type={"text"}/>
-                            </Tooltip>
-                        </Typography.Link>
+                        {
+                            this.state.displayMode === "ListView" &&
+                            <Typography.Link>
+                                <Tooltip title="List View">
+                                    <Button icon={<UnorderedListOutlined/>} type={"text"}/>
+                                </Tooltip>
+                                <Tooltip title="Group View">
+                                    <Button icon={<TreeViewOutlined/>} type={"text"}/>
+                                </Tooltip>
+                            </Typography.Link>
+                        }
                         <Typography.Link>
                             <Tooltip title="Sort Ascending">
                                 <Button icon={<SortAscendingOutlined/>} type={"text"}/>

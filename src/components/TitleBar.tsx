@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Button, Flex, Image, Popconfirm, Tag} from "antd";
+import {Avatar, Badge, Button, Flex, Image, Popconfirm} from "antd";
 import {
     BellOutlined,
     CloudSyncOutlined,
@@ -9,14 +9,22 @@ import {
     UserOutlined
 } from '@ant-design/icons';
 import packageJson from '../../package.json';
+import {AppContext} from "../AppContext.ts";
 
 class TitleBar extends React.Component {
 
+    declare context: React.ContextType<typeof AppContext>;
+    static contextType = AppContext;
+
+
     public constructor(props: any, context: any) {
         super(props, context);
+
+        this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
     }
 
     private async onLaunchGameClick() {
+        await this.context.installMods();
     }
 
     render() {
@@ -54,20 +62,38 @@ class TitleBar extends React.Component {
                         <PlayCircleOutlined/>
                         Launch Game
                     </Button>
-                    <BellOutlined/>
+                    <span>
+                        <Badge size={"small"}
+                               count={0}
+                        >
+                            <BellOutlined/>
+                        </Badge>
+                    </span>
+                    <span>
+                        <Popconfirm
+                            placement="bottom"
+                            title={"text"}
+                            description={"description"}
+                            okText="Yes"
+                            cancelText="No"
+                        >
+                            <SkinOutlined/>
+                        </Popconfirm>
+                    </span>
+                    <span>
+                        <QuestionCircleOutlined/>
+                    </span>
                     <Popconfirm
-                        placement="bottom"
+                        placement="bottomRight"
                         title={"text"}
                         description={"description"}
                         okText="Yes"
                         cancelText="No"
                     >
-                        <SkinOutlined/>
+                        <Avatar className={"app-header-avatar"}
+                                icon={<UserOutlined/>}
+                        />
                     </Popconfirm>
-                    <QuestionCircleOutlined/>
-                    <Avatar className={"app-header-avatar"}
-                            icon={<UserOutlined/>}
-                    />
                 </Flex>
             </Flex>
         )
