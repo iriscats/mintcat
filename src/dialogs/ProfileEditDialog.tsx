@@ -1,30 +1,48 @@
 import React from "react";
 import {Button, Card, Flex, Input, List, Modal} from "antd";
 import {ModListPageContext} from "../AppContext.ts";
-import Icon, {CopyOutlined, DeleteOutlined, EditOutlined, FileAddOutlined, PlusCircleOutlined} from "@ant-design/icons";
+import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
-    dataSource?: any;
+    newProfileName?: string;
+    editingKey?: string | null;
+    editingValue?: string;
 }
 
+type InputCallback = (name: string) => void;
 
 class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     declare context: React.ContextType<typeof ModListPageContext>;
     static contextType = ModListPageContext;
 
+    private callback: InputCallback;
+
     public constructor(props: any, context: ProfileEditDialogStates) {
         super(props, context);
 
         this.state = {
             isModalOpen: false,
+            newProfileName: "",
+            editingKey: null,
+            editingValue: ""
         }
 
         this.show = this.show.bind(this);
         this.handleOk = this.handleOk.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
+        this.handleAdd = this.handleAdd.bind(this);
+        this.handleDelete = this.handleDelete.bind(this);
+        this.handleRename = this.handleRename.bind(this);
+        this.handleCopy = this.handleCopy.bind(this);
+        this.handleProfileInputChange = this.handleProfileInputChange.bind(this);
+    }
+
+    public setCallback(callback) {
+        this.callback = callback;
+        return this;
     }
 
     public show() {
@@ -35,12 +53,44 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     private async handleOk() {
         this.setState({isModalOpen: false});
+        this.callback?.call(this);
     }
 
     private handleCancel() {
         this.setState({isModalOpen: false});
+        this.callback?.call(this);
     }
 
+    private async handleAdd() {
+        console.log(this.state.newProfileName);
+        await this.context.addProfile(this.state.newProfileName);
+        this.forceUpdate();
+        this.setState({
+            newProfileName: ""
+        });
+    }
+
+    private async handleDelete(key: string) {
+        await this.context.removeProfile(key);
+        this.forceUpdate();
+    }
+
+    private async handleRename(key: string, newName: string) {
+        await this.context.renameProfile(key, newName);
+        this.setState({
+            editingKey: null,
+            editingValue: ""
+        });
+    }
+
+    private async handleCopy(key: string) {
+        await this.context.addProfile(key + "_copy");
+        this.forceUpdate();
+    }
+
+    private handleProfileInputChange(e) {
+        this.setState({newProfileName: e.target.value})
+    }
 
     render() {
         return (
@@ -55,10 +105,15 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                           header={
                               <Flex>
                                   <Input size="small"
-                                         placeholder="Input New Profile"/>
+                                         type={"text"}
+                                         value={this.state.newProfileName}
+                                         placeholder="Input New Profile"
+                                         onChange={this.handleProfileInputChange}
+                                         onPressEnter={this.handleAdd}
+                                  />
                                   <Button type={"text"}
                                           style={{marginLeft: "8px", marginRight: "20px"}}
-                                          onClick={this.handleOk}
+                                          onClick={this.handleAdd}
                                           icon={<PlusCircleOutlined/>}
                                   />
                               </Flex>
@@ -67,23 +122,44 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                               item =>
                                   <List.Item>
                                       <Flex style={{width: "100%", display: "block"}}>
-                                          <span style={{lineHeight: "32px"}}>
-                                              {item}
-                                          </span>
+                                            <span style={{lineHeight: "32px"}}>
+                                                {this.state.editingKey === item ? (
+                                                    <Input
+                                                        size="small"
+                                                        value={this.state.editingValue}
+                                                        onChange={(e) => this.setState({editingValue: e.target.value})}
+                                                        onPressEnter={() => this.handleRename(item, this.state.editingValue)}
+                                                        style={{width: "200px"}}
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    <span>{item}</span>
+                                                )}
+                                            </span>
                                           <Button type={"text"}
                                                   style={{float: "right"}}
-                                                  onClick={this.handleOk}
+                                                  onClick={() => this.handleDelete(item)}
                                                   icon={<DeleteOutlined/>}
                                           />
                                           <Button type={"text"}
                                                   style={{float: "right"}}
-                                                  onClick={this.handleOk}
+                                                  onClick={() => this.handleCopy(item)}
                                                   icon={<CopyOutlined/>}
                                           />
-                                          <Button type={"text"}
-                                                  style={{float: "right"}}
-                                                  onClick={this.handleOk}
-                                                  icon={<EditOutlined/>}
+                                          <Button
+                                              type={"text"}
+                                              style={{float: "right"}}
+                                              onClick={async () => {
+                                                  if (this.state.editingKey === item) {
+                                                      await this.handleRename(item, this.state.editingValue);
+                                                  } else {
+                                                      this.setState({
+                                                          editingKey: item,
+                                                          editingValue: item
+                                                      });
+                                                  }
+                                              }}
+                                              icon={this.state.editingKey === item ? <CheckOutlined/> : <EditOutlined/>}
                                           />
                                       </Flex>
                                   </List.Item>

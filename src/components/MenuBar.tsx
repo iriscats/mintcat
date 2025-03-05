@@ -6,10 +6,16 @@ import {ModioOutlined} from "./SvgIcon.tsx";
 
 type MenuItem = Required<MenuProps>['items'][number];
 
+export enum MenuPage {
+    Home = 'home',
+    Setting = 'setting',
+    Modio = 'modio'
+}
+
 const items: MenuItem[] = [
-    {key: 'home', icon: <HomeOutlined/>, label: 'Home'},
-    {key: 'modio', icon: <ModioOutlined/>, label: 'mod.io'},
-    {key: 'settings', icon: <SettingOutlined/>, label: 'Settings'}
+    {key: MenuPage.Home, icon: <HomeOutlined/>, label: 'Home'},
+    {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io'},
+    {key: MenuPage.Setting, icon: <SettingOutlined/>, label: 'Settings'}
 ];
 
 interface MenuBarProps {

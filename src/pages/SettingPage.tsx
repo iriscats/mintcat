@@ -1,26 +1,16 @@
 import React from 'react';
 import {
-    Button,
-    Cascader,
-    DatePicker,
     Form,
     Input,
-    InputNumber,
-    Mentions,
     Select,
-    TreeSelect,
-    Segmented, Card,
+    Card,
 } from 'antd';
-
-const {RangePicker} = DatePicker;
-
 
 class SettingPage extends React.Component<any, any> {
 
     public constructor(props: any, context: any) {
         super(props, context);
     }
-
 
     render() {
 
@@ -41,7 +31,7 @@ class SettingPage extends React.Component<any, any> {
                         wrapperCol={{span: 16}}
                         style={{maxWidth: 600}}
                     >
-                        <Form.Item label="Language" name="Input" >
+                        <Form.Item label="Language" name="Input">
                             <Select/>
                         </Form.Item>
                         <Form.Item label="Theme" name="Input">
@@ -58,7 +48,7 @@ class SettingPage extends React.Component<any, any> {
                         wrapperCol={{span: 16}}
                         style={{maxWidth: 600}}
                     >
-                        <Form.Item label="mod.io key" name="Input" >
+                        <Form.Item label="mod.io key" name="Input">
                             <Input/>
                         </Form.Item>
                     </Form>
@@ -71,7 +61,7 @@ class SettingPage extends React.Component<any, any> {
                         wrapperCol={{span: 16}}
                         style={{maxWidth: 600}}
                     >
-                        <Form.Item label="Game Path" name="Input" >
+                        <Form.Item label="Game Path" name="Input">
                             <Input/>
                         </Form.Item>
                     </Form>

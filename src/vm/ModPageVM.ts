@@ -6,6 +6,8 @@ import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "./conf
 
 export class ModListViewModel {
 
+    private static instance: ModListViewModel;
+
     private converter: ModConfigConverter = new ModConfigConverter();
 
     public get ModList(): ModList {
@@ -75,6 +77,13 @@ export class ModListViewModel {
         this.converter.profileList.remove(name);
 
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+        //TODO remove profile details
+    }
+
+    public async renameProfile(oldName: string, newName: string): Promise<void> {
+        this.converter.profileList.rename(oldName, newName);
+
+        await ConfigApi.saveProfileData(this.converter.profileList.toJson());
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
@@ -138,9 +147,11 @@ export class ModListViewModel {
 
 
     public static async getInstance() {
+        if (ModListViewModel.instance) {
+            return ModListViewModel.instance;
+        }
         const vm = new ModListViewModel();
         let config = await ConfigApi.loadModListData();
-        console.log(config);
         if (config === undefined) {
             config = await ConfigApi.loadModListDataV1();
             if (config !== undefined) {

@@ -4,7 +4,7 @@ import {I18nextProvider} from "react-i18next"
 
 import TitleBar from "./components/TitleBar.tsx";
 import StatusBar from "./components/StatusBar.tsx";
-import MenuBar from "./components/MenuBar.tsx";
+import MenuBar, {MenuPage} from "./components/MenuBar.tsx";
 import ModListPage from "./pages/ModListPage.tsx";
 import SettingPage from "./pages/SettingPage.tsx";
 import ModioPage from "./pages/ModioPage.tsx";
@@ -24,7 +24,7 @@ const {
 
 class App extends React.Component<any, any> {
 
-    private currentPage: string = "home";
+    private currentPage: string = MenuPage.Home;
 
     public constructor(props: any, context: any) {
         super(props, context);
@@ -48,9 +48,9 @@ class App extends React.Component<any, any> {
                                 }}/>
                             </Sider>
                             <Content>
-                                {this.currentPage === "home" && <ModListPage/>}
-                                {this.currentPage === "modio" && <ModioPage/>}
-                                {this.currentPage === "settings" && <SettingPage/>}
+                                {this.currentPage === MenuPage.Home && <ModListPage/>}
+                                {this.currentPage === MenuPage.Modio && <ModioPage/>}
+                                {this.currentPage === MenuPage.Setting && <SettingPage/>}
                             </Content>
                         </Layout>
                         <Footer style={{height: "30px"}}>

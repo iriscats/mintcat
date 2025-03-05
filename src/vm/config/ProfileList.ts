@@ -15,6 +15,13 @@ export class ProfileList {
         this.profiles.splice(this.profiles.indexOf(profile), 1);
     }
 
+    public rename(oldName: string, newName: string) {
+        const index = this.profiles.indexOf(oldName);
+        if (index >= 0) {
+            this.profiles[index] = newName;
+        }
+    }
+
     public static fromJson(json_str: string): ProfileList {
         const json = JSON.parse(json_str);
         let profile = new ProfileList();

@@ -1,5 +1,5 @@
 import React from 'react';
-import {Avatar, Button, Card, Divider, Flex, List, message, Skeleton, Space} from 'antd';
+import {Avatar, Button, Divider, Flex, List, message, Skeleton, Space} from 'antd';
 import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
@@ -53,87 +53,85 @@ class ModioPage extends React.Component<any, ModioPageState> {
 
     render() {
         return (
-            <>
-                <div id="scrollableDiv"
-                     style={{
-                         height: window.innerHeight - 81,
-                         overflow: 'auto',
-                         backgroundColor: '#fff',
-                         padding: '10px',
-                     }}
-                >
-                    <AddModDialog ref={this.addModDialogRef}/>
+            <div id="scrollableDiv"
+                 style={{
+                     height: window.innerHeight - 81,
+                     overflow: 'auto',
+                     backgroundColor: '#fff',
+                     padding: '10px',
+                 }}
+            >
+                <AddModDialog ref={this.addModDialogRef}/>
 
-                    <Flex vertical={true}>
-                        <Search placeholder="Search on mod.io"/>
-                        <InfiniteScroll
-                            dataLength={this.state.dataSource.length}
-                            hasMore={this.state.dataSource.length < 100}
-                            loader={<Skeleton avatar paragraph={{rows: 1}} active/>}
-                            endMessage={<Divider plain>It is all, nothing more 🤐</Divider>}
-                            scrollableTarget="scrollableDiv"
-                            next={() => {
-                                console.log('next');
-                            }}
-                        >
-                            <List
-                                itemLayout="vertical"
-                                dataSource={this.state.dataSource}
-                                size={"small"}
-                                footer={
-                                    <div>
-                                    </div>
-                                }
-                                renderItem={(item) => (
-                                    <List.Item
-                                        key={item.name}
-                                        onDoubleClick={() => {
+                <Flex vertical={true}>
+                    <Search placeholder="Search on mod.io"/>
+                    <InfiniteScroll
+                        dataLength={this.state.dataSource.length}
+                        hasMore={this.state.dataSource.length < 100}
+                        loader={<Skeleton avatar paragraph={{rows: 1}} active/>}
+                        endMessage={<Divider plain>It is all, nothing more 🤐</Divider>}
+                        scrollableTarget="scrollableDiv"
+                        next={() => {
+                            console.log('next');
+                        }}
+                    >
+                        <List
+                            itemLayout="vertical"
+                            dataSource={this.state.dataSource}
+                            size={"small"}
+                            footer={
+                                <div>
+                                </div>
+                            }
+                            renderItem={(item) => (
+                                <List.Item
+                                    key={item.name}
+                                    onDoubleClick={() => {
 
-                                        }}
-                                        actions={[
-                                            <IconText icon={DownloadOutlined}
-                                                      text={item.stats.downloads_total.toString()}/>,
-                                            <IconText icon={LikeOutlined}
-                                                      text={item.stats.subscribers_total.toString()}/>,
+                                    }}
+                                    actions={[
+                                        <IconText icon={DownloadOutlined}
+                                                  text={item.stats.downloads_total.toString()}/>,
+                                        <IconText icon={LikeOutlined}
+                                                  text={item.stats.subscribers_total.toString()}/>,
 
-                                        ]}
-                                        extra={
-                                            <img
-                                                width={180}
-                                                style={{border: '1px solid #eee'}}
-                                                alt="logo"
-                                                src={"https://api.v1st.net/" + item.logo.thumb_320x180}
+                                    ]}
+                                    extra={
+                                        <img
+                                            width={180}
+                                            style={{border: '1px solid #eee'}}
+                                            alt="logo"
+                                            src={"https://api.v1st.net/" + item.logo.thumb_320x180}
+                                        />
+                                    }
+                                >
+                                    <List.Item.Meta
+                                        avatar={
+                                            <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
+                                                    src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
                                             />
                                         }
-                                    >
-                                        <List.Item.Meta
-                                            avatar={
-                                                <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
-                                                        src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
-                                                />
-                                            }
-                                            title={
-                                                <>
-                                                    <a href={item.name_id}>{item.name}</a>
-                                                    <Button type={"text"}
-                                                            onClick={() => {
-                                                                console.log(item)
-                                                                this.onAddClick(item.profile_url)
-                                                            }}>
-                                                        <PlusCircleOutlined/>
-                                                    </Button>
-                                                </>
-                                            }
-                                            description={item.summary}
-                                        />
+                                        title={
+                                            <>
+                                                <a href={item.name_id}>{item.name}</a>
+                                                <Button type={"text"}
+                                                        onClick={() => {
+                                                            console.log(item)
+                                                            this.onAddClick(item.profile_url)
+                                                        }}>
+                                                    <PlusCircleOutlined/>
+                                                </Button>
+                                            </>
+                                        }
+                                        description={item.summary}
+                                    />
 
-                                    </List.Item>
-                                )}
-                            />
-                        </InfiniteScroll>
-                    </Flex>
-                </div>
-            </>
+                                </List.Item>
+                            )}
+                        />
+                    </InfiniteScroll>
+                </Flex>
+            </div>
         );
     }
 

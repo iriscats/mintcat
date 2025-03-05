@@ -1,10 +1,12 @@
 import {invoke} from '@tauri-apps/api/core';
 
 
-class IntegrateApi {
+export class IntegrateApi {
 
-    public static async Install() {
-        return await invoke('my_custom_command');
+    public static async Install(mod_list: string) {
+        return await invoke('install_mods', {
+            "mod_list_json": mod_list,
+        });
     }
 
     public static async Uninstall() {
