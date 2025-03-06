@@ -1,10 +1,18 @@
+import {writeFile} from "@tauri-apps/plugin-fs";
+
 class CacheApi {
 
     public constructor() {
     }
 
-    public async saveCacheFile(data: ArrayBuffer): Promise<any> {
-
+    public static async saveCacheFile(modName: string, data: Uint8Array): Promise<any> {
+        const fileName = `/Users/bytedance/Desktop/data/${modName}.zip`;
+        try {
+            await writeFile(fileName, data);
+            return fileName;
+        } catch (error) {
+            console.error(`Failed to write file ${modName}: ${error}`);
+        }
     }
 
     public async loadModCache() {

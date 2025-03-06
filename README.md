@@ -10,3 +10,5 @@ This template should help get you started developing with Tauri, React and Types
 
 ## Modio RESTful API
 https://docs.mod.io/
+https://api.v1st.net/https://docs.mod.io/restapiref/#getting-started
+https://api.v1st.net/https://docs.mod.io/restapiref/#get-mod

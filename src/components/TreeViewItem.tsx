@@ -1,5 +1,5 @@
 import React from "react";
-import {Dropdown, MenuProps, Select, Switch, Tag} from "antd";
+import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag} from "antd";
 import {FolderOutlined} from "@ant-design/icons";
 
 const contextMenus: MenuProps['items'] = [
@@ -28,41 +28,71 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                               onMenuClick(e.key, nodeData.key);
                           }
                       }}>
-                    <span style={{width: "100%", display: "block"}}>
-                        <Switch checked={nodeData.enabled} size={"small"}
-                                onChange={(checked) => onSwitchChange(checked, nodeData)}
-                                style={{marginRight: "8px", marginTop: "-3px"}}
-                        />
+                <Flex align="center" style={{width: "100%", display: "block"}}>
+                    <Switch checked={nodeData.enabled} size={"small"}
+                            onChange={(checked) => onSwitchChange(checked, nodeData)}
+                            style={{marginRight: "8px", marginTop: "-3px"}}
+                    />
 
-                        {nodeData.isLocal === false &&
-                            <Select size={"small"}
-                                    suffixIcon={null}
-                                    popupMatchSelectWidth={false}
-                                    style={{marginRight: "8px", width: "60px"}}
-                                    value={nodeData.fileVersion}
-                                >
-                                <Select.Option value={nodeData.fileVersion}>{nodeData.fileVersion}</Select.Option>
-                            </Select>}
+                    {nodeData.isLocal === false &&
+                        <Select size={"small"}
+                                suffixIcon={null}
+                                popupMatchSelectWidth={false}
+                                style={{marginRight: "8px", width: "60px"}}
+                                value={nodeData.fileVersion}
+                                onDropdownVisibleChange={(visible) => {
+                                    console.log("onDropdownVisibleChange" + visible);
+                                }}
+                        >
+                            <Select.Option value={nodeData.fileVersion}>{nodeData.fileVersion}</Select.Option>
+                        </Select>}
 
-                        <a>{nodeData.title}</a>
+                    {nodeData.isLocal === false &&
+                        <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            verticalAlign: "middle",
+                            marginRight: "5px",
+                        }}>
+                            {
+                                (nodeData.downloadProgress !== 100) &&
+                                <Progress
+                                    type="circle"
+                                    trailColor="#e6f4ff"
+                                    percent={nodeData.downloadProgress}
+                                    strokeWidth={20}
+                                    size={14}
+                                    format={(number) => `Downloading ${number}%`}
+                                />
+                            }
+                        </span>
+                    }
 
-                        {nodeData.approval === "Verified" ? (<Tag color="blue" style={{float: "right"}}>V</Tag>) :
-                            nodeData.approval === "Approved" ? (<Tag color="green" style={{float: "right"}}>A</Tag>) :
-                                nodeData.approval === "Sandbox" ? (
-                                        <Tag color="orange" style={{float: "right"}}>S</Tag>) :
-                                    (<></>)}
+                    {nodeData.isLocal === true && <a style={{color: "#403c3c"}}> {nodeData.title}</a>}
+                    {
+                        nodeData.isLocal === false &&
+                        <a style={{color: nodeData.downloadProgress === 100 ? "#1f81f8" : "lightblue"}}>
+                            {nodeData.title}
+                        </a>
+                    }
 
-                        {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
-                            <Tag color="red" style={{float: "right"}}>{nodeData.versions[0]}</Tag>)}
+                    {nodeData.approval === "Verified" ? (<Tag color="blue" style={{float: "right"}}>V</Tag>) :
+                        nodeData.approval === "Approved" ? (<Tag color="green" style={{float: "right"}}>A</Tag>) :
+                            nodeData.approval === "Sandbox" ? (
+                                    <Tag color="orange" style={{float: "right"}}>S</Tag>) :
+                                (<></>)}
 
-                        {nodeData.required === "RequiredByAll" && (
-                            <Tag color="orange" style={{float: "right"}}>RequiredByAll</Tag>)}
+                    {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
+                        <Tag color="red" style={{float: "right"}}>{nodeData.versions[0]}</Tag>)}
 
-                        {nodeData.tags.map(tagName => (
-                            <Tag key={tagName} style={{float: "right"}}>{tagName}</Tag>
-                        ))}
+                    {nodeData.required === "RequiredByAll" && (
+                        <Tag color="orange" style={{float: "right"}}>RequiredByAll</Tag>)}
 
-                    </span>
+                    {nodeData.tags.map(tagName => (
+                        <Tag key={tagName} style={{float: "right"}}>{tagName}</Tag>
+                    ))}
+
+                </Flex>
             </Dropdown>
         );
     } else {

@@ -2,7 +2,8 @@ import ConfigApi from "../apis/ConfigApi.ts";
 import ModioApi from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {ModList, ModListItem} from "./config/ModList.ts";
-import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "./config/ProfileList.ts";
+import {ProfileList, ProfileTree} from "./config/ProfileList.ts";
+import CacheApi from "../apis/CacheApi.ts";
 
 export class ModListViewModel {
 
@@ -135,16 +136,28 @@ export class ModListViewModel {
         for (const mod of this.ModList.Mods) {
             if (mod.modId === -1 && mod.url.startsWith("http")) {
                 const resp = await ModioApi.getModInfoByLink(mod.url);
+                const newItem = new ModListItem(resp);
                 if (resp) {
-                    this.ModList.update(mod, new ModListItem(resp));
+                    this.ModList.update(mod, newItem);
                     onProgress();
                 }
+
+                const data = await ModioApi.downloadModFile(newItem.downloadUrl, (loaded: number, total: number) => {
+                    //console.log(loaded, total);
+                    newItem.downloadProgress = (loaded / total) * 100;
+                    this.ModList.update(mod, newItem);
+                    onProgress();
+                });
+
+                const path = await CacheApi.saveCacheFile(newItem.nameId, data);
+                newItem.downloadProgress = 100;
+                newItem.cachePath = path;
+                this.ModList.update(mod, newItem);
+
+                await ConfigApi.saveModListData(this.ModList.toJson());
             }
         }
-
-        await ConfigApi.saveModListData(this.ModList.toJson());
     }
-
 
     public static async getInstance() {
         if (ModListViewModel.instance) {
@@ -155,7 +168,6 @@ export class ModListViewModel {
         if (config === undefined) {
             config = await ConfigApi.loadModListDataV1();
             if (config !== undefined) {
-                console.log(vm.converter.modList);
                 vm.converter.convertTo(config);
                 await ConfigApi.saveModListData(vm.converter.modList.toJson());
                 await ConfigApi.saveProfileData(vm.converter.profileList.toJson());

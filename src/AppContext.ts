@@ -1,5 +1,5 @@
 import {createContext} from "react";
-import {ModListViewModel} from "./vm/ModPageVM.ts";
+import {ModListViewModel} from "./vm/ModListVM.ts";
 import {AppViewModel} from "./vm/AppViewModel.ts";
 
 export const AppContext

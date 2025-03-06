@@ -20,6 +20,8 @@ import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
+import ModioApi from "../apis/ModioApi.ts";
+import CacheApi from "../apis/CacheApi.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -48,7 +50,9 @@ class ModListPage extends React.Component<any, ModListPageState> {
         {value: 'Approved', label: 'Approved'},
         {value: 'Sandbox', label: 'Sandbox'},
         {value: 'RequiredByAll', label: 'RequiredByAll'},
-        {value: 'Optional', label: 'Optional'}
+        {value: 'Optional', label: 'Optional'},
+        {value: 'Framework', label: 'Framework'},
+        {value: 'Tools', label: 'Tools'},
     ]
 
     public constructor(props: any, context: ModListPageState) {
@@ -88,8 +92,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
     private onEditProfileClick() {
         this.profileEditDialogRef
             .current?.setCallback(async () => {
-                await this.updateProfileSelect();
-            }).show();
+            await this.updateProfileSelect();
+        }).show();
     }
 
     private onMultiCheckboxChange(e: CheckboxChangeEvent) {
@@ -198,6 +202,16 @@ class ModListPage extends React.Component<any, ModListPageState> {
                         await this.context.setGroupName(id, text);
                         await this.updateTreeData();
                     }).show();
+                break;
+            case "update": {
+                const mod = this.context.ModList.get(id);
+                if (mod) {
+                    const data = await ModioApi.downloadModFile(mod.downloadUrl, (loaded: number, total: number) => {
+                        console.log(loaded, total);
+                    });
+                    await CacheApi.saveCacheFile(mod.nameId, data);
+                }
+            }
                 break;
             case "add_mod": {
                 this.addModDialogRef.current?.setValue(id).setCallback(
@@ -323,21 +337,31 @@ class ModListPage extends React.Component<any, ModListPageState> {
                           onDrop={this.onDrop}
                           titleRender={this.onCustomTitleRender}
                     />
-                    <Flex style={{borderTop: "1px solid #eee"}}>
-                        <span style={{margin: "2px 10px 0 10px"}}>
-                            <Checkbox onChange={this.onMultiCheckboxChange}
-                            />
-                            {
-                                this.state.isMultiSelect === true &&
-                                <span>
-                                    <Button type="text" size={"small"} icon={<CloseCircleOutlined/>}>
-                                        Delete
-                                    </Button>
-                                    <Button type="text" size={"small"} icon={<SyncOutlined/>}>
-                                        Update
-                                    </Button>
-                                </span>
-                            }
+                    <Flex style={{
+                        borderTop: "1px solid #eee",
+                        padding: "2px 10px 0 10px",
+                        width: "100%",
+                        justifyContent: "space-between",
+                    }}>
+                        <Checkbox onChange={this.onMultiCheckboxChange}
+                        />
+                        {
+                            this.state.isMultiSelect === true &&
+                            <span style={{marginRight: 'auto'}}>
+                                <Button type="text" size={"small"} icon={<CloseCircleOutlined/>}>
+                                    Delete
+                                </Button>
+                                <Button type="text" size={"small"} icon={<SyncOutlined/>}>
+                                    Update
+                                </Button>
+                            </span>
+                        }
+                        <span style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: '#888',
+                        }}>
+                          {this.context.ModList.Mods.filter((value) => value.enabled).length} / {this.context.ModList.Mods.length}
                         </span>
                     </Flex>
                 </Flex>
