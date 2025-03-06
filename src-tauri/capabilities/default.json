@@ -13,6 +13,10 @@
     {
       "identifier": "fs:allow-write-text-file",
       "allow": [{ "path": "$DESKTOP/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$DESKTOP/**" }]
     }
   ]
 }

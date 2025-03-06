@@ -29,6 +29,7 @@ export class TreeViewConverter {
                     approval: modItem.approval,
                     versions: modItem.versions,
                     fileVersion: modItem.fileVersion,
+                    downloadProgress: modItem.downloadProgress,
                 });
 
             } else if (item.type === ProfileTreeType.FOLDER) {

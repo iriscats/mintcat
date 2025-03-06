@@ -1,4 +1,4 @@
-import {ModListViewModel} from "./ModPageVM.ts";
+import {ModListViewModel} from "./ModListVM.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 
 export class AppViewModel {
