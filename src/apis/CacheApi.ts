@@ -1,18 +1,38 @@
-import {writeFile} from "@tauri-apps/plugin-fs";
+import {writeFile, size} from "@tauri-apps/plugin-fs";
+
+const CACHE_PATH = "/Users/bytedance/Desktop/data/";
 
 class CacheApi {
 
     public constructor() {
     }
 
+    public static getModCachePath(modName: string): string {
+        return `${CACHE_PATH}${modName}.zip`;
+    }
+
     public static async saveCacheFile(modName: string, data: Uint8Array): Promise<any> {
-        const fileName = `/Users/bytedance/Desktop/data/${modName}.zip`;
+        const fileName = CacheApi.getModCachePath(modName);
         try {
             await writeFile(fileName, data);
             return fileName;
         } catch (error) {
             console.error(`Failed to write file ${modName}: ${error}`);
         }
+    }
+
+    public static async checkCacheFile(modName: string, fileSize: number): Promise<boolean> {
+        const fileName = CacheApi.getModCachePath(modName);
+        try {
+            const _fileSize = await size(fileName);
+            console.log(fileSize, _fileSize);
+            if (_fileSize === fileSize) {
+                return true;
+            }
+        } catch (error) {
+            console.error(error);
+        }
+        return false;
     }
 
     public async loadModCache() {
@@ -1176,6 +1196,7 @@ class CacheApi {
             }
         });
     }
+
 }
 
 export default CacheApi;

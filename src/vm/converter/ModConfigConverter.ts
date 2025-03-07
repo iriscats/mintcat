@@ -21,11 +21,15 @@ export class ModConfigConverter {
                 item.url = modItem["spec"]["url"];
                 item.required = modItem["required"];
                 item.enabled = modItem["enabled"];
-
-                const addedModItem = this.modList.add(item);
                 if (item.url.startsWith("http")) {
+                    const addedModItem = this.modList.add(item);
                     modioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
                 }else{
+                    item.displayName = modItem["spec"]["url"].split("/").pop();
+                    item.cachePath = modItem["spec"]["url"];
+                    item.isLocal = true;
+                    item.downloadProgress = 100;
+                    const addedModItem = this.modList.add(item);
                     localFolder.add(addedModItem.id, ProfileTreeType.ITEM);
                 }
             }

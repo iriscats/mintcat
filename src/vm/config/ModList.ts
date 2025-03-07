@@ -8,7 +8,7 @@ export class ModListItem {
     public nameId: string = "";
     public displayName: string = "";
     public required: boolean = false;
-    public enabled: boolean = false;
+    public enabled: boolean = true;
     public fileVersion: string = "-";
     public tags: string[] = [];
     public usedVersion: string = "";
@@ -17,7 +17,8 @@ export class ModListItem {
     public isLocal: boolean = true;
     public downloadUrl: string = "";
     public cachePath: string = "";
-    public downloadProgress: number = 0;
+    public downloadProgress: number = 100;
+    public fileSize: number = 0;
 
     public constructor(modInfo?: ModInfo) {
         if (modInfo) {
@@ -31,13 +32,16 @@ export class ModListItem {
                 this.tags.push(tag.name);
             }
 
-            if (this.url.startsWith("http") === true) {
-                this.isLocal = false;
-            }
+            this.isLocal = false;
+            this.downloadProgress = 0;
+            this.fileSize = modInfo.modfile.filesize;
 
             this.convertModVersion();
             this.convertModApprovalType();
             this.convertModRequired();
+        } else {
+            this.isLocal = true;
+            this.downloadProgress = 100;
         }
     }
 
@@ -151,6 +155,7 @@ export class ModList {
             modItem.downloadUrl = mod.download_url;
             modItem.cachePath = mod.cache_path;
             modItem.downloadProgress = mod.download_progress;
+            modItem.fileSize = mod.file_size;
             modList.mods.push(modItem);
         }
         return modList;
@@ -175,6 +180,7 @@ export class ModList {
                 "is_local": mod.isLocal,
                 "download_url": mod.downloadUrl,
                 "cache_path": mod.cachePath,
+                "file_size": mod.fileSize,
                 "download_progress": mod.downloadProgress
             }
             mods.push(modItem);

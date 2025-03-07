@@ -17,6 +17,10 @@
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "$DESKTOP/**" }]
+    },
+    {
+      "identifier": "fs:allow-size",
+      "allow": [{ "path": "$DESKTOP/**" }]
     }
   ]
 }
