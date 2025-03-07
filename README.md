@@ -15,7 +15,12 @@ https://ant-design.antgroup.com/index-cn
 https://v2.tauri.app/start/
 
 
-## Modio RESTful API
-https://docs.mod.io/
-https://api.v1st.net/https://docs.mod.io/restapiref/#getting-started
-https://api.v1st.net/https://docs.mod.io/restapiref/#get-mod
+# Modio RESTful API
+1. https://docs.mod.io/
+2. https://api.v1st.net/https://docs.mod.io/restapiref/#getting-started
+3. https://api.v1st.net/https://docs.mod.io/restapiref/#get-mod
+
+# Build
+```
+ pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
+ ```
