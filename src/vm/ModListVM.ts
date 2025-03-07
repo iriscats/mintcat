@@ -75,6 +75,7 @@ export class ModListViewModel {
 
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
         //TODO remove profile details
+
     }
 
     public async renameProfile(oldName: string, newName: string): Promise<void> {

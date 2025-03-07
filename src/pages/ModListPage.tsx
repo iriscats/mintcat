@@ -204,13 +204,12 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     }).show();
                 break;
             case "update": {
-                const mod = this.context.ModList.get(id);
-                if (mod) {
-                    const data = await ModioApi.downloadModFile(mod.downloadUrl, (loaded: number, total: number) => {
-                        console.log(loaded, total);
-                    });
-                    await CacheApi.saveCacheFile(mod.nameId, data);
-                }
+                // const mod = this.context.ModList.get(id);
+                // if (mod) {
+                //     await ModioApi.downloadModFile(mod, (loaded: number, total: number) => {
+                //         console.log(loaded, total);
+                //     });
+                // }
             }
                 break;
             case "add_mod": {
