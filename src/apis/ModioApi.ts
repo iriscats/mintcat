@@ -1,4 +1,6 @@
 import {ModInfo} from "../vm/modio/ModInfo.ts";
+import {ModListItem} from "../vm/config/ModList.ts";
+import CacheApi from "./CacheApi.ts";
 
 const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io/";
 const MODIO_API_URL = "https://api.mod.io/";
@@ -54,8 +56,18 @@ class ModioApi {
         return resp.json();
     }
 
-    public static async downloadModFile(url: string, onProgress?: (loaded: number, total: number) => void) {
-        const response = await fetch(url);
+    public static async downloadModFile(modInfo: ModListItem,
+                                        onProgress?: (loaded: number, total: number) => void) {
+
+        if (await CacheApi.checkCacheFile(modInfo.nameId, modInfo.fileSize)) {
+            modInfo.downloadProgress = 100;
+            modInfo.cachePath = CacheApi.getModCachePath(modInfo.nameId);
+            onProgress(1, 1);
+            console.log("Load Cache " + modInfo.cachePath);
+            return modInfo;
+        }
+
+        const response = await fetch(modInfo.downloadUrl);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -91,7 +103,9 @@ class ModioApi {
             position += chunk.length;
         }
 
-        return data;
+        modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, data);
+        modInfo.downloadProgress = 100;
+        return modInfo;
     }
 
     public static async getModioApi() {

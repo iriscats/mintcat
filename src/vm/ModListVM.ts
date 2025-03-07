@@ -3,7 +3,6 @@ import ModioApi from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {ModList, ModListItem} from "./config/ModList.ts";
 import {ProfileList, ProfileTree} from "./config/ProfileList.ts";
-import CacheApi from "../apis/CacheApi.ts";
 
 export class ModListViewModel {
 
@@ -39,9 +38,6 @@ export class ModListViewModel {
     public async addModFromUrl(url: string, groupId: number): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
         const addedModItem = this.ModList.add(new ModListItem(resp));
-        addedModItem.enabled = true;
-        addedModItem.isLocal = false;
-
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
@@ -50,8 +46,8 @@ export class ModListViewModel {
 
     public async addModFromPath(path: string, groupId: number): Promise<void> {
         let modListItem = new ModListItem();
+        modListItem.displayName = path.split("/").pop();
         modListItem.cachePath = path;
-        modListItem.enabled = true;
         const addedModItem = this.ModList.add(modListItem);
 
         this.ActiveProfile.addMod(addedModItem.id, groupId);
@@ -136,24 +132,19 @@ export class ModListViewModel {
         for (const mod of this.ModList.Mods) {
             if (mod.modId === -1 && mod.url.startsWith("http")) {
                 const resp = await ModioApi.getModInfoByLink(mod.url);
-                const newItem = new ModListItem(resp);
+                let newItem = new ModListItem(resp);
                 if (resp) {
                     this.ModList.update(mod, newItem);
                     onProgress();
                 }
 
-                const data = await ModioApi.downloadModFile(newItem.downloadUrl, (loaded: number, total: number) => {
-                    //console.log(loaded, total);
+                newItem = await ModioApi.downloadModFile(newItem, (loaded: number, total: number) => {
                     newItem.downloadProgress = (loaded / total) * 100;
                     this.ModList.update(mod, newItem);
                     onProgress();
                 });
 
-                const path = await CacheApi.saveCacheFile(newItem.nameId, data);
-                newItem.downloadProgress = 100;
-                newItem.cachePath = path;
                 this.ModList.update(mod, newItem);
-
                 await ConfigApi.saveModListData(this.ModList.toJson());
             }
         }
