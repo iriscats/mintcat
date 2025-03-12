@@ -66,11 +66,15 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 <Flex vertical={true}>
                     <Search placeholder="Search on mod.io"/>
                     <InfiniteScroll
+                        scrollableTarget="scrollableDiv"
                         dataLength={this.state.dataSource.length}
                         hasMore={this.state.dataSource.length < 100}
-                        loader={<Skeleton avatar paragraph={{rows: 1}} active/>}
-                        endMessage={<Divider plain>It is all, nothing more 🤐</Divider>}
-                        scrollableTarget="scrollableDiv"
+                        loader={
+                            <Skeleton paragraph={{rows: 10}} active/>
+                        }
+                        endMessage={
+                            <Divider plain>It is all, nothing more 🤐</Divider>
+                        }
                         next={() => {
                             console.log('next');
                         }}

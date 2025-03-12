@@ -13,7 +13,7 @@ https://ant-design.antgroup.com/index-cn
 
 # Tuari 2.0
 https://v2.tauri.app/start/
-
+Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 # Modio RESTful API
 1. https://docs.mod.io/
@@ -22,5 +22,6 @@ https://v2.tauri.app/start/
 
 # Build
 ```
- pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
+pnpm install 
+pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
  ```

@@ -1,7 +1,7 @@
+use crate::integrator::ReadSeek;
 use std::fs;
 use std::path::PathBuf;
 use tracing::info;
-use crate::integrator::ReadSeek;
 
 pub fn install_ue4ss(install_path: &PathBuf) {
     info!("install_ue4ss");
@@ -20,7 +20,11 @@ pub fn install_ue4ss(install_path: &PathBuf) {
     fs::create_dir(mods_path).unwrap();
 }
 
-pub fn install_ue4ss_mod(install_path: &PathBuf, mod_name: &String, mod_data: &mut Box<dyn ReadSeek>) {
+pub fn install_ue4ss_mod(
+    install_path: &PathBuf,
+    mod_name: &String,
+    mod_data: &mut Box<dyn ReadSeek>,
+) {
     info!("install_ue4ss_mod");
     let mods_home_path = install_path.join("ue4ss").join("mods");
 
@@ -39,7 +43,6 @@ pub fn install_ue4ss_mod(install_path: &PathBuf, mod_name: &String, mod_data: &m
     mod_data.read_to_end(&mut content).unwrap();
     fs::write(dll_path, &content).unwrap();
 }
-
 
 pub fn uninstall_ue4ss(install_path: &PathBuf) {
     info!("uninstall_ue4ss");

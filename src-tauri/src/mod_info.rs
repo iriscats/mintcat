@@ -121,7 +121,6 @@ pub struct MetaMod {
 }
 impl Meta {
     pub fn to_server_list_string(&self) -> String {
-
         return "".to_owned();
     }
 }

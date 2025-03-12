@@ -252,10 +252,10 @@ impl PakIntegrator {
         let path = "FSD/Content/Game/BP_PlayerControllerBase";
         let mut asset = self.deferred_assets[path].parse()?;
 
-        game_pak_patch::hook_pcb(&mut asset)
-            .expect("TODO: panic message");
+        game_pak_patch::hook_pcb(&mut asset).expect("TODO: panic message");
 
-        self.bundle.write_asset(asset, &path)
+        self.bundle
+            .write_asset(asset, &path)
             .expect("TODO: panic message");
 
         Ok(())

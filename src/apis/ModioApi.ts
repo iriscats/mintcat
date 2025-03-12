@@ -1,15 +1,21 @@
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import {ModListItem} from "../vm/config/ModList.ts";
 import CacheApi from "./CacheApi.ts";
+import {AppViewModel} from "../vm/AppViewModel.ts";
 
 const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io/";
 const MODIO_API_URL = "https://api.mod.io/";
-const MODIO_API_KEY = "";
 const GAME_ID = 2475;
 
 class ModioApi {
 
-    private static buildRequestHeader() {
+    private static async getApiKey() {
+        const vm = await AppViewModel.getInstance();
+        return vm.setting?.modioOAuth;
+    }
+
+    private static async getHost() {
+
     }
 
     private static parseModLinks(link: string) {
@@ -31,7 +37,8 @@ class ModioApi {
             return Promise.reject("Invalid mod link");
         }
 
-        const modRequestUrl = `${PROXY_MODIO_API_URL}v1/games/${GAME_ID}/mods/${result.modId}?api_key=${MODIO_API_KEY}`;
+        const key = await ModioApi.getApiKey();
+        const modRequestUrl = `${PROXY_MODIO_API_URL}v1/games/${GAME_ID}/mods/${result.modId}?api_key=${key}`;
         const resp = await fetch(modRequestUrl);
         if (resp.status === 200) {
             const data = await resp.json();
@@ -42,17 +49,20 @@ class ModioApi {
         }
     }
 
-    private static buildRequestUrl(): string {
-        return `${PROXY_MODIO_API_URL}v1/games/${GAME_ID}/mods?api_key=${MODIO_API_KEY}`;
+    private static async buildRequestUrl() {
+        const key = await ModioApi.getApiKey();
+        return `${PROXY_MODIO_API_URL}v1/games/${GAME_ID}/mods?api_key=${key}`;
     }
 
     public static async getModInfoByName(nameId: string): Promise<Response> {
-        const resp = await fetch(this.buildRequestUrl() + "&name_id=" + nameId);
+        const url = await this.buildRequestUrl();
+        const resp = await fetch(url + "&name_id=" + nameId);
         return resp.json();
     }
 
     public static async getModList(): Promise<Response> {
-        const resp = await fetch(this.buildRequestUrl());
+        const url = await this.buildRequestUrl();
+        const resp = await fetch(url);
         return resp.json();
     }
 
@@ -61,7 +71,7 @@ class ModioApi {
 
         if (await CacheApi.checkCacheFile(modInfo.nameId, modInfo.fileSize)) {
             modInfo.downloadProgress = 100;
-            modInfo.cachePath = CacheApi.getModCachePath(modInfo.nameId);
+            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId);
             onProgress(1, 1);
             console.log("Load Cache " + modInfo.cachePath);
             return modInfo;
