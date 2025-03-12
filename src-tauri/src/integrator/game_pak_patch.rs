@@ -379,7 +379,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
                         }),
                     },
                 }
-                    .into(),
+                .into(),
                 ExLocalVariable {
                     token: EExprToken::ExLocalVariable,
                     variable: KismetPropertyPointer {
@@ -390,10 +390,10 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
                         }),
                     },
                 }
-                    .into(),
+                .into(),
             ],
         }
-            .into(),
+        .into(),
     ))
 }
 
@@ -464,9 +464,7 @@ pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box
     Ok(())
 }
 
-pub fn patch_modding_tab_item<C: Seek + Read>(
-    asset: &mut Asset<C>,
-) -> Result<(), Box<dyn Error>> {
+pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let itm_tab_modding = get_import(
         asset,
         vec![
@@ -519,9 +517,7 @@ pub fn patch_modding_tab_item<C: Seek + Read>(
     Ok(())
 }
 
-pub fn patch_server_list_entry<C: Seek + Read>(
-    asset: &mut Asset<C>,
-) -> Result<(), Box<dyn Error>> {
+pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let get_mods_installed = asset
         .imports
         .iter()

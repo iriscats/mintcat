@@ -1,11 +1,22 @@
-import {readTextFile, writeTextFile} from '@tauri-apps/plugin-fs';
+import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir} from '@tauri-apps/plugin-fs';
+import {appConfigDir} from "@tauri-apps/api/path";
+
+const IS_DEV = false;
+const DEV_PATH = "/Users/bytedance/Desktop/config/";
 
 
 class ConfigApi {
 
+    public static async getConfigPath() {
+        const configDir = await appConfigDir();
+        return IS_DEV ? DEV_PATH : configDir;
+    }
+
     public static async readDataToFile(fileName: string): Promise<string> {
         try {
-            return await readTextFile(fileName);
+            return await readTextFile(fileName, {
+                baseDir: BaseDirectory.AppConfig,
+            });
         } catch (error) {
             console.error(`Failed to read file ${fileName}: ${error}`);
             return undefined;
@@ -14,7 +25,13 @@ class ConfigApi {
 
     public static async saveDataToFile(fileName: string, data: string): Promise<boolean> {
         try {
-            await writeTextFile(fileName, data);
+            const configDir = await ConfigApi.getConfigPath();
+            if (!await exists(configDir)) {
+                await mkdir(configDir)
+            }
+            await writeTextFile(fileName, data, {
+                baseDir: BaseDirectory.AppConfig,
+            });
             return true;
         } catch (error) {
             console.error(`Failed to write file ${fileName}: ${error}`);
@@ -28,52 +45,57 @@ class ConfigApi {
     }
 
     public static async loadModListData(): Promise<string> {
-        const fileName = "/Users/bytedance/Desktop/config/mods.json";
+        const fileName = "mods.json";
         return await ConfigApi.readDataToFile(fileName);
     }
 
     public static async saveModListData(data: string): Promise<boolean> {
-        const fileName = "/Users/bytedance/Desktop/config/mods.json";
+        const fileName = "mods.json";
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 
     public static async loadProfileData(): Promise<string> {
-        const fileName = "/Users/bytedance/Desktop/config/profile.json";
+        const fileName = "profile.json";
         return await ConfigApi.readDataToFile(fileName);
     }
 
     public static async saveProfileData(data: string): Promise<boolean> {
-        const fileName = "/Users/bytedance/Desktop/config/profile.json";
+        const fileName = "profile.json";
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 
     public static async loadProfileDetails(name: string): Promise<string> {
-        const fileName = `/Users/bytedance/Desktop/config/profile_${name}.json`;
+        const fileName = `profile_${name}.json`;
         return await ConfigApi.readDataToFile(fileName);
     }
 
     public static async saveProfileDetails(name: string, data: string): Promise<boolean> {
-        const fileName = `/Users/bytedance/Desktop/config/profile_${name}.json`;
+        const fileName = `profile_${name}.json`;
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 
     public static async loadUserData(): Promise<string> {
-        const fileName = `/Users/bytedance/Desktop/config/user.json`;
+        const fileName = "user.json";
         return await ConfigApi.readDataToFile(fileName);
     }
 
     public static async saveUserDetails(data: string): Promise<boolean> {
-        const fileName = `/Users/bytedance/Desktop/config/user.json`;
+        const fileName = "user.json";
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 
+    public static async loadSettingV1(): Promise<string> {
+        const fileName = "/Users/bytedance/Desktop/config/settings.json";
+        return await ConfigApi.readDataToFile(fileName);
+    }
+
     public static async loadSettings(): Promise<string> {
-        const fileName = `/Users/bytedance/Desktop/config/setting.json`;
+        const fileName = "settings.json";
         return await ConfigApi.readDataToFile(fileName);
     }
 
     public static async saveSettings(data: string): Promise<boolean> {
-        const fileName = `/Users/bytedance/Desktop/config/setting.json`;
+        const fileName = "settings.json";
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 

@@ -2,25 +2,63 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "shell:allow-open",
+    "os:default",
+    "log:default",
     {
       "identifier": "fs:allow-read-text-file",
-      "allow": [{ "path": "$DESKTOP/**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     },
     {
       "identifier": "fs:allow-write-text-file",
-      "allow": [{ "path": "$DESKTOP/**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     },
     {
       "identifier": "fs:allow-write-file",
-      "allow": [{ "path": "$DESKTOP/**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     },
     {
       "identifier": "fs:allow-size",
-      "allow": [{ "path": "$DESKTOP/**" }]
-    }
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    "dialog:default",
+    "process:default"
   ]
 }

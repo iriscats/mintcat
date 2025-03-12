@@ -1,35 +1,14 @@
 pub mod capability;
-//mod game_hook;
 mod error;
 mod installation;
-mod logging;
-pub mod mod_info;
-//mod mod_lints;
 pub mod integrator;
-
-use std::fs::File;
-use std::io::Write;
+pub mod mod_info;
 
 use crate::integrator::pak_integrator::PakIntegrator;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
-fn save_file(file_data: Vec<u8>, filename: String) -> Result<(), String> {
-    match File::create(&filename) {
-        Ok(mut file) => {
-            if let Err(e) = file.write_all(&file_data) {
-                return Err(format!("Failed to write to file: {}", e));
-            }
-        }
-        Err(e) => return Err(format!("Failed to create file: {}", e)),
-    }
-    Ok(())
-}
-
-#[tauri::command]
-fn install_mods(mod_list_json: Box<str>) -> Result<(), String> {
-    let integrator =
-        PakIntegrator::new("/Users/bytedance/Desktop/data/Content/Paks/FSD-WindowsNoEditor.pak");
+fn install_mods(game_path: String, mod_list_json: Box<str>) -> Result<(), String> {
+    let integrator = PakIntegrator::new(game_path);
     match integrator {
         Ok(integrator) => {
             let mods: Vec<mod_info::ModInfo> = serde_json::from_str(&mod_list_json).unwrap();
@@ -41,13 +20,37 @@ fn install_mods(mod_list_json: Box<str>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn launch_games() -> Result<(), String> {
+fn launch_game() -> Result<(), String> {
+    Ok(())
+}
+
+#[tauri::command]
+fn find_steam_game_home() -> Result<(), String> {
+    let steam_dir = steamlocate::SteamDir::locate();
+    match steam_dir {
+        Ok(steam_dir) => {
+            println!("Steam installation - {}", steam_dir.path().display());
+
+            /*            const GMOD_APP_ID: u32 = 4_000;
+            let (garrys_mod, _lib) = steam_dir
+                .find_app(GMOD_APP_ID)
+                .expect("Of course we have G Mod");
+            assert_eq!(garrys_mod.name.as_ref().unwrap(), "Garry's Mod");
+            println!("{garrys_mod:#?}");*/
+        }
+        Err(e) => eprintln!("Failed to create integrator: {}", e),
+    }
+
     Ok(())
 }
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![install_mods])
         .run(tauri::generate_context!())

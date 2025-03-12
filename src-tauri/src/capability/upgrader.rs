@@ -7,4 +7,3 @@ pub struct GitHubRelease {
     pub tag_name: String,
     pub body: String,
 }
-
