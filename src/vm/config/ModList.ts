@@ -22,6 +22,7 @@ export class ModListItem {
 
     public constructor(modInfo?: ModInfo) {
         if (modInfo) {
+            this.url = modInfo.profile_url;
             this.modId = modInfo.id;
             this.displayName = modInfo.name;
             this.nameId = modInfo.name_id;

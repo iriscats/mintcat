@@ -1,7 +1,9 @@
 import {writeFile, size, exists, mkdir} from "@tauri-apps/plugin-fs";
-import {appDataDir} from '@tauri-apps/api/path';
+import {appCacheDir} from '@tauri-apps/api/path';
+import {path} from "@tauri-apps/api";
+import packageJson from '../../package.json';
 
-const IS_DEV = false;
+const IS_DEV = packageJson.dev;
 const DEV_PATH = "/Users/bytedance/Desktop/data/";
 
 
@@ -11,17 +13,17 @@ class CacheApi {
     }
 
     public static async getModCachePath(modName: string) {
-        const appDataDirPath = await appDataDir();
-        if (!await exists(appDataDirPath)) {
-            await mkdir(appDataDirPath)
+        const appCachePath = await appCacheDir();
+        if (!await exists(appCachePath)) {
+            await mkdir(appCachePath)
         }
-        const cachePath = IS_DEV ? DEV_PATH : appDataDirPath;
-        return `${cachePath}${modName}.zip`;
+        const cachePath = IS_DEV ? DEV_PATH : appCachePath;
+        return await path.join(cachePath, `${modName}.zip`);
     }
 
     public static async saveCacheFile(modName: string, data: Uint8Array): Promise<any> {
-        const fileName = await CacheApi.getModCachePath(modName);
         try {
+            const fileName = await CacheApi.getModCachePath(modName);
             await writeFile(fileName, data);
             return fileName;
         } catch (error) {
@@ -30,8 +32,8 @@ class CacheApi {
     }
 
     public static async checkCacheFile(modName: string, fileSize: number): Promise<boolean> {
-        const fileName = await CacheApi.getModCachePath(modName);
         try {
+            const fileName = await CacheApi.getModCachePath(modName);
             const _fileSize = await size(fileName);
             if (_fileSize === fileSize) {
                 return true;

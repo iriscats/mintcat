@@ -1,11 +1,14 @@
 import React from 'react';
+import {open} from '@tauri-apps/plugin-dialog'
 import {
     Form,
     Input,
     Select,
-    Card,
+    Card, message,
 } from 'antd';
 import {AppContext} from "../AppContext.ts";
+import {FolderAddOutlined} from "@ant-design/icons";
+import Search from "antd/es/input/Search";
 
 
 const LanguageOptions = [
@@ -14,7 +17,7 @@ const LanguageOptions = [
 ];
 
 const ThemeOptions = [
-    {value: 'default', label: 'Default'},
+    {value: 'Light', label: 'Light'},
 ];
 
 
@@ -29,10 +32,50 @@ class SettingPage extends React.Component<any, any> {
 
     public constructor(props: any, context: any) {
         super(props, context);
+
+        this.onGamePathClick = this.onGamePathClick.bind(this);
+        this.onOAuthChange = this.onOAuthChange.bind(this);
+        this.onLanguageChange = this.onLanguageChange.bind(this);
+        this.onThemeChange = this.onThemeChange.bind(this);
+    }
+
+    private async onLanguageChange() {
+        this.context.setting.language = this.appSettingFormRef.current?.getFieldValue("language");
+        await this.context.saveSettings();
+    }
+
+    private async onThemeChange() {
+        this.context.setting.guiTheme = this.appSettingFormRef.current?.getFieldValue("theme");
+        await this.context.saveSettings();
+    }
+
+    private async onOAuthChange(e: any) {
+        this.context.setting.modioOAuth = e.target.value;
+        await this.context.saveSettings();
+    }
+
+    private async onGamePathClick() {
+        const result = await open({
+            filters: [{
+                name: 'FSD-WindowsNoEditor',
+                extensions: ['pak'],
+            }],
+            multiple: false,
+        });
+        if (result) {
+            if (result.endsWith("FSD-WindowsNoEditor.pak")) {
+                this.gameSettingFormRef.current?.setFieldsValue({
+                    gamePath: result,
+                });
+                this.context.setting.drgPakPath = result;
+                await this.context.saveSettings();
+            } else {
+                message.error("Please select FSD-WindowsNoEditor.pak");
+            }
+        }
     }
 
     componentDidMount(): void {
-        console.log(this.context.setting);
         this.appSettingFormRef.current?.setFieldsValue({
             language: this.context.setting.language,
             theme: this.context.setting.guiTheme,
@@ -65,10 +108,13 @@ class SettingPage extends React.Component<any, any> {
                           style={{maxWidth: 600}}
                     >
                         <Form.Item label="Language" name="language">
-                            <Select options={LanguageOptions}/>
+                            <Select options={LanguageOptions}
+                                    onChange={this.onLanguageChange}
+                            />
                         </Form.Item>
                         <Form.Item label="Theme" name="theme">
-                            <Select options={ThemeOptions}/>
+                            <Select options={ThemeOptions}
+                                    onChange={this.onThemeChange}/>
                         </Form.Item>
                     </Form>
                 </Card>
@@ -82,7 +128,7 @@ class SettingPage extends React.Component<any, any> {
                           style={{maxWidth: 600}}
                     >
                         <Form.Item label="mod.io key" name="oauth">
-                            <Input/>
+                            <Input onChange={this.onOAuthChange}/>
                         </Form.Item>
                     </Form>
                 </Card>
@@ -95,7 +141,10 @@ class SettingPage extends React.Component<any, any> {
                           style={{maxWidth: 600}}
                     >
                         <Form.Item label="Game Path" name="gamePath">
-                            <Input/>
+                            <Search placeholder={"FSD-WindowsNoEditor.pak"}
+                                    enterButton={<FolderAddOutlined/>}
+                                    onSearch={this.onGamePathClick}
+                            />
                         </Form.Item>
                     </Form>
                 </Card>

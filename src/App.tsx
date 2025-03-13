@@ -5,7 +5,7 @@ import {I18nextProvider} from "react-i18next"
 import TitleBar from "./components/TitleBar.tsx";
 import StatusBar from "./components/StatusBar.tsx";
 import MenuBar, {MenuPage} from "./components/MenuBar.tsx";
-import ModListPage from "./pages/ModListPage.tsx";
+import HomePage from "./pages/HomePage.tsx";
 import SettingPage from "./pages/SettingPage.tsx";
 import ModioPage from "./pages/ModioPage.tsx";
 
@@ -48,7 +48,7 @@ class App extends React.Component<any, any> {
                                 }}/>
                             </Sider>
                             <Content>
-                                {this.currentPage === MenuPage.Home && <ModListPage/>}
+                                {this.currentPage === MenuPage.Home && <HomePage/>}
                                 {this.currentPage === MenuPage.Modio && <ModioPage/>}
                                 {this.currentPage === MenuPage.Setting && <SettingPage/>}
                             </Content>

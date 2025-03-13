@@ -12,15 +12,15 @@ export class IntegrateApi {
     }
 
     public static async uninstall() {
-        return await invoke('my_custom_command');
+        return await invoke('uninstall');
     }
 
     public static async locateGamePath() {
-        return await invoke('my_custom_command');
+        return await invoke('locale_game_path');
     }
 
     public static async launchGame(gamePath: string) {
-        return await invoke('my_custom_command');
+        return await invoke('launch_game');
     }
 
 }

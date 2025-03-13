@@ -20,17 +20,17 @@ target_arch = "x86_64"
 
 
 [build-dependencies]
-tauri-build = { version = "2" }
+tauri-build = { version = "2", features = [] }
 
 
 [dependencies]
-tauri = { version = "2" }
+tauri = { version = "2", features = [] }
 tauri-plugin-fs = "2.2.0"
-tauri-plugin-shell = "2"
-tauri-plugin-os = "2"
-tauri-plugin-log = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-process = "2"
+tauri-plugin-shell = "2.2.0"
+tauri-plugin-os = "2.2.1"
+tauri-plugin-log = "2.3.0"
+tauri-plugin-dialog = "2.2.0"
+tauri-plugin-process = "2.2.0"
 
 
 serde = { version = "1", features = ["derive"] }
