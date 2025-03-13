@@ -20,8 +20,6 @@ import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
-import ModioApi from "../apis/ModioApi.ts";
-import CacheApi from "../apis/CacheApi.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -34,7 +32,7 @@ interface ModListPageState {
     displayMode?: string;
 }
 
-class ModListPage extends React.Component<any, ModListPageState> {
+class HomePage extends React.Component<any, ModListPageState> {
 
     declare context: React.ContextType<typeof ModListPageContext>;
     static contextType = ModListPageContext;
@@ -53,6 +51,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
         {value: 'Optional', label: 'Optional'},
         {value: 'Framework', label: 'Framework'},
         {value: 'Tools', label: 'Tools'},
+        {value: 'QoL', label: 'QoL'},
+        {value: 'Visual', label: 'Visual'}
     ]
 
     public constructor(props: any, context: ModListPageState) {
@@ -63,6 +63,10 @@ class ModListPage extends React.Component<any, ModListPageState> {
             contextMenus: [],
             defaultProfile: "",
         }
+
+        this.context.setUpdateViewCallback(async () => {
+            await this.updateView();
+        });
 
         this.onAddModClick = this.onAddModClick.bind(this);
         this.onEditProfileClick = this.onEditProfileClick.bind(this);
@@ -79,10 +83,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
     }
 
     private onAddModClick() {
-        this.addModDialogRef.current?.setValue()
-            .setCallback(async () => {
-                await this.updateTreeData();
-            }).show();
+        this.addModDialogRef.current?.setValue().show();
     }
 
     private async onUpdateClick() {
@@ -112,7 +113,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
     private async onSelectChange(value: string) {
         console.log(`Selected: ${value}`);
         this.context.ActiveProfile = value;
-        await this.updateTreeData();
         this.setState({
             defaultProfile: value as string,
         })
@@ -121,7 +121,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
     private async onSwitchChange(checked: boolean, node: any) {
         console.log(`Switch: ${checked}`, node);
         await this.context.setModEnabled(node.key, checked);
-        await this.updateTreeData();
     }
 
     private onTreeNodeSelect(keys, info) {
@@ -154,7 +153,7 @@ class ModListPage extends React.Component<any, ModListPageState> {
         })
     }
 
-    private async updateTreeData() {
+    private async updateView() {
         const converter = new TreeViewConverter(this.context.ModList);
         converter.convertTo(this.context.ActiveProfile);
         this.setState({
@@ -175,7 +174,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     "New Group",
                     async (text) => {
                         await this.context.addGroup(0, text);
-                        await this.updateTreeData();
                     })
                     .show();
             }
@@ -186,12 +184,11 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     "New Group",
                     async (text) => {
                         await this.context.addGroup(id, text);
-                        await this.updateTreeData();
                     }).show();
                 break;
             case "delete_group":
                 await this.context.removeGroup(id);
-                await this.updateTreeData();
+                await this.updateView();
                 break;
             case "rename_group":
                 const groupName = this.context.ActiveProfile.groupNameMap.get(id);
@@ -200,7 +197,6 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     groupName,
                     async (text) => {
                         await this.context.setGroupName(id, text);
-                        await this.updateTreeData();
                     }).show();
                 break;
             case "update": {
@@ -212,12 +208,8 @@ class ModListPage extends React.Component<any, ModListPageState> {
                 // }
             }
                 break;
-            case "add_mod": {
-                this.addModDialogRef.current?.setValue(id).setCallback(
-                    async () => {
-                        await this.updateTreeData();
-                    }).show();
-            }
+            case "add_mod":
+                this.addModDialogRef.current?.setValue(id).show();
                 break;
             case "rename":
                 const modName = this.context.ModList.get(id)?.displayName;
@@ -226,12 +218,10 @@ class ModListPage extends React.Component<any, ModListPageState> {
                     modName,
                     async (text) => {
                         await this.context.setDisplayName(id, text);
-                        await this.updateTreeData();
                     }).show();
                 break;
             case "delete":
                 await this.context.removeMod(id);
-                await this.updateTreeData();
                 break;
             case "copy_link":
                 try {
@@ -254,13 +244,9 @@ class ModListPage extends React.Component<any, ModListPageState> {
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
         });
-        this.updateTreeData().then(() => {
+        this.updateView().then(() => {
         });
-
-        this.context.updateModList(() => {
-            this.updateTreeData().then(() => {
-            });
-        }).then(() => {
+        this.context.updateModList().then(() => {
         })
     }
 
@@ -371,4 +357,4 @@ class ModListPage extends React.Component<any, ModListPageState> {
 }
 
 
-export default ModListPage;
+export default HomePage;

@@ -1,9 +1,10 @@
 import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir} from '@tauri-apps/plugin-fs';
-import {appConfigDir} from "@tauri-apps/api/path";
+import {appConfigDir, configDir} from "@tauri-apps/api/path";
+import packageJson from '../../package.json';
+import {path} from "@tauri-apps/api";
 
-const IS_DEV = false;
+const IS_DEV = packageJson.dev;
 const DEV_PATH = "/Users/bytedance/Desktop/config/";
-
 
 class ConfigApi {
 
@@ -14,7 +15,12 @@ class ConfigApi {
 
     public static async readDataToFile(fileName: string): Promise<string> {
         try {
-            return await readTextFile(fileName, {
+            let filePath = fileName;
+            if (IS_DEV) {
+                const configDir = await ConfigApi.getConfigPath();
+                filePath = await path.join(configDir, fileName);
+            }
+            return await readTextFile(filePath, {
                 baseDir: BaseDirectory.AppConfig,
             });
         } catch (error) {
@@ -40,8 +46,18 @@ class ConfigApi {
     }
 
     public static async loadModListDataV1(): Promise<string> {
-        const fileName = "/Users/bytedance/Desktop/config/configv1.json";
-        return await ConfigApi.readDataToFile(fileName);
+        try {
+            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json");
+            console.info(oldFilePath);
+            const fileName = IS_DEV ?
+                "configv1.json" :
+                oldFilePath;
+
+            return await readTextFile(oldFilePath);
+        } catch (error) {
+            console.error(error);
+            return undefined;
+        }
     }
 
     public static async loadModListData(): Promise<string> {
@@ -85,8 +101,18 @@ class ConfigApi {
     }
 
     public static async loadSettingV1(): Promise<string> {
-        const fileName = "/Users/bytedance/Desktop/config/settings.json";
-        return await ConfigApi.readDataToFile(fileName);
+        try {
+            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json");
+            console.info(oldFilePath);
+            const fileName = IS_DEV ?
+                "settingsv1.json" :
+                oldFilePath;
+
+            return await readTextFile(oldFilePath);
+        } catch (error) {
+            console.error(error);
+            return undefined;
+        }
     }
 
     public static async loadSettings(): Promise<string> {

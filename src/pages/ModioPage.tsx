@@ -16,7 +16,8 @@ const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
 );
 
 interface ModioPageState {
-    dataSource?: ModInfo[]
+    dataSource?: ModInfo[],
+    loading: boolean,
 }
 
 class ModioPage extends React.Component<any, ModioPageState> {
@@ -27,7 +28,8 @@ class ModioPage extends React.Component<any, ModioPageState> {
         super(props, context);
 
         this.state = {
-            dataSource: []
+            dataSource: [],
+            loading: true,
         }
 
         this.onAddClick = this.onAddClick.bind(this);
@@ -42,10 +44,10 @@ class ModioPage extends React.Component<any, ModioPageState> {
 
     componentDidMount() {
         if (this.state.dataSource.length == 0) {
-            ModioApi.getModList().then((resp: any) => {
-                console.log(resp.data);
+            ModioApi.getModList().then((list: any) => {
                 this.setState({
-                    dataSource: resp.data
+                    dataSource: list,
+                    loading: false,
                 })
             })
         }
@@ -68,13 +70,9 @@ class ModioPage extends React.Component<any, ModioPageState> {
                     <InfiniteScroll
                         scrollableTarget="scrollableDiv"
                         dataLength={this.state.dataSource.length}
-                        hasMore={this.state.dataSource.length < 100}
-                        loader={
-                            <Skeleton paragraph={{rows: 10}} active/>
-                        }
-                        endMessage={
-                            <Divider plain>It is all, nothing more 🤐</Divider>
-                        }
+                        hasMore={true}
+                        loader={null}
+                        endMessage={null}
                         next={() => {
                             console.log('next');
                         }}
@@ -83,10 +81,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                             itemLayout="vertical"
                             dataSource={this.state.dataSource}
                             size={"small"}
-                            footer={
-                                <div>
-                                </div>
-                            }
+                            loading={this.state.loading}
                             renderItem={(item) => (
                                 <List.Item
                                     key={item.name}

@@ -48,7 +48,7 @@ impl PakIntegrator {
         let mut deferred_assets = Self::init_deferred_assets();
         Self::collect_game_assets(&fsd_pak, &mut fsd_pak_reader, &mut deferred_assets)?;
 
-        let path_mod_pak = installation.paks_path().join("mods_P.pak");
+        let path_mod_pak = installation.paks_path().join("FSD-WindowsNoEditor_Mods.pak");
         info!("installation path {:?}", installation.paks_path());
 
         let bundle = ModBundleWriter::new(
