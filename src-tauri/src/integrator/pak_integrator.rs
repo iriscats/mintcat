@@ -14,6 +14,7 @@ use std::error::Error;
 use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Emitter};
 use tracing::info;
 use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
 use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
@@ -48,7 +49,9 @@ impl PakIntegrator {
         let mut deferred_assets = Self::init_deferred_assets();
         Self::collect_game_assets(&fsd_pak, &mut fsd_pak_reader, &mut deferred_assets)?;
 
-        let path_mod_pak = installation.paks_path().join("FSD-WindowsNoEditor_Mods.pak");
+        let path_mod_pak = installation
+            .paks_path()
+            .join("FSD-WindowsNoEditor_Mods.pak");
         info!("installation path {:?}", installation.paks_path());
 
         let bundle = ModBundleWriter::new(
@@ -103,15 +106,26 @@ impl PakIntegrator {
     }
 
     #[tracing::instrument(skip_all)]
-    pub fn install(mut self, mods: Vec<(ModInfo)>) -> Result<(), Box<dyn Error>> {
+    pub fn install(mut self, app: AppHandle, mods: Vec<(ModInfo)>) -> Result<(), Box<dyn Error>> {
         for (mod_info) in &mods {
             self.process_mod(mod_info)?;
+            //app.emit("status-bar-log", mod_info.pak_path).unwrap();
         }
 
+        app.emit("status-bar-log", "Path Game Pak...").unwrap();
+        app.emit("status-bar-percent", 80).unwrap();
+
         self.apply_pcb_patch()?;
+
+        app.emit("status-bar-log", "Write Mod...").unwrap();
+        app.emit("status-bar-percent", 90).unwrap();
+
         self.write_mint_files()?;
         self.serialize_asset_registry()?;
         self.bundle.finish()?;
+
+        app.emit("status-bar-log", "Install Mod Success").unwrap();
+        app.emit("status-bar-percent", 100).unwrap();
 
         info!(
             "{} mods installed to {}",

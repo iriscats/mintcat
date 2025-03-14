@@ -4,11 +4,12 @@ import {
     Form,
     Input,
     Select,
-    Card, message,
+    Card, message, Button,
 } from 'antd';
 import {AppContext} from "../AppContext.ts";
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
+import {IntegrateApi} from "../apis/IntegrateApi.ts";
 
 
 const LanguageOptions = [
@@ -37,6 +38,7 @@ class SettingPage extends React.Component<any, any> {
         this.onOAuthChange = this.onOAuthChange.bind(this);
         this.onLanguageChange = this.onLanguageChange.bind(this);
         this.onThemeChange = this.onThemeChange.bind(this);
+        this.onDevToolsClick = this.onDevToolsClick.bind(this);
     }
 
     private async onLanguageChange() {
@@ -52,6 +54,10 @@ class SettingPage extends React.Component<any, any> {
     private async onOAuthChange(e: any) {
         this.context.setting.modioOAuth = e.target.value;
         await this.context.saveSettings();
+    }
+
+    private async onDevToolsClick() {
+        await IntegrateApi.openDevTools();
     }
 
     private async onGamePathClick() {
@@ -115,6 +121,11 @@ class SettingPage extends React.Component<any, any> {
                         <Form.Item label="Theme" name="theme">
                             <Select options={ThemeOptions}
                                     onChange={this.onThemeChange}/>
+                        </Form.Item>
+                        <Form.Item label="Dev Tools">
+                            <Button type="dashed" onClick={this.onDevToolsClick}>
+                                Open / Close Dev Tools
+                            </Button>
                         </Form.Item>
                     </Form>
                 </Card>

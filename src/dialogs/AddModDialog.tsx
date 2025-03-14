@@ -27,7 +27,6 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     static contextType = ModListPageContext;
 
     private readonly modioFormRef: any = React.createRef();
-
     private readonly localFormRef: any = React.createRef();
 
     private callback?: InputCallback;
@@ -68,7 +67,6 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
             url
         });
 
-        console.log(this.modioFormRef.current);
         this.modioFormRef.current?.setFieldsValue({
             modLinks: url,
             groupId
@@ -90,15 +88,13 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     private async handleOk() {
         // https://mod.io/g/drg/m/10iron-will-recharge-10-minutes
-        const values = this.modioFormRef.current?.getFieldsValue();
-        console.log(values);
         if (this.state.tabActiveKey === AddModType.MODIO) {
-            const links = values["modLinks"].toString().split("\n");
+            const links = this.state.url.split("\n");
             for (const link of links) {
                 await this.context.addModFromUrl(link, this.state.groupId);
             }
         } else {
-            await this.context.addModFromPath(values["path"], this.state.groupId);
+            await this.context.addModFromPath(this.state.url, this.state.groupId);
         }
         this.setState({
             isModalOpen: false
@@ -193,12 +189,12 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                       <Form ref={this.localFormRef}
                                             layout="vertical"
                                             initialValues={{
-                                                path: "",
+                                                path: this.state.url,
                                                 groupId: this.state.groupId
                                             }}
                                       >
                                           <Form.Item name="path" label="Path" rules={[{required: true}]}>
-                                              <Input addonAfter={<FolderAddOutlined/>}/>
+                                              <Input addonAfter={<FolderAddOutlined/>} />
                                           </Form.Item>
                                           <Form.Item name="groupId" label="Group" rules={[{required: true}]}>
                                               <Select options={this.state.groupOptions}/>

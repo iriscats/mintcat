@@ -1,11 +1,19 @@
 import {ModList, ModListItem} from "../config/ModList.ts";
-import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "../config/ProfileList.ts";
+import {ProfileList, ProfileTree, ProfileTreeType} from "../config/ProfileList.ts";
 
 export class ModConfigConverter {
 
     public profileList: ProfileList = new ProfileList();
     public profileTreeList: ProfileTree[] = [];
     public modList: ModList = new ModList();
+
+    public createDefault(){
+        this.modList = new ModList();
+        this.profileList = new ProfileList();
+        this.profileList.Profiles.push("default");
+        this.profileTreeList = [];
+        this.profileTreeList.push(new ProfileTree("default"));
+    }
 
     private convertModListDataV01ToV02(data: any) {
 

@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import packageJson from '../../package.json';
 import {AppContext} from "../AppContext.ts";
+import {t} from "i18next";
 
 class TitleBar extends React.Component {
 
@@ -60,7 +61,11 @@ class TitleBar extends React.Component {
                         onClick={this.onLaunchGameClick}
                         className={"ant-header-start-button"}>
                         <PlayCircleOutlined/>
-                        Launch Game
+                        <span>
+                            <b>
+                                {t("Launch Game")}
+                            </b>
+                        </span>
                     </Button>
                     <span>
                         <Badge size={"small"}
