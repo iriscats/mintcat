@@ -1,10 +1,9 @@
 import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir} from '@tauri-apps/plugin-fs';
 import {appConfigDir, configDir} from "@tauri-apps/api/path";
-import packageJson from '../../package.json';
 import {path} from "@tauri-apps/api";
 
-const IS_DEV = packageJson.dev;
-const DEV_PATH = "/Users/bytedance/Desktop/config/";
+const IS_DEV = window.location.host === "127.0.0.1";
+const DEV_PATH = "~/Desktop/config/";
 
 class ConfigApi {
 
@@ -45,21 +44,6 @@ class ConfigApi {
         return false;
     }
 
-    public static async loadModListDataV1(): Promise<string> {
-        try {
-            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json");
-            console.info(oldFilePath);
-            const fileName = IS_DEV ?
-                "configv1.json" :
-                oldFilePath;
-
-            return await readTextFile(oldFilePath);
-        } catch (error) {
-            console.error(error);
-            return undefined;
-        }
-    }
-
     public static async loadModListData(): Promise<string> {
         const fileName = "mods.json";
         return await ConfigApi.readDataToFile(fileName);
@@ -90,29 +74,9 @@ class ConfigApi {
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 
-    public static async loadUserData(): Promise<string> {
-        const fileName = "user.json";
-        return await ConfigApi.readDataToFile(fileName);
-    }
-
-    public static async saveUserDetails(data: string): Promise<boolean> {
+    public static async saveUserData(data: string): Promise<boolean> {
         const fileName = "user.json";
         return await ConfigApi.saveDataToFile(fileName, data);
-    }
-
-    public static async loadSettingV1(): Promise<string> {
-        try {
-            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json");
-            console.info(oldFilePath);
-            const fileName = IS_DEV ?
-                "settingsv1.json" :
-                oldFilePath;
-
-            return await readTextFile(oldFilePath);
-        } catch (error) {
-            console.error(error);
-            return undefined;
-        }
     }
 
     public static async loadSettings(): Promise<string> {
@@ -124,6 +88,43 @@ class ConfigApi {
         const fileName = "settings.json";
         return await ConfigApi.saveDataToFile(fileName, data);
     }
+
+
+    public static async loadModListDataV1(): Promise<string> {
+        try {
+            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json");
+            //const oldFilePath = await path.join(await configDir(), "mint\\config\\mod_data.json");
+            const oldFilePathDev = await path.join(await ConfigApi.getConfigPath(), "configv1.json");
+
+            const fileName = IS_DEV ? oldFilePathDev : oldFilePath;
+            return await readTextFile(fileName);
+        } catch (error) {
+            console.error(error);
+            return undefined;
+        }
+    }
+
+    public static async loadSettingV1(): Promise<string> {
+        try {
+            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json");
+            //const oldFilePath = await path.join(await configDir(), "mint\\config\\config.json");
+            const oldFilePathDev = await path.join(await ConfigApi.getConfigPath(), "settingsv1.json");
+
+            const fileName = IS_DEV ? oldFilePathDev : oldFilePath;
+            return await readTextFile(fileName);
+        } catch (error) {
+            console.error(error);
+            return undefined;
+        }
+    }
+
+    public static async loadModioUserData(): Promise<string> {
+        const fileName = "user.json";
+        const oldFilePath = "C:\\Users\\bytedance\\AppData\\Local\\mod.io\\2475\\S-1-5-21-1688096665-3863216114-603340213-1000\\user.json";
+
+        return await ConfigApi.readDataToFile(fileName);
+    }
+
 
 }
 

@@ -128,7 +128,6 @@ export class ModListViewModel {
         this.updateViewCallback?.call(this);
     }
 
-
     public async setGroupName(id: number, name: string): Promise<void> {
         this.ActiveProfile.setGroupName(id, name);
 
@@ -180,6 +179,7 @@ export class ModListViewModel {
         if (ModListViewModel.instance) {
             return ModListViewModel.instance;
         }
+
         const vm = new ModListViewModel();
         try {
             let config = await ConfigApi.loadModListData();
@@ -195,11 +195,7 @@ export class ModListViewModel {
                     }
                     return vm;
                 } else {
-                    vm.converter.modList = new ModList();
-                    vm.converter.profileList = new ProfileList();
-                    vm.converter.profileList.Profiles.push("default");
-                    vm.converter.profileTreeList = [];
-                    vm.converter.profileTreeList.push(new ProfileTree("default"));
+                    vm.converter.createDefault()
                     return vm;
                 }
             } else {
@@ -215,11 +211,7 @@ export class ModListViewModel {
             return vm;
         } catch (e) {
             message.error("初始化Mod列表失败" + e);
-            vm.converter.modList = new ModList();
-            vm.converter.profileList = new ProfileList();
-            vm.converter.profileList.Profiles.push("default");
-            vm.converter.profileTreeList = [];
-            vm.converter.profileTreeList.push(new ProfileTree("default"));
+            vm.converter.createDefault()
             return vm;
         }
     }

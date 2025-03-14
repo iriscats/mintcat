@@ -23,6 +23,10 @@ export class IntegrateApi {
         return await invoke('launch_game');
     }
 
+    public static async openDevTools() {
+        return await invoke('open_devtools');
+    }
+
 }
 
 

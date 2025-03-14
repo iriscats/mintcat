@@ -178,9 +178,14 @@ class ModioApi {
         return modInfo;
     }
 
-    public static async getModioApi() {
+    public static async getModEvents() {
         `/games/${GAME_ID}/mods/events`
     }
+
+    public static async getUserInfo() {
+        //https://*.modapi.io/v1/me
+    }
+
 
 }
 

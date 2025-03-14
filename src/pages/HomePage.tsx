@@ -55,8 +55,8 @@ class HomePage extends React.Component<any, ModListPageState> {
         {value: 'Visual', label: 'Visual'}
     ]
 
-    public constructor(props: any, context: ModListPageState) {
-        super(props, context);
+    public constructor(props: any, state: ModListPageState) {
+        super(props, state);
 
         this.state = {
             options: [],
@@ -229,6 +229,9 @@ class HomePage extends React.Component<any, ModListPageState> {
                     if (mod?.url) {
                         await navigator.clipboard.writeText(mod.url);
                         message.success(`已复制到剪贴板: ${mod.url} `);
+                    } else {
+                        await navigator.clipboard.writeText(mod.cachePath);
+                        message.success(`已复制到剪贴板: ${mod.cachePath} `);
                     }
                 } catch (err) {
                     message.error('复制失败');

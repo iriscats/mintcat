@@ -1,10 +1,9 @@
 import {writeFile, size, exists, mkdir} from "@tauri-apps/plugin-fs";
 import {appCacheDir} from '@tauri-apps/api/path';
 import {path} from "@tauri-apps/api";
-import packageJson from '../../package.json';
 
-const IS_DEV = packageJson.dev;
-const DEV_PATH = "/Users/bytedance/Desktop/data/";
+const IS_DEV = window.location.host === "127.0.0.1";
+const DEV_PATH = "~/Desktop/data/";
 
 
 class CacheApi {

@@ -145,6 +145,21 @@ export class ProfileTree {
         return parent;
     }
 
+    public getModList() {
+        const modIds: number[] = [];
+        const traverse = (node: ProfileTreeItem) => {
+            if (node.type === ProfileTreeType.ITEM) {
+                modIds.push(node.id);
+            } else {
+                for (const child of node.children) {
+                    traverse(child);
+                }
+            }
+        };
+        traverse(this.root);
+        return modIds;
+    }
+
     public static fromJson(json_str: string): ProfileTree {
         const json = JSON.parse(json_str);
         let profile = new ProfileTree("");

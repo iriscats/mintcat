@@ -22,37 +22,40 @@ export class AppViewModel {
 
     public async checkModList() {
         const viewModel = await ModListViewModel.getInstance();
-        for (const item of viewModel.ModList.Mods) {
-            if (item.isLocal === true) {
-                if (!await exists(item.cachePath)) {
-                    message.error("文件不存在 !" + item.cachePath);
-                }
-                return;
-            } else {
-                if (!await exists(item.cachePath)) {
-                    const mv = await ModListViewModel.getInstance();
-                    await mv.updateMod(item);
-                }
-            }
-        }
-    }
-
-    public async installMods() {
-        const viewModel = await ModListViewModel.getInstance();
-        const installModList = [];
-        for (const item of viewModel.ModList.Mods) {
-
+        const modList = viewModel.ActiveProfile.getModList();
+        for (const modId of modList) {
+            const item = viewModel.ModList.get(modId);
             if (item.enabled) {
                 if (item.isLocal === true) {
                     if (!await exists(item.cachePath)) {
                         message.error("文件不存在 !" + item.cachePath);
                     }
-                    return;
+                    return false;
                 } else {
                     if (!await exists(item.cachePath)) {
-                        await viewModel.updateMod(item);
+                        const mv = await ModListViewModel.getInstance();
+                        await mv.updateMod(item);
                     }
                 }
+            }
+        }
+        return true;
+    }
+
+    public async installMods() {
+        if (!await this.checkGamePath()) {
+            return;
+        }
+        if (!await this.checkModList()) {
+            return;
+        }
+
+        const viewModel = await ModListViewModel.getInstance();
+        const modList = viewModel.ActiveProfile.getModList();
+        const installModList = [];
+        for (const modId of modList) {
+            const item = viewModel.ModList.get(modId);
+            if (item.enabled) {
                 installModList.push({
                     modio_id: item.id,
                     name: item.nameId,
@@ -61,8 +64,6 @@ export class AppViewModel {
             }
         }
         await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
-
-        message.success("安装成功!");
     }
 
 
@@ -81,11 +82,14 @@ export class AppViewModel {
             try {
                 if (!await exists(this.setting.drgPakPath)) {
                     message.error("游戏路径不存在!");
+                    return false;
                 }
             } catch (e) {
                 message.error("没有权限读取游戏路径! ");
+                return false;
             }
         }
+        return true;
     }
 
     private async checkLanguage() {
