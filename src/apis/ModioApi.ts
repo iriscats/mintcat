@@ -112,9 +112,12 @@ class ModioApi {
         }
     }
 
-    public static async getModList(): Promise<ModInfo[]> {
+    public static async getModList(name: string = undefined): Promise<ModInfo[]> {
         try {
-            const url = await this.buildRequestUrl("mods");
+            let url = await this.buildRequestUrl("mods");
+            if (name) {
+                url = `${url}?name-lk=*${name}*`;
+            }
             const resp = await fetch(url, {
                 headers: await ModioApi.getHeaders(),
             });
