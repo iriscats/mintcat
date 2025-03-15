@@ -487,7 +487,7 @@
           },
           "Expression": {
             "$type": "UAssetAPI.Kismet.Bytecode.Expressions.EX_StringConst, UAssetAPI",
-            "Value": "0.3.2"
+            "Value": "0.4.0"
           }
         },
         {
