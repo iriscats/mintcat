@@ -33,6 +33,18 @@ class ModioPage extends React.Component<any, ModioPageState> {
         }
 
         this.onAddClick = this.onAddClick.bind(this);
+        this.onSearch = this.onSearch.bind(this);
+    }
+
+    private async onSearch(value: string) {
+        this.setState({
+            loading: true,
+        });
+        const list = await ModioApi.getModList(value);
+        this.setState({
+            dataSource: list,
+            loading: false,
+        });
     }
 
     private onAddClick(url: string) {
@@ -44,12 +56,12 @@ class ModioPage extends React.Component<any, ModioPageState> {
 
     componentDidMount() {
         if (this.state.dataSource.length == 0) {
-            ModioApi.getModList().then((list: any) => {
+            ModioApi.getModList().then((list: any[]) => {
                 this.setState({
                     dataSource: list,
                     loading: false,
                 })
-            })
+            });
         }
     }
 
@@ -66,7 +78,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 <AddModDialog ref={this.addModDialogRef}/>
 
                 <Flex vertical={true}>
-                    <Search placeholder="Search on mod.io"/>
+                    <Search placeholder="Search on mod.io" onSearch={this.onSearch}/>
                     <InfiniteScroll
                         scrollableTarget="scrollableDiv"
                         dataLength={this.state.dataSource.length}
