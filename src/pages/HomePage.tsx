@@ -20,6 +20,8 @@ import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
+import {save} from "@tauri-apps/plugin-dialog";
+import {copyFile} from "@tauri-apps/plugin-fs";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -61,6 +63,7 @@ class HomePage extends React.Component<any, ModListPageState> {
         this.state = {
             options: [],
             contextMenus: [],
+            expandedKeys: [],
             defaultProfile: "",
         }
 
@@ -158,8 +161,12 @@ class HomePage extends React.Component<any, ModListPageState> {
         converter.convertTo(this.context.ActiveProfile);
         this.setState({
             treeData: converter.treeData,
-            expandedKeys: converter.expandedKeys,
         })
+        if (this.state.expandedKeys.length === 0) {
+            this.setState({
+                expandedKeys: converter.expandedKeys,
+            })
+        }
     }
 
     private onCustomTitleRender(nodeData: any) {
@@ -237,7 +244,21 @@ class HomePage extends React.Component<any, ModListPageState> {
                     message.error('复制失败');
                 }
                 break;
-            case "export":
+            case "export": {
+                try {
+                    const mod = this.context.ModList.get(id);
+                    const path = await save({
+                        filters: [{
+                            name: mod.displayName,
+                            extensions: ['zip', 'pak'],
+                        }]
+                    });
+                    await copyFile(mod.cachePath, path);
+                    message.success('导出完成');
+                } catch (e) {
+                    message.error('导出失败');
+                }
+            }
                 break;
             default:
                 break;
@@ -283,10 +304,16 @@ class HomePage extends React.Component<any, ModListPageState> {
                         }
                         <Typography.Link>
                             <Tooltip title="Sort Ascending">
-                                <Button icon={<SortAscendingOutlined/>} type={"text"}/>
+                                <Button icon={<SortAscendingOutlined/>}
+                                        type={"text"}
+
+                                />
                             </Tooltip>
                             <Tooltip title="Sort Descending">
-                                <Button icon={<SortDescendingOutlined/>} type={"text"}/>
+                                <Button icon={<SortDescendingOutlined/>}
+                                        type={"text"}
+
+                                />
                             </Tooltip>
                         </Typography.Link>
                         <Typography.Link>

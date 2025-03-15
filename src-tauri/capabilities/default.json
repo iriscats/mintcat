@@ -58,6 +58,14 @@
         }
       ]
     },
+    {
+      "identifier": "fs:allow-copy-file",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
     "dialog:default",
     "process:default"
   ]
