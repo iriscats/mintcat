@@ -29,8 +29,8 @@ export class AppViewModel {
                 if (item.isLocal === true) {
                     if (!await exists(item.cachePath)) {
                         message.error("文件不存在 !" + item.cachePath);
+                        return false;
                     }
-                    return false;
                 } else {
                     if (!await exists(item.cachePath)) {
                         const mv = await ModListViewModel.getInstance();
@@ -63,6 +63,7 @@ export class AppViewModel {
                 });
             }
         }
+        console.log(installModList);
         await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
     }
 

@@ -1,9 +1,11 @@
 import React from 'react';
-import {Form, Input, Modal, Select, Tabs, TabsProps} from 'antd';
+import {Form, Input, Modal, Select, Tabs} from 'antd';
 import TextArea from "antd/es/input/TextArea";
 import {FolderAddOutlined} from "@ant-design/icons";
 import {ModListPageContext} from "../AppContext.ts";
 import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
+import Search from "antd/es/input/Search";
+import {open} from "@tauri-apps/plugin-dialog";
 
 interface AddModDialogStates {
     isModalOpen?: boolean;
@@ -44,6 +46,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         this.handleCancel = this.handleCancel.bind(this);
         this.setCallback = this.setCallback.bind(this);
         this.handleTabChange = this.handleTabChange.bind(this);
+        this.onSelectPathClick = this.onSelectPathClick.bind(this);
     }
 
     public setValue(groupId: number = 0, url: string = undefined) {
@@ -87,7 +90,6 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 
     private async handleOk() {
-        // https://mod.io/g/drg/m/10iron-will-recharge-10-minutes
         if (this.state.tabActiveKey === AddModType.MODIO) {
             const links = this.state.url.split("\n");
             for (const link of links) {
@@ -125,6 +127,26 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
             this.setState({
                 tabActiveKey: key
             })
+        }
+    }
+
+    private async onSelectPathClick() {
+        const result = await open({
+            filters: [{
+                name: '*',
+                extensions: ['pak'],
+            }],
+            multiple: false,
+        });
+        if (result) {
+
+            this.localFormRef.current?.setFieldsValue({
+                path: result,
+            });
+
+            this.setState({
+               url: result,
+            });
         }
     }
 
@@ -170,6 +192,11 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                                      rules={[{required: true}]}
                                           >
                                               <TextArea value={this.state.url}
+                                                        onChange={(e) => {
+                                                            this.setState({
+                                                                url: e.target.value
+                                                            })
+                                                        }}
                                                         rows={4}
                                               />
                                           </Form.Item>
@@ -194,7 +221,8 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                             }}
                                       >
                                           <Form.Item name="path" label="Path" rules={[{required: true}]}>
-                                              <Input addonAfter={<FolderAddOutlined/>} />
+                                              <Search enterButton={<FolderAddOutlined/>}
+                                                      onSearch={this.onSelectPathClick}/>
                                           </Form.Item>
                                           <Form.Item name="groupId" label="Group" rules={[{required: true}]}>
                                               <Select options={this.state.groupOptions}/>
