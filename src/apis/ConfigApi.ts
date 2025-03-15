@@ -92,10 +92,11 @@ class ConfigApi {
 
     public static async loadModListDataV1(): Promise<string> {
         try {
-            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json");
-            //const oldFilePath = await path.join(await configDir(), "mint\\config\\mod_data.json");
+            let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json"); // 0.2
+            if (!await exists(oldFilePath)) {
+                oldFilePath = await path.join(await configDir(), "mint\\config\\mod_data.json"); // 0.3
+            }
             const oldFilePathDev = await path.join(await ConfigApi.getConfigPath(), "configv1.json");
-
             const fileName = IS_DEV ? oldFilePathDev : oldFilePath;
             return await readTextFile(fileName);
         } catch (error) {
@@ -106,10 +107,11 @@ class ConfigApi {
 
     public static async loadSettingV1(): Promise<string> {
         try {
-            const oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json");
-            //const oldFilePath = await path.join(await configDir(), "mint\\config\\config.json");
+            let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json"); // 0.2
+            if (!await exists(oldFilePath)) {
+                oldFilePath = await path.join(await configDir(), "mint\\config\\config.json"); // 0.3
+            }
             const oldFilePathDev = await path.join(await ConfigApi.getConfigPath(), "settingsv1.json");
-
             const fileName = IS_DEV ? oldFilePathDev : oldFilePath;
             return await readTextFile(fileName);
         } catch (error) {
