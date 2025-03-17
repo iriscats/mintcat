@@ -8,6 +8,10 @@ use crate::integrator::ue4ss_integrate::{install_ue4ss_mod, uninstall_ue4ss};
 use crate::integrator::{game_pak_patch, ReadSeek};
 use crate::mod_info::{MetaConfig, ModInfo};
 
+use crate::integrator::game_pak_patch::{
+    escape_menu_path, get_deferred_paths, modding_tab_path, patch_paths, pcb_path,
+    server_list_entry_path,
+};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -77,7 +81,8 @@ impl PakIntegrator {
     }
 
     fn init_deferred_assets() -> HashMap<&'static str, RawAsset> {
-        let deferred_paths = ["FSD/Content/Game/BP_PlayerControllerBase"];
+        let deferred_paths = get_deferred_paths();
+
         HashMap::from_iter(
             deferred_paths
                 .iter()
@@ -112,10 +117,14 @@ impl PakIntegrator {
             //app.emit("status-bar-log", mod_info.pak_path).unwrap();
         }
 
-        app.emit("status-bar-log", "Path Game Pak...").unwrap();
+        app.emit("status-bar-log", "Patch Game Pak...").unwrap();
         app.emit("status-bar-percent", 80).unwrap();
 
         self.apply_pcb_patch()?;
+        self.apply_sandbox_patch()?;
+        self.apply_modding_tab_patch()?;
+        self.apply_escape_menu_patch()?;
+        self.apply_server_list_entry_patch()?;
 
         app.emit("status-bar-log", "Write Mod...").unwrap();
         app.emit("status-bar-percent", 90).unwrap();
@@ -263,13 +272,56 @@ impl PakIntegrator {
     }
 
     fn apply_pcb_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let path = "FSD/Content/Game/BP_PlayerControllerBase";
-        let mut asset = self.deferred_assets[path].parse()?;
-
+        let mut asset = self.deferred_assets[pcb_path].parse()?;
         game_pak_patch::hook_pcb(&mut asset).expect("TODO: panic message");
 
         self.bundle
-            .write_asset(asset, &path)
+            .write_asset(asset, &pcb_path)
+            .expect("TODO: panic message");
+
+        Ok(())
+    }
+
+    fn apply_sandbox_patch(&mut self) -> Result<(), Box<dyn Error>> {
+        patch_paths.iter().for_each(|path| {
+            let mut asset = self.deferred_assets[path].parse().unwrap();
+            game_pak_patch::patch_sandbox(&mut asset).expect("TODO: panic message");
+
+            self.bundle
+                .write_asset(asset, path)
+                .expect("TODO: panic message");
+        });
+
+        Ok(())
+    }
+
+    fn apply_escape_menu_patch(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut asset = self.deferred_assets[escape_menu_path].parse()?;
+        game_pak_patch::patch_modding_tab(&mut asset).expect("TODO: panic message");
+
+        self.bundle
+            .write_asset(asset, &escape_menu_path)
+            .expect("TODO: panic message");
+
+        Ok(())
+    }
+
+    fn apply_modding_tab_patch(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut asset = self.deferred_assets[modding_tab_path].parse()?;
+        game_pak_patch::patch_modding_tab_item(&mut asset).expect("TODO: panic message");
+
+        self.bundle
+            .write_asset(asset, &modding_tab_path)
+            .expect("TODO: panic message");
+
+        Ok(())
+    }
+
+    fn apply_server_list_entry_patch(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut asset = self.deferred_assets[server_list_entry_path].parse()?;
+        game_pak_patch::patch_server_list_entry(&mut asset).expect("TODO: panic message");
+        self.bundle
+            .write_asset(asset, &server_list_entry_path)
             .expect("TODO: panic message");
 
         Ok(())
