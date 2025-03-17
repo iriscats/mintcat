@@ -1,15 +1,14 @@
 import React from 'react';
 import {open} from '@tauri-apps/plugin-dialog'
-import {
-    Form,
-    Input,
-    Select,
-    Card, message, Button,
-} from 'antd';
-import {AppContext} from "../AppContext.ts";
+import {openPath} from '@tauri-apps/plugin-opener';
+import {Form, Input, Select, Card, message, Button, Flex} from 'antd';
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
+
+import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
+import ConfigApi from "../apis/ConfigApi.ts";
+import {appCacheDir} from "@tauri-apps/api/path";
 
 
 const LanguageOptions = [
@@ -21,6 +20,15 @@ const ThemeOptions = [
     {value: 'Light', label: 'Light'},
 ];
 
+const settingLayout = {
+    labelCol: {span: 7},
+    wrapperCol: {span: 16},
+    style: {maxWidth: 700},
+};
+
+const buttonLayout = {
+    style: {width: 468},
+};
 
 class SettingPage extends React.Component<any, any> {
 
@@ -39,6 +47,30 @@ class SettingPage extends React.Component<any, any> {
         this.onLanguageChange = this.onLanguageChange.bind(this);
         this.onThemeChange = this.onThemeChange.bind(this);
         this.onDevToolsClick = this.onDevToolsClick.bind(this);
+        this.onOpenConfigDirClick = this.onOpenConfigDirClick.bind(this);
+        this.onOpenCacheDirClick = this.onOpenCacheDirClick.bind(this);
+        this.onSelectCacheDirClick = this.onSelectCacheDirClick.bind(this);
+    }
+
+    private async onOpenConfigDirClick() {
+        await openPath(await ConfigApi.getConfigPath());
+    }
+
+    private async onOpenCacheDirClick() {
+        if (this.context.setting.cachePath) {
+            await openPath(this.context.setting.cachePath);
+        } else {
+            await openPath(await appCacheDir());
+        }
+    }
+
+    private async onSelectCacheDirClick() {
+        const result = await open({
+            directory: true
+        });
+        if (result) {
+            await this.context.saveSettings();
+        }
     }
 
     private async onLanguageChange() {
@@ -82,9 +114,12 @@ class SettingPage extends React.Component<any, any> {
     }
 
     componentDidMount(): void {
+        console.log(this.context.setting);
         this.appSettingFormRef.current?.setFieldsValue({
             language: this.context.setting.language,
             theme: this.context.setting.guiTheme,
+            configDirectory: this.context.setting.configPath,
+            cacheDirectory: this.context.setting.cachePath,
         });
         this.userSettingFormRef.current?.setFieldsValue({
             oauth: this.context.setting.modioOAuth,
@@ -109,9 +144,7 @@ class SettingPage extends React.Component<any, any> {
                       style={{marginBottom: "10px"}}
                 >
                     <Form ref={this.appSettingFormRef}
-                          labelCol={{span: 6}}
-                          wrapperCol={{span: 16}}
-                          style={{maxWidth: 600}}
+                          {...settingLayout}
                     >
                         <Form.Item label="Language" name="language">
                             <Select options={LanguageOptions}
@@ -122,8 +155,41 @@ class SettingPage extends React.Component<any, any> {
                             <Select options={ThemeOptions}
                                     onChange={this.onThemeChange}/>
                         </Form.Item>
+                        <Form.Item label="Config Directory">
+                            <Flex>
+                                <Input value={this.context.setting.configPath}
+                                       disabled/>
+                                <Button type="default"
+                                        onClick={this.onOpenConfigDirClick}
+                                >
+                                    Open
+                                </Button>
+                            </Flex>
+                        </Form.Item>
+                        <Form.Item label="Cache Directory">
+                            <Flex>
+                                <Search value={this.context.setting.cachePath}
+                                    enterButton={<FolderAddOutlined/>}
+                                    onSearch={this.onSelectCacheDirClick}
+                                />
+                                <Button type="default"
+                                        onClick={this.onOpenCacheDirClick}
+                                >
+                                    Open
+                                </Button>
+                            </Flex>
+                        </Form.Item>
+                        <Form.Item label="Old Version Mint Cache">
+                            <Button type="dashed"
+                                    {...buttonLayout}
+                                    onClick={this.onDevToolsClick}>
+                                Clean
+                            </Button>
+                        </Form.Item>
                         <Form.Item label="Dev Tools">
-                            <Button type="dashed" onClick={this.onDevToolsClick}>
+                            <Button type="dashed"
+                                    {...buttonLayout}
+                                    onClick={this.onDevToolsClick}>
                                 Open / Close Dev Tools
                             </Button>
                         </Form.Item>
@@ -134,9 +200,7 @@ class SettingPage extends React.Component<any, any> {
                       style={{marginBottom: "10px"}}
                 >
                     <Form ref={this.userSettingFormRef}
-                          labelCol={{span: 6}}
-                          wrapperCol={{span: 16}}
-                          style={{maxWidth: 600}}
+                          {...settingLayout}
                     >
                         <Form.Item label="mod.io key" name="oauth">
                             <Input onChange={this.onOAuthChange}/>
@@ -147,9 +211,7 @@ class SettingPage extends React.Component<any, any> {
                 <Card title="Game Settings"
                 >
                     <Form ref={this.gameSettingFormRef}
-                          labelCol={{span: 6}}
-                          wrapperCol={{span: 16}}
-                          style={{maxWidth: 600}}
+                          {...settingLayout}
                     >
                         <Form.Item label="Game Path" name="gamePath">
                             <Search placeholder={"FSD-WindowsNoEditor.pak"}

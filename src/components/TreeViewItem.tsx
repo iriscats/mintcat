@@ -28,7 +28,12 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                               onMenuClick(e.key, nodeData.key);
                           }
                       }}>
-                <Flex align="center" style={{width: "100%", display: "block"}}>
+                <Flex align="center"
+                      style={{
+                          width: "calc(100% - 20px)",
+                          display: "block"
+                      }}
+                >
                     <Switch checked={nodeData.enabled} size={"small"}
                             onChange={(checked) => onSwitchChange(checked, nodeData)}
                             style={{marginRight: "8px", marginTop: "-3px"}}

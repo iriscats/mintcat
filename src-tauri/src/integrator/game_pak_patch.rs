@@ -17,18 +17,29 @@ use unreal_asset::{
     Asset,
 };
 
-// static pcb_path: &str = "FSD/Content/Game/BP_PlayerControllerBase";
-// static patch_paths: [&str; 6] = [
-//     "FSD/Content/Game/BP_GameInstance",
-//     "FSD/Content/Game/SpaceRig/BP_PlayerController_SpaceRig",
-//     "FSD/Content/Game/StartMenu/Bp_StartMenu_PlayerController",
-//     "FSD/Content/UI/Menu_DeepDives/ITM_DeepDives_Join",
-//     "FSD/Content/UI/Menu_ServerList/_MENU_ServerList",
-//     "FSD/Content/UI/Menu_ServerList/WND_JoiningModded",
-// ];
-// static escape_menu_path: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
-// static modding_tab_path: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
-// static server_list_entry_path: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
+pub static pcb_path: &str = "FSD/Content/Game/BP_PlayerControllerBase";
+pub static patch_paths: [&str; 6] = [
+    "FSD/Content/Game/BP_GameInstance",
+    "FSD/Content/Game/SpaceRig/BP_PlayerController_SpaceRig",
+    "FSD/Content/Game/StartMenu/Bp_StartMenu_PlayerController",
+    "FSD/Content/UI/Menu_DeepDives/ITM_DeepDives_Join",
+    "FSD/Content/UI/Menu_ServerList/_MENU_ServerList",
+    "FSD/Content/UI/Menu_ServerList/WND_JoiningModded",
+];
+pub static escape_menu_path: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
+pub static modding_tab_path: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
+pub static server_list_entry_path: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
+
+pub fn get_deferred_paths() -> Vec<&'static str> {
+    let mut paths = vec![
+        pcb_path,
+        escape_menu_path,
+        modding_tab_path,
+        server_list_entry_path,
+    ];
+    paths.extend(patch_paths);
+    paths
+}
 
 type ImportChain<'a> = Vec<Import<'a>>;
 
@@ -37,6 +48,7 @@ struct Import<'a> {
     class_name: &'a str,
     object_name: &'a str,
 }
+
 impl<'a> Import<'a> {
     fn new(class_package: &'a str, class_name: &'a str, object_name: &'a str) -> Import<'a> {
         Import {
@@ -134,11 +146,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
         parameters: vec![
             ExVectorConst {
                 token: EExprToken::ExVectorConst,
-                value: unreal_asset::types::vector::Vector::new(
-                    0f64.into(),
-                    0f64.into(),
-                    0f64.into(),
-                ),
+                value: Vector::new(0f64.into(), 0f64.into(), 0f64.into()),
             }
             .into(),
             ExRotationConst {
@@ -148,11 +156,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
             .into(),
             ExVectorConst {
                 token: EExprToken::ExVectorConst,
-                value: unreal_asset::types::vector::Vector::new(
-                    1f64.into(),
-                    1f64.into(),
-                    1f64.into(),
-                ),
+                value: Vector::new(1f64.into(), 1f64.into(), 1f64.into()),
             }
             .into(),
         ],
@@ -397,6 +401,21 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
     ))
 }
 
+fn patch_is_modded(
+    is_modded: Option<PackageIndex>,
+    is_modded_sandbox: Option<PackageIndex>,
+    mut statement: TrackedStatement,
+) -> Option<TrackedStatement> {
+    walk(&mut statement.ex, &|ex| {
+        if let KismetExpression::ExCallMath(f) = ex {
+            if Some(f.stack_node) == is_modded || Some(f.stack_node) == is_modded_sandbox {
+                *ex = ExFalse::default().into()
+            }
+        }
+    });
+    Some(statement)
+}
+
 pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
@@ -414,28 +433,13 @@ pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn
             .map(|(pi, _)| PackageIndex::from_import(pi as i32).unwrap())
     };
 
-    fn patch_ismodded(
-        is_modded: Option<PackageIndex>,
-        is_modded_sandbox: Option<PackageIndex>,
-        mut statement: TrackedStatement,
-    ) -> Option<TrackedStatement> {
-        walk(&mut statement.ex, &|ex| {
-            if let KismetExpression::ExCallMath(f) = ex {
-                if Some(f.stack_node) == is_modded || Some(f.stack_node) == is_modded_sandbox {
-                    *ex = ExFalse::default().into()
-                }
-            }
-        });
-        Some(statement)
-    }
-
     let is_modded = find_function("FSDIsModdedServer");
     let is_modded_sandbox = find_function("FSDIsModdedSandboxServer");
 
     for (_pi, statements) in statements.iter_mut() {
         *statements = std::mem::take(statements)
             .into_iter()
-            .filter_map(|s| patch_ismodded(is_modded, is_modded_sandbox, s))
+            .filter_map(|s| patch_is_modded(is_modded, is_modded_sandbox, s))
             .collect();
     }
     inject_tracked_statements(asset, ver, statements);
