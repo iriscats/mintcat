@@ -81,7 +81,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                     <Search placeholder="Search on mod.io" onSearch={this.onSearch}/>
                     <InfiniteScroll
                         scrollableTarget="scrollableDiv"
-                        dataLength={this.state.dataSource.length}
+                        dataLength={this.state.dataSource?.length}
                         hasMore={true}
                         loader={null}
                         endMessage={null}

@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {exists} from '@tauri-apps/plugin-fs';
-
+import {appCacheDir} from '@tauri-apps/api/path';
 import {ModListViewModel} from "./ModListVM.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import ConfigApi from "../apis/ConfigApi.ts";
@@ -67,7 +67,6 @@ export class AppViewModel {
         await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
     }
 
-
     private async checkOauth() {
         if (this.setting.modioOAuth === undefined ||
             this.setting.modioOAuth === null ||
@@ -91,6 +90,16 @@ export class AppViewModel {
             }
         }
         return true;
+    }
+
+    public async checkAppPath() {
+        if (this.setting.cachePath === "" || this.setting.cachePath === undefined) {
+            this.converter.setting.cachePath = await appCacheDir();
+        }
+        if(this.setting.configPath === "" || this.setting.configPath === undefined) {
+            this.converter.setting.configPath = await ConfigApi.getConfigPath();
+        }
+        await ConfigApi.saveSettings(this.setting.toJson());
     }
 
     private async checkLanguage() {
@@ -128,6 +137,7 @@ export class AppViewModel {
             }
         }
 
+        await vm.checkAppPath();
         await vm.checkOauth();
         await vm.checkGamePath();
         await vm.checkLanguage();

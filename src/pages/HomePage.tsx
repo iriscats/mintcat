@@ -6,7 +6,7 @@ import {
 import {
     CloseCircleOutlined,
     EditOutlined,
-    PlusCircleOutlined,
+    PlusCircleOutlined, SaveOutlined,
     SearchOutlined, SortAscendingOutlined, SortDescendingOutlined,
     SyncOutlined,
     UnorderedListOutlined
@@ -284,6 +284,9 @@ class HomePage extends React.Component<any, ModListPageState> {
                     <Space split={<Divider type="vertical"/>} size={2}
                            style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
                         <Typography.Link>
+                            <Tooltip title="Save Changes">
+                                <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onAddModClick}/>
+                            </Tooltip>
                             <Tooltip title="Add Mod">
                                 <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
                             </Tooltip>
@@ -375,6 +378,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                             display: 'flex',
                             alignItems: 'center',
                             color: '#888',
+                            marginRight: '20px',
                         }}>
                           {this.context.ModList.Mods.filter((value) => value.enabled).length} / {this.context.ModList.Mods.length}
                         </span>

@@ -58,9 +58,18 @@ class StatusBar extends React.Component<any, StatusBarState> {
                           showInfo={false}
                           size={"small"}
                           percent={this.state.percent}
-                          style={{width: "100%", margin: -4, border: 0, padding: 0, borderRadius: 0}}
-                />
-                <div style={{lineHeight: "36px", marginLeft: "10px", color: "#666"}}>
+                          style={{
+                              width: "100%",
+                              marginTop: -4,
+                              border: 0,
+                              padding: 0,
+                              borderRadius: 0
+                          }}/>
+                <div style={{
+                    lineHeight: "30px",
+                    marginLeft: "10px",
+                    color: "#666"
+                }}>
                     {this.state.message}
                 </div>
             </Flex>
