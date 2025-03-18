@@ -1,5 +1,5 @@
 import React from 'react';
-import {Form, Input, Modal, Select, Tabs} from 'antd';
+import {Form, Modal, Select, Tabs} from 'antd';
 import TextArea from "antd/es/input/TextArea";
 import {FolderAddOutlined} from "@ant-design/icons";
 import {ModListPageContext} from "../AppContext.ts";

@@ -5,7 +5,7 @@ import {path} from "@tauri-apps/api";
 const IS_DEV = window.location.host === "127.0.0.1";
 const DEV_PATH = "~/Desktop/config/";
 
-class ConfigApi {
+export class ConfigApi {
 
     public static async getConfigPath() {
         const configDir = await appConfigDir();
@@ -130,4 +130,3 @@ class ConfigApi {
 
 }
 
-export default ConfigApi;

@@ -1,9 +1,9 @@
 import React from 'react';
-import {Avatar, Button, Divider, Flex, List, message, Skeleton, Space} from 'antd';
+import {Avatar, Button, Flex, List, message, Space} from 'antd';
 import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
-import ModioApi from "../apis/ModioApi.ts";
+import {ModioApi} from "../apis/ModioApi.ts";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 

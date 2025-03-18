@@ -1,9 +1,11 @@
-import ConfigApi from "../apis/ConfigApi.ts";
-import ModioApi from "../apis/ModioApi.ts";
+import {message} from "antd";
+
+import {ConfigApi} from "../apis/ConfigApi.ts";
+import {ModioApi} from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {ModList, ModListItem} from "./config/ModList.ts";
 import {ProfileList, ProfileTree} from "./config/ProfileList.ts";
-import {message} from "antd";
+
 
 export class ModListViewModel {
 

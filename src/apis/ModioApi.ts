@@ -1,15 +1,15 @@
+import {message} from "antd";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import {ModListItem} from "../vm/config/ModList.ts";
-import CacheApi from "./CacheApi.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
-import {message} from "antd";
+import {CacheApi} from "./CacheApi.ts";
 
 const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io";
 const MODIO_API_URL = "https://api.mod.io";
-const GAME_ID = 2475;
+const MODIO_GAME_ID = 2475;
 const IS_PROXY = true;
 
-class ModioApi {
+export class ModioApi {
 
     private constructor() {
     }
@@ -35,9 +35,9 @@ class ModioApi {
         const host = await ModioApi.getHost();
         const key = await ModioApi.getApiKey();
         if (key) {
-            return `${host}/v1/games/${GAME_ID}/${api}?api_key=${key}`;
+            return `${host}/v1/games/${MODIO_GAME_ID}/${api}?api_key=${key}`;
         } else {
-            return `${host}/v1/games/${GAME_ID}/${api}`;
+            return `${host}/v1/games/${MODIO_GAME_ID}/${api}`;
         }
     }
 
@@ -81,7 +81,7 @@ class ModioApi {
     public static async getModInfoByName(nameId: string): Promise<ModInfo> {
         const key = await ModioApi.getApiKey();
         const host = await ModioApi.getHost();
-        const modRequestUrl = `${host}/v1/games/${GAME_ID}/mods?name_id=${nameId}`;
+        const modRequestUrl = `${host}/v1/games/${MODIO_GAME_ID}/mods?name_id=${nameId}`;
 
         try {
             const resp = await fetch(modRequestUrl, {
@@ -99,7 +99,7 @@ class ModioApi {
     public static async getModInfoById(modId: string): Promise<ModInfo> {
         const key = await ModioApi.getApiKey();
         const host = await ModioApi.getHost();
-        const modRequestUrl = `${host}/v1/games/${GAME_ID}/mods/${modId}`;
+        const modRequestUrl = `${host}/v1/games/${MODIO_GAME_ID}/mods/${modId}`;
 
         try {
             const resp = await fetch(modRequestUrl, {
@@ -182,7 +182,7 @@ class ModioApi {
     }
 
     public static async getModEvents() {
-        `/games/${GAME_ID}/mods/events`
+        `/games/${MODIO_GAME_ID}/mods/events`
     }
 
     public static async getUserInfo() {
@@ -191,6 +191,3 @@ class ModioApi {
 
 
 }
-
-export default ModioApi;
-
