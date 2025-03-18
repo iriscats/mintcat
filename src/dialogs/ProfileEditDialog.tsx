@@ -1,8 +1,7 @@
 import React from "react";
 import {Button, Card, Flex, Input, List, Modal} from "antd";
-import {ModListPageContext} from "../AppContext.ts";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
-
+import {ModListPageContext} from "../AppContext.ts";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;

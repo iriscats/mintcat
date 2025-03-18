@@ -1,11 +1,12 @@
 import {message} from "antd";
 import {exists} from '@tauri-apps/plugin-fs';
-import {appCacheDir} from '@tauri-apps/api/path';
-import {ModListViewModel} from "./ModListVM.ts";
-import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import ConfigApi from "../apis/ConfigApi.ts";
-import {Setting} from "./config/Setting.ts";
 import {locale} from "@tauri-apps/plugin-os";
+import {appCacheDir} from '@tauri-apps/api/path';
+
+import {IntegrateApi} from "../apis/IntegrateApi.ts";
+import {ConfigApi} from "../apis/ConfigApi.ts";
+import {ModListViewModel} from "./ModListVM.ts";
+import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 
 export class AppViewModel {
@@ -93,13 +94,17 @@ export class AppViewModel {
     }
 
     public async checkAppPath() {
-        if (this.setting.cachePath === "" || this.setting.cachePath === undefined) {
-            this.converter.setting.cachePath = await appCacheDir();
+        try {
+            if (this.setting.cachePath === "" || this.setting.cachePath === undefined) {
+                this.converter.setting.cachePath = await appCacheDir();
+            }
+            if (this.setting.configPath === "" || this.setting.configPath === undefined) {
+                this.converter.setting.configPath = await ConfigApi.getConfigPath();
+            }
+            await ConfigApi.saveSettings(this.setting.toJson());
+        } catch (err) {
+            message.error("没有权限获取配置文件夹路径! ");
         }
-        if(this.setting.configPath === "" || this.setting.configPath === undefined) {
-            this.converter.setting.configPath = await ConfigApi.getConfigPath();
-        }
-        await ConfigApi.saveSettings(this.setting.toJson());
     }
 
     private async checkLanguage() {

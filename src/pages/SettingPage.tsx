@@ -1,14 +1,14 @@
 import React from 'react';
 import {open} from '@tauri-apps/plugin-dialog'
 import {openPath} from '@tauri-apps/plugin-opener';
+import {appCacheDir} from "@tauri-apps/api/path";
 import {Form, Input, Select, Card, message, Button, Flex} from 'antd';
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
 
 import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import ConfigApi from "../apis/ConfigApi.ts";
-import {appCacheDir} from "@tauri-apps/api/path";
+import {ConfigApi} from "../apis/ConfigApi.ts";
 
 
 const LanguageOptions = [
@@ -169,8 +169,8 @@ class SettingPage extends React.Component<any, any> {
                         <Form.Item label="Cache Directory">
                             <Flex>
                                 <Search value={this.context.setting.cachePath}
-                                    enterButton={<FolderAddOutlined/>}
-                                    onSearch={this.onSelectCacheDirClick}
+                                        enterButton={<FolderAddOutlined/>}
+                                        onSearch={this.onSelectCacheDirClick}
                                 />
                                 <Button type="default"
                                         onClick={this.onOpenCacheDirClick}

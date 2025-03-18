@@ -6,7 +6,7 @@ const IS_DEV = window.location.host === "127.0.0.1";
 const DEV_PATH = "~/Desktop/data/";
 
 
-class CacheApi {
+export class CacheApi {
 
     public constructor() {
     }
@@ -44,5 +44,3 @@ class CacheApi {
     }
 
 }
-
-export default CacheApi;
