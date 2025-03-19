@@ -108,6 +108,7 @@ class HomePage extends React.Component<any, ModListPageState> {
     }
 
     private onDrop(info: any) {
+        console.log(info);
         this.setState({
             treeData: dragAndDrop(info, this.state.treeData),
         })

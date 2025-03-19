@@ -7,6 +7,8 @@ export function dragAndDrop(nodeInfo: any, treeData: TreeDataNode[]) {
     const dropPos = nodeInfo.node.pos.split('-');
     const dropPosition = nodeInfo.dropPosition - Number(dropPos[dropPos.length - 1]); // the drop position relative to the drop node, inside 0, top -1, bottom 1
 
+    console.log(dropKey, dragKey, dropPos, dropPosition);
+
     const loop = (
         data: TreeDataNode[],
         key: React.Key,

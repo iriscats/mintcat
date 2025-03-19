@@ -1,11 +1,9 @@
-use crate::mod_info::{ApprovalStatus, Meta, MetaConfig, MetaMod, ModInfo, SemverVersion};
-use repak::PakWriter;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Cursor, Read, Seek, Write};
-use std::path::PathBuf;
 use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
 use unreal_asset::Asset;
+use repak::PakWriter;
 
 #[derive(Debug, Default)]
 struct Dir {
@@ -77,37 +75,6 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         self.write_file(&data_out.0.into_inner(), &format!("{path}.uasset"))?;
         self.write_file(&data_out.1.into_inner(), &format!("{path}.uexp"))?;
 
-        Ok(())
-    }
-
-    pub fn write_meta(
-        &mut self,
-        config: MetaConfig,
-        mods: &[(ModInfo, PathBuf)],
-    ) -> Result<(), Box<dyn Error>> {
-        let mut split = env!("CARGO_PKG_VERSION").split('.');
-        let version = SemverVersion {
-            major: split.next().unwrap().parse().unwrap(),
-            minor: split.next().unwrap().parse().unwrap(),
-            patch: split.next().unwrap().parse().unwrap(),
-        };
-
-        let meta = Meta {
-            version,
-            config,
-            mods: mods
-                .iter()
-                .map(|(info, _)| MetaMod {
-                    name: "TODO".into(),
-                    version: "TODO".into(), // TODO
-                    author: "TODO".into(),  // TODO
-                    url: "https://".into(),
-                    approval: ApprovalStatus::Sandbox,
-                    required: false,
-                })
-                .collect(),
-        };
-        //self.write_file(&postcard::to_allocvec(&meta).unwrap(), "meta")?;
         Ok(())
     }
 

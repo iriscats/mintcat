@@ -1,9 +1,20 @@
+use crate::mod_info::ModInfo;
+use std::collections::HashSet;
 use std::error::Error;
+use std::io;
 use std::io::{Read, Seek};
+use std::path::PathBuf;
 use tracing::info;
 use uasset_utils::splice::{
     extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement,
 };
+use unreal_asset::properties::int_property::BoolProperty;
+use unreal_asset::properties::object_property::{
+    SoftObjectPath, SoftObjectProperty, TopLevelAssetPath,
+};
+use unreal_asset::properties::str_property::StrProperty;
+use unreal_asset::properties::struct_property::StructProperty;
+use unreal_asset::properties::{Ancestry, FName, Property};
 use unreal_asset::{
     exports::ExportBaseTrait,
     flags::EObjectFlags,
@@ -17,8 +28,8 @@ use unreal_asset::{
     Asset,
 };
 
-pub static pcb_path: &str = "FSD/Content/Game/BP_PlayerControllerBase";
-pub static patch_paths: [&str; 6] = [
+pub static PCB_PATH: &str = "FSD/Content/Game/BP_PlayerControllerBase";
+pub static PATCH_PATHS: [&str; 6] = [
     "FSD/Content/Game/BP_GameInstance",
     "FSD/Content/Game/SpaceRig/BP_PlayerController_SpaceRig",
     "FSD/Content/Game/StartMenu/Bp_StartMenu_PlayerController",
@@ -26,18 +37,18 @@ pub static patch_paths: [&str; 6] = [
     "FSD/Content/UI/Menu_ServerList/_MENU_ServerList",
     "FSD/Content/UI/Menu_ServerList/WND_JoiningModded",
 ];
-pub static escape_menu_path: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
-pub static modding_tab_path: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
-pub static server_list_entry_path: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
+pub static ESCAPE_MENU_PATH: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
+pub static MODDING_TAB_PATH: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
+pub static SERVER_LIST_ENTRY_PATH: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
 
 pub fn get_deferred_paths() -> Vec<&'static str> {
     let mut paths = vec![
-        pcb_path,
-        escape_menu_path,
-        modding_tab_path,
-        server_list_entry_path,
+        PCB_PATH,
+        ESCAPE_MENU_PATH,
+        MODDING_TAB_PATH,
+        SERVER_LIST_ENTRY_PATH,
     ];
-    paths.extend(patch_paths);
+    paths.extend(PATCH_PATHS);
     paths
 }
 
@@ -85,6 +96,52 @@ fn get_import<R: Read + Seek>(asset: &mut Asset<R>, import: ImportChain) -> Pack
         });
     }
     pi
+}
+
+fn find_export_named<'a, R: io::Read + io::Seek>(
+    asset: &'a mut unreal_asset::Asset<R>,
+    name: &'a str,
+) -> Option<&'a mut unreal_asset::exports::normal_export::NormalExport> {
+    for export in &mut asset.asset_data.exports {
+        if let unreal_asset::exports::Export::NormalExport(export) = export {
+            if export.base_export.object_name.get_content(|n| n == name) {
+                return Some(export);
+            }
+        }
+    }
+    None
+}
+fn find_array_property_named<'a>(
+    export: &'a mut unreal_asset::exports::normal_export::NormalExport,
+    name: &'a str,
+) -> Option<(
+    usize,
+    &'a mut unreal_asset::properties::array_property::ArrayProperty,
+)> {
+    for (i, prop) in &mut export.properties.iter_mut().enumerate() {
+        if let unreal_asset::properties::Property::ArrayProperty(prop) = prop {
+            if prop.name.get_content(|n| n == name) {
+                return Some((i, prop));
+            }
+        }
+    }
+    None
+}
+fn find_struct_property_named<'a>(
+    export: &'a mut unreal_asset::exports::normal_export::NormalExport,
+    name: &'a str,
+) -> Option<(
+    usize,
+    &'a mut unreal_asset::properties::struct_property::StructProperty,
+)> {
+    for (i, prop) in &mut export.properties.iter_mut().enumerate() {
+        if let unreal_asset::properties::Property::StructProperty(prop) = prop {
+            if prop.name.get_content(|n| n == name) {
+                return Some((i, prop));
+            }
+        }
+    }
+    None
 }
 
 /// "it's only 3 instructions"
@@ -625,4 +682,61 @@ pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(
     }
 
     Ok(())
+}
+
+pub fn patch_init_actors<C: Read + Seek>(
+    asset: &mut Asset<C>,
+    init_space_rig: HashSet<String>,
+    init_cave: HashSet<String>
+) {
+    let init_spacerig_fnames = init_space_rig
+        .into_iter()
+        .map(|p| asset.add_fname(&p))
+        .collect::<Vec<_>>();
+    let init_cave_fnames = init_cave
+        .into_iter()
+        .map(|p| asset.add_fname(&p))
+        .collect::<Vec<_>>();
+
+    let ancestry = Ancestry::new(FName::new_dummy("".to_owned(), 0));
+
+    if let Some(e) = find_export_named(asset, "Default__MI_SpawnMods_C") {
+        if let Some((_, p)) = find_array_property_named(e, "SpaceRigMods") {
+            p.value.clear();
+            for path in init_spacerig_fnames {
+                p.value.push(
+                    SoftObjectProperty {
+                        name: FName::new_dummy("0".to_owned(), -2147483648),
+                        ancestry: ancestry.clone(),
+                        property_guid: None,
+                        duplication_index: 0,
+                        value: SoftObjectPath {
+                            asset_path: TopLevelAssetPath::new(None, path),
+                            sub_path_string: None,
+                        },
+                    }
+                    .into(),
+                );
+            }
+        }
+        if let Some((_, p)) = find_array_property_named(e, "CaveMods") {
+            p.value.clear();
+            for path in init_cave_fnames {
+                p.value.push(
+                    SoftObjectProperty {
+                        name: FName::new_dummy("0".to_owned(), -2147483648),
+                        ancestry: ancestry.clone(),
+                        property_guid: None,
+                        duplication_index: 0,
+                        value: SoftObjectPath {
+                            asset_path: TopLevelAssetPath::new(None, path),
+                            sub_path_string: None,
+                        },
+                    }
+                    .into(),
+                );
+            }
+        }
+
+    }
 }
