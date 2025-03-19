@@ -14,7 +14,8 @@
       {
         "title": "mintcat",
         "width": 1200,
-        "height": 628
+        "height": 628,
+        "dragDropEnabled": false
       }
     ],
     "security": {

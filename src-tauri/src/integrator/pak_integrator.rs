@@ -1,88 +1,97 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::installation::DRGInstallation;
-
 use crate::integrator::mod_bundle_writer::ModBundleWriter;
-use crate::integrator::modio_patch::uninstall_modio;
 use crate::integrator::raw_asset::RawAsset;
-use crate::integrator::ue4ss_integrate::{install_ue4ss_mod, uninstall_ue4ss};
 use crate::integrator::{game_pak_patch, ReadSeek};
-use crate::mod_info::{MetaConfig, ModInfo};
+use crate::mod_info::ModInfo;
 
-use crate::integrator::game_pak_patch::{
-    escape_menu_path, get_deferred_paths, modding_tab_path, patch_paths, pcb_path,
-    server_list_entry_path,
-};
-use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
-use std::io::{BufReader, BufWriter, Cursor, ErrorKind, Read, Seek, Write};
+use std::io::{BufReader, BufWriter, Cursor, Read, Seek, Write};
 use std::path::{Path, PathBuf};
+
 use tauri::{AppHandle, Emitter};
-use tracing::info;
-use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
-use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
-use uasset_utils::splice::{
-    extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement,
+
+use crate::integrator::game_pak_patch::{
+    get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
+    SERVER_LIST_ENTRY_PATH,
 };
+use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
+use uasset_utils::paths::{PakPath, PakPathComponentTrait};
 use unreal_asset::engine_version::EngineVersion;
-use unreal_asset::{Asset, AssetBuilder};
-use zip::ZipArchive;
+use unreal_asset::AssetBuilder;
+
+static FSD_AR_PATH: &str = "FSD/AssetRegistry.bin";
+static FSD_MOD_PAK_NAME: &str = "FSD-WindowsNoEditor_Mods.pak";
 
 pub struct PakIntegrator {
-    installation: DRGInstallation,
     fsd_pak: repak::PakReader,
     fsd_pak_reader: BufReader<fs::File>,
     asset_registry: AssetRegistry,
-    deferred_assets: HashMap<&'static str, RawAsset>,
     bundle: ModBundleWriter<BufWriter<fs::File>>,
-    added_paths: HashSet<String>,
+    deferred_assets: HashMap<&'static str, RawAsset>, // 延迟加载并且等待被 Patch 的资产
+    added_paths: HashSet<String>,                     // 防止重复写入
+    init_space_rig_assets: HashSet<String>,
+    init_cave_assets: HashSet<String>,
+}
+
+fn format_soft_class(path: &Path) -> String {
+    let name = path.file_stem().unwrap().to_string_lossy();
+    format!(
+        "/Game/{}{}_C",
+        path.strip_prefix("FSD/Content")
+            .unwrap()
+            .to_string_lossy()
+            .strip_suffix("uasset")
+            .unwrap(),
+        name
+    )
 }
 
 impl PakIntegrator {
     pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self, Box<dyn Error>> {
-        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
-
         let mut fsd_pak_reader = BufReader::new(fs::File::open(fsd_path_pak.as_ref())?);
         let fsd_pak = repak::PakBuilder::new().reader(&mut fsd_pak_reader)?;
 
-        let ar_path = "FSD/AssetRegistry.bin";
-        let mut asset_registry =
-            AssetRegistry::read(&mut Cursor::new(fsd_pak.get(ar_path, &mut fsd_pak_reader)?))?;
+        let mut asset_registry = AssetRegistry::read(&mut Cursor::new(
+            fsd_pak.get(FSD_AR_PATH, &mut fsd_pak_reader)?,
+        ))?;
 
         let mut deferred_assets = Self::init_deferred_assets();
-        Self::collect_game_assets(&fsd_pak, &mut fsd_pak_reader, &mut deferred_assets)?;
+        Self::load_deferred_assets_for_game_pak(
+            &fsd_pak,
+            &mut fsd_pak_reader,
+            &mut deferred_assets,
+        )?;
 
-        let path_mod_pak = installation
-            .paks_path()
-            .join("FSD-WindowsNoEditor_Mods.pak");
-        info!("installation path {:?}", installation.paks_path());
-
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
+        let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
         let bundle = ModBundleWriter::new(
             BufWriter::new(
                 fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .truncate(true)
-                    .open(&path_mod_pak)?,
+                    .open(&mod_pak_path)?,
             ),
             &fsd_pak.files(),
         )?;
 
         Ok(Self {
-            installation,
             fsd_pak,
             fsd_pak_reader,
             asset_registry,
             deferred_assets,
             bundle,
             added_paths: HashSet::new(),
+            init_space_rig_assets: HashSet::new(),
+            init_cave_assets: HashSet::new(),
         })
     }
 
     fn init_deferred_assets() -> HashMap<&'static str, RawAsset> {
         let deferred_paths = get_deferred_paths();
-
         HashMap::from_iter(
             deferred_paths
                 .iter()
@@ -90,7 +99,7 @@ impl PakIntegrator {
         )
     }
 
-    fn collect_game_assets(
+    fn load_deferred_assets_for_game_pak(
         pak: &repak::PakReader,
         reader: &mut (impl Read + Seek),
         assets: &mut HashMap<&str, RawAsset>,
@@ -110,7 +119,6 @@ impl PakIntegrator {
         Ok(())
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn install(mut self, app: AppHandle, mods: Vec<(ModInfo)>) -> Result<(), Box<dyn Error>> {
         for (mod_info) in &mods {
             self.process_mod(mod_info)?;
@@ -120,6 +128,11 @@ impl PakIntegrator {
         app.emit("status-bar-log", "Patch Game Pak...").unwrap();
         app.emit("status-bar-percent", 80).unwrap();
 
+        let integration_dir = include_dir::include_dir!("$CARGO_MANIFEST_DIR/assets/integration");
+        let mut mint_files = HashMap::new();
+        Self::collect_mint_files(&integration_dir, &mut mint_files);
+
+        self.apply_mint_patch(&mut mint_files)?;
         self.apply_pcb_patch()?;
         self.apply_sandbox_patch()?;
         self.apply_modding_tab_patch()?;
@@ -129,18 +142,12 @@ impl PakIntegrator {
         app.emit("status-bar-log", "Write Mod...").unwrap();
         app.emit("status-bar-percent", 90).unwrap();
 
-        self.write_mint_files()?;
+        self.write_mint_files(&mut mint_files)?;
         self.serialize_asset_registry()?;
         self.bundle.finish()?;
 
         app.emit("status-bar-log", "Install Mod Success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
-
-        info!(
-            "{} mods installed to {}",
-            mods.len(),
-            self.installation.paks_path().join("mods_P.pak").display()
-        );
 
         Ok(())
     }
@@ -192,8 +199,37 @@ impl PakIntegrator {
         let mount = PakPath::new(pak.mount_point());
         let pak_files = self.normalize_pak_paths(&pak, &mount)?;
 
+        self.process_init_asset(&pak_files)?;
         self.process_asset_registry(&pak, &pak_files, pak_buf)?;
         self.write_mod_assets(pak, pak_files, pak_buf)?;
+        Ok(())
+    }
+
+    fn process_init_asset(
+        &mut self,
+        pak_files: &HashMap<PathBuf, String>,
+    ) -> Result<(), Box<dyn Error>> {
+        for pak_file in pak_files {
+            if let Some(filename) = pak_file.0.file_name() {
+                if filename == "AssetRegistry.bin" {
+                    continue;
+                }
+                if pak_file.0.extension().and_then(std::ffi::OsStr::to_str)
+                    == Some("ushaderbytecode")
+                {
+                    continue;
+                }
+                let lower = filename.to_string_lossy().to_lowercase();
+                if lower == "initspacerig.uasset" {
+                    self.init_space_rig_assets
+                        .insert(format_soft_class(&*pak_file.0));
+                }
+                if lower == "initcave.uasset" {
+                    self.init_cave_assets
+                        .insert(format_soft_class(&*pak_file.0));
+                }
+            }
+        }
         Ok(())
     }
 
@@ -211,10 +247,7 @@ impl PakIntegrator {
             .map(|p| {
                 let full_path = mount.join(&p);
                 let normalized = full_path.strip_prefix("../../../")?;
-
-                // 将 UTF-8 Path 转换为标准 PathBuf
                 let std_path = PathBuf::from(normalized.as_str());
-
                 Ok((std_path, p))
             })
             .collect()
@@ -230,20 +263,17 @@ impl PakIntegrator {
             if let Some("uasset" | "umap") = normalized.extension().and_then(|e| e.to_str()) {
                 if pak_files.contains_key(&normalized.with_extension("uexp")) {
                     let uasset = pak.get(pak_path, pak_buf)?;
-
                     let uexp = pak.get(
                         &PakPath::new(pak_path).with_extension("uexp").to_string(),
                         pak_buf,
                     )?;
-
                     let asset = AssetBuilder::new(Cursor::new(uasset), EngineVersion::VER_UE4_27)
                         .bulk(Cursor::new(uexp))
                         .skip_data(true)
                         .build()?;
 
                     self.asset_registry
-                        .populate(normalized.with_extension("").to_str().unwrap(), &asset)
-                        .expect("TODO: panic message");
+                        .populate(normalized.with_extension("").to_str().unwrap(), &asset)?;
                 }
             }
         }
@@ -263,27 +293,53 @@ impl PakIntegrator {
             }
 
             let file_data = pak.get(&pak_path, pak_buf)?;
-
             self.bundle
                 .write_file(&file_data, normalized.to_str().unwrap())?;
+
             self.added_paths.insert(lowercase);
         }
         Ok(())
     }
 
-    fn apply_pcb_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[pcb_path].parse()?;
-        game_pak_patch::hook_pcb(&mut asset).expect("TODO: panic message");
+    fn apply_mint_patch(
+        &mut self,
+        mint_files: &mut HashMap<String, Vec<u8>>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mint_path = (
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uasset",
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uexp",
+        );
 
-        self.bundle
-            .write_asset(asset, &pcb_path)
-            .expect("TODO: panic message");
+        let mut asset = unreal_asset::Asset::new(
+            Cursor::new(mint_files[mint_path.0].clone()),
+            Some(Cursor::new(mint_files[mint_path.1].clone())),
+            EngineVersion::VER_UE4_27,
+            None,
+            false,
+        )?;
+
+        game_pak_patch::patch_init_actors(
+            &mut asset,
+            self.init_space_rig_assets.clone(),
+            self.init_cave_assets.clone(),
+        );
+        self.bundle.write_asset(
+            asset,
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods",
+        )?;
 
         Ok(())
     }
 
+    fn apply_pcb_patch(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut asset = self.deferred_assets[PCB_PATH].parse()?;
+        game_pak_patch::hook_pcb(&mut asset)?;
+        self.bundle.write_asset(asset, &PCB_PATH)?;
+        Ok(())
+    }
+
     fn apply_sandbox_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        patch_paths.iter().for_each(|path| {
+        PATCH_PATHS.iter().for_each(|path| {
             let mut asset = self.deferred_assets[path].parse().unwrap();
             game_pak_patch::patch_sandbox(&mut asset).expect("TODO: panic message");
 
@@ -296,53 +352,46 @@ impl PakIntegrator {
     }
 
     fn apply_escape_menu_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[escape_menu_path].parse()?;
-        game_pak_patch::patch_modding_tab(&mut asset).expect("TODO: panic message");
-
-        self.bundle
-            .write_asset(asset, &escape_menu_path)
-            .expect("TODO: panic message");
-
+        let mut asset = self.deferred_assets[ESCAPE_MENU_PATH].parse()?;
+        game_pak_patch::patch_modding_tab(&mut asset)?;
+        self.bundle.write_asset(asset, &ESCAPE_MENU_PATH)?;
         Ok(())
     }
 
     fn apply_modding_tab_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[modding_tab_path].parse()?;
-        game_pak_patch::patch_modding_tab_item(&mut asset).expect("TODO: panic message");
-
-        self.bundle
-            .write_asset(asset, &modding_tab_path)
-            .expect("TODO: panic message");
-
+        let mut asset = self.deferred_assets[MODDING_TAB_PATH].parse()?;
+        game_pak_patch::patch_modding_tab_item(&mut asset)?;
+        self.bundle.write_asset(asset, &MODDING_TAB_PATH)?;
         Ok(())
     }
 
     fn apply_server_list_entry_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[server_list_entry_path].parse()?;
-        game_pak_patch::patch_server_list_entry(&mut asset).expect("TODO: panic message");
-        self.bundle
-            .write_asset(asset, &server_list_entry_path)
-            .expect("TODO: panic message");
-
+        let mut asset = self.deferred_assets[SERVER_LIST_ENTRY_PATH].parse()?;
+        game_pak_patch::patch_server_list_entry(&mut asset)?;
+        self.bundle.write_asset(asset, &SERVER_LIST_ENTRY_PATH)?;
         Ok(())
     }
 
-    fn write_mint_files(&mut self) -> Result<(), Box<dyn Error>> {
-        let integration_dir = include_dir::include_dir!("$CARGO_MANIFEST_DIR/assets/integration");
-
-        let mut int_files = HashMap::new();
-        Self::collect_integration_files(&integration_dir, &mut int_files);
-
-        for (path, data) in int_files {
+    fn write_mint_files(
+        &mut self,
+        mint_files: &mut HashMap<String, Vec<u8>>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mint_path = (
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uasset",
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uexp",
+        );
+        mint_files.remove(mint_path.0);
+        mint_files.remove(mint_path.1);
+        for (path, data) in mint_files {
             self.bundle.write_file(&*data, &path)?;
         }
         Ok(())
     }
 
-    fn collect_integration_files(dir: &include_dir::Dir, files: &mut HashMap<String, Vec<u8>>) {
+    fn collect_mint_files(dir: &include_dir::Dir, files: &mut HashMap<String, Vec<u8>>) {
         for entry in dir.entries() {
             match entry {
-                include_dir::DirEntry::Dir(d) => Self::collect_integration_files(d, files),
+                include_dir::DirEntry::Dir(d) => Self::collect_mint_files(d, files),
                 include_dir::DirEntry::File(f) => {
                     files.insert(
                         f.path().to_str().unwrap().replace('\\', "/"),
@@ -355,18 +404,13 @@ impl PakIntegrator {
 
     fn serialize_asset_registry(&mut self) -> Result<(), Box<dyn Error>> {
         let mut buf = Vec::new();
-        self.asset_registry
-            .write(&mut buf)
-            .expect("Failed to serialize asset registry");
-
-        self.bundle.write_file(&buf, "FSD/AssetRegistry.bin")?;
-
+        self.asset_registry.write(&mut buf)?;
+        self.bundle.write_file(&buf, FSD_AR_PATH)?;
         Ok(())
     }
 }
 
 impl PakIntegrator {
-    #[tracing::instrument(level = "debug", skip(path_pak))]
     pub fn uninstall<P: AsRef<Path>>(path_pak: P) -> Result<(), Box<dyn Error>> {
         Ok(())
     }

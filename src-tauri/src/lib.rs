@@ -97,8 +97,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             install_mods,
             open_devtools,
-            launch_game,          // 添加缺失的命令
-            find_steam_game_home  // 添加缺失的命令
+            launch_game,
+            find_steam_game_home
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

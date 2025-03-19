@@ -42,16 +42,20 @@ class App extends React.Component<any, any> {
             }).then(_ => {
             });
 
-            getCurrentWindow().onDragDropEvent((event) => {
-                if (event.payload.type === 'drop') {
-                    console.log('User dropped', event.payload);
-                    this.addModDialogRef.current?.setValue(ProfileTreeGroupType.LOCAL, event.payload.paths[0])
-                        .setCallback(async () => {
-                            await message.info("Add Successfully");
-                        }).show();
-                }
-            }).then(_ => {
-            });
+            // getCurrentWindow().onDragDropEvent((event) => {
+            //     if (event.payload.type === 'drop') {
+            //         console.log('User dropped', event.payload);
+            //         if (event.payload.paths.length === 0) {
+            //             return;
+            //         }
+            //
+            //         this.addModDialogRef.current?.setValue(ProfileTreeGroupType.LOCAL, event.payload.paths[0])
+            //             .setCallback(async () => {
+            //                 await message.info("Add Successfully");
+            //             }).show();
+            //     }
+            // }).then(_ => {
+            // });
 
         } catch (e) {
         }

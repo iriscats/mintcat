@@ -15,8 +15,7 @@ impl RawAsset {
             EngineVersion::VER_UE4_27,
         )
         .bulk(std::io::Cursor::new(self.uexp.as_ref().unwrap()))
-        .build()
-        .expect("TODO: panic message");
+        .build()?;
 
         Ok(asset)
     }
