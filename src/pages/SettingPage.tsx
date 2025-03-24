@@ -114,7 +114,6 @@ class SettingPage extends React.Component<any, any> {
     }
 
     componentDidMount(): void {
-        console.log(this.context.setting);
         this.appSettingFormRef.current?.setFieldsValue({
             language: this.context.setting.language,
             theme: this.context.setting.guiTheme,

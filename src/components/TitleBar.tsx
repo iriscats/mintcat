@@ -1,5 +1,6 @@
 import React from "react";
 import {Avatar, Badge, Button, Flex, Image, Popconfirm} from "antd";
+import {t} from "i18next";
 import {
     BellOutlined,
     CloudSyncOutlined,
@@ -10,7 +11,8 @@ import {
 } from '@ant-design/icons';
 import packageJson from '../../package.json';
 import {AppContext} from "../AppContext.ts";
-import {t} from "i18next";
+import {IntegrateApi} from "../apis/IntegrateApi.ts";
+import {once} from "@tauri-apps/api/event";
 
 class TitleBar extends React.Component {
 
@@ -26,6 +28,9 @@ class TitleBar extends React.Component {
 
     private async onLaunchGameClick() {
         await this.context.installMods();
+        await once<string>('install-success', async () => {
+            await IntegrateApi.launchGame();
+        });
     }
 
     render() {
@@ -101,8 +106,7 @@ class TitleBar extends React.Component {
                     </Popconfirm>
                 </Flex>
             </Flex>
-        )
-            ;
+        );
     }
 }
 

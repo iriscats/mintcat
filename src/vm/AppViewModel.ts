@@ -1,4 +1,4 @@
-import {message} from "antd";
+import {message, Modal} from "antd";
 import {exists} from '@tauri-apps/plugin-fs';
 import {locale} from "@tauri-apps/plugin-os";
 import {appCacheDir} from '@tauri-apps/api/path';
@@ -8,11 +8,16 @@ import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModListViewModel} from "./ModListVM.ts";
 import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
+import {MessageBox} from "../components/MessageBox.ts";
+
+const IS_DEV = window.location.host === "localhost:1420";
 
 export class AppViewModel {
 
     private static instance: AppViewModel;
     private converter: SettingConverter = new SettingConverter();
+
+    public isFirstRun: boolean = false;
 
     public get setting(): Setting {
         return this.converter.setting;
@@ -64,21 +69,18 @@ export class AppViewModel {
                 });
             }
         }
-        console.log(installModList);
         await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
     }
 
-    private async checkOauth() {
-        if (this.setting.modioOAuth === undefined ||
-            this.setting.modioOAuth === null ||
-            this.setting.modioOAuth === ""
-        ) {
+    private async checkOauth(): Promise<boolean> {
+        if (!this.setting.modioOAuth || this.setting.modioOAuth === "") {
             message.error("mod.io OAuth 不存在!");
+            return false;
         }
-
+        return true;
     }
 
-    private async checkGamePath() {
+    private async checkGamePath(): Promise<boolean> {
         if (this.setting.drgPakPath !== undefined) {
             try {
                 if (!await exists(this.setting.drgPakPath)) {
@@ -123,32 +125,51 @@ export class AppViewModel {
         await ConfigApi.saveSettings(this.setting.toJson());
     }
 
+    public async loadSettings() {
+        const settingData = await ConfigApi.loadSettings();
+        if (settingData !== undefined) {
+            this.converter.setting = Setting.fromJson(settingData);
+        } else {
+            this.converter.setting = new Setting();
+        }
+    }
+
     public static async getInstance(): Promise<AppViewModel> {
         if (AppViewModel.instance) {
             return AppViewModel.instance;
         }
+        const appVM = new AppViewModel();
+        const modListVM = await ModListViewModel.getInstance();
 
-        const vm = new AppViewModel();
-        const settingData = await ConfigApi.loadSettings();
-        if (settingData !== undefined) {
-            vm.converter.setting = Setting.fromJson(settingData);
-        } else {
-            const settingDataV1 = await ConfigApi.loadSettingV1();
-            if (settingDataV1 !== undefined) {
-                vm.converter.convertTo(settingDataV1);
-                await ConfigApi.saveSettings(vm.setting.toJson());
+        appVM.isFirstRun = await IntegrateApi.isFirstRun();
+
+        let settingDataV1 = appVM.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
+        if (settingDataV1 !== undefined) {
+            const confirmed = await MessageBox.confirm({
+                title: '配置导入',
+                content: '发现旧版配置文件，是否导入?',
+            });
+            if (confirmed) {
+                appVM.converter.convertTo(settingDataV1);
+                await ConfigApi.saveSettings(appVM.setting.toJson());
+                await modListVM.loadOldConfig()
             } else {
-                vm.converter.setting = new Setting();
+                settingDataV1 = undefined;
             }
         }
 
-        await vm.checkAppPath();
-        await vm.checkOauth();
-        await vm.checkGamePath();
-        await vm.checkLanguage();
+        if (!settingDataV1 || !appVM.isFirstRun) {
+            await appVM.loadSettings();
+            await modListVM.loadConfig()
+        }
 
-        AppViewModel.instance = vm;
-        return vm;
+        await appVM.checkAppPath();
+        await appVM.checkOauth();
+        await appVM.checkGamePath();
+        await appVM.checkLanguage();
+
+        AppViewModel.instance = appVM;
+        return appVM;
     }
 
 }

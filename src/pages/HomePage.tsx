@@ -22,6 +22,7 @@ import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
+import {AppViewModel} from "../vm/AppViewModel.ts";
 
 
 interface ModListPageState {
@@ -84,10 +85,16 @@ class HomePage extends React.Component<any, ModListPageState> {
         this.onDrop = this.onDrop.bind(this);
         this.onSwitchChange = this.onSwitchChange.bind(this);
         this.onCustomTitleRender = this.onCustomTitleRender.bind(this);
+        this.onSaveChangesClick = this.onSaveChangesClick.bind(this);
     }
 
     private onAddModClick() {
         this.addModDialogRef.current?.setValue().show();
+    }
+
+    private async onSaveChangesClick() {
+        const vm = await AppViewModel.getInstance();
+        await vm.installMods();
     }
 
     private async onUpdateClick() {
@@ -287,7 +294,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                            style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
                         <Typography.Link>
                             <Tooltip title="Save Changes">
-                                <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onAddModClick}/>
+                                <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onSaveChangesClick}/>
                             </Tooltip>
                             <Tooltip title="Add Mod">
                                 <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>

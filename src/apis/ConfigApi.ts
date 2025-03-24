@@ -2,24 +2,17 @@ import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir} from '@tauri-
 import {appConfigDir, configDir} from "@tauri-apps/api/path";
 import {path} from "@tauri-apps/api";
 
-const IS_DEV = window.location.host === "127.0.0.1";
-const DEV_PATH = "~/Desktop/config/";
+console.log(window.location.host);
 
 export class ConfigApi {
 
     public static async getConfigPath() {
-        const configDir = await appConfigDir();
-        return IS_DEV ? DEV_PATH : configDir;
+        return await appConfigDir();
     }
 
     public static async readDataToFile(fileName: string): Promise<string> {
         try {
-            let filePath = fileName;
-            if (IS_DEV) {
-                const configDir = await ConfigApi.getConfigPath();
-                filePath = await path.join(configDir, fileName);
-            }
-            return await readTextFile(filePath, {
+            return await readTextFile(fileName, {
                 baseDir: BaseDirectory.AppConfig,
             });
         } catch (error) {
@@ -89,16 +82,25 @@ export class ConfigApi {
         return await ConfigApi.saveDataToFile(fileName, data);
     }
 
+    private static async getModListDataV1Path(): Promise<string> {
+        let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json"); // 0.2
+        if (!await exists(oldFilePath)) {
+            oldFilePath = await path.join(await configDir(), "mint\\config\\mod_data.json"); // 0.3
+        }
+        return oldFilePath;
+    }
+
+    private static async getSettingV1Path(): Promise<string> {
+        let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json"); // 0.2
+        if (!await exists(oldFilePath)) {
+            oldFilePath = await path.join(await configDir(), "mint\\config\\config.json"); // 0.3
+        }
+        return oldFilePath;
+    }
 
     public static async loadModListDataV1(): Promise<string> {
         try {
-            let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json"); // 0.2
-            if (!await exists(oldFilePath)) {
-                oldFilePath = await path.join(await configDir(), "mint\\config\\mod_data.json"); // 0.3
-            }
-            const oldFilePathDev = await path.join(await ConfigApi.getConfigPath(), "configv1.json");
-            const fileName = IS_DEV ? oldFilePathDev : oldFilePath;
-            return await readTextFile(fileName);
+            return await readTextFile(await ConfigApi.getModListDataV1Path());
         } catch (error) {
             console.error(error);
             return undefined;
@@ -107,13 +109,7 @@ export class ConfigApi {
 
     public static async loadSettingV1(): Promise<string> {
         try {
-            let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json"); // 0.2
-            if (!await exists(oldFilePath)) {
-                oldFilePath = await path.join(await configDir(), "mint\\config\\config.json"); // 0.3
-            }
-            const oldFilePathDev = await path.join(await ConfigApi.getConfigPath(), "settingsv1.json");
-            const fileName = IS_DEV ? oldFilePathDev : oldFilePath;
-            return await readTextFile(fileName);
+            return await readTextFile(await ConfigApi.getSettingV1Path());
         } catch (error) {
             console.error(error);
             return undefined;

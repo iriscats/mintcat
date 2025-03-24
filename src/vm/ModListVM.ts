@@ -177,45 +177,46 @@ export class ModListViewModel {
         }
     }
 
+    public async loadConfig() {
+        try {
+            let config = await ConfigApi.loadModListData();
+            this.converter.modList = ModList.fromJson(config);
+            this.converter.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData());
+            for (const profile of this.converter.profileList.Profiles) {
+                const profileDetailData = await ConfigApi.loadProfileDetails(profile);
+                if (profileDetailData) {
+                    this.converter.profileTreeList.push(ProfileTree.fromJson(profileDetailData));
+                }
+            }
+        } catch (err) {
+            message.error("初始化 Mod 列表失败");
+            this.converter.createDefault()
+        }
+    }
+
+    public async loadOldConfig() {
+        try {
+            const config = await ConfigApi.loadModListDataV1();
+            this.converter.convertTo(config);
+            await ConfigApi.saveModListData(this.converter.modList.toJson());
+            await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+            for (const profile of this.converter.profileList.Profiles) {
+                await ConfigApi.saveProfileDetails(profile,
+                    this.converter.profileTreeList.find(p => p.name === profile)!.toJson());
+            }
+        } catch (e) {
+            this.converter.createDefault();
+        }
+    }
+
     public static async getInstance() {
+        console.log("mod list vm getInstance");
+
         if (ModListViewModel.instance) {
             return ModListViewModel.instance;
         }
-
-        const vm = new ModListViewModel();
-        try {
-            let config = await ConfigApi.loadModListData();
-            if (config === undefined) {
-                config = await ConfigApi.loadModListDataV1();
-                if (config !== undefined) {
-                    vm.converter.convertTo(config);
-                    await ConfigApi.saveModListData(vm.converter.modList.toJson());
-                    await ConfigApi.saveProfileData(vm.converter.profileList.toJson());
-                    for (const profile of vm.converter.profileList.Profiles) {
-                        await ConfigApi.saveProfileDetails(profile,
-                            vm.converter.profileTreeList.find(p => p.name === profile)!.toJson());
-                    }
-                    return vm;
-                } else {
-                    vm.converter.createDefault()
-                    return vm;
-                }
-            } else {
-                vm.converter.modList = ModList.fromJson(config);
-                vm.converter.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData());
-                for (const profile of vm.converter.profileList.Profiles) {
-                    const profileDetailData = await ConfigApi.loadProfileDetails(profile);
-                    if (profileDetailData) {
-                        vm.converter.profileTreeList.push(ProfileTree.fromJson(profileDetailData));
-                    }
-                }
-            }
-            return vm;
-        } catch (e) {
-            message.error("初始化Mod列表失败" + e);
-            vm.converter.createDefault()
-            return vm;
-        }
+        ModListViewModel.instance = new ModListViewModel();
+        return ModListViewModel.instance;
     }
 
 }

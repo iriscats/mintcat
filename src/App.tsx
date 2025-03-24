@@ -10,7 +10,6 @@ import HomePage from "./pages/HomePage.tsx";
 import SettingPage from "./pages/SettingPage.tsx";
 import ModioPage from "./pages/ModioPage.tsx";
 import AddModDialog from "./dialogs/AddModDialog.tsx";
-import {ProfileTreeGroupType} from "./vm/config/ProfileList.ts";
 import defaultTheme from './themes/default.ts';
 import i18n from "./locales/i18n"
 
@@ -25,10 +24,18 @@ const {
 } = Layout;
 
 
-
 class App extends React.Component<any, any> {
 
-    private currentPage: string = MenuPage.Home;
+    state = {
+        currentPage: MenuPage.Home
+    }
+
+    private pageConfigs = [
+        {key: MenuPage.Home, component: <HomePage/>},
+        {key: MenuPage.Modio, component: <ModioPage/>},
+        {key: MenuPage.Setting, component: <SettingPage/>}
+    ];
+
     private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
 
     public constructor(props: any, context: any) {
@@ -36,6 +43,7 @@ class App extends React.Component<any, any> {
     }
 
     componentDidMount() {
+
         try {
             getCurrentWindow().onResized(({payload: size}) => {
                 this.forceUpdate();
@@ -61,29 +69,32 @@ class App extends React.Component<any, any> {
         }
     }
 
+
     render() {
         return (
             <I18nextProvider i18n={i18n}>
-                <ConfigProvider
-                    theme={defaultTheme}
-                >
+                <ConfigProvider theme={defaultTheme}>
                     <Layout className={"app"}>
-                        <AddModDialog ref={this.addModDialogRef}/>
-
+                        {/*<AddModDialog ref={this.addModDialogRef}/>*/}
                         <Header className={"app-header"}>
                             <TitleBar/>
                         </Header>
                         <Layout>
                             <Sider width="50px">
                                 <MenuBar onClick={(key) => {
-                                    this.currentPage = key;
-                                    this.forceUpdate();
+                                    this.setState({currentPage: key});
                                 }}/>
                             </Sider>
                             <Content>
-                                {this.currentPage === MenuPage.Home && <HomePage/>}
-                                {this.currentPage === MenuPage.Modio && <ModioPage/>}
-                                {this.currentPage === MenuPage.Setting && <SettingPage/>}
+                                {this.pageConfigs.map(({key, component}) => (
+                                    <div key={key}
+                                         style={{
+                                             display: this.state.currentPage === key ? 'block' : 'none',
+                                             height: '100%'
+                                         }}>
+                                        {component}
+                                    </div>
+                                ))}
                             </Content>
                         </Layout>
                         <Footer style={{height: "30px"}}>
