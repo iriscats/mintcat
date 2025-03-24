@@ -19,8 +19,20 @@ export class IntegrateApi {
         return await invoke('locale_game_path');
     }
 
-    public static async launchGame(gamePath: string) {
+    public static async launchGame() {
         return await invoke('launch_game');
+    }
+
+    public static async isFirstRun(): Promise<boolean> {
+        try {
+            return await invoke('is_first_run');
+        }catch (error) {
+            return false;
+        }
+    }
+
+    public static async checkInstalled() {
+        return await invoke('check_installed');
     }
 
     public static async openDevTools() {

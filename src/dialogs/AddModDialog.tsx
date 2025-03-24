@@ -151,8 +151,11 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 
     private updateGroupList() {
+        if (!this.context?.ActiveProfile) {
+            return;
+        }
         this.setState({
-            groupOptions: Array.from(this.context.ActiveProfile.groupNameMap)
+            groupOptions: Array.from(this.context?.ActiveProfile?.groupNameMap)
                 .map(([key, value]) => ({
                     label: value,
                     value: key,

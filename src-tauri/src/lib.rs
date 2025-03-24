@@ -23,8 +23,6 @@ fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) -> R
                 app.emit("status-bar-percent", 10).unwrap();
 
                 integrator.install(app, mods).unwrap();
-
-                launch_game().unwrap();
             }
             Err(e) => eprintln!("Failed to create integrator: {}", e),
         }
@@ -85,6 +83,26 @@ fn open_devtools(app_handle: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn is_first_run() -> Result<bool, String> {
+    let path = std::env::current_dir().unwrap();
+    let first_run_path = path.join("first_run");
+    println!("{:?}", first_run_path);
+    if first_run_path.exists() {
+        println!("first run");
+        std::fs::remove_file(first_run_path).unwrap();
+        Ok(true)
+    } else {
+        println!("first run false");
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+fn check_installed() -> Result<String, String> {
+    Ok("".parse().unwrap())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -98,7 +116,8 @@ pub fn run() {
             install_mods,
             open_devtools,
             launch_game,
-            find_steam_game_home
+            find_steam_game_home,
+            is_first_run
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

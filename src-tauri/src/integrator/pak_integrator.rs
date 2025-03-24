@@ -148,6 +148,7 @@ impl PakIntegrator {
 
         app.emit("status-bar-log", "Install Mod Success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
+        app.emit("install-success", {}).unwrap();
 
         Ok(())
     }

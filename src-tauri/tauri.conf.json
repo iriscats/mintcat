@@ -27,6 +27,11 @@
     "targets": "all",
     "icon": [
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "assets/first_run": "first_run",
+      "assets/UE4SSL.dll": "UE4SSL.dll",
+      "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll"
+    }
   }
 }

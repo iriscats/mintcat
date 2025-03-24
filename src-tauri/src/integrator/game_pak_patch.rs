@@ -99,7 +99,7 @@ fn get_import<R: Read + Seek>(asset: &mut Asset<R>, import: ImportChain) -> Pack
 }
 
 fn find_export_named<'a, R: io::Read + io::Seek>(
-    asset: &'a mut unreal_asset::Asset<R>,
+    asset: &'a mut Asset<R>,
     name: &'a str,
 ) -> Option<&'a mut unreal_asset::exports::normal_export::NormalExport> {
     for export in &mut asset.asset_data.exports {

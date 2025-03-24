@@ -2,9 +2,6 @@ import {writeFile, size, exists, mkdir} from "@tauri-apps/plugin-fs";
 import {appCacheDir} from '@tauri-apps/api/path';
 import {path} from "@tauri-apps/api";
 
-const IS_DEV = window.location.host === "127.0.0.1";
-const DEV_PATH = "~/Desktop/data/";
-
 
 export class CacheApi {
 
@@ -16,8 +13,7 @@ export class CacheApi {
         if (!await exists(appCachePath)) {
             await mkdir(appCachePath)
         }
-        const cachePath = IS_DEV ? DEV_PATH : appCachePath;
-        return await path.join(cachePath, `${modName}.zip`);
+        return await path.join(appCachePath, `${modName}.zip`);
     }
 
     public static async saveCacheFile(modName: string, data: Uint8Array): Promise<any> {
