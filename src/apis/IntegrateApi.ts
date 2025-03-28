@@ -11,8 +11,10 @@ export class IntegrateApi {
         });
     }
 
-    public static async uninstall() {
-        return await invoke('uninstall');
+    public static async uninstall(gamePath: string) {
+        return await invoke('uninstall_mods', {
+            gamePath: gamePath,
+        });
     }
 
     public static async locateGamePath() {
@@ -26,13 +28,15 @@ export class IntegrateApi {
     public static async isFirstRun(): Promise<boolean> {
         try {
             return await invoke('is_first_run');
-        }catch (error) {
+        } catch (error) {
             return false;
         }
     }
 
-    public static async checkInstalled() {
-        return await invoke('check_installed');
+    public static async checkInstalled(gamePath: string): Promise<string> {
+        return await invoke('check_installed', {
+            gamePath: gamePath,
+        });
     }
 
     public static async openDevTools() {

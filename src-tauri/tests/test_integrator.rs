@@ -1,5 +1,5 @@
 use mintcat_lib::integrator::pak_integrator::PakIntegrator;
-use mintcat_lib::mod_info::ModInfo;
+use mintcat_lib::integrator::mod_info::ModInfo;
 use std::path::PathBuf;
 
 #[test]

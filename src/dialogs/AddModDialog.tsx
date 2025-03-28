@@ -42,6 +42,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         }
 
         this.show = this.show.bind(this);
+        this.clearData = this.clearData.bind(this);
         this.handleOk = this.handleOk.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.setCallback = this.setCallback.bind(this);
@@ -89,6 +90,15 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         });
     }
 
+    private async clearData() {
+        this.modioFormRef.current?.resetFields();
+        this.localFormRef.current?.resetFields();
+        this.setState({
+            url: "",
+            isModalOpen: false
+        });
+    }
+
     private async handleOk() {
         if (this.state.tabActiveKey === AddModType.MODIO) {
             const links = this.state.url.split("\n");
@@ -98,18 +108,12 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         } else {
             await this.context.addModFromPath(this.state.url, this.state.groupId);
         }
-        this.setState({
-            isModalOpen: false
-        });
-        this.modioFormRef.current?.setFieldsValue({});
+        await this.clearData();
         this.callback?.call(this);
     }
 
-    private handleCancel() {
-        this.modioFormRef.current?.setFieldsValue({});
-        this.setState({
-            isModalOpen: false
-        });
+    private async handleCancel() {
+        await this.clearData();
     }
 
     private handleTabChange(key: string) {
@@ -134,7 +138,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         const result = await open({
             filters: [{
                 name: '*',
-                extensions: ['pak'],
+                extensions: ['pak', 'zip'],
             }],
             multiple: false,
         });
@@ -145,7 +149,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
             });
 
             this.setState({
-               url: result,
+                url: result,
             });
         }
     }

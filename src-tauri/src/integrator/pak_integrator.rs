@@ -1,24 +1,22 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
-use crate::installation::DRGInstallation;
-use crate::integrator::mod_bundle_writer::ModBundleWriter;
-use crate::integrator::raw_asset::RawAsset;
-use crate::integrator::{game_pak_patch, ReadSeek};
-use crate::mod_info::ModInfo;
-
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::fs;
-use std::io::{BufReader, BufWriter, Cursor, Read, Seek, Write};
-use std::path::{Path, PathBuf};
-
-use tauri::{AppHandle, Emitter};
-
 use crate::integrator::game_pak_patch::{
     get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
     SERVER_LIST_ENTRY_PATH,
 };
+use crate::integrator::installation::DRGInstallation;
+use crate::integrator::mod_bundle_writer::ModBundleWriter;
+use crate::integrator::mod_info::ModInfo;
+use crate::integrator::raw_asset::RawAsset;
+use crate::integrator::ue4ss_integrate::{install_ue4ss, install_ue4ss_mod, uninstall_ue4ss};
+use crate::integrator::{game_pak_patch, ReadSeek};
+use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::fs;
+use std::io::{BufReader, BufWriter, Cursor, Read, Seek};
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Emitter};
 use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
-use uasset_utils::paths::{PakPath, PakPathComponentTrait};
+use uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
 
@@ -26,8 +24,7 @@ static FSD_AR_PATH: &str = "FSD/AssetRegistry.bin";
 static FSD_MOD_PAK_NAME: &str = "FSD-WindowsNoEditor_Mods.pak";
 
 pub struct PakIntegrator {
-    fsd_pak: repak::PakReader,
-    fsd_pak_reader: BufReader<fs::File>,
+    installation: DRGInstallation,
     asset_registry: AssetRegistry,
     bundle: ModBundleWriter<BufWriter<fs::File>>,
     deferred_assets: HashMap<&'static str, RawAsset>, // 延迟加载并且等待被 Patch 的资产
@@ -54,7 +51,7 @@ impl PakIntegrator {
         let mut fsd_pak_reader = BufReader::new(fs::File::open(fsd_path_pak.as_ref())?);
         let fsd_pak = repak::PakBuilder::new().reader(&mut fsd_pak_reader)?;
 
-        let mut asset_registry = AssetRegistry::read(&mut Cursor::new(
+        let asset_registry = AssetRegistry::read(&mut Cursor::new(
             fsd_pak.get(FSD_AR_PATH, &mut fsd_pak_reader)?,
         ))?;
 
@@ -79,8 +76,7 @@ impl PakIntegrator {
         )?;
 
         Ok(Self {
-            fsd_pak,
-            fsd_pak_reader,
+            installation,
             asset_registry,
             deferred_assets,
             bundle,
@@ -119,10 +115,11 @@ impl PakIntegrator {
         Ok(())
     }
 
-    pub fn install(mut self, app: AppHandle, mods: Vec<(ModInfo)>) -> Result<(), Box<dyn Error>> {
-        for (mod_info) in &mods {
-            self.process_mod(mod_info)?;
-            //app.emit("status-bar-log", mod_info.pak_path).unwrap();
+    pub fn install(mut self, app: AppHandle, mods: Vec<ModInfo>) -> Result<(), Box<dyn Error>> {
+        for mut mod_info in mods.into_iter() {
+            self.process_mod(&mut mod_info)?;
+            app.emit("status-bar-log", format!("Process mod: {}", mod_info.name))
+                .unwrap();
         }
 
         app.emit("status-bar-log", "Patch Game Pak...").unwrap();
@@ -153,10 +150,12 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn process_mod(&mut self, mod_info: &ModInfo) -> Result<(), Box<dyn Error>> {
-        let (mut pak_buf, dll_buf) = self.load_mod_files(mod_info.pak_path.as_ref())?;
+    fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<(), Box<dyn Error>> {
+        let (mut pak_buf, mut dll_buf) = self.load_mod_files(mod_info.pak_path.as_ref())?;
         self.process_pak_files(&mut pak_buf)?;
-        //self.process_dll_files(mod_info, &mut dll_buf)?;
+        if let Some(mut dll_buf) = dll_buf.take() {
+            self.process_dll_files(mod_info, &mut dll_buf)?;
+        }
         Ok(())
     }
 
@@ -234,7 +233,17 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn process_dll_files(&mut self, dll_buf: &mut Box<dyn ReadSeek>) -> Result<(), Box<dyn Error>> {
+    fn process_dll_files(
+        &mut self,
+        mod_info: &mut ModInfo,
+        dll_buf: &mut Box<dyn ReadSeek>,
+    ) -> Result<(), Box<dyn Error>> {
+        install_ue4ss(&self.installation.binaries_directory());
+        install_ue4ss_mod(
+            &self.installation.binaries_directory(),
+            &mod_info.name,
+            dll_buf,
+        );
         Ok(())
     }
 
@@ -409,10 +418,46 @@ impl PakIntegrator {
         self.bundle.write_file(&buf, FSD_AR_PATH)?;
         Ok(())
     }
-}
 
-impl PakIntegrator {
-    pub fn uninstall<P: AsRef<Path>>(path_pak: P) -> Result<(), Box<dyn Error>> {
+    pub fn check_installed(fsd_path_pak: String) -> Result<String, Box<dyn Error>> {
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
+
+        let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
+        let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
+
+        if old_mod_pak_path.exists() || hook_dll_path.exists() {
+            return Ok("old_version_mint_installed".parse().unwrap());
+        }
+
+        let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
+        if mod_pak_path.exists() {
+            return Ok("mintcat_installed".parse().unwrap());
+        }
+
+        Ok("no_installed".parse().unwrap())
+    }
+
+    pub fn uninstall(fsd_path_pak: String) -> Result<(), Box<dyn Error>> {
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
+
+        let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
+        let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
+        let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
+
+        if fs::exists(&old_mod_pak_path)? {
+            fs::remove_file(&old_mod_pak_path).unwrap();
+        }
+
+        if fs::exists(&mod_pak_path)? {
+            fs::remove_file(&mod_pak_path).unwrap();
+        }
+
+        if fs::exists(&hook_dll_path)? {
+            fs::remove_file(&hook_dll_path).unwrap();
+        }
+
+        uninstall_ue4ss(&installation.binaries_directory())?;
+
         Ok(())
     }
 }

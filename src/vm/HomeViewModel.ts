@@ -7,9 +7,9 @@ import {ModList, ModListItem} from "./config/ModList.ts";
 import {ProfileList, ProfileTree} from "./config/ProfileList.ts";
 
 
-export class ModListViewModel {
+export class HomeViewModel {
 
-    private static instance: ModListViewModel;
+    private static instance: HomeViewModel;
 
     private converter: ModConfigConverter = new ModConfigConverter();
 
@@ -47,22 +47,33 @@ export class ModListViewModel {
 
     public async addModFromUrl(url: string, groupId: number): Promise<void> {
         const resp = await ModioApi.getModInfoByLink(url);
-        const addedModItem = this.ModList.add(new ModListItem(resp));
+        const modItem = new ModListItem(resp);
+        if (this.ModList.checkIsExist(modItem)) {
+            message.error("Mod already exists");
+            return;
+        }
+
+        const addedModItem = this.ModList.add(modItem);
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
         this.updateViewCallback?.call(this);
 
-        this.updateMod(addedModItem);
+        await this.updateMod(addedModItem);
     }
 
     public async addModFromPath(path: string, groupId: number): Promise<void> {
         let modListItem = new ModListItem();
         modListItem.displayName = path.split("/").pop();
+        modListItem.url = path;
         modListItem.cachePath = path;
-        const addedModItem = this.ModList.add(modListItem);
+        if (this.ModList.checkIsExist(modListItem)) {
+            message.error("Mod already exists");
+            return;
+        }
 
+        const addedModItem = this.ModList.add(modListItem);
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
@@ -212,11 +223,11 @@ export class ModListViewModel {
     public static async getInstance() {
         console.log("mod list vm getInstance");
 
-        if (ModListViewModel.instance) {
-            return ModListViewModel.instance;
+        if (HomeViewModel.instance) {
+            return HomeViewModel.instance;
         }
-        ModListViewModel.instance = new ModListViewModel();
-        return ModListViewModel.instance;
+        HomeViewModel.instance = new HomeViewModel();
+        return HomeViewModel.instance;
     }
 
 }

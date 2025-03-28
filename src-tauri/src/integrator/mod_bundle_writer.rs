@@ -1,9 +1,9 @@
+use repak::PakWriter;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{Cursor, Read, Seek, Write};
 use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
 use unreal_asset::Asset;
-use repak::PakWriter;
 
 #[derive(Debug, Default)]
 struct Dir {
@@ -56,8 +56,8 @@ impl<W: Write + Seek> ModBundleWriter<W> {
     }
 
     pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<(), Box<dyn Error>> {
-        self.pak_writer
-            .write_file(self.normalize_path(path).as_str(), true, data)?;
+        let normalized_path = self.normalize_path(path);
+        self.pak_writer.write_file(normalized_path.as_str(), true, data)?;
         Ok(())
     }
 
@@ -78,8 +78,8 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         Ok(())
     }
 
-    pub fn finish(self) -> Result<(), Box<dyn Error>> {
-        self.pak_writer.write_index()?;
+    pub fn finish(mut self) -> Result<(), Box<dyn Error>> {
+        self.pak_writer.write_index().unwrap();
         Ok(())
     }
 }
