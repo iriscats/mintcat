@@ -1,4 +1,4 @@
-use crate::installation::DRGInstallation;
+use crate::integrator::installation::DRGInstallation;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::fs;

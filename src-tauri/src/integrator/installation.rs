@@ -7,8 +7,6 @@ pub struct DRGInstallation {
 }
 
 impl DRGInstallation {
-    /// Returns first DRG installation found. Only supports Steam version
-    /// TODO locate Xbox version
     pub fn find() -> Option<Self> {
         steamlocate::SteamDir::locate()
             .ok()
@@ -36,7 +34,7 @@ impl DRGInstallation {
         Ok(Self { root })
     }
     pub fn binaries_directory(&self) -> PathBuf {
-        self.root.join("Binaries").join("Bin64")
+        self.root.join("Binaries").join("Win64")
     }
     pub fn paks_path(&self) -> PathBuf {
         self.root.join("Content").join("Paks")

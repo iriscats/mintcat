@@ -5,7 +5,7 @@ import {appCacheDir} from '@tauri-apps/api/path';
 
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
-import {ModListViewModel} from "./ModListVM.ts";
+import {HomeViewModel} from "./HomeViewModel.ts";
 import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
@@ -27,7 +27,7 @@ export class AppViewModel {
     }
 
     public async checkModList() {
-        const viewModel = await ModListViewModel.getInstance();
+        const viewModel = await HomeViewModel.getInstance();
         const modList = viewModel.ActiveProfile.getModList();
         for (const modId of modList) {
             const item = viewModel.ModList.get(modId);
@@ -39,7 +39,7 @@ export class AppViewModel {
                     }
                 } else {
                     if (!await exists(item.cachePath)) {
-                        const mv = await ModListViewModel.getInstance();
+                        const mv = await HomeViewModel.getInstance();
                         await mv.updateMod(item);
                     }
                 }
@@ -56,7 +56,22 @@ export class AppViewModel {
             return;
         }
 
-        const viewModel = await ModListViewModel.getInstance();
+        const installType = await IntegrateApi.checkInstalled(this.setting.drgPakPath);
+        console.log(installType);
+        if (installType === "old_version_mint_installed") {
+            const result = await MessageBox.confirm({
+                title: '安装提示',
+                content: '检测到旧版 MINT 安装，是否卸载?',
+            });
+            if (!result) {
+                message.warning("用户取消安装!");
+                return;
+            }
+        }
+
+        await IntegrateApi.uninstall(this.setting.drgPakPath);
+
+        const viewModel = await HomeViewModel.getInstance();
         const modList = viewModel.ActiveProfile.getModList();
         const installModList = [];
         for (const modId of modList) {
@@ -139,7 +154,7 @@ export class AppViewModel {
             return AppViewModel.instance;
         }
         const appVM = new AppViewModel();
-        const modListVM = await ModListViewModel.getInstance();
+        const modListVM = await HomeViewModel.getInstance();
 
         appVM.isFirstRun = await IntegrateApi.isFirstRun();
 
@@ -147,7 +162,7 @@ export class AppViewModel {
         if (settingDataV1 !== undefined) {
             const confirmed = await MessageBox.confirm({
                 title: '配置导入',
-                content: '发现旧版配置文件，是否导入?',
+                content: '发现旧版 mint 配置文件，是否导入并覆盖? ',
             });
             if (confirmed) {
                 appVM.converter.convertTo(settingDataV1);

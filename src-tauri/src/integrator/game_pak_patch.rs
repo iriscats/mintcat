@@ -1,20 +1,15 @@
-use crate::mod_info::ModInfo;
 use std::collections::HashSet;
 use std::error::Error;
 use std::io;
 use std::io::{Read, Seek};
-use std::path::PathBuf;
 use tracing::info;
 use uasset_utils::splice::{
     extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement,
 };
-use unreal_asset::properties::int_property::BoolProperty;
 use unreal_asset::properties::object_property::{
     SoftObjectPath, SoftObjectProperty, TopLevelAssetPath,
 };
-use unreal_asset::properties::str_property::StrProperty;
-use unreal_asset::properties::struct_property::StructProperty;
-use unreal_asset::properties::{Ancestry, FName, Property};
+use unreal_asset::properties::{Ancestry, FName};
 use unreal_asset::{
     exports::ExportBaseTrait,
     flags::EObjectFlags,

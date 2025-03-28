@@ -103,6 +103,14 @@ export class ModList {
         return 10000 + this.mods.length;
     }
 
+    public checkIsExist(modItem: ModListItem): boolean {
+        let isExist = this.mods.find(m => m.url === modItem.url) !== undefined;
+        if (!isExist && modItem.modId !== -1) {
+            isExist = this.mods.find(m => m.modId === modItem.modId) !== undefined;
+        }
+        return isExist;
+    }
+
     public add(modItem: ModListItem): ModListItem {
         modItem.id = this.makeId();
         this.mods.push(modItem);
