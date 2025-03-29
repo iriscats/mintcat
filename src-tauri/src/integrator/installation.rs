@@ -23,6 +23,7 @@ impl DRGInstallation {
             })
             .and_then(|path| Self::from_pak_path(path).ok())
     }
+
     pub fn from_pak_path<P: AsRef<Path>>(pak: P) -> Result<Self, Box<dyn Error>> {
         let root = pak
             .as_ref()
@@ -33,18 +34,22 @@ impl DRGInstallation {
             .to_path_buf();
         Ok(Self { root })
     }
+
     pub fn binaries_directory(&self) -> PathBuf {
         self.root.join("Binaries").join("Win64")
     }
+
     pub fn paks_path(&self) -> PathBuf {
         self.root.join("Content").join("Paks")
     }
+
     pub fn main_pak(&self) -> PathBuf {
         self.root
             .join("Content")
             .join("Paks")
             .join("FSD-WindowsNoEditor.pak")
     }
+
     pub fn modio_directory(&self) -> Option<PathBuf> {
         #[cfg(target_os = "windows")]
         {
@@ -64,4 +69,5 @@ impl DRGInstallation {
             None // TODO
         }
     }
+
 }

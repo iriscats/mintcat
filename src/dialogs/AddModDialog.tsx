@@ -91,8 +91,15 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 
     private async clearData() {
+        console.log("clear data");
         this.modioFormRef.current?.resetFields();
         this.localFormRef.current?.resetFields();
+        this.modioFormRef.current?.setFieldsValue({
+            modLinks: ""
+        });
+        this.localFormRef.current?.setFieldsValue({
+            path: ""
+        });
         this.setState({
             url: "",
             isModalOpen: false

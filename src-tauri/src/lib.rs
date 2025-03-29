@@ -1,6 +1,7 @@
 pub mod capability;
 pub mod integrator;
 
+use crate::integrator::installation::DRGInstallation;
 use integrator::mod_info;
 use integrator::pak_integrator::PakIntegrator;
 use tauri::{AppHandle, Emitter, Manager};
@@ -8,7 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 #[tauri::command]
 fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
     std::thread::spawn(move || {
-        let mut integrator = PakIntegrator::new(game_path);
+        let integrator = PakIntegrator::new(game_path);
         match integrator {
             Ok(integrator) => {
                 app.emit("status-bar-log", "Start Install...").unwrap();
@@ -21,7 +22,7 @@ fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
 
                 integrator.install(app, mods).unwrap();
             }
-            Err(e) => {}
+            Err(_) => {}
         }
     });
 }
@@ -32,9 +33,8 @@ fn uninstall_mods(game_path: String) {
 }
 
 #[tauri::command]
-fn check_installed(game_path: String) -> Result<String, String> {
-    let result = PakIntegrator::check_installed(game_path).unwrap();
-    Ok(result)
+fn check_installed(game_path: String) -> String {
+    PakIntegrator::check_installed(game_path).unwrap()
 }
 
 #[tauri::command]
@@ -59,26 +59,12 @@ fn launch_game() {
 }
 
 #[tauri::command]
-fn find_steam_game_home() -> Result<String, String> {
-    #[cfg(target_os = "windows")]
-    {
-        let steam_dir = steamlocate::SteamDir::locate();
-        match steam_dir {
-            Ok(steam_dir) => {
-                println!("Steam installation - {}", steam_dir.path().display());
-
-                let game_id = "548430";
-                /* const GMOD_APP_ID: u32 = 4_000;
-                let (garrys_mod, _lib) = steam_dir
-                    .find_app(GMOD_APP_ID)
-                    .expect("Of course we have G Mod");
-                assert_eq!(garrys_mod.name.as_ref().unwrap(), "Garry's Mod");
-                println!("{garrys_mod:#?}");*/
-            }
-            Err(e) => eprintln!("Failed to create integrator: {}", e),
-        }
+fn find_game_pak() -> String {
+    if let Some(installation) = DRGInstallation::find() {
+        installation.main_pak().to_str().unwrap().to_string()
+    } else {
+        "".to_string()
     }
-    Ok("".to_string())
 }
 
 #[tauri::command]
@@ -93,17 +79,14 @@ fn open_devtools(app_handle: AppHandle) {
 }
 
 #[tauri::command]
-fn is_first_run() -> Result<bool, String> {
+fn is_first_run() -> bool {
     let path = std::env::current_dir().unwrap();
     let first_run_path = path.join("first_run");
-    println!("{:?}", first_run_path);
     if first_run_path.exists() {
-        println!("first run");
         std::fs::remove_file(first_run_path).unwrap();
-        Ok(true)
+        true
     } else {
-        println!("first run false");
-        Ok(false)
+        false
     }
 }
 
@@ -122,7 +105,7 @@ pub fn run() {
             check_installed,
             open_devtools,
             launch_game,
-            find_steam_game_home,
+            find_game_pak,
             is_first_run
         ])
         .run(tauri::generate_context!())
