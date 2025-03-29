@@ -100,7 +100,7 @@ export class ModList {
     }
 
     private makeId() {
-        return 10000 + this.mods.length;
+        return  Date.now() + Math.floor(Math.random() * 900) + 100;
     }
 
     public checkIsExist(modItem: ModListItem): boolean {

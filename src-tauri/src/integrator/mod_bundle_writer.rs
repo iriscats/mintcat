@@ -78,7 +78,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         Ok(())
     }
 
-    pub fn finish(mut self) -> Result<(), Box<dyn Error>> {
+    pub fn finish(self) -> Result<(), Box<dyn Error>> {
         self.pak_writer.write_index().unwrap();
         Ok(())
     }
