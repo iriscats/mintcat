@@ -1,5 +1,6 @@
 import {ModList, ModListItem} from "../config/ModList.ts";
 import {ProfileList, ProfileTree, ProfileTreeType} from "../config/ProfileList.ts";
+import {path} from "@tauri-apps/api";
 
 export class ModConfigConverter {
 
@@ -7,7 +8,7 @@ export class ModConfigConverter {
     public profileTreeList: ProfileTree[] = [];
     public modList: ModList = new ModList();
 
-    public createDefault(){
+    public createDefault() {
         this.modList = new ModList();
         this.profileList = new ProfileList();
         this.profileList.Profiles.push("default");
@@ -15,14 +16,14 @@ export class ModConfigConverter {
         this.profileTreeList.push(new ProfileTree("default"));
     }
 
-    private convertModListDataV01ToV02(data: any) {
+    private async convertModListDataV01ToV02(data: any) {
 
         for (const profile in data.profiles) {
             const profileTree = new ProfileTree(profile);
             const mods = data.profiles[profile]["mods"];
 
             const localFolder = profileTree.LocalFolder;
-            const modioFolder =  profileTree.ModioFolder;
+            const modioFolder = profileTree.ModioFolder;
 
             for (const modItem of mods) {
                 const item = new ModListItem();
@@ -32,8 +33,8 @@ export class ModConfigConverter {
                 if (item.url.startsWith("http")) {
                     const addedModItem = this.modList.add(item);
                     modioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
-                }else{
-                    item.displayName = modItem["spec"]["url"].split("/").pop();
+                } else {
+                    item.displayName = await path.basename(modItem["spec"]["url"]);
                     item.cachePath = modItem["spec"]["url"];
                     item.isLocal = true;
                     item.downloadProgress = 100;
@@ -49,10 +50,10 @@ export class ModConfigConverter {
         this.profileList.activeProfile = data.active_profile;
     }
 
-    public convertTo(config: string) {
+    public async convertTo(config: string) {
         const data = JSON.parse(config);
         if (data.version === "0.1.0") {
-            this.convertModListDataV01ToV02(data);
+            await this.convertModListDataV01ToV02(data);
         } else if (data.version === "0.2.0") {
 
         }

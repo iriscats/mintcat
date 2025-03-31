@@ -17,8 +17,8 @@ export class IntegrateApi {
         });
     }
 
-    public static async locateGamePath() {
-        return await invoke('locale_game_path');
+    public static async findGamePak(): Promise<string> {
+        return await invoke('find_game_pak');
     }
 
     public static async launchGame() {

@@ -1,7 +1,7 @@
 import {warn, debug, trace, info, error} from '@tauri-apps/plugin-log';
 
 
-function InitLog() {
+export function InitLog() {
     try {
         function forwardConsole(
             fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',

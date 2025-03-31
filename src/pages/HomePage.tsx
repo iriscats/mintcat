@@ -98,7 +98,7 @@ class HomePage extends React.Component<any, ModListPageState> {
     }
 
     private async onUpdateClick() {
-        await message.info("Updating...");
+        await this.context.updateModList();
     }
 
     private onEditProfileClick() {
@@ -216,12 +216,10 @@ class HomePage extends React.Component<any, ModListPageState> {
                     }).show();
                 break;
             case "update": {
-                // const mod = this.context.ModList.get(id);
-                // if (mod) {
-                //     await ModioApi.downloadModFile(mod, (loaded: number, total: number) => {
-                //         console.log(loaded, total);
-                //     });
-                // }
+                const mod = this.context.ModList.get(id);
+                if (mod) {
+                    await this.context.updateMod(mod);
+                }
             }
                 break;
             case "add_mod":

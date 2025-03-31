@@ -1,9 +1,10 @@
 import {ModInfo} from "../modio/ModInfo.ts";
 
+export const MOD_INVALID_ID = 999999;
 
 export class ModListItem {
-    public id: number = -1;
-    public modId: number = -1;
+    public id: number = MOD_INVALID_ID;
+    public modId: number = MOD_INVALID_ID;
     public url: string = "";
     public nameId: string = "";
     public displayName: string = "";
@@ -100,12 +101,13 @@ export class ModList {
     }
 
     private makeId() {
-        return  Date.now() + Math.floor(Math.random() * 900) + 100;
+        const rand = Math.floor(Math.random() * 9000) + 1000;
+        return parseInt(Date.now().toString() + rand.toString());
     }
 
     public checkIsExist(modItem: ModListItem): boolean {
         let isExist = this.mods.find(m => m.url === modItem.url) !== undefined;
-        if (!isExist && modItem.modId !== -1) {
+        if (!isExist && modItem.modId !== MOD_INVALID_ID) {
             isExist = this.mods.find(m => m.modId === modItem.modId) !== undefined;
         }
         return isExist;
@@ -127,7 +129,7 @@ export class ModList {
 
     public update(oldItem: ModListItem, newItem: ModListItem) {
         const index = this.mods.findIndex(m => m.id === oldItem.id);
-        if (index !== -1) {
+        if (index !== MOD_INVALID_ID) {
             newItem.id = oldItem.id;
             newItem.enabled = oldItem.enabled;
             newItem.url = oldItem.url;

@@ -3,6 +3,7 @@ import {ModInfo} from "../vm/modio/ModInfo.ts";
 import {ModListItem} from "../vm/config/ModList.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {CacheApi} from "./CacheApi.ts";
+import {UserInfo} from "../vm/modio/UserInfo.ts";
 
 const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io";
 const MODIO_API_URL = "https://api.mod.io";
@@ -186,7 +187,17 @@ export class ModioApi {
     }
 
     public static async getUserInfo() {
-        //https://*.modapi.io/v1/me
+        try {
+            const host = await ModioApi.getHost();
+            const url = `${host}/v1/me`;
+            const resp = await fetch(url, {
+                headers: await ModioApi.getHeaders(),
+            });
+            const data = await resp.json();
+            return data as UserInfo;
+        } catch (e) {
+            message.error("Fetch UserInfo Error");
+        }
     }
 
 

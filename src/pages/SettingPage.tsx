@@ -9,6 +9,7 @@ import Search from "antd/es/input/Search";
 import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
+import {CacheApi} from "../apis/CacheApi.ts";
 
 
 const LanguageOptions = [
@@ -50,6 +51,7 @@ class SettingPage extends React.Component<any, any> {
         this.onOpenConfigDirClick = this.onOpenConfigDirClick.bind(this);
         this.onOpenCacheDirClick = this.onOpenCacheDirClick.bind(this);
         this.onSelectCacheDirClick = this.onSelectCacheDirClick.bind(this);
+        this.onFindGamePathClick = this.onFindGamePathClick.bind(this);
     }
 
     private async onOpenConfigDirClick() {
@@ -73,6 +75,16 @@ class SettingPage extends React.Component<any, any> {
         }
     }
 
+    private async onFindGamePathClick() {
+        const path = await IntegrateApi.findGamePak();
+        if (path) {
+            this.context.setting.drgPakPath = path;
+            await this.context.saveSettings();
+        }else{
+            message.error("Can't find FSD-WindowsNoEditor.pak");
+        }
+    }
+
     private async onLanguageChange() {
         this.context.setting.language = this.appSettingFormRef.current?.getFieldValue("language");
         await this.context.saveSettings();
@@ -90,6 +102,12 @@ class SettingPage extends React.Component<any, any> {
 
     private async onDevToolsClick() {
         await IntegrateApi.openDevTools();
+    }
+
+    private async onClearCacheClick() {
+        if (await CacheApi.cleanOldCacheFiles()) {
+            message.success("Clean cache success");
+        }
     }
 
     private async onGamePathClick() {
@@ -181,7 +199,7 @@ class SettingPage extends React.Component<any, any> {
                         <Form.Item label="Old Version Mint Cache">
                             <Button type="dashed"
                                     {...buttonLayout}
-                                    onClick={this.onDevToolsClick}>
+                                    onClick={this.onClearCacheClick}>
                                 Clean
                             </Button>
                         </Form.Item>
@@ -212,11 +230,19 @@ class SettingPage extends React.Component<any, any> {
                     <Form ref={this.gameSettingFormRef}
                           {...settingLayout}
                     >
-                        <Form.Item label="Game Path" name="gamePath">
-                            <Search placeholder={"FSD-WindowsNoEditor.pak"}
-                                    enterButton={<FolderAddOutlined/>}
-                                    onSearch={this.onGamePathClick}
-                            />
+                        <Form.Item label="Game Path">
+                            <Flex>
+                                <Search placeholder={"FSD-WindowsNoEditor.pak"}
+                                        value={this.context.setting.drgPakPath}
+                                        enterButton={<FolderAddOutlined/>}
+                                        onSearch={this.onGamePathClick}
+                                />
+                                <Button type="default"
+                                        onClick={this.onFindGamePathClick}
+                                >
+                                    Auto Find
+                                </Button>
+                            </Flex>
                         </Form.Item>
                     </Form>
                 </Card>

@@ -118,7 +118,7 @@ export class ConfigApi {
 
     public static async loadModioUserData(): Promise<string> {
         const fileName = "user.json";
-        const oldFilePath = "C:\\Users\\bytedance\\AppData\\Local\\mod.io\\2475\\S-1-5-21-1688096665-3863216114-603340213-1000\\user.json";
+        const oldFilePath = "C:\\Users\\-\\AppData\\Local\\mod.io\\2475\\S-1-5-21-1688096665-3863216114-603340213-1000\\user.json";
 
         return await ConfigApi.readDataToFile(fileName);
     }
