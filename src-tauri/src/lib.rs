@@ -22,7 +22,9 @@ fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
 
                 integrator.install(app, mods).unwrap();
             }
-            Err(_) => {}
+            Err(_) => {
+                app.emit("status-bar-log", "Failed to load Mods ...").unwrap();
+            }
         }
     });
 }

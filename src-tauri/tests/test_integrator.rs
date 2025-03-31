@@ -19,7 +19,7 @@ fn test_pak_integrator() {
                     if path.is_file() {
                         mods.push(
                             (ModInfo {
-                                name: Option::from("test".to_string()),
+                                name: "test".to_string(),
                                 modio_id: None,
                                 pak_path: entry.path().to_str().unwrap().to_string(),
                             }),
@@ -28,7 +28,7 @@ fn test_pak_integrator() {
                 }
             }
 
-            let install_result = integrator.install(mods);
+            let install_result = integrator.install();
             match install_result {
                 Ok(_) => println!("Installation succeeded."),
                 Err(e) => eprintln!("Installation failed: {}", e),

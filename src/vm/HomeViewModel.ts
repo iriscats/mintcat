@@ -1,9 +1,10 @@
 import {message} from "antd";
-
+import {exists} from "@tauri-apps/plugin-fs";
+import {path} from "@tauri-apps/api";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
-import {ModList, ModListItem} from "./config/ModList.ts";
+import {MOD_INVALID_ID, ModList, ModListItem} from "./config/ModList.ts";
 import {ProfileList, ProfileTree} from "./config/ProfileList.ts";
 
 
@@ -63,11 +64,11 @@ export class HomeViewModel {
         await this.updateMod(addedModItem);
     }
 
-    public async addModFromPath(path: string, groupId: number): Promise<void> {
+    public async addModFromPath(modPath: string, groupId: number): Promise<void> {
         let modListItem = new ModListItem();
-        modListItem.displayName = path.split("/").pop();
-        modListItem.url = path;
-        modListItem.cachePath = path;
+        modListItem.displayName = await path.basename(modPath);
+        modListItem.url = modPath;
+        modListItem.cachePath = modPath;
         if (this.ModList.checkIsExist(modListItem)) {
             message.error("Mod already exists");
             return;
@@ -180,10 +181,27 @@ export class HomeViewModel {
         await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
-    public async updateModList(): Promise<void> {
+    public async checkLocalMod(modItem: ModListItem) {
+        if (modItem.isLocal === true && modItem.enabled === true) {
+            if (!await exists(modItem.cachePath)) {
+                message.error("Mod 文件不存在: " + modItem.cachePath);
+                return false;
+            }
+        }
+    }
+
+    public async updateModList(isRefresh = false): Promise<void> {
         for (const mod of this.ModList.Mods) {
-            if (mod.modId === -1 && mod.url.startsWith("http")) {
-                await this.updateMod(mod);
+            if (isRefresh) {
+                if (mod.url.startsWith("http")) {
+                    await this.updateMod(mod);
+                } else {
+                    await this.checkLocalMod(mod);
+                }
+            } else {
+                if (mod.modId === MOD_INVALID_ID && mod.url.startsWith("http")) {
+                    await this.updateMod(mod);
+                }
             }
         }
     }
@@ -208,7 +226,7 @@ export class HomeViewModel {
     public async loadOldConfig() {
         try {
             const config = await ConfigApi.loadModListDataV1();
-            this.converter.convertTo(config);
+            await this.converter.convertTo(config);
             await ConfigApi.saveModListData(this.converter.modList.toJson());
             await ConfigApi.saveProfileData(this.converter.profileList.toJson());
             for (const profile of this.converter.profileList.Profiles) {
@@ -221,8 +239,6 @@ export class HomeViewModel {
     }
 
     public static async getInstance() {
-        console.log("mod list vm getInstance");
-
         if (HomeViewModel.instance) {
             return HomeViewModel.instance;
         }

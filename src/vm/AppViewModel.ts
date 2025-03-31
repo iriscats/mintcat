@@ -76,10 +76,11 @@ export class AppViewModel {
         const installModList = [];
         for (const modId of modList) {
             const item = viewModel.ModList.get(modId);
+            const modName = item.nameId === ""? item.displayName : item.nameId;
             if (item.enabled) {
                 installModList.push({
-                    modio_id: item.id,
-                    name: item.nameId,
+                    modio_id: item.modId,
+                    name: modName,
                     pak_path: item.cachePath,
                 });
             }
