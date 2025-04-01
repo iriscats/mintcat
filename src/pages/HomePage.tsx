@@ -61,7 +61,10 @@ class HomePage extends React.Component<any, ModListPageState> {
 
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
 
+    private filterList: string[] = [];
+
     private filterOptions: SelectProps['options'] = [
+        {value: 'All', label: 'All'},
         {value: 'Verified', label: 'Verified'},
         {value: 'Approved', label: 'Approved'},
         {value: 'Sandbox', label: 'Sandbox'},
@@ -104,6 +107,7 @@ class HomePage extends React.Component<any, ModListPageState> {
         this.onMultiDeleteClick = this.onMultiDeleteClick.bind(this);
         this.onMultiDisableClick = this.onMultiDisableClick.bind(this);
         this.onMultiUpdateClick = this.onMultiUpdateClick.bind(this);
+        this.onSearchSelectChange = this.onSearchSelectChange.bind(this);
     }
 
     private async onMultiDeleteClick() {
@@ -133,6 +137,11 @@ class HomePage extends React.Component<any, ModListPageState> {
                 await this.context.updateMod(modItem)
             }
         }
+        await this.updateView();
+    }
+
+    private async onSearchSelectChange(value: any) {
+        this.filterList = [value];
         await this.updateView();
     }
 
@@ -392,16 +401,16 @@ class HomePage extends React.Component<any, ModListPageState> {
                                 options={this.state.options}
                                 onChange={this.onSelectChange}
                             />
-                            <Tooltip title="Comment">
+                            <Tooltip title="Edit">
                                 <Button icon={<EditOutlined/>} type={"text"} onClick={this.onEditProfileClick}/>
                             </Tooltip>
                         </Typography.Link>
                         <Typography.Link>
                             <Select size={"small"}
-                                    showSearch
                                     style={{width: "300px"}}
                                     suffixIcon={<SearchOutlined/>}
                                     options={this.filterOptions}
+                                    onChange={this.onSearchSelectChange}
                             />
                         </Typography.Link>
                     </Space>

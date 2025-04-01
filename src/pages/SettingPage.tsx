@@ -80,7 +80,7 @@ class SettingPage extends React.Component<any, any> {
         if (path) {
             this.context.setting.drgPakPath = path;
             await this.context.saveSettings();
-        }else{
+        } else {
             message.error("Can't find FSD-WindowsNoEditor.pak");
         }
     }
@@ -91,7 +91,9 @@ class SettingPage extends React.Component<any, any> {
     }
 
     private async onThemeChange() {
-        this.context.setting.guiTheme = this.appSettingFormRef.current?.getFieldValue("theme");
+        const theme = this.appSettingFormRef.current?.getFieldValue("theme");
+        
+        this.context.setting.guiTheme = theme;
         await this.context.saveSettings();
     }
 
