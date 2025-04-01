@@ -83,17 +83,17 @@ export class ConfigApi {
     }
 
     private static async getModListDataV1Path(): Promise<string> {
-        let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\mod_data.json"); // 0.2
+        let oldFilePath = await path.join(await configDir(), "drg-mod-integration", "config", "mod_data.json"); // 0.2
         if (!await exists(oldFilePath)) {
-            oldFilePath = await path.join(await configDir(), "mint\\config\\mod_data.json"); // 0.3
+            oldFilePath = await path.join(await configDir(), "mint", "config", "mod_data.json"); // 0.3
         }
         return oldFilePath;
     }
 
     private static async getSettingV1Path(): Promise<string> {
-        let oldFilePath = await path.join(await configDir(), "drg-mod-integration\\config\\config.json"); // 0.2
+        let oldFilePath = await path.join(await configDir(), "drg-mod-integration", "config", "config.json"); // 0.2
         if (!await exists(oldFilePath)) {
-            oldFilePath = await path.join(await configDir(), "mint\\config\\config.json"); // 0.3
+            oldFilePath = await path.join(await configDir(), "mint", "config", "config.json"); // 0.3
         }
         return oldFilePath;
     }

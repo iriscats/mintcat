@@ -8,14 +8,21 @@ export function InitLog() {
             logger: (message: string) => Promise<void>
         ) {
             const original = console[fnName];
-            console[fnName] = (message) => {
-                if (message === null) {
-                    message = "null";
-                } else if (message === undefined) {
-                    message = "undefined";
-                }
-                original(message);
-                logger(message).then(_ => {
+            console[fnName] = (...args: any[]) => {
+                // 转换所有参数为字符串
+                let message = args.map(arg => {
+                    if (arg === null) return "null";
+                    if (arg === undefined) return "undefined";
+                    try {
+                        return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+                    } catch (e) {
+                        return `[Unserializable: ${e}]`;
+                    }
+                }).join(' ');
+
+                original.apply(console, args);
+                logger(message).catch(e => {
+                    console.error('Logging failed:', e);
                 });
             };
         }

@@ -13,6 +13,7 @@ interface AddModDialogStates {
     groupOptions?: any[];
     groupId?: number;
     url?: string;
+    loading?: boolean;
 }
 
 type InputCallback = (name: string) => void;
@@ -38,6 +39,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
         this.state = {
             isModalOpen: false,
+            loading: false,
             tabActiveKey: AddModType.MODIO,
         }
 
@@ -107,6 +109,9 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 
     private async handleOk() {
+        this.setState({
+            loading: true
+        })
         if (this.state.tabActiveKey === AddModType.MODIO) {
             const links = this.state.url.split("\n");
             for (const link of links) {
@@ -117,6 +122,9 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         }
         await this.clearData();
         this.callback?.call(this);
+        this.setState({
+            loading: false
+        })
     }
 
     private async handleCancel() {
@@ -181,6 +189,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     render() {
         return (
             <Modal title="Add Mod"
+                   mask={false}
                    open={this.state.isModalOpen}
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
@@ -196,6 +205,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                   children: <>
                                       <Form ref={this.modioFormRef}
                                             layout="vertical"
+                                            disabled={this.state.loading}
                                             initialValues={{
                                                 modLinks: this.state.url,
                                                 groupId: this.state.groupId
@@ -229,6 +239,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                   children: <>
                                       <Form ref={this.localFormRef}
                                             layout="vertical"
+                                            disabled={this.state.loading}
                                             initialValues={{
                                                 path: this.state.url,
                                                 groupId: this.state.groupId

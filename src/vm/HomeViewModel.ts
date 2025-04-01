@@ -5,7 +5,8 @@ import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {MOD_INVALID_ID, ModList, ModListItem} from "./config/ModList.ts";
-import {ProfileList, ProfileTree} from "./config/ProfileList.ts";
+import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "./config/ProfileList.ts";
+import {emit} from "@tauri-apps/api/event";
 
 
 export class HomeViewModel {
@@ -47,6 +48,8 @@ export class HomeViewModel {
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<void> {
+        await emit("status-bar-log", "Fetch mod info...");
+
         const resp = await ModioApi.getModInfoByLink(url);
         const modItem = new ModListItem(resp);
         if (this.ModList.checkIsExist(modItem)) {
@@ -80,6 +83,34 @@ export class HomeViewModel {
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
         this.updateViewCallback?.call(this);
+    }
+
+    private sortNode(modItem: ProfileTreeItem, order: string): ProfileTreeItem[] {
+        return modItem.children.sort((a, b) => {
+            if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.ITEM) {
+                const modA = this.ModList.get(a.id);
+                const modB = this.ModList.get(b.id);
+                if (order === "asc") {
+                    return modA.displayName.localeCompare(modB.displayName);
+                } else {
+                    return modA.displayName.localeCompare(modB.displayName) * -1;
+                }
+            } else if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.FOLDER) {
+                return -1;
+            } else if (a.type === ProfileTreeType.FOLDER && b.type === ProfileTreeType.ITEM) {
+                return 1;
+            }
+        })
+    }
+
+    public async sortMods(order: string): Promise<void> {
+        if (this.ActiveProfile.ModioFolder) {
+            this.ActiveProfile.ModioFolder.children = this.sortNode(this.ActiveProfile.ModioFolder, order);
+        }
+        if (this.ActiveProfile.LocalFolder) {
+            this.ActiveProfile.LocalFolder.children = this.sortNode(this.ActiveProfile.LocalFolder, order);
+        }
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
     public async removeMod(id: number): Promise<void> {
@@ -149,6 +180,11 @@ export class HomeViewModel {
         this.updateViewCallback?.call(this);
     }
 
+    public async setProfileData(root: ProfileTreeItem): Promise<void> {
+        this.ActiveProfile.root = root;
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+    }
+
     public async addGroup(groupId: number, groupName: string): Promise<void> {
         this.ActiveProfile.addGroup(groupName, groupId);
 
@@ -171,7 +207,9 @@ export class HomeViewModel {
             this.updateViewCallback?.call(this);
         }
 
-        newItem = await ModioApi.downloadModFile(newItem, (loaded: number, total: number) => {
+        await emit("status-bar-log", "Update Mod: " + mod.displayName);
+        newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
+            await emit("status-bar-log", `Download Mod: ${mod.displayName} (${loaded} / ${total})`);
             newItem.downloadProgress = (loaded / total) * 100;
             this.ModList.update(mod, newItem);
             this.updateViewCallback?.call(this);
@@ -179,6 +217,7 @@ export class HomeViewModel {
 
         this.ModList.update(mod, newItem);
         await ConfigApi.saveModListData(this.ModList.toJson());
+        await emit("status-bar-log", "Update Finish");
     }
 
     public async checkLocalMod(modItem: ModListItem) {

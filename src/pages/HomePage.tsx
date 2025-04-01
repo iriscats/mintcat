@@ -2,14 +2,29 @@ import React from "react";
 import {save} from "@tauri-apps/plugin-dialog";
 import {copyFile} from "@tauri-apps/plugin-fs";
 import {
-    Button, Checkbox, Divider,
-    Flex, MenuProps, message, Select, SelectProps, Space, Tooltip, Tree, TreeProps, Typography,
+    Button,
+    Checkbox,
+    Divider,
+    Flex,
+    MenuProps,
+    message,
+    Select,
+    SelectProps,
+    Space,
+    Tooltip,
+    Tree,
+    TreeProps,
+    Typography,
 } from 'antd';
 import {
     CloseCircleOutlined,
     EditOutlined,
-    PlusCircleOutlined, SaveOutlined,
-    SearchOutlined, SortAscendingOutlined, SortDescendingOutlined,
+    PauseCircleOutlined,
+    PlusCircleOutlined,
+    SaveOutlined,
+    SearchOutlined,
+    SortAscendingOutlined,
+    SortDescendingOutlined,
     SyncOutlined,
     UnorderedListOutlined
 } from "@ant-design/icons";
@@ -23,7 +38,6 @@ import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
 import {AppViewModel} from "../vm/AppViewModel.ts";
-
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -66,6 +80,7 @@ class HomePage extends React.Component<any, ModListPageState> {
             options: [],
             contextMenus: [],
             expandedKeys: [],
+            selectedKeys: [],
             defaultProfile: "",
         }
 
@@ -86,9 +101,42 @@ class HomePage extends React.Component<any, ModListPageState> {
         this.onSwitchChange = this.onSwitchChange.bind(this);
         this.onCustomTitleRender = this.onCustomTitleRender.bind(this);
         this.onSaveChangesClick = this.onSaveChangesClick.bind(this);
+        this.onMultiDeleteClick = this.onMultiDeleteClick.bind(this);
+        this.onMultiDisableClick = this.onMultiDisableClick.bind(this);
+        this.onMultiUpdateClick = this.onMultiUpdateClick.bind(this);
     }
 
-    private onAddModClick() {
+    private async onMultiDeleteClick() {
+        for (const key of this.state.selectedKeys) {
+            const modItem = this.context.ModList.get(key);
+            if (modItem) {
+                await this.context.removeMod(key);
+            }
+        }
+        await this.updateView();
+    }
+
+    private async onMultiDisableClick() {
+        for (const key of this.state.selectedKeys) {
+            const modItem = this.context.ModList.get(key);
+            if (modItem) {
+                await this.context.setModEnabled(key, false)
+            }
+        }
+        await this.updateView();
+    }
+
+    private async onMultiUpdateClick() {
+        for (const key of this.state.selectedKeys) {
+            const modItem = this.context.ModList.get(key);
+            if (modItem) {
+                await this.context.updateMod(modItem)
+            }
+        }
+        await this.updateView();
+    }
+
+    private async onAddModClick() {
         this.addModDialogRef.current?.setValue().show();
     }
 
@@ -98,7 +146,7 @@ class HomePage extends React.Component<any, ModListPageState> {
     }
 
     private async onUpdateClick() {
-        await this.context.updateModList();
+        await this.context.updateModList(true);
     }
 
     private onEditProfileClick() {
@@ -114,12 +162,19 @@ class HomePage extends React.Component<any, ModListPageState> {
         })
     }
 
-    private onDrop(info: any) {
+    private async onSortClick(order: string) {
+        await this.context.sortMods(order);
+        await this.updateView();
+    }
+
+    private async onDrop(info: any) {
         console.log(info);
+        const newTreeData = dragAndDrop(info, this.state.treeData);
         this.setState({
-            treeData: dragAndDrop(info, this.state.treeData),
+            treeData: newTreeData,
         })
-        //TODO：treeData to vm
+        const converter = new TreeViewConverter(this.context.ModList);
+        await this.context.setProfileData(converter.convertFrom(newTreeData));
     }
 
     private async onSelectChange(value: string) {
@@ -135,11 +190,14 @@ class HomePage extends React.Component<any, ModListPageState> {
         await this.context.setModEnabled(node.key, checked);
     }
 
-    private onTreeNodeSelect(keys, info) {
-        console.log(keys, info);
+    private onTreeNodeSelect(keys) {
+        console.log(keys);
+        this.setState({
+            selectedKeys: keys,
+        })
     }
 
-    private onTreeNodeExpand(keys, info) {
+    private onTreeNodeExpand(keys) {
         this.setState({
             expandedKeys: keys,
         })
@@ -316,13 +374,13 @@ class HomePage extends React.Component<any, ModListPageState> {
                             <Tooltip title="Sort Ascending">
                                 <Button icon={<SortAscendingOutlined/>}
                                         type={"text"}
-
+                                        onClick={() => this.onSortClick("asc")}
                                 />
                             </Tooltip>
                             <Tooltip title="Sort Descending">
                                 <Button icon={<SortDescendingOutlined/>}
                                         type={"text"}
-
+                                        onClick={() => this.onSortClick("dasc")}
                                 />
                             </Tooltip>
                         </Typography.Link>
@@ -356,6 +414,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                           expandedKeys={this.state.expandedKeys}
                           selectedKeys={this.state.selectedKeys}
                           treeData={this.state.treeData}
+                          onCheck={this.onTreeNodeSelect}
                           onSelect={this.onTreeNodeSelect}
                           onRightClick={this.onTreeRightClick}
                           onExpand={this.onTreeNodeExpand}
@@ -373,10 +432,20 @@ class HomePage extends React.Component<any, ModListPageState> {
                         {
                             this.state.isMultiSelect === true &&
                             <span style={{marginRight: 'auto'}}>
-                                <Button type="text" size={"small"} icon={<CloseCircleOutlined/>}>
+                                <Button type="text" size={"small"}
+                                        icon={<CloseCircleOutlined/>}
+                                        onClick={this.onMultiDeleteClick}
+                                >
                                     Delete
                                 </Button>
-                                <Button type="text" size={"small"} icon={<SyncOutlined/>}>
+                                <Button type="text" size={"small"}
+                                        icon={<PauseCircleOutlined/>}
+                                        onClick={this.onMultiDisableClick}>
+                                    Disable
+                                </Button>
+                                <Button type="text" size={"small"}
+                                        icon={<SyncOutlined/>}
+                                        onClick={this.onMultiUpdateClick}>
                                     Update
                                 </Button>
                             </span>

@@ -118,6 +118,8 @@ export class ModioApi {
             let url = await this.buildRequestUrl("mods");
             if (name) {
                 url = `${url}?name-lk=*${name}*`;
+            }else {
+                url = `${url}?_limit=20`;
             }
             const resp = await fetch(url, {
                 headers: await ModioApi.getHeaders(),

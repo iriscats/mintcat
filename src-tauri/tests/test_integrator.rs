@@ -28,7 +28,7 @@ fn test_pak_integrator() {
                 }
             }
 
-            let install_result = integrator.install();
+            let install_result = integrator.install(,"");
             match install_result {
                 Ok(_) => println!("Installation succeeded."),
                 Err(e) => eprintln!("Installation failed: {}", e),
