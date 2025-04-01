@@ -14,6 +14,7 @@ export class TreeViewConverter {
     }
 
     private buildTreeNode(parent: any, root: ProfileTreeItem) {
+        console.log("buildTreeNode");
         for (const item of root.children) {
             if (item.type === ProfileTreeType.ITEM) {
                 const modItem = this.modList.get(item.id);
@@ -46,6 +47,20 @@ export class TreeViewConverter {
         }
     }
 
+    private buildProfileTree(parent: any, root: ProfileTreeItem) {
+        if (parent === undefined) {
+            return;
+        }
+        for (const item of parent.children) {
+            if (item.isLeaf === true) {
+                root.children.push(new ProfileTreeItem(item.key, ProfileTreeType.ITEM));
+            } else {
+                const folder = new ProfileTreeItem(item.key, ProfileTreeType.FOLDER, item.title);
+                root.children.push(folder);
+                this.buildProfileTree(item, folder);
+            }
+        }
+    }
 
     public convertTo(tree: ProfileTree) {
         const root = {
@@ -57,5 +72,15 @@ export class TreeViewConverter {
         this.treeData = root.children;
     }
 
+    public convertFrom(treeData: any) {
+        const rootTreeData = {
+            key: "root",
+            isLeaf: false,
+            children: treeData,
+        }
+        const rootProfile = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
+        this.buildProfileTree(rootTreeData, rootProfile);
+        return rootProfile;
+    }
 
 }

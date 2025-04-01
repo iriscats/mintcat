@@ -14,7 +14,7 @@ export class ModListItem {
     public tags: string[] = [];
     public usedVersion: string = "";
     public versions: string[] = [];
-    public approval: string = "";
+    public approval: string = "Sandbox";
     public isLocal: boolean = true;
     public downloadUrl: string = "";
     public cachePath: string = "";

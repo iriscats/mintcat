@@ -1,11 +1,12 @@
 import React from 'react';
-import {Avatar, Button, Flex, List, message, Space} from 'antd';
+import {Avatar, Button, Dropdown, Flex, List, MenuProps, message, Space} from 'antd';
 import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
+import {TranslateApi} from "../apis/TranslateApi.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -14,6 +15,10 @@ const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
         {text}
     </Space>
 );
+
+const contextMenus: MenuProps['items'] = [
+    {label: '翻译成中文', key: 'translate_ch'},
+];
 
 interface ModioPageState {
     dataSource?: ModInfo[],
@@ -34,6 +39,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
 
         this.onAddClick = this.onAddClick.bind(this);
         this.onSearch = this.onSearch.bind(this);
+        this.onMenuClick = this.onMenuClick.bind(this);
     }
 
     private async onSearch(value: string) {
@@ -52,6 +58,24 @@ class ModioPage extends React.Component<any, ModioPageState> {
             .setCallback(async () => {
                 await message.info("Add Successfully");
             }).show();
+    }
+
+    private async onMenuClick(key: string, item: ModInfo) {
+        switch (key) {
+            case 'translate_ch': {
+                let foundItem = this.state.dataSource.find((mod) => {
+                    return mod.name === item.name;
+                });
+                foundItem.name = await TranslateApi.translate(item.name);
+                foundItem.summary = await TranslateApi.translate(item.summary);
+                this.setState({
+                    dataSource: this.state.dataSource,
+                })
+            }
+                break;
+            default:
+                break;
+        }
     }
 
     componentDidMount() {
@@ -116,27 +140,33 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                         />
                                     }
                                 >
-                                    <List.Item.Meta
-                                        avatar={
-                                            <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
-                                                    src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
-                                            />
-                                        }
-                                        title={
-                                            <>
-                                                <a href={item.name_id}>{item.name}</a>
-                                                <Button type={"text"}
-                                                        onClick={() => {
-                                                            console.log(item)
-                                                            this.onAddClick(item.profile_url)
-                                                        }}>
-                                                    <PlusCircleOutlined/>
-                                                </Button>
-                                            </>
-                                        }
-                                        description={item.summary}
-                                    />
-
+                                    <Dropdown trigger={['contextMenu']}
+                                              menu={{
+                                                  items: contextMenus,
+                                                  onClick: async (e) => {
+                                                      await this.onMenuClick(e.key, item);
+                                                  }
+                                              }}>
+                                        <List.Item.Meta
+                                            avatar={
+                                                <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
+                                                        src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
+                                                />
+                                            }
+                                            title={
+                                                <>
+                                                    <a href={item.name_id}>{item.name}</a>
+                                                    <Button type={"text"}
+                                                            onClick={() => {
+                                                                this.onAddClick(item.profile_url)
+                                                            }}>
+                                                        <PlusCircleOutlined/>
+                                                    </Button>
+                                                </>
+                                            }
+                                            description={item.summary}
+                                        />
+                                    </Dropdown>
                                 </List.Item>
                             )}
                         />
