@@ -61,7 +61,7 @@ export class AppViewModel {
         if (installType === "old_version_mint_installed") {
             const result = await MessageBox.confirm({
                 title: '安装提示',
-                content: '检测到旧版 MINT 安装，是否卸载?',
+                content: '检测到旧版 MINT(0.2, 0.3) 安装文件，是否卸载?',
             });
             if (!result) {
                 message.warning("用户取消安装!");
@@ -163,7 +163,7 @@ export class AppViewModel {
         if (settingDataV1 !== undefined) {
             const confirmed = await MessageBox.confirm({
                 title: '配置导入',
-                content: '发现旧版 mint 配置文件，是否导入并覆盖? ',
+                content: '发现旧版 MINT(0.2, 0.3) 配置文件，是否导入并覆盖? ',
             });
             if (confirmed) {
                 appVM.converter.convertTo(settingDataV1);

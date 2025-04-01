@@ -18,6 +18,9 @@ export class TreeViewConverter {
         for (const item of root.children) {
             if (item.type === ProfileTreeType.ITEM) {
                 const modItem = this.modList.get(item.id);
+                if (modItem === undefined) {
+                    continue;
+                }
                 const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
                 parent.children.push({
                     key: modItem.id,

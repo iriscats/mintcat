@@ -107,15 +107,15 @@ class TitleBar extends React.Component<any, TitleBarState> {
                         </Badge>
                     </span>
                     <span>
-                        <Popconfirm
-                            placement="bottom"
-                            title={"text"}
-                            description={"description"}
-                            okText="Yes"
-                            cancelText="No"
-                        >
+                        {/*<Popconfirm*/}
+                        {/*    placement="bottom"*/}
+                        {/*    title={"text"}*/}
+                        {/*    description={"description"}*/}
+                        {/*    okText="Yes"*/}
+                        {/*    cancelText="No"*/}
+                        {/*>*/}
                             <SkinOutlined/>
-                        </Popconfirm>
+                        {/*</Popconfirm>*/}
                     </span>
                     <span>
                         <QuestionCircleOutlined/>

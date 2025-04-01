@@ -119,34 +119,33 @@ class ModioPage extends React.Component<any, ModioPageState> {
                             size={"small"}
                             loading={this.state.loading}
                             renderItem={(item) => (
-                                <List.Item
-                                    key={item.name}
-                                    onDoubleClick={() => {
+                                <Dropdown trigger={['contextMenu']}
+                                          menu={{
+                                              items: contextMenus,
+                                              onClick: async (e) => {
+                                                  await this.onMenuClick(e.key, item);
+                                              }
+                                          }}>
+                                    <List.Item
+                                        key={item.name}
+                                        onDoubleClick={() => {
+                                        }}
+                                        actions={[
+                                            <IconText icon={DownloadOutlined}
+                                                      text={item.stats.downloads_total.toString()}/>,
+                                            <IconText icon={LikeOutlined}
+                                                      text={item.stats.subscribers_total.toString()}/>,
 
-                                    }}
-                                    actions={[
-                                        <IconText icon={DownloadOutlined}
-                                                  text={item.stats.downloads_total.toString()}/>,
-                                        <IconText icon={LikeOutlined}
-                                                  text={item.stats.subscribers_total.toString()}/>,
-
-                                    ]}
-                                    extra={
-                                        <img
-                                            width={180}
-                                            style={{border: '1px solid #eee'}}
-                                            alt="logo"
-                                            src={"https://api.v1st.net/" + item.logo.thumb_320x180}
-                                        />
-                                    }
-                                >
-                                    <Dropdown trigger={['contextMenu']}
-                                              menu={{
-                                                  items: contextMenus,
-                                                  onClick: async (e) => {
-                                                      await this.onMenuClick(e.key, item);
-                                                  }
-                                              }}>
+                                        ]}
+                                        extra={
+                                            <img
+                                                width={180}
+                                                style={{border: '1px solid #eee'}}
+                                                alt="logo"
+                                                src={"https://api.v1st.net/" + item.logo.thumb_320x180}
+                                            />
+                                        }
+                                    >
                                         <List.Item.Meta
                                             avatar={
                                                 <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
@@ -166,8 +165,8 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                             }
                                             description={item.summary}
                                         />
-                                    </Dropdown>
-                                </List.Item>
+                                    </List.Item>
+                                </Dropdown>
                             )}
                         />
                     </InfiniteScroll>
