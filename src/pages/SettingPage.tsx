@@ -1,4 +1,5 @@
 import React from 'react';
+import {t} from "i18next";
 import {open} from '@tauri-apps/plugin-dialog'
 import {openPath} from '@tauri-apps/plugin-opener';
 import {appCacheDir} from "@tauri-apps/api/path";
@@ -11,28 +12,27 @@ import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
 
-
-const LanguageOptions = [
-    {value: 'en', label: 'English'},
-    {value: 'zh', label: 'Chinese'},
-];
-
-const ThemeOptions = [
-    {value: 'Light', label: 'Light'},
-    {value: 'Dark', label: 'Dark'},
-];
-
-const settingLayout = {
+const SettingLayout = {
     labelCol: {span: 7},
     wrapperCol: {span: 16},
     style: {maxWidth: 700},
 };
 
-const buttonLayout = {
+const ButtonLayout = {
     style: {width: 468},
 };
 
 class SettingPage extends React.Component<any, any> {
+
+    private languageOptions = [
+        {value: 'en', label: t("English")},
+        {value: 'zh', label: t('Chinese')},
+    ];
+
+    private themeOptions = [
+        {value: 'Light', label: t('Light')},
+        {value: 'Dark', label: t('Dark')},
+    ];
 
     declare context: React.ContextType<typeof AppContext>;
     static contextType = AppContext;
@@ -82,7 +82,7 @@ class SettingPage extends React.Component<any, any> {
             this.context.setting.drgPakPath = path;
             await this.context.saveSettings();
         } else {
-            message.error("Can't find FSD-WindowsNoEditor.pak");
+            message.error(t("Can't find FSD-WindowsNoEditor.pak"));
         }
     }
 
@@ -111,7 +111,7 @@ class SettingPage extends React.Component<any, any> {
 
     private async onClearCacheClick() {
         if (await CacheApi.cleanOldCacheFiles()) {
-            message.success("Clean cache success");
+            message.success(t("Clean cache success"));
         }
     }
 
@@ -131,7 +131,7 @@ class SettingPage extends React.Component<any, any> {
                 this.context.setting.drgPakPath = result;
                 await this.context.saveSettings();
             } else {
-                message.error("Please select FSD-WindowsNoEditor.pak");
+                message.error(t("Please select FSD-WindowsNoEditor.pak"));
             }
         }
     }
@@ -162,33 +162,33 @@ class SettingPage extends React.Component<any, any> {
                     padding: '30px',
                 }}
             >
-                <Card title="MintCat Settings"
+                <Card title={t("MintCat Settings")}
                       style={{marginBottom: "10px"}}
                 >
                     <Form ref={this.appSettingFormRef}
-                          {...settingLayout}
+                          {...SettingLayout}
                     >
-                        <Form.Item label="Language" name="language">
-                            <Select options={LanguageOptions}
+                        <Form.Item label={t("Language")} name="language">
+                            <Select options={this.languageOptions}
                                     onChange={this.onLanguageChange}
                             />
                         </Form.Item>
-                        <Form.Item label="Theme" name="theme">
-                            <Select options={ThemeOptions}
+                        <Form.Item label={t("Theme")} name="theme">
+                            <Select options={this.themeOptions}
                                     onChange={this.onThemeChange}/>
                         </Form.Item>
-                        <Form.Item label="Config Directory">
+                        <Form.Item label={t("Config Directory")}>
                             <Flex>
                                 <Input value={this.context.setting.configPath}
                                        disabled/>
                                 <Button type="default"
                                         onClick={this.onOpenConfigDirClick}
                                 >
-                                    Open
+                                    {t("Open")}
                                 </Button>
                             </Flex>
                         </Form.Item>
-                        <Form.Item label="Cache Directory">
+                        <Form.Item label={t("Cache Directory")}>
                             <Flex>
                                 <Search value={this.context.setting.cachePath}
                                         enterButton={<FolderAddOutlined/>}
@@ -197,45 +197,45 @@ class SettingPage extends React.Component<any, any> {
                                 <Button type="default"
                                         onClick={this.onOpenCacheDirClick}
                                 >
-                                    Open
+                                    {t("Open")}
                                 </Button>
                             </Flex>
                         </Form.Item>
-                        <Form.Item label="Old Version Mint Cache">
+                        <Form.Item label={t("Old Version Mint Cache")}>
                             <Button type="dashed"
-                                    {...buttonLayout}
+                                    {...ButtonLayout}
                                     onClick={this.onClearCacheClick}>
-                                Clean
+                                {t("Clean")}
                             </Button>
                         </Form.Item>
-                        <Form.Item label="Dev Tools">
+                        <Form.Item label={t("Dev Tools")}>
                             <Button type="dashed"
-                                    {...buttonLayout}
+                                    {...ButtonLayout}
                                     onClick={this.onDevToolsClick}>
-                                Open / Close Dev Tools
+                                {t("Open Dev Tools")}
                             </Button>
                         </Form.Item>
                     </Form>
                 </Card>
 
-                <Card title="User Authentication"
+                <Card title={t("User Authentication")}
                       style={{marginBottom: "10px"}}
                 >
                     <Form ref={this.userSettingFormRef}
-                          {...settingLayout}
+                          {...SettingLayout}
                     >
-                        <Form.Item label="mod.io key" name="oauth">
+                        <Form.Item label={t("mod.io key")} name="oauth">
                             <Input onChange={this.onOAuthChange}/>
                         </Form.Item>
                     </Form>
                 </Card>
 
-                <Card title="Game Settings"
+                <Card title={t("Game Settings")}
                 >
                     <Form ref={this.gameSettingFormRef}
-                          {...settingLayout}
+                          {...SettingLayout}
                     >
-                        <Form.Item label="Game Path">
+                        <Form.Item label={t("Game Path")}>
                             <Flex>
                                 <Search placeholder={"FSD-WindowsNoEditor.pak"}
                                         value={this.context.setting.drgPakPath}
@@ -245,7 +245,7 @@ class SettingPage extends React.Component<any, any> {
                                 <Button type="default"
                                         onClick={this.onFindGamePathClick}
                                 >
-                                    Auto Find
+                                    {t("Auto Find")}
                                 </Button>
                             </Flex>
                         </Form.Item>

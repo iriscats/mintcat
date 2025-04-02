@@ -1,4 +1,5 @@
 import React from 'react';
+import {t} from "i18next";
 import {Avatar, Button, Dropdown, Flex, List, MenuProps, message, Space} from 'antd';
 import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -17,7 +18,7 @@ const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
 );
 
 const contextMenus: MenuProps['items'] = [
-    {label: '翻译成中文', key: 'translate_ch'},
+    {label: t("Translate Into Current Language"), key: 'translate'},
 ];
 
 interface ModioPageState {
@@ -56,13 +57,13 @@ class ModioPage extends React.Component<any, ModioPageState> {
     private onAddClick(url: string) {
         this.addModDialogRef.current?.setValue(0, url)
             .setCallback(async () => {
-                await message.info("Add Successfully");
+                await message.info(t("Add Successfully"));
             }).show();
     }
 
     private async onMenuClick(key: string, item: ModInfo) {
         switch (key) {
-            case 'translate_ch': {
+            case 'translate': {
                 let foundItem = this.state.dataSource.find((mod) => {
                     return mod.name === item.name;
                 });
@@ -102,7 +103,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 <AddModDialog ref={this.addModDialogRef}/>
 
                 <Flex vertical={true}>
-                    <Search placeholder="Search on mod.io" onSearch={this.onSearch}/>
+                    <Search placeholder={t("Search on mod.io")} onSearch={this.onSearch}/>
                     <InfiniteScroll
                         scrollableTarget="scrollableDiv"
                         dataLength={this.state.dataSource?.length}

@@ -6,6 +6,7 @@ import {ModListPageContext} from "../AppContext.ts";
 import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
 import Search from "antd/es/input/Search";
 import {open} from "@tauri-apps/plugin-dialog";
+import {t} from "i18next";
 
 interface AddModDialogStates {
     isModalOpen?: boolean;
@@ -22,7 +23,6 @@ enum AddModType {
     MODIO = "mod.io",
     LOCAL = "local"
 }
-
 
 class AddModDialog extends React.Component<any, AddModDialogStates> {
 
@@ -188,7 +188,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
 
     render() {
         return (
-            <Modal title="Add Mod"
+            <Modal title={t("Add Mod")}
                    mask={false}
                    open={this.state.isModalOpen}
                    onOk={this.handleOk}
@@ -212,7 +212,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                             }}
                                       >
                                           <Form.Item name="modLinks"
-                                                     label="Mod Links"
+                                                     label={t("Mod Links")}
                                                      rules={[{required: true}]}
                                           >
                                               <TextArea value={this.state.url}
@@ -225,7 +225,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                               />
                                           </Form.Item>
                                           <Form.Item name="groupId"
-                                                     label="Group"
+                                                     label={t("Group")}
                                                      rules={[{required: true}]}
                                           >
                                               <Select options={this.state.groupOptions}/>
@@ -235,7 +235,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                               },
                               {
                                   key: AddModType.LOCAL,
-                                  label: 'Local',
+                                  label: t("Local"),
                                   children: <>
                                       <Form ref={this.localFormRef}
                                             layout="vertical"
@@ -245,11 +245,11 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                                 groupId: this.state.groupId
                                             }}
                                       >
-                                          <Form.Item name="path" label="Path" rules={[{required: true}]}>
+                                          <Form.Item name="path" label={t("Path")} rules={[{required: true}]}>
                                               <Search enterButton={<FolderAddOutlined/>}
                                                       onSearch={this.onSelectPathClick}/>
                                           </Form.Item>
-                                          <Form.Item name="groupId" label="Group" rules={[{required: true}]}>
+                                          <Form.Item name="groupId" label={t("Group")} rules={[{required: true}]}>
                                               <Select options={this.state.groupOptions}/>
                                           </Form.Item>
                                       </Form>

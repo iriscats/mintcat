@@ -4,6 +4,7 @@ import {ModListItem} from "../vm/config/ModList.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {CacheApi} from "./CacheApi.ts";
 import {UserInfo} from "../vm/modio/UserInfo.ts";
+import {t} from "i18next";
 
 const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io";
 const MODIO_API_URL = "https://api.mod.io";
@@ -67,7 +68,7 @@ export class ModioApi {
     public static async getModInfoByLink(url: string): Promise<ModInfo> {
         const result = ModioApi.parseModLinks(url);
         if (result === undefined) {
-            message.error("Invalid mod link:" + url);
+            message.error(t("Invalid Mod Link") + url);
             return;
         }
 
@@ -93,7 +94,7 @@ export class ModioApi {
             return data["data"][0];
         } catch (e) {
             console.error(e);
-            message.error("Fetch Mod Error" + e);
+            message.error(t("Fetch Mod Info Error") + e);
         }
     }
 
@@ -109,7 +110,7 @@ export class ModioApi {
             return await resp.json();
         } catch (e) {
             console.error(e);
-            message.error("Fetch Mod Error" + e);
+            message.error(t("Fetch Mod Info Error") + e);
         }
     }
 
@@ -118,7 +119,7 @@ export class ModioApi {
             let url = await this.buildRequestUrl("mods");
             if (name) {
                 url = `${url}?name-lk=*${name}*`;
-            }else {
+            } else {
                 url = `${url}?_limit=20`;
             }
             const resp = await fetch(url, {
@@ -127,7 +128,7 @@ export class ModioApi {
             const data = await resp.json();
             return data.data as ModInfo[];
         } catch (e) {
-            message.error("Fetch Mod List Error");
+            message.error(t("Fetch Mod Info Error"));
             return [];
         }
     }
@@ -198,7 +199,7 @@ export class ModioApi {
             const data = await resp.json();
             return data as UserInfo;
         } catch (e) {
-            message.error("Fetch UserInfo Error");
+            message.error(t("Fetch UserInfo Error"));
         }
     }
 
