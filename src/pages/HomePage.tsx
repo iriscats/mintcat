@@ -38,6 +38,7 @@ import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
 import {AppViewModel} from "../vm/AppViewModel.ts";
+import {MessageBox} from "../components/MessageBox.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -111,13 +112,19 @@ class HomePage extends React.Component<any, ModListPageState> {
     }
 
     private async onMultiDeleteClick() {
-        for (const key of this.state.selectedKeys) {
-            const modItem = this.context.ModList.get(key);
-            if (modItem) {
-                await this.context.removeMod(key);
+        const confirm = await MessageBox.confirm({
+            title: "Delete Mods",
+            content: "Are you sure you want to delete the selected mods?",
+        });
+        if (confirm) {
+            for (const key of this.state.selectedKeys) {
+                const modItem = this.context.ModList.get(key);
+                if (modItem) {
+                    await this.context.removeMod(key);
+                }
             }
+            await this.updateView();
         }
-        await this.updateView();
     }
 
     private async onMultiDisableClick() {

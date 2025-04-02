@@ -19,6 +19,7 @@ const LanguageOptions = [
 
 const ThemeOptions = [
     {value: 'Light', label: 'Light'},
+    {value: 'Dark', label: 'Dark'},
 ];
 
 const settingLayout = {
@@ -86,15 +87,17 @@ class SettingPage extends React.Component<any, any> {
     }
 
     private async onLanguageChange() {
-        this.context.setting.language = this.appSettingFormRef.current?.getFieldValue("language");
+        const language = this.appSettingFormRef.current?.getFieldValue("language");
+        this.context.setting.language = language;
         await this.context.saveSettings();
+        localStorage.setItem('lang', language);
+        window.location.reload();
     }
 
     private async onThemeChange() {
-        const theme = this.appSettingFormRef.current?.getFieldValue("theme");
-        
-        this.context.setting.guiTheme = theme;
+        this.context.setting.guiTheme = this.appSettingFormRef.current?.getFieldValue("theme");
         await this.context.saveSettings();
+        await this.context.loadTheme();
     }
 
     private async onOAuthChange(e: any) {

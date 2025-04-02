@@ -73,7 +73,7 @@ class App extends React.Component<any, any> {
     render() {
         return (
             <I18nextProvider i18n={i18n}>
-                <ConfigProvider theme={defaultTheme}>
+                <ConfigProvider theme={defaultTheme} >
                     <Layout className={"app"}>
                         {/*<AddModDialog ref={this.addModDialogRef}/>*/}
                         <Header className={"app-header"}>

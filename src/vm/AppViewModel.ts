@@ -9,6 +9,7 @@ import {HomeViewModel} from "./HomeViewModel.ts";
 import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
+import i18n from "i18next";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -76,7 +77,7 @@ export class AppViewModel {
         const installModList = [];
         for (const modId of modList) {
             const item = viewModel.ModList.get(modId);
-            const modName = item.nameId === ""? item.displayName : item.nameId;
+            const modName = item.nameId === "" ? item.displayName : item.nameId;
             if (item.enabled) {
                 installModList.push({
                     modio_id: item.modId,
@@ -125,13 +126,19 @@ export class AppViewModel {
         }
     }
 
-    private async checkLanguage() {
+    private async checkSysLanguage() {
         try {
             const userLocale = await locale();
             if (!userLocale) {
                 message.error("获取语言失败!");
             } else {
                 console.log(userLocale);
+                if (userLocale.includes("zh")) {
+                    if (!localStorage.getItem('lang')) {
+                        localStorage.setItem('lang', "zh");
+                    }
+                }
+                return userLocale;
             }
         } catch (e) {
         }
@@ -150,6 +157,35 @@ export class AppViewModel {
         }
     }
 
+    public async checkUpdate() {
+    }
+
+    public async loadTheme() {
+        const theme = this.converter.setting.guiTheme
+        if (theme === "Light") {
+            window.document.documentElement.style.filter = "none";
+            // Remove dark mode style tag if exists
+            const darkStyle = document.getElementById('dark-theme-style');
+            darkStyle?.remove();
+        } else if (theme === "Dark") {
+            window.document.documentElement.style.filter = "invert(100%)";
+            // Create new style element with unique ID
+            const style = document.createElement('style');
+            style.id = 'dark-theme-style';
+            style.textContent = 'img { filter: brightness(0.7) invert(100%); }';
+            document.head.appendChild(style);
+        }
+    }
+
+    public async loadUserLanguages() {
+        let language = this.converter.setting?.language;
+        if (language && language !== "") {
+            if (!localStorage.getItem('lang')) {
+                localStorage.setItem('lang', language)
+            }
+        }
+    }
+
     public static async getInstance(): Promise<AppViewModel> {
         if (AppViewModel.instance) {
             return AppViewModel.instance;
@@ -158,11 +194,12 @@ export class AppViewModel {
         const modListVM = await HomeViewModel.getInstance();
 
         appVM.isFirstRun = await IntegrateApi.isFirstRun();
+        await appVM.checkSysLanguage();
 
         let settingDataV1 = appVM.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
         if (settingDataV1 !== undefined) {
             const confirmed = await MessageBox.confirm({
-                title: '配置导入',
+                title: '导入配置',
                 content: '发现旧版 MINT(0.2, 0.3) 配置文件，是否导入并覆盖? ',
             });
             if (confirmed) {
@@ -179,10 +216,12 @@ export class AppViewModel {
             await modListVM.loadConfig()
         }
 
+        await appVM.loadUserLanguages();
         await appVM.checkAppPath();
         await appVM.checkOauth();
         await appVM.checkGamePath();
-        await appVM.checkLanguage();
+        await appVM.loadTheme();
+
 
         AppViewModel.instance = appVM;
         return appVM;
