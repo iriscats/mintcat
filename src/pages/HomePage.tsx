@@ -39,6 +39,7 @@ import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {MessageBox} from "../components/MessageBox.ts";
+import {t} from "i18next";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -113,8 +114,8 @@ class HomePage extends React.Component<any, ModListPageState> {
 
     private async onMultiDeleteClick() {
         const confirm = await MessageBox.confirm({
-            title: "Delete Mods",
-            content: "Are you sure you want to delete the selected mods?",
+            title: t("Delete Mods"),
+            content: t("Are you sure you want to delete the selected mods?"),
         });
         if (confirm) {
             for (const key of this.state.selectedKeys) {
@@ -189,7 +190,7 @@ class HomePage extends React.Component<any, ModListPageState> {
         this.setState({
             treeData: newTreeData,
         })
-        const converter = new TreeViewConverter(this.context.ModList);
+        const converter = new TreeViewConverter(this.context.ModList, this.filterList);
         await this.context.setProfileData(converter.convertFrom(newTreeData));
     }
 
@@ -240,7 +241,7 @@ class HomePage extends React.Component<any, ModListPageState> {
     }
 
     private async updateView() {
-        const converter = new TreeViewConverter(this.context.ModList);
+        const converter = new TreeViewConverter(this.context.ModList, this.filterList);
         converter.convertTo(this.context.ActiveProfile);
         this.setState({
             treeData: converter.treeData,
@@ -260,8 +261,8 @@ class HomePage extends React.Component<any, ModListPageState> {
         switch (key) {
             case "add_new_group": {
                 this.inputDialogRef.current?.setCallback(
-                    "Add New Group",
-                    "New Group",
+                    t("Add New Group"),
+                    t("New Group"),
                     async (text) => {
                         await this.context.addGroup(0, text);
                     })
@@ -270,8 +271,8 @@ class HomePage extends React.Component<any, ModListPageState> {
                 break;
             case "add_sub_group":
                 this.inputDialogRef.current?.setCallback(
-                    "Add Sub Group",
-                    "New Group",
+                    t("Add Sub Group"),
+                    t("New Group"),
                     async (text) => {
                         await this.context.addGroup(id, text);
                     }).show();
@@ -283,7 +284,7 @@ class HomePage extends React.Component<any, ModListPageState> {
             case "rename_group":
                 const groupName = this.context.ActiveProfile.groupNameMap.get(id);
                 this.inputDialogRef.current?.setCallback(
-                    "Rename Group",
+                    t("Rename Group"),
                     groupName,
                     async (text) => {
                         await this.context.setGroupName(id, text);
@@ -316,13 +317,13 @@ class HomePage extends React.Component<any, ModListPageState> {
                     const mod = this.context.ModList.get(id);
                     if (mod?.url) {
                         await navigator.clipboard.writeText(mod.url);
-                        message.success(`已复制到剪贴板: ${mod.url} `);
+                        message.success(t("Copied To Clipboard") + `: ${mod.url} `);
                     } else {
                         await navigator.clipboard.writeText(mod.cachePath);
-                        message.success(`已复制到剪贴板: ${mod.cachePath} `);
+                        message.success(t("Copied To Clipboard") + `: ${mod.cachePath} `);
                     }
                 } catch (err) {
-                    message.error('复制失败');
+                    message.error(t("Copy Failed"));
                 }
                 break;
             case "export": {
@@ -335,9 +336,9 @@ class HomePage extends React.Component<any, ModListPageState> {
                         }]
                     });
                     await copyFile(mod.cachePath, path);
-                    message.success('导出完成');
+                    message.success(t("Export Success"));
                 } catch (e) {
-                    message.error('导出失败');
+                    message.error(t("Export Failed"));
                 }
             }
                 break;
@@ -365,13 +366,13 @@ class HomePage extends React.Component<any, ModListPageState> {
                     <Space split={<Divider type="vertical"/>} size={2}
                            style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
                         <Typography.Link>
-                            <Tooltip title="Save Changes">
+                            <Tooltip title={t("Save Changes")}>
                                 <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onSaveChangesClick}/>
                             </Tooltip>
-                            <Tooltip title="Add Mod">
+                            <Tooltip title={t("Add Mod")}>
                                 <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
                             </Tooltip>
-                            <Tooltip title="Update All Mods">
+                            <Tooltip title={t("Update All Mods")}>
                                 <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onUpdateClick}/>
                             </Tooltip>
                         </Typography.Link>
@@ -387,13 +388,13 @@ class HomePage extends React.Component<any, ModListPageState> {
                             </Typography.Link>
                         }
                         <Typography.Link>
-                            <Tooltip title="Sort Ascending">
+                            <Tooltip title={t("Sort Ascending")}>
                                 <Button icon={<SortAscendingOutlined/>}
                                         type={"text"}
                                         onClick={() => this.onSortClick("asc")}
                                 />
                             </Tooltip>
-                            <Tooltip title="Sort Descending">
+                            <Tooltip title={t("Sort Descending")}>
                                 <Button icon={<SortDescendingOutlined/>}
                                         type={"text"}
                                         onClick={() => this.onSortClick("dasc")}
@@ -408,7 +409,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                                 options={this.state.options}
                                 onChange={this.onSelectChange}
                             />
-                            <Tooltip title="Edit">
+                            <Tooltip title={t("Edit Profile")}>
                                 <Button icon={<EditOutlined/>} type={"text"} onClick={this.onEditProfileClick}/>
                             </Tooltip>
                         </Typography.Link>
@@ -452,17 +453,17 @@ class HomePage extends React.Component<any, ModListPageState> {
                                         icon={<CloseCircleOutlined/>}
                                         onClick={this.onMultiDeleteClick}
                                 >
-                                    Delete
+                                   {t("Delete")}
                                 </Button>
                                 <Button type="text" size={"small"}
                                         icon={<PauseCircleOutlined/>}
                                         onClick={this.onMultiDisableClick}>
-                                    Disable
+                                    {t("Disable")}
                                 </Button>
                                 <Button type="text" size={"small"}
                                         icon={<SyncOutlined/>}
                                         onClick={this.onMultiUpdateClick}>
-                                    Update
+                                    {t("Update")}
                                 </Button>
                             </span>
                         }

@@ -1,6 +1,6 @@
 import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "../config/ProfileList.ts";
 import {TreeProps} from "antd";
-import {ModList} from "../config/ModList.ts";
+import {ModList, ModListItem} from "../config/ModList.ts";
 
 
 export class TreeViewConverter {
@@ -8,9 +8,32 @@ export class TreeViewConverter {
     public treeData?: TreeProps['treeData'] = []
     public expandedKeys?: TreeProps['expandedKeys'] = [];
     private modList?: ModList;
+    public filterList?: string[] = [];
 
-    public constructor(modList: ModList) {
+    public constructor(modList: ModList, filterList: string[] = []) {
         this.modList = modList;
+        this.filterList = filterList;
+    }
+
+    private filter(modItem: ModListItem) {
+        if (this.filterList.length === 0) {
+            return true;
+        }
+        for (let filter of this.filterList) {
+            if (filter === "All") {
+                return true;
+            }
+            if (modItem.displayName?.indexOf(filter) > -1) {
+                return true;
+            }
+            if (modItem.approval === filter) {
+                return true;
+            }
+            if (modItem.tags?.indexOf(filter) > -1) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private buildTreeNode(parent: any, root: ProfileTreeItem) {
@@ -22,20 +45,21 @@ export class TreeViewConverter {
                     continue;
                 }
                 const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
-                parent.children.push({
-                    key: modItem.id,
-                    isLeaf: true,
-                    title: title,
-                    tags: modItem.tags,
-                    required: modItem.required,
-                    enabled: modItem.enabled,
-                    isLocal: modItem.isLocal,
-                    approval: modItem.approval,
-                    versions: modItem.versions,
-                    fileVersion: modItem.fileVersion,
-                    downloadProgress: modItem.downloadProgress,
-                });
-
+                if (this.filter(modItem)) {
+                    parent.children.push({
+                        key: modItem.id,
+                        isLeaf: true,
+                        title: title,
+                        tags: modItem.tags,
+                        required: modItem.required,
+                        enabled: modItem.enabled,
+                        isLocal: modItem.isLocal,
+                        approval: modItem.approval,
+                        versions: modItem.versions,
+                        fileVersion: modItem.fileVersion,
+                        downloadProgress: modItem.downloadProgress,
+                    });
+                }
             } else if (item.type === ProfileTreeType.FOLDER) {
                 this.expandedKeys.push(item.id);
                 const node = {

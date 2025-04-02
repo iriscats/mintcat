@@ -68,7 +68,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                       initialValues={{
                           text: this.state.defaultValue,
                       }}>
-                    <Form.Item name="text" label="Input Text" rules={[{required: true}]}>
+                    <Form.Item name="text" label={"Input Text"} rules={[{required: true}]}>
                         <Input allowClear/>
                     </Form.Item>
                 </Form>

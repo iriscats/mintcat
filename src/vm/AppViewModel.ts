@@ -1,4 +1,5 @@
-import {message, Modal} from "antd";
+import {message} from "antd";
+import {t} from "i18next";
 import {exists} from '@tauri-apps/plugin-fs';
 import {locale} from "@tauri-apps/plugin-os";
 import {appCacheDir} from '@tauri-apps/api/path';
@@ -9,7 +10,7 @@ import {HomeViewModel} from "./HomeViewModel.ts";
 import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
-import i18n from "i18next";
+
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -35,7 +36,7 @@ export class AppViewModel {
             if (item.enabled) {
                 if (item.isLocal === true) {
                     if (!await exists(item.cachePath)) {
-                        message.error("文件不存在 !" + item.cachePath);
+                        message.error(t("File Not Found") + item.cachePath);
                         return false;
                     }
                 } else {
@@ -61,11 +62,11 @@ export class AppViewModel {
         console.log(installType);
         if (installType === "old_version_mint_installed") {
             const result = await MessageBox.confirm({
-                title: '安装提示',
-                content: '检测到旧版 MINT(0.2, 0.3) 安装文件，是否卸载?',
+                title: t("Installation Warning"),
+                content: t("Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?"),
             });
             if (!result) {
-                message.warning("用户取消安装!");
+                message.warning(t("User Cancels Installation"));
                 return;
             }
         }
@@ -91,7 +92,7 @@ export class AppViewModel {
 
     private async checkOauth(): Promise<boolean> {
         if (!this.setting.modioOAuth || this.setting.modioOAuth === "") {
-            message.error("mod.io OAuth 不存在!");
+            message.error(t("mod.io OAuth No Found"));
             return false;
         }
         return true;
@@ -101,11 +102,11 @@ export class AppViewModel {
         if (this.setting.drgPakPath !== undefined) {
             try {
                 if (!await exists(this.setting.drgPakPath)) {
-                    message.error("游戏路径不存在!");
+                    message.error(t("Game Path Not Found"));
                     return false;
                 }
             } catch (e) {
-                message.error("没有权限读取游戏路径! ");
+                message.error(t("No Permission To Access Game Path"));
                 return false;
             }
         }
@@ -122,7 +123,7 @@ export class AppViewModel {
             }
             await ConfigApi.saveSettings(this.setting.toJson());
         } catch (err) {
-            message.error("没有权限获取配置文件夹路径! ");
+            message.error(t("No Permission To Access the Config Folder"));
         }
     }
 
@@ -130,12 +131,17 @@ export class AppViewModel {
         try {
             const userLocale = await locale();
             if (!userLocale) {
-                message.error("获取语言失败!");
+                message.error(t("Failed To Get System Info"));
             } else {
                 console.log(userLocale);
                 if (userLocale.includes("zh")) {
                     if (!localStorage.getItem('lang')) {
                         localStorage.setItem('lang', "zh");
+                    }
+                }
+                else if (userLocale.includes("en")) {
+                    if (!localStorage.getItem('lang')) {
+                        localStorage.setItem('lang', "en");
                     }
                 }
                 return userLocale;
@@ -199,8 +205,8 @@ export class AppViewModel {
         let settingDataV1 = appVM.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
         if (settingDataV1 !== undefined) {
             const confirmed = await MessageBox.confirm({
-                title: '导入配置',
-                content: '发现旧版 MINT(0.2, 0.3) 配置文件，是否导入并覆盖? ',
+                title: t("Import Config"),
+                content: t("Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?"),
             });
             if (confirmed) {
                 appVM.converter.convertTo(settingDataV1);

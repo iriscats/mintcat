@@ -2,6 +2,7 @@ import React from "react";
 import {Button, Card, Flex, Input, List, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ModListPageContext} from "../AppContext.ts";
+import {t} from "i18next";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
@@ -93,7 +94,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     render() {
         return (
-            <Modal title="Edit Profile"
+            <Modal title={t("Edit Profile")}
                    open={this.state.isModalOpen}
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
@@ -106,7 +107,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                                   <Input size="small"
                                          type={"text"}
                                          value={this.state.newProfileName}
-                                         placeholder="Input New Profile"
+                                         placeholder={t("Input New Profile")}
                                          onChange={this.handleProfileInputChange}
                                          onPressEnter={this.handleAdd}
                                   />

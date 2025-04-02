@@ -1,24 +1,26 @@
 import React from "react";
 import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag} from "antd";
 import {FolderOutlined} from "@ant-design/icons";
+import {t} from "i18next";
 
-const contextMenus: MenuProps['items'] = [
-    {label: 'Rename', key: 'rename'},
-    {label: 'Update', key: 'update'},
-    {label: 'Delete', key: 'delete'},
-    {label: 'Copy Link', key: 'copy_link'},
-    {label: 'Export', key: 'export'}
-];
-
-const contextMenusGroup: MenuProps['items'] = [
-    {label: 'Add Mod', key: 'add_mod'},
-    {label: 'Add New Group', key: 'add_new_group'},
-    {label: 'Add Sub Group', key: 'add_sub_group'},
-    {label: 'Rename Group', key: 'rename_group'},
-    {label: 'Delete Group', key: 'delete_group'}
-];
 
 export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: any) {
+
+    const contextMenus: MenuProps['items'] = [
+        {label: t('Rename'), key: 'rename'},
+        {label: t('Update'), key: 'update'},
+        {label: t('Delete'), key: 'delete'},
+        {label: t('Copy Link'), key: 'copy_link'},
+        {label: t('Export'), key: 'export'}
+    ];
+
+    const contextMenusGroup: MenuProps['items'] = [
+        {label: t('Add Mod'), key: 'add_mod'},
+        {label: t('Add New Group'), key: 'add_new_group'},
+        {label: t('Add Sub Group'), key: 'add_sub_group'},
+        {label: t('Rename Group'), key: 'rename_group'},
+        {label: t('Delete Group'), key: 'delete_group'}
+    ];
 
     if (nodeData.isLeaf) {
         return (
