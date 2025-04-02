@@ -44,6 +44,7 @@ export class ModListItem {
         } else {
             this.isLocal = true;
             this.downloadProgress = 100;
+            this.approval = "";
         }
     }
 

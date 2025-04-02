@@ -6,11 +6,6 @@
     padding: 0;
     margin: 0;
     border: 0;
-    filter: invert(100%);
-}
-
-img {
-    filter: brightness(0.7) invert(100%) ;
 }
 
 html, body {

@@ -17,7 +17,7 @@ struct ModioMod {
 }
 
 #[tracing::instrument(level = "debug")]
-pub fn uninstall_modio(
+pub fn recovery_modio(
     installation: &DRGInstallation,
     modio_mods: HashSet<u32>,
 ) -> Result<(), Error> {
