@@ -134,7 +134,7 @@ impl PakIntegrator {
         self.apply_sandbox_patch()?;
         self.apply_modding_tab_patch()?;
         self.apply_escape_menu_patch()?;
-        self.apply_server_list_entry_patch()?;
+        //self.apply_server_list_entry_patch()?;
 
         app.emit("status-bar-log", "Write Mod...").unwrap();
         app.emit("status-bar-percent", 90).unwrap();

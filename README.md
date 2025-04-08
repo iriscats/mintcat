@@ -41,6 +41,7 @@ macOS:
 1. https://docs.mod.io/
 2. https://api.v1st.net/https://docs.mod.io/restapiref/#getting-started
 3. https://api.v1st.net/https://docs.mod.io/restapiref/#get-mod
+4. https://api.v1st.net/https://docs.mod.io/restapiref/#dependencies
 
 # Build
 

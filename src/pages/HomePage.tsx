@@ -19,7 +19,7 @@ import {
 import {
     CloseCircleOutlined,
     EditOutlined,
-    PauseCircleOutlined,
+    PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined,
     SaveOutlined,
     SearchOutlined,
@@ -40,6 +40,7 @@ import {TreeViewItem} from "../components/TreeViewItem.tsx";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {t} from "i18next";
+import {HomeViewModel} from "../vm/HomeViewModel.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -72,10 +73,11 @@ class HomePage extends React.Component<any, ModListPageState> {
         {value: 'Sandbox', label: 'Sandbox'},
         {value: 'RequiredByAll', label: 'RequiredByAll'},
         {value: 'Optional', label: 'Optional'},
+        {value: 'Audio', label: 'Audio'},
         {value: 'Framework', label: 'Framework'},
         {value: 'Tools', label: 'Tools'},
         {value: 'QoL', label: 'QoL'},
-        {value: 'Visual', label: 'Visual'}
+        {value: 'Visual', label: 'Visual'},
     ]
 
     public constructor(props: any, state: ModListPageState) {
@@ -89,9 +91,10 @@ class HomePage extends React.Component<any, ModListPageState> {
             defaultProfile: "",
         }
 
-        this.context.setUpdateViewCallback(async () => {
-            await this.updateView();
-        });
+        this.context.setUpdateViewCallback(
+            async () => await this.updateTreeView(),
+            async () => await this.updateProfileSelect()
+        );
 
         this.onAddModClick = this.onAddModClick.bind(this);
         this.onEditProfileClick = this.onEditProfileClick.bind(this);
@@ -107,9 +110,12 @@ class HomePage extends React.Component<any, ModListPageState> {
         this.onCustomTitleRender = this.onCustomTitleRender.bind(this);
         this.onSaveChangesClick = this.onSaveChangesClick.bind(this);
         this.onMultiDeleteClick = this.onMultiDeleteClick.bind(this);
-        this.onMultiDisableClick = this.onMultiDisableClick.bind(this);
+        this.onMultiEnableClick = this.onMultiEnableClick.bind(this);
         this.onMultiUpdateClick = this.onMultiUpdateClick.bind(this);
         this.onSearchSelectChange = this.onSearchSelectChange.bind(this);
+
+        this.updateProfileSelect = this.updateProfileSelect.bind(this);
+        this.updateTreeView = this.updateTreeView.bind(this);
     }
 
     private async onMultiDeleteClick() {
@@ -124,18 +130,18 @@ class HomePage extends React.Component<any, ModListPageState> {
                     await this.context.removeMod(key);
                 }
             }
-            await this.updateView();
+            await this.updateTreeView();
         }
     }
 
-    private async onMultiDisableClick() {
+    private async onMultiEnableClick(isEnable: boolean) {
         for (const key of this.state.selectedKeys) {
             const modItem = this.context.ModList.get(key);
             if (modItem) {
-                await this.context.setModEnabled(key, false)
+                await this.context.setModEnabled(key, isEnable)
             }
         }
-        await this.updateView();
+        await this.updateTreeView();
     }
 
     private async onMultiUpdateClick() {
@@ -145,12 +151,12 @@ class HomePage extends React.Component<any, ModListPageState> {
                 await this.context.updateMod(modItem)
             }
         }
-        await this.updateView();
+        await this.updateTreeView();
     }
 
     private async onSearchSelectChange(value: any) {
         this.filterList = [value];
-        await this.updateView();
+        await this.updateTreeView();
     }
 
     private async onAddModClick() {
@@ -181,11 +187,10 @@ class HomePage extends React.Component<any, ModListPageState> {
 
     private async onSortClick(order: string) {
         await this.context.sortMods(order);
-        await this.updateView();
+        await this.updateTreeView();
     }
 
     private async onDrop(info: any) {
-        console.log(info);
         const newTreeData = dragAndDrop(info, this.state.treeData);
         this.setState({
             treeData: newTreeData,
@@ -195,7 +200,6 @@ class HomePage extends React.Component<any, ModListPageState> {
     }
 
     private async onSelectChange(value: string) {
-        console.log(`Selected: ${value}`);
         this.context.ActiveProfile = value;
         this.setState({
             defaultProfile: value as string,
@@ -203,12 +207,10 @@ class HomePage extends React.Component<any, ModListPageState> {
     };
 
     private async onSwitchChange(checked: boolean, node: any) {
-        console.log(`Switch: ${checked}`, node);
         await this.context.setModEnabled(node.key, checked);
     }
 
     private onTreeNodeSelect(keys) {
-        console.log(keys);
         this.setState({
             selectedKeys: keys,
         })
@@ -240,16 +242,18 @@ class HomePage extends React.Component<any, ModListPageState> {
         })
     }
 
-    private async updateView() {
+    private async updateTreeView() {
         const converter = new TreeViewConverter(this.context.ModList, this.filterList);
         converter.convertTo(this.context.ActiveProfile);
+
         this.setState({
             treeData: converter.treeData,
-        })
+        });
+
         if (this.state.expandedKeys.length === 0) {
             this.setState({
                 expandedKeys: converter.expandedKeys,
-            })
+            });
         }
     }
 
@@ -279,7 +283,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                 break;
             case "delete_group":
                 await this.context.removeGroup(id);
-                await this.updateView();
+                await this.updateTreeView();
                 break;
             case "rename_group":
                 const groupName = this.context.ActiveProfile.groupNameMap.get(id);
@@ -350,7 +354,7 @@ class HomePage extends React.Component<any, ModListPageState> {
     componentDidMount(): void {
         this.updateProfileSelect().then(() => {
         });
-        this.updateView().then(() => {
+        this.updateTreeView().then(() => {
         });
         this.context.updateModList().then(() => {
         })
@@ -451,13 +455,17 @@ class HomePage extends React.Component<any, ModListPageState> {
                             <span style={{marginRight: 'auto'}}>
                                 <Button type="text" size={"small"}
                                         icon={<CloseCircleOutlined/>}
-                                        onClick={this.onMultiDeleteClick}
-                                >
+                                        onClick={this.onMultiDeleteClick}>
                                    {t("Delete")}
                                 </Button>
                                 <Button type="text" size={"small"}
+                                        icon={<PlayCircleOutlined/>}
+                                        onClick={() => this.onMultiEnableClick(true)}>
+                                    {t("Enable")}
+                                </Button>
+                                <Button type="text" size={"small"}
                                         icon={<PauseCircleOutlined/>}
-                                        onClick={this.onMultiDisableClick}>
+                                        onClick={() => this.onMultiEnableClick(false)}>
                                     {t("Disable")}
                                 </Button>
                                 <Button type="text" size={"small"}

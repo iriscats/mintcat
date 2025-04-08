@@ -1,6 +1,6 @@
 import React from "react";
-import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag} from "antd";
-import {FolderOutlined} from "@ant-design/icons";
+import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag, Tooltip} from "antd";
+import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {t} from "i18next";
 
 
@@ -37,6 +37,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                           display: "block"
                       }}
                 >
+
                     <Switch checked={nodeData.enabled} size={"small"}
                             onChange={(checked) => onSwitchChange(checked, nodeData)}
                             style={{marginRight: "8px", marginTop: "-3px"}}
@@ -53,7 +54,24 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                                 }}
                         >
                             <Select.Option value={nodeData.fileVersion}>{nodeData.fileVersion}</Select.Option>
-                        </Select>}
+                        </Select>
+                    }
+
+                    {nodeData.isLocal === false && nodeData.onlineUpdateDate > nodeData.lastUpdateDate &&
+                        <Tooltip title={t("Discovered New Version")}>
+                            <span style={{color: "orange", marginRight: "4px"}}>
+                                <ClockCircleOutlined/>
+                            </span>
+                        </Tooltip>
+                    }
+
+                    {nodeData.isLocal === false && nodeData.onlineAvailable === false &&
+                        <Tooltip title={t("Online Mod has been Deleted by Author")}>
+                            <span style={{color: "red", marginRight: "4px"}}>
+                                <ExclamationCircleOutlined/>
+                            </span>
+                        </Tooltip>
+                    }
 
                     {nodeData.isLocal === false &&
                         <span style={{

@@ -1,8 +1,10 @@
 import React from "react";
+import {t} from "i18next";
 import {Button, Card, Flex, Input, List, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ModListPageContext} from "../AppContext.ts";
-import {t} from "i18next";
+import {ProfileTree} from "../vm/config/ProfileList.ts";
+import {ConfigApi} from "../apis/ConfigApi.ts";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
@@ -62,8 +64,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleAdd() {
-        console.log(this.state.newProfileName);
-        await this.context.addProfile(this.state.newProfileName);
+        await this.context.addProfile(this.state.newProfileName,
+            new ProfileTree(this.state.newProfileName).toJson());
         this.forceUpdate();
         this.setState({
             newProfileName: ""
@@ -84,7 +86,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleCopy(key: string) {
-        await this.context.addProfile(key + "_copy");
+        const data = await ConfigApi.loadProfileDetails(key);
+        await this.context.addProfile(key + "_copy", data);
         this.forceUpdate();
     }
 

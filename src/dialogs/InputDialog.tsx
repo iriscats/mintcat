@@ -1,5 +1,6 @@
 import React from 'react';
 import {Form, Input, Modal} from 'antd';
+import {t} from "i18next";
 
 interface AddModDialogStates {
     isModalOpen?: boolean;
@@ -68,7 +69,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                       initialValues={{
                           text: this.state.defaultValue,
                       }}>
-                    <Form.Item name="text" label={"Input Text"} rules={[{required: true}]}>
+                    <Form.Item name="text" label={t("Please Input Name")} rules={[{required: true}]}>
                         <Input allowClear/>
                     </Form.Item>
                 </Form>

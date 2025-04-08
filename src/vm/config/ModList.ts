@@ -20,6 +20,9 @@ export class ModListItem {
     public cachePath: string = "";
     public downloadProgress: number = 100;
     public fileSize: number = 0;
+    public lastUpdateDate: number = Date.now();
+    public onlineUpdateDate: number = Date.now();
+    public onlineAvailable: boolean = true;
 
     public constructor(modInfo?: ModInfo) {
         if (modInfo) {
@@ -90,6 +93,27 @@ export class ModListItem {
         }
         this.tags = tags;
     }
+
+    public clone() {
+        const modItem = new ModListItem();
+        modItem.id = this.id;
+        modItem.modId = this.modId;
+        modItem.url = this.url;
+        modItem.nameId = this.nameId;
+        modItem.displayName = this.displayName;
+        modItem.required = this.required;
+        modItem.enabled = this.enabled;
+        modItem.fileVersion = this.fileVersion;
+        modItem.tags = this.tags;
+        modItem.versions = this.versions;
+        modItem.approval = this.approval;
+        modItem.isLocal = this.isLocal;
+        modItem.downloadUrl = this.downloadUrl;
+        modItem.cachePath = this.cachePath;
+        modItem.downloadProgress = this.downloadProgress;
+        modItem.fileSize = this.fileSize;
+        return modItem;
+    }
 }
 
 export class ModList {
@@ -103,18 +127,18 @@ export class ModList {
 
     private makeId() {
         const rand = Math.floor(Math.random() * 9000) + 1000;
+        console.log(rand);
         return parseInt(Date.now().toString() + rand.toString());
     }
 
-    public checkIsExist(modItem: ModListItem): boolean {
-        let isExist = this.mods.find(m => m.url === modItem.url) !== undefined;
-        if (!isExist && modItem.modId !== MOD_INVALID_ID) {
-            isExist = this.mods.find(m => m.modId === modItem.modId) !== undefined;
-        }
-        return isExist;
-    }
-
     public add(modItem: ModListItem): ModListItem {
+        if (modItem.modId !== MOD_INVALID_ID) {
+            const foundItem = this.getByModId(modItem.modId);
+            if (foundItem) {
+                return foundItem;
+            }
+        }
+
         modItem.id = this.makeId();
         this.mods.push(modItem);
         return modItem;
@@ -125,12 +149,22 @@ export class ModList {
     }
 
     public get(id: number): ModListItem | undefined {
+        if (id === MOD_INVALID_ID)
+            return undefined;
         return this.mods.find(m => m.id === id);
+    }
+
+    public getByModId(modId: number): ModListItem | undefined {
+        return this.mods.find(m => m.modId === modId);
+    }
+
+    public getByUrl(url: string): ModListItem | undefined {
+        return this.mods.find(m => m.url === url);
     }
 
     public update(oldItem: ModListItem, newItem: ModListItem) {
         const index = this.mods.findIndex(m => m.id === oldItem.id);
-        if (index !== MOD_INVALID_ID) {
+        if (index !== -1) {
             newItem.id = oldItem.id;
             newItem.enabled = oldItem.enabled;
             newItem.url = oldItem.url;
@@ -140,6 +174,7 @@ export class ModList {
             if (newItem.url.startsWith("http") === true) {
                 newItem.isLocal = false;
             }
+            newItem.lastUpdateDate = Date.now();
             this.mods[index] = newItem;
             return this.mods[index];
         }
@@ -168,13 +203,15 @@ export class ModList {
             modItem.cachePath = mod.cache_path;
             modItem.downloadProgress = mod.download_progress;
             modItem.fileSize = mod.file_size;
+            modItem.lastUpdateDate = mod.last_update_date;
+            modItem.onlineUpdateDate = mod.online_update_date;
+            modItem.onlineAvailable = mod.online_available;
             modList.mods.push(modItem);
         }
         return modList;
     }
 
     public toJson() {
-
         const mods = [];
         for (const mod of this.mods) {
             const modItem = {
@@ -193,7 +230,10 @@ export class ModList {
                 "download_url": mod.downloadUrl,
                 "cache_path": mod.cachePath,
                 "file_size": mod.fileSize,
-                "download_progress": mod.downloadProgress
+                "download_progress": mod.downloadProgress,
+                "last_update_date": mod.lastUpdateDate,
+                "online_update_date": mod.onlineUpdateDate,
+                "online_available": mod.onlineAvailable,
             }
             mods.push(modItem);
         }
@@ -202,6 +242,6 @@ export class ModList {
             "version": this.version,
             "mods": mods
         }
-        return JSON.stringify(modList);
+        return JSON.stringify(modList, null, 4);
     }
 }

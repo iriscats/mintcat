@@ -1,12 +1,19 @@
 import {message} from "antd";
+import {t} from "i18next";
 import {exists} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
+import {emit} from "@tauri-apps/api/event";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {MOD_INVALID_ID, ModList, ModListItem} from "./config/ModList.ts";
-import {ProfileList, ProfileTree, ProfileTreeItem, ProfileTreeType} from "./config/ProfileList.ts";
-import {emit} from "@tauri-apps/api/event";
+import {
+    ProfileList,
+    ProfileTree,
+    ProfileTreeGroupType,
+    ProfileTreeItem,
+    ProfileTreeType
+} from "./config/ProfileList.ts";
 
 
 export class HomeViewModel {
@@ -15,7 +22,9 @@ export class HomeViewModel {
 
     private converter: ModConfigConverter = new ModConfigConverter();
 
-    private updateViewCallback?: () => void;
+    private updateTreeViewCallback?: () => void;
+
+    private updateSelectCallback?: () => void;
 
     public get ModList(): ModList {
         return this.converter.modList;
@@ -34,55 +43,99 @@ export class HomeViewModel {
     }
 
     public set ActiveProfile(activeProfile: string) {
+        console.log("set ActiveProfile " + activeProfile);
         this.converter.profileList.activeProfile = activeProfile;
         ConfigApi.saveProfileData(this.converter.profileList.toJson()).then(_ => {
         });
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     private constructor() {
     }
 
-    public setUpdateViewCallback(callback: () => void) {
-        this.updateViewCallback = callback;
+    public setUpdateViewCallback(treeviewCallback: () => void, selectCallback: () => void) {
+        this.updateTreeViewCallback = treeviewCallback;
+        this.updateSelectCallback = selectCallback;
     }
 
-    public async addModFromUrl(url: string, groupId: number): Promise<void> {
-        await emit("status-bar-log", "Fetch mod info...");
+    private async addModDependencies(modList: ModList, modId: number, groupId: number): Promise<void> {
+        await emit("status-bar-log", t("Fetch Mod Dependencies"));
+
+        const depends = await ModioApi.getDependencies(modId);
+        for (const depend of depends) {
+            const modItem = new ModListItem(depend);
+            if (modList.getByModId(modItem.modId)) {
+                continue;
+            }
+
+            const addedModItem = this.ModList.add(modItem);
+            this.ActiveProfile.addMod(addedModItem.id, groupId);
+            this.updateTreeViewCallback?.call(this);
+            await this.updateMod(addedModItem);
+        }
+    }
+
+    public async addModFromUrl(url: string, groupId: number): Promise<boolean> {
+        await emit("status-bar-log", t("Fetch Mod Info"));
 
         const resp = await ModioApi.getModInfoByLink(url);
+        if (resp === undefined) {
+            return false;
+        }
+
         const modItem = new ModListItem(resp);
-        if (this.ModList.checkIsExist(modItem)) {
-            message.error("Mod already exists");
-            return;
+        const subModList = this.ActiveProfile.getModList(this.ModList);
+        if (subModList.getByModId(modItem.modId)) {
+            message.error(t("Mod Already Exists"));
+            return false;
         }
 
         const addedModItem = this.ModList.add(modItem);
         this.ActiveProfile.addMod(addedModItem.id, groupId);
+        this.updateTreeViewCallback?.call(this);
+        await this.updateMod(addedModItem);
+
+        if (resp.dependencies) {
+            await this.addModDependencies(subModList, resp.id, groupId);
+        }
 
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
-        this.updateViewCallback?.call(this);
 
-        await this.updateMod(addedModItem);
+        return true;
     }
 
-    public async addModFromPath(modPath: string, groupId: number): Promise<void> {
+    public async addModFromPath(modPath: string, groupId: number): Promise<boolean> {
         let modListItem = new ModListItem();
         modListItem.displayName = await path.basename(modPath);
         modListItem.url = modPath;
         modListItem.cachePath = modPath;
-        if (this.ModList.checkIsExist(modListItem)) {
-            message.error("Mod already exists");
-            return;
+
+        if (!await exists(modPath)) {
+            message.error(t("Mod Path No Exists" + modPath));
+            return false;
         }
 
-        const addedModItem = this.ModList.add(modListItem);
+        const subModList = this.ActiveProfile.getModList(this.ModList);
+        if (subModList.getByUrl(modPath)) {
+            message.error(t("Mod already exists"));
+            return false;
+        }
+
+        const foundItem = this.ModList.getByUrl(modPath);
+        let addedModItem: ModListItem;
+        if (foundItem) {
+            addedModItem = foundItem;
+        } else {
+            addedModItem = this.ModList.add(modListItem);
+        }
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
+
+        return true;
     }
 
     private sortNode(modItem: ProfileTreeItem, order: string): ProfileTreeItem[] {
@@ -114,34 +167,48 @@ export class HomeViewModel {
     }
 
     public async removeMod(id: number): Promise<void> {
-        this.ModList.remove(id);
         this.ActiveProfile.removeMod(id);
-
-        await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
-
-        this.updateViewCallback?.call(this);
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
-    public async addProfile(name: string): Promise<void> {
+    public async addProfile(name: string, data: string): Promise<void> {
+        const profileTree = ProfileTree.fromJson(data);
+        profileTree.name = name;
+
         this.converter.profileList.add(name);
+        this.converter.profileTreeList.push(profileTree);
 
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+        await ConfigApi.saveProfileDetails(name, profileTree.toJson());
+
+        this.updateSelectCallback?.call(this);
     }
 
     public async removeProfile(name: string): Promise<void> {
+        if (this.converter.profileList.Profiles.length <= 1) {
+            message.error(t("Profile must have at least one profile"));
+            return;
+        }
         this.converter.profileList.remove(name);
 
+        await ConfigApi.deleteProfileDetails(name);
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
-        //TODO remove profile details
 
+        this.updateSelectCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async renameProfile(oldName: string, newName: string): Promise<void> {
         this.converter.profileList.rename(oldName, newName);
-
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+
+        const profileTree = this.converter.profileTreeList.find(p => p.name === oldName);
+        profileTree.name = newName;
+        await ConfigApi.saveProfileDetails(newName, profileTree.toJson());
+        await ConfigApi.renameProfileDetails(oldName, newName);
+
+        this.updateSelectCallback?.call(this);
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
@@ -149,9 +216,8 @@ export class HomeViewModel {
         if (modItem) {
             modItem.displayName = name;
         }
-
         await ConfigApi.saveModListData(this.ModList.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
@@ -160,7 +226,7 @@ export class HomeViewModel {
             modItem.enabled = enable;
         }
         await ConfigApi.saveModListData(this.ModList.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
@@ -170,14 +236,14 @@ export class HomeViewModel {
         }
 
         await ConfigApi.saveModListData(this.ModList.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
         this.ActiveProfile.setGroupName(id, name);
 
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async setProfileData(root: ProfileTreeItem): Promise<void> {
@@ -189,14 +255,19 @@ export class HomeViewModel {
         this.ActiveProfile.addGroup(groupName, groupId);
 
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async removeGroup(groupId: number): Promise<void> {
+        if (groupId === ProfileTreeGroupType.MODIO || groupId === ProfileTreeGroupType.LOCAL) {
+            message.error(t("Can't Remove Default Group"));
+            return;
+        }
+
         this.ActiveProfile.removeGroup(groupId);
 
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
-        this.updateViewCallback?.call(this);
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async updateMod(mod: ModListItem) {
@@ -204,33 +275,35 @@ export class HomeViewModel {
         let newItem = new ModListItem(resp);
         if (resp) {
             this.ModList.update(mod, newItem);
-            this.updateViewCallback?.call(this);
+            this.updateTreeViewCallback?.call(this);
         }
 
-        await emit("status-bar-log", "Update Mod: " + mod.displayName);
+        await emit("status-bar-log", t("Update Mod") + mod.displayName);
         newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
-            await emit("status-bar-log", `Download Mod: ${mod.displayName} (${loaded} / ${total})`);
+            await emit("status-bar-log", t("Downloading") + `${mod.displayName} (${loaded} / ${total})`);
             newItem.downloadProgress = (loaded / total) * 100;
             this.ModList.update(mod, newItem);
-            this.updateViewCallback?.call(this);
+            this.updateTreeViewCallback?.call(this);
         });
 
         this.ModList.update(mod, newItem);
         await ConfigApi.saveModListData(this.ModList.toJson());
-        await emit("status-bar-log", "Update Finish");
+        await emit("status-bar-log", t("Update Finish"));
+        console.log(this.ModList);
     }
 
     public async checkLocalMod(modItem: ModListItem) {
         if (modItem.isLocal === true && modItem.enabled === true) {
             if (!await exists(modItem.cachePath)) {
-                message.error("Mod 文件不存在: " + modItem.cachePath);
+                message.error(t("File Not Found") + modItem.cachePath);
                 return false;
             }
         }
     }
 
     public async updateModList(isRefresh = false): Promise<void> {
-        for (const mod of this.ModList.Mods) {
+        const subModList = this.ActiveProfile.getModList(this.ModList);
+        for (const mod of subModList.Mods) {
             if (isRefresh) {
                 if (mod.url.startsWith("http")) {
                     await this.updateMod(mod);
@@ -243,6 +316,15 @@ export class HomeViewModel {
                 }
             }
         }
+
+        if (isRefresh) {
+            this.ActiveProfile.lastUpdate = new Date().getTime();
+            await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        }
+    }
+
+    public async updateUI() {
+        this.updateTreeViewCallback?.call(this);
     }
 
     public async loadConfig() {
