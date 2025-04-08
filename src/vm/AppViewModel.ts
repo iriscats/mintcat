@@ -12,6 +12,7 @@ import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {MOD_INVALID_ID} from "./config/ModList.ts";
+import {emit} from "@tauri-apps/api/event";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -87,6 +88,8 @@ export class AppViewModel {
             }
         }
         await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
+
+        await emit("status-bar-log", t("Installation Finish"));
     }
 
     private async checkOauth(): Promise<boolean> {
@@ -166,12 +169,16 @@ export class AppViewModel {
     public async checkModUpdate() {
         setTimeout(async () => {
             const viewModel = await HomeViewModel.getInstance();
-            /*
             if (new Date().getTime() - viewModel.ActiveProfile.lastUpdate < 1000 * 60 * 60) {
                 return;
             }
-            */
-            const updateTime = Math.round(new Date().getTime() / 1000) - 60 * 60 * 24 * 30;
+
+            let updateTime = 0;
+            if (!viewModel.ActiveProfile.lastUpdate) {
+                updateTime = Math.round(new Date().getTime() / 1000) - 60 * 60 * 24 * 30;
+            } else {
+                updateTime = viewModel.ActiveProfile.lastUpdate;
+            }
 
             const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
             const modIdList = [];
@@ -212,7 +219,7 @@ export class AppViewModel {
             await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile.toJson());
             await ConfigApi.saveModListData(viewModel.ModList.toJson());
             await viewModel.updateUI();
-        }, 1000);
+        }, 1000 * 60);
     }
 
     public async loadTheme() {

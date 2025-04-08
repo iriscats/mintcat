@@ -50,6 +50,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         this.setCallback = this.setCallback.bind(this);
         this.handleTabChange = this.handleTabChange.bind(this);
         this.onSelectPathClick = this.onSelectPathClick.bind(this);
+        this.onSelectGroupChange = this.onSelectGroupChange.bind(this);
     }
 
     public setValue(groupId: number = 0, url: string = undefined) {
@@ -118,16 +119,23 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
             }
 
             let success = false;
-            if (this.state.tabActiveKey === AddModType.MODIO) {
-                const links = this.state.url.split("\n");
-                for (const link of links) {
-                    success = await this.context.addModFromUrl(link, this.state.groupId);
-                    if (!success) {
-                        break;
+            switch (this.state.tabActiveKey) {
+                case AddModType.MODIO: {
+                    const links = this.state.url.split("\n");
+                    for (const link of links) {
+                        success = await this.context.addModFromUrl(link, this.state.groupId);
+                        if (!success) {
+                            break;
+                        }
                     }
                 }
-            } else {
-                success = await this.context.addModFromPath(this.state.url, this.state.groupId);
+                    break;
+                case AddModType.LOCAL: {
+                    success = await this.context.addModFromPath(this.state.url, this.state.groupId);
+                }
+                    break;
+                default:
+                    break;
             }
 
             if (success) {
@@ -199,6 +207,12 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         })
     }
 
+    private onSelectGroupChange(value: number) {
+        this.setState({
+            groupId: value
+        })
+    }
+
     componentDidMount() {
         this.updateGroupList();
     }
@@ -233,7 +247,9 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                                       onSearch={this.onSelectPathClick}/>
                                           </Form.Item>
                                           <Form.Item name="groupId" label={t("Group")} rules={[{required: true}]}>
-                                              <Select options={this.state.groupOptions}/>
+                                              <Select options={this.state.groupOptions}
+                                                      onChange={this.onSelectGroupChange}
+                                              />
                                           </Form.Item>
                                       </Form>
                                   </>,
@@ -267,7 +283,9 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                                      label={t("Group")}
                                                      rules={[{required: true}]}
                                           >
-                                              <Select options={this.state.groupOptions}/>
+                                              <Select options={this.state.groupOptions}
+                                                      onChange={this.onSelectGroupChange}
+                                              />
                                           </Form.Item>
                                       </Form>
                                   </>,

@@ -127,7 +127,6 @@ export class ModList {
 
     private makeId() {
         const rand = Math.floor(Math.random() * 9000) + 1000;
-        console.log(rand);
         return parseInt(Date.now().toString() + rand.toString());
     }
 
@@ -137,6 +136,11 @@ export class ModList {
             if (foundItem) {
                 return foundItem;
             }
+        }
+
+        const foundItem = this.getByUrl(modItem.url);
+        if (foundItem) {
+            return foundItem;
         }
 
         modItem.id = this.makeId();

@@ -25,17 +25,21 @@ const {
 class App extends React.Component<any, any> {
 
     state = {
-        currentPage: MenuPage.Home
+        currentPage: MenuPage.Home,
+        windowSize: {width: 2400, height: 1200},
     }
 
     private pageConfigs = [
         {key: MenuPage.Home, component: <HomePage/>},
     ];
 
+    private isHooked: boolean = false;
+
     public constructor(props: any, context: any) {
         super(props, context);
 
         this.clickMenu = this.clickMenu.bind(this);
+        this.hookWindowResized = this.hookWindowResized.bind(this);
     }
 
     private async clickMenu(key: string): Promise<void> {
@@ -82,14 +86,25 @@ class App extends React.Component<any, any> {
         // });
     }
 
-    componentDidMount() {
+    private hookWindowResized() {
         try {
+            if (this.isHooked) {
+                return;
+            }
+            this.isHooked = true;
             getCurrentWindow().onResized(({payload: size}) => {
+                this.setState({
+                    windowSize: size,
+                })
                 this.forceUpdate();
             }).then(_ => {
             });
         } catch (e) {
         }
+    }
+
+    componentDidMount() {
+        this.hookWindowResized();
     }
 
     render() {
@@ -106,11 +121,12 @@ class App extends React.Component<any, any> {
                             </Sider>
                             <Content>
                                 {this.pageConfigs.map(({key, component}) => (
-                                    <div key={key}
-                                         style={{
-                                             display: this.state.currentPage === key ? 'block' : 'none',
-                                             height: '100%'
-                                         }}>
+                                    <div
+                                        key={`${key}-${this.state.windowSize.width}-${this.state.windowSize.height}`}
+                                        style={{
+                                            display: this.state.currentPage === key ? 'block' : 'none',
+                                            height: '100%'
+                                        }}>
                                         {component}
                                     </div>
                                 ))}
