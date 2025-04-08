@@ -14,6 +14,7 @@ import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {once} from "@tauri-apps/api/event";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {MessageBox} from "./MessageBox.ts";
+import {CacheApi} from "../apis/CacheApi.ts";
 
 
 interface TitleBarState {
@@ -48,8 +49,9 @@ class TitleBar extends React.Component<any, TitleBarState> {
     private async loadAvatar() {
         const userInfo = await ModioApi.getUserInfo();
         if (userInfo) {
+            const url = await CacheApi.cacheImage(userInfo.avatar.thumb_50x50);
             this.setState({
-                profileUrl: "https://api.v1st.net/" + userInfo.avatar.thumb_50x50,
+                profileUrl: url,
                 username: userInfo.username,
             })
         }
@@ -107,15 +109,15 @@ class TitleBar extends React.Component<any, TitleBarState> {
                         </Badge>
                     </span>
                     <span>
-                        {/*<Popconfirm*/}
-                        {/*    placement="bottom"*/}
-                        {/*    title={"text"}*/}
-                        {/*    description={"description"}*/}
-                        {/*    okText="Yes"*/}
-                        {/*    cancelText="No"*/}
-                        {/*>*/}
-                            <SkinOutlined/>
-                        {/*</Popconfirm>*/}
+                    <Popconfirm
+                        placement="bottom"
+                        title={"开发中"}
+                        description={"未完成的功能，敬请期待"}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <SkinOutlined/>
+                    </Popconfirm>
                     </span>
                     <span>
                         <QuestionCircleOutlined/>
@@ -124,10 +126,10 @@ class TitleBar extends React.Component<any, TitleBarState> {
                             icon={<UserOutlined/>}
                             src={<img src={this.state.profileUrl} alt="avatar"/>}
                             onClick={async () => {
-                                MessageBox.confirm({
-                                    title: "User Profile",
+                                await MessageBox.confirm({
+                                    title: t("User Info"),
                                     content: <>
-                                        你的用户名是：{this.state.username}
+                                        {this.state.username}
                                     </>
                                 })
                             }}

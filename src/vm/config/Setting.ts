@@ -3,8 +3,8 @@ export class Setting {
     public version: string = "0.2.0";
     public modioOAuth: string = "";
     public drgPakPath: string = "";
-    public guiTheme: string = "";
-    public language: string = "";
+    public guiTheme: string = "Light";
+    public language: string = "en";
     public cachePath: string = "";
     public configPath: string = "";
 
@@ -17,7 +17,7 @@ export class Setting {
         setting.guiTheme = json.gui_theme;
         setting.language = json.language;
         setting.cachePath = json.cache_path;
-        setting.configPath = json.configPath;
+        setting.configPath = json.config_path;
         return setting;
     }
 
@@ -28,9 +28,9 @@ export class Setting {
             "drg_pak_path": this.drgPakPath,
             "gui_theme": this.guiTheme,
             "language": this.language,
-            "cachePath": this.cachePath,
-            "configPath": this.configPath,
+            "cache_path": this.cachePath,
+            "config_path": this.configPath,
         }
-        return JSON.stringify(setting);
+        return JSON.stringify(setting, null, 4);
     }
 }

@@ -17,8 +17,10 @@ export interface ModInfo {
     logo: Logo;
     homepage_url?: any;
     name: string;
+    name_trans: string;
     name_id: string;
     summary: string;
+    summary_trans: string;
     description: string;
     description_plaintext: string;
     metadata_blob?: any;

@@ -37,7 +37,6 @@ export class TreeViewConverter {
     }
 
     private buildTreeNode(parent: any, root: ProfileTreeItem) {
-        console.log("buildTreeNode");
         for (const item of root.children) {
             if (item.type === ProfileTreeType.ITEM) {
                 const modItem = this.modList.get(item.id);
@@ -58,6 +57,9 @@ export class TreeViewConverter {
                         versions: modItem.versions,
                         fileVersion: modItem.fileVersion,
                         downloadProgress: modItem.downloadProgress,
+                        lastUpdateDate: modItem.lastUpdateDate,
+                        onlineUpdateDate: modItem.onlineUpdateDate,
+                        onlineAvailable: modItem.onlineAvailable
                     });
                 }
             } else if (item.type === ProfileTreeType.FOLDER) {

@@ -1,8 +1,6 @@
-import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir} from '@tauri-apps/plugin-fs';
+import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir, remove, rename} from '@tauri-apps/plugin-fs';
 import {appConfigDir, configDir} from "@tauri-apps/api/path";
 import {path} from "@tauri-apps/api";
-
-console.log(window.location.host);
 
 export class ConfigApi {
 
@@ -60,6 +58,24 @@ export class ConfigApi {
     public static async loadProfileDetails(name: string): Promise<string> {
         const fileName = `profile_${name}.json`;
         return await ConfigApi.readDataToFile(fileName);
+    }
+
+    public static async deleteProfileDetails(name: string) {
+        const fileName = `profile_${name}.json`;
+        const profilePath = await path.join(await ConfigApi.getConfigPath(), fileName);
+        if (await exists(profilePath)) {
+            await remove(profilePath);
+        }
+    }
+
+    public static async renameProfileDetails(oldName: string, newName: string) {
+        const oldFileName = `profile_${oldName}.json`;
+        const newFileName = `profile_${newName}.json`;
+        const oldProfilePath = await path.join(await ConfigApi.getConfigPath(), oldFileName);
+        const newProfilePath = await path.join(await ConfigApi.getConfigPath(), newFileName);
+        if (await exists(oldProfilePath)) {
+            await rename(oldProfilePath, newProfilePath);
+        }
     }
 
     public static async saveProfileDetails(name: string, data: string): Promise<boolean> {

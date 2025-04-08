@@ -2,7 +2,7 @@ import {message} from "antd";
 import {t} from "i18next";
 import {exists} from '@tauri-apps/plugin-fs';
 import {locale} from "@tauri-apps/plugin-os";
-import {appCacheDir} from '@tauri-apps/api/path';
+import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
 
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
@@ -10,7 +10,8 @@ import {HomeViewModel} from "./HomeViewModel.ts";
 import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
-
+import {ModioApi} from "../apis/ModioApi.ts";
+import {MOD_INVALID_ID} from "./config/ModList.ts";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -30,9 +31,8 @@ export class AppViewModel {
 
     public async checkModList() {
         const viewModel = await HomeViewModel.getInstance();
-        const modList = viewModel.ActiveProfile.getModList();
-        for (const modId of modList) {
-            const item = viewModel.ModList.get(modId);
+        const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
+        for (const item of subModList.Mods) {
             if (item.enabled) {
                 if (item.isLocal === true) {
                     if (!await exists(item.cachePath)) {
@@ -74,10 +74,9 @@ export class AppViewModel {
         await IntegrateApi.uninstall(this.setting.drgPakPath);
 
         const viewModel = await HomeViewModel.getInstance();
-        const modList = viewModel.ActiveProfile.getModList();
+        const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
         const installModList = [];
-        for (const modId of modList) {
-            const item = viewModel.ModList.get(modId);
+        for (const item of subModList.Mods) {
             const modName = item.nameId === "" ? item.displayName : item.nameId;
             if (item.enabled) {
                 installModList.push({
@@ -138,8 +137,7 @@ export class AppViewModel {
                     if (!localStorage.getItem('lang')) {
                         localStorage.setItem('lang', "zh");
                     }
-                }
-                else if (userLocale.includes("en")) {
+                } else if (userLocale.includes("en")) {
                     if (!localStorage.getItem('lang')) {
                         localStorage.setItem('lang', "en");
                     }
@@ -160,10 +158,61 @@ export class AppViewModel {
             this.converter.setting = Setting.fromJson(settingData);
         } else {
             this.converter.setting = new Setting();
+            this.converter.setting.cachePath = await appCacheDir();
+            this.converter.setting.configPath = await appConfigDir();
         }
     }
 
-    public async checkUpdate() {
+    public async checkModUpdate() {
+        setTimeout(async () => {
+            const viewModel = await HomeViewModel.getInstance();
+            /*
+            if (new Date().getTime() - viewModel.ActiveProfile.lastUpdate < 1000 * 60 * 60) {
+                return;
+            }
+            */
+            const updateTime = Math.round(new Date().getTime() / 1000) - 60 * 60 * 24 * 30;
+
+            const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
+            const modIdList = [];
+            for (const item of subModList.Mods) {
+                if (item.isLocal === false || item.modId !== MOD_INVALID_ID) {
+                    modIdList.push(item.modId);
+                }
+            }
+
+            const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
+            for (const event of events) {
+                console.log(event);
+                switch (event.event_type) {
+                    case "MODFILE_CHANGED": {
+                        let modItem = viewModel.ModList.getByModId(event.mod_id);
+                        if (modItem) {
+                            modItem.onlineUpdateDate = event.date_added * 1000;
+                            if (!modItem.lastUpdateDate) {
+                                modItem.lastUpdateDate = 0;
+                            }
+                        }
+                    }
+                        break;
+                    case "MOD_UNAVAILABLE":
+                    case "MOD_DELETED": {
+                        let modItem = viewModel.ModList.getByModId(event.mod_id);
+                        if (modItem) {
+                            modItem.onlineAvailable = false;
+                            modItem.lastUpdateDate = event.date_added * 1000;
+                            modItem.onlineUpdateDate = event.date_added * 1000;
+                        }
+                    }
+                        break;
+                }
+            }
+
+            viewModel.ActiveProfile.lastUpdate = new Date().getTime();
+            await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile.toJson());
+            await ConfigApi.saveModListData(viewModel.ModList.toJson());
+            await viewModel.updateUI();
+        }, 1000);
     }
 
     public async loadTheme() {
@@ -178,7 +227,7 @@ export class AppViewModel {
             // Create new style element with unique ID
             const style = document.createElement('style');
             style.id = 'dark-theme-style';
-            style.textContent = 'img { filter: brightness(0.7) invert(100%); }';
+            style.textContent = 'img { filter: brightness(0.8) invert(100%); }';
             document.head.appendChild(style);
         }
     }
@@ -209,7 +258,7 @@ export class AppViewModel {
                 content: t("Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?"),
             });
             if (confirmed) {
-                appVM.converter.convertTo(settingDataV1);
+                await appVM.converter.convertTo(settingDataV1);
                 await ConfigApi.saveSettings(appVM.setting.toJson());
                 await modListVM.loadOldConfig()
             } else {
@@ -227,7 +276,7 @@ export class AppViewModel {
         await appVM.checkOauth();
         await appVM.checkGamePath();
         await appVM.loadTheme();
-
+        await appVM.checkModUpdate();
 
         AppViewModel.instance = appVM;
         return appVM;

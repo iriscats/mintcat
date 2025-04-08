@@ -1,3 +1,6 @@
+import {ModList} from "./ModList.ts";
+import {t} from "i18next";
+
 export class ProfileList {
     public version: string = "0.2.0";
     public activeProfile: string = "default";
@@ -13,12 +16,18 @@ export class ProfileList {
 
     public remove(profile: string) {
         this.profiles.splice(this.profiles.indexOf(profile), 1);
+        if (this.activeProfile === profile) {
+            this.activeProfile = this.profiles[0];
+        }
     }
 
     public rename(oldName: string, newName: string) {
         const index = this.profiles.indexOf(oldName);
         if (index >= 0) {
             this.profiles[index] = newName;
+        }
+        if (this.activeProfile === oldName) {
+            this.activeProfile = newName;
         }
     }
 
@@ -37,7 +46,7 @@ export class ProfileList {
             "active_profile": this.activeProfile,
             "profiles": this.profiles
         }
-        return JSON.stringify(profile);
+        return JSON.stringify(profile, null, 4);
     }
 
 }
@@ -56,6 +65,7 @@ export enum ProfileTreeGroupType {
 export class ProfileTree {
     public version: string = "0.2.0";
     public name: string = "";
+    public lastUpdate: number = -1;
     public root: ProfileTreeItem = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
     public groupNameMap: Map<number, string> = new Map<number, string>();
 
@@ -77,11 +87,12 @@ export class ProfileTree {
 
     public constructor(name: string) {
         this.name = name;
+        this.lastUpdate = Date.now();
 
         this.root.add(ProfileTreeGroupType.MODIO, ProfileTreeType.FOLDER, "mod.io");
-        this.root.add(ProfileTreeGroupType.LOCAL, ProfileTreeType.FOLDER, "Local");
+        this.root.add(ProfileTreeGroupType.LOCAL, ProfileTreeType.FOLDER, t("Local"));
         this.groupNameMap.set(ProfileTreeGroupType.MODIO, "mod.io");
-        this.groupNameMap.set(ProfileTreeGroupType.LOCAL, "Local");
+        this.groupNameMap.set(ProfileTreeGroupType.LOCAL, t("Local"));
     }
 
     private makeId() {
@@ -145,11 +156,11 @@ export class ProfileTree {
         return parent;
     }
 
-    public getModList() {
-        const modIds: number[] = [];
+    public getModList(mainList: ModList): ModList {
+        const modList = new ModList();
         const traverse = (node: ProfileTreeItem) => {
             if (node.type === ProfileTreeType.ITEM) {
-                modIds.push(node.id);
+                modList.Mods.push(mainList.get(node.id).clone());
             } else {
                 for (const child of node.children) {
                     traverse(child);
@@ -157,7 +168,7 @@ export class ProfileTree {
             }
         };
         traverse(this.root);
-        return modIds;
+        return modList;
     }
 
     public static fromJson(json_str: string): ProfileTree {
@@ -173,9 +184,9 @@ export class ProfileTree {
         const profile = {
             "version": this.version,
             "name": this.name,
-            "root": this.root.toJson()
+            "root": this.root.toJsonObject()
         }
-        return JSON.stringify(profile);
+        return JSON.stringify(profile, null, 4);
     }
 
 }
@@ -209,14 +220,13 @@ export class ProfileTreeItem {
         return item;
     }
 
-    public toJson() {
-        const item = {
+    public toJsonObject() {
+        return {
             "id": this.id,
             "type": this.type,
             "name": this.name,
-            "children": this.children.map(m => m.toJson())
-        }
-        return item;
+            "children": this.children.map(m => m.toJsonObject())
+        };
     }
 }
 

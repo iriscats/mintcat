@@ -1,5 +1,5 @@
 import React from 'react';
-import {Form, Modal, Select, Tabs} from 'antd';
+import {Form, message, Modal, Select, Tabs} from 'antd';
 import TextArea from "antd/es/input/TextArea";
 import {FolderAddOutlined} from "@ant-design/icons";
 import {ModListPageContext} from "../AppContext.ts";
@@ -53,7 +53,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 
     public setValue(groupId: number = 0, url: string = undefined) {
-        let tabActiveKey = AddModType.MODIO;
+        let tabActiveKey = AddModType.LOCAL;
         switch (groupId) {
             case ProfileTreeGroupType.MODIO:
                 tabActiveKey = AddModType.MODIO;
@@ -93,7 +93,6 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 
     private async clearData() {
-        console.log("clear data");
         this.modioFormRef.current?.resetFields();
         this.localFormRef.current?.resetFields();
         this.modioFormRef.current?.setFieldsValue({
@@ -111,20 +110,38 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     private async handleOk() {
         this.setState({
             loading: true
-        })
-        if (this.state.tabActiveKey === AddModType.MODIO) {
-            const links = this.state.url.split("\n");
-            for (const link of links) {
-                await this.context.addModFromUrl(link, this.state.groupId);
+        });
+        try {
+            if (!this.state.url) {
+                message.error(t("Mod Link is Empty"));
+                return;
             }
-        } else {
-            await this.context.addModFromPath(this.state.url, this.state.groupId);
+
+            let success = false;
+            if (this.state.tabActiveKey === AddModType.MODIO) {
+                const links = this.state.url.split("\n");
+                for (const link of links) {
+                    success = await this.context.addModFromUrl(link, this.state.groupId);
+                    if (!success) {
+                        break;
+                    }
+                }
+            } else {
+                success = await this.context.addModFromPath(this.state.url, this.state.groupId);
+            }
+
+            if (success) {
+                await this.clearData();
+                this.callback?.call(this);
+            }
+
+        } catch (e) {
+            message.error(t("Add Mod Error") + e);
+        } finally {
+            this.setState({
+                loading: false
+            })
         }
-        await this.clearData();
-        this.callback?.call(this);
-        this.setState({
-            loading: false
-        })
     }
 
     private async handleCancel() {
@@ -200,6 +217,28 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                       items={
                           [
                               {
+                                  key: AddModType.LOCAL,
+                                  label: t("Local"),
+                                  children: <>
+                                      <Form ref={this.localFormRef}
+                                            layout="vertical"
+                                            disabled={this.state.loading}
+                                            initialValues={{
+                                                path: this.state.url,
+                                                groupId: this.state.groupId
+                                            }}
+                                      >
+                                          <Form.Item name="path" label={t("Path")} rules={[{required: true}]}>
+                                              <Search enterButton={<FolderAddOutlined/>}
+                                                      onSearch={this.onSelectPathClick}/>
+                                          </Form.Item>
+                                          <Form.Item name="groupId" label={t("Group")} rules={[{required: true}]}>
+                                              <Select options={this.state.groupOptions}/>
+                                          </Form.Item>
+                                      </Form>
+                                  </>,
+                              },
+                              {
                                   key: AddModType.MODIO,
                                   label: 'mod.io',
                                   children: <>
@@ -228,28 +267,6 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                                                      label={t("Group")}
                                                      rules={[{required: true}]}
                                           >
-                                              <Select options={this.state.groupOptions}/>
-                                          </Form.Item>
-                                      </Form>
-                                  </>,
-                              },
-                              {
-                                  key: AddModType.LOCAL,
-                                  label: t("Local"),
-                                  children: <>
-                                      <Form ref={this.localFormRef}
-                                            layout="vertical"
-                                            disabled={this.state.loading}
-                                            initialValues={{
-                                                path: this.state.url,
-                                                groupId: this.state.groupId
-                                            }}
-                                      >
-                                          <Form.Item name="path" label={t("Path")} rules={[{required: true}]}>
-                                              <Search enterButton={<FolderAddOutlined/>}
-                                                      onSearch={this.onSelectPathClick}/>
-                                          </Form.Item>
-                                          <Form.Item name="groupId" label={t("Group")} rules={[{required: true}]}>
                                               <Select options={this.state.groupOptions}/>
                                           </Form.Item>
                                       </Form>

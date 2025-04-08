@@ -72,7 +72,9 @@ class SettingPage extends React.Component<any, any> {
             directory: true
         });
         if (result) {
+            this.context.setting.cachePath = result;
             await this.context.saveSettings();
+            this.forceUpdate();
         }
     }
 
@@ -81,6 +83,7 @@ class SettingPage extends React.Component<any, any> {
         if (path) {
             this.context.setting.drgPakPath = path;
             await this.context.saveSettings();
+            this.forceUpdate();
         } else {
             message.error(t("Can't find FSD-WindowsNoEditor.pak"));
         }
@@ -130,6 +133,7 @@ class SettingPage extends React.Component<any, any> {
                 });
                 this.context.setting.drgPakPath = result;
                 await this.context.saveSettings();
+                this.forceUpdate();
             } else {
                 message.error(t("Please select FSD-WindowsNoEditor.pak"));
             }

@@ -1,24 +1,22 @@
 import {message} from "antd";
+import {t} from "i18next";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import {ModListItem} from "../vm/config/ModList.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {CacheApi} from "./CacheApi.ts";
 import {UserInfo} from "../vm/modio/UserInfo.ts";
-import {t} from "i18next";
+import {EventInfo} from "../vm/modio/EventInfo.ts";
 
-const PROXY_MODIO_API_URL = "https://api.v1st.net/https://api.mod.io";
+const PROXY_API_URL = "https://api.v1st.net/";
 const MODIO_API_URL = "https://api.mod.io";
 const MODIO_GAME_ID = 2475;
 const IS_PROXY = true;
 
 export class ModioApi {
 
-    private constructor() {
-    }
-
     private static async getHost() {
         if (IS_PROXY) {
-            return PROXY_MODIO_API_URL;
+            return PROXY_API_URL + MODIO_API_URL;
         } else {
             return MODIO_API_URL;
         }
@@ -33,17 +31,6 @@ export class ModioApi {
         }
     }
 
-    private static async buildRequestUrl(api: string) {
-        const host = await ModioApi.getHost();
-        const key = await ModioApi.getApiKey();
-        if (key) {
-            return `${host}/v1/games/${MODIO_GAME_ID}/${api}?api_key=${key}`;
-        } else {
-            return `${host}/v1/games/${MODIO_GAME_ID}/${api}`;
-        }
-    }
-
-
     private static async getHeaders() {
         const vm = await AppViewModel.getInstance();
         return {
@@ -51,6 +38,14 @@ export class ModioApi {
         }
     }
 
+    private static async getRequest(path: string) {
+        const host = await ModioApi.getHost();
+        const url = host + path;
+        const resp = await fetch(url, {
+            headers: await ModioApi.getHeaders(),
+        });
+        return await resp.json();
+    }
 
     private static parseModLinks(link: string) {
         let regex = new RegExp('^https://mod\.io/g/drg/m/([^/#]+)(?:#(\\d+)(?:/(\\d+))?)?$');
@@ -81,57 +76,71 @@ export class ModioApi {
 
 
     public static async getModInfoByName(nameId: string): Promise<ModInfo> {
-        const key = await ModioApi.getApiKey();
-        const host = await ModioApi.getHost();
-        const modRequestUrl = `${host}/v1/games/${MODIO_GAME_ID}/mods?name_id=${nameId}`;
-
         try {
-            const resp = await fetch(modRequestUrl, {
-                headers: await ModioApi.getHeaders(),
-            });
-            const data = await resp.json();
-            console.log(data);
+            const path = `/v1/games/${MODIO_GAME_ID}/mods?name_id=${nameId}`;
+            const data = await ModioApi.getRequest(path);
             return data["data"][0];
         } catch (e) {
-            console.error(e);
             message.error(t("Fetch Mod Info Error") + e);
         }
     }
 
     public static async getModInfoById(modId: string): Promise<ModInfo> {
-        const key = await ModioApi.getApiKey();
-        const host = await ModioApi.getHost();
-        const modRequestUrl = `${host}/v1/games/${MODIO_GAME_ID}/mods/${modId}`;
-
         try {
-            const resp = await fetch(modRequestUrl, {
-                headers: await ModioApi.getHeaders(),
-            });
-            return await resp.json();
+            const path = `/v1/games/${MODIO_GAME_ID}/mods/${modId}`;
+            const data = await ModioApi.getRequest(path);
+            return data as ModInfo;
         } catch (e) {
-            console.error(e);
             message.error(t("Fetch Mod Info Error") + e);
         }
     }
 
-    public static async getModList(name: string = undefined): Promise<ModInfo[]> {
+    public static async getModList(pageNo: number = 0, pageSize: number = 20, name: string = undefined): Promise<ModInfo[]> {
         try {
-            let url = await this.buildRequestUrl("mods");
+            let path = "";
             if (name) {
-                url = `${url}?name-lk=*${name}*`;
+                path = `/v1/games/${MODIO_GAME_ID}/mods?name-lk=*${name}*`;
             } else {
-                url = `${url}?_limit=20`;
+                path = `/v1/games/${MODIO_GAME_ID}/mods?_limit=${pageSize}&_offset=${pageSize * pageNo}`;
             }
-            const resp = await fetch(url, {
-                headers: await ModioApi.getHeaders(),
-            });
-            const data = await resp.json();
+            const data = await ModioApi.getRequest(path);
             return data.data as ModInfo[];
         } catch (e) {
             message.error(t("Fetch Mod Info Error"));
             return [];
         }
     }
+
+    public static async getUserInfo() {
+        try {
+            const path = "/v1/me";
+            const data = await ModioApi.getRequest(path);
+            return data as UserInfo;
+        } catch (e) {
+            message.error(t("Fetch UserInfo Error") + e);
+        }
+    }
+
+    public static async getDependencies(modId: number) {
+        try {
+            const path = `/v1/games/${MODIO_GAME_ID}/mods/${modId}/dependencies`;
+            const data = await ModioApi.getRequest(path);
+            return data.data as ModInfo[];
+        } catch (e) {
+            message.error(t("Fetch Dependence Error") + e);
+        }
+    }
+
+    public static async getEvents(dateAdded: number, modIds: string) {
+        try {
+            const path = `/v1/games/${MODIO_GAME_ID}/mods/events?mod_id-in=${modIds}&date_added-min=${dateAdded}&event_type-in=MODFILE_CHANGED,MOD_UNAVAILABLE,MOD_DELETED`;
+            const data = await ModioApi.getRequest(path);
+            return data.data as EventInfo[];
+        } catch (e) {
+            message.error(t("Fetch Events Error") + e);
+        }
+    }
+
 
     public static async downloadModFile(modInfo: ModListItem,
                                         onProgress?: (loaded: number, total: number) => void) {
@@ -184,24 +193,5 @@ export class ModioApi {
         modInfo.downloadProgress = 100;
         return modInfo;
     }
-
-    public static async getModEvents() {
-        `/games/${MODIO_GAME_ID}/mods/events`
-    }
-
-    public static async getUserInfo() {
-        try {
-            const host = await ModioApi.getHost();
-            const url = `${host}/v1/me`;
-            const resp = await fetch(url, {
-                headers: await ModioApi.getHeaders(),
-            });
-            const data = await resp.json();
-            return data as UserInfo;
-        } catch (e) {
-            message.error(t("Fetch UserInfo Error"));
-        }
-    }
-
 
 }

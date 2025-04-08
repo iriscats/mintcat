@@ -1,6 +1,8 @@
+import {path} from "@tauri-apps/api";
 import {ModList, ModListItem} from "../config/ModList.ts";
 import {ProfileList, ProfileTree, ProfileTreeType} from "../config/ProfileList.ts";
-import {path} from "@tauri-apps/api";
+import {t} from "i18next";
+
 
 export class ModConfigConverter {
 
@@ -11,9 +13,9 @@ export class ModConfigConverter {
     public createDefault() {
         this.modList = new ModList();
         this.profileList = new ProfileList();
-        this.profileList.Profiles.push("default");
+        this.profileList.Profiles.push(t("Default"));
         this.profileTreeList = [];
-        this.profileTreeList.push(new ProfileTree("default"));
+        this.profileTreeList.push(new ProfileTree(t("Default")));
     }
 
     private async convertModListDataV01ToV02(data: any) {

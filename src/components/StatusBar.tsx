@@ -1,6 +1,7 @@
 import React from "react";
 import {Flex, Progress, ProgressProps} from "antd";
 import {listen} from "@tauri-apps/api/event";
+import {t} from "i18next";
 
 
 const ProgressColors: ProgressProps['strokeColor'] = {
@@ -21,7 +22,7 @@ class StatusBar extends React.Component<any, StatusBarState> {
         super(props, state);
 
         this.state = {
-            message: "Ready",
+            message: t("Ready"),
             percent: 0,
         }
 

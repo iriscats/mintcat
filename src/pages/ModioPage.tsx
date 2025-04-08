@@ -1,13 +1,14 @@
 import React from 'react';
 import {t} from "i18next";
-import {Avatar, Button, Dropdown, Flex, List, MenuProps, message, Space} from 'antd';
-import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
+import {Avatar, Button, Dropdown, Flex, List, MenuProps, message, Skeleton, Space} from 'antd';
+import {DownloadOutlined, HomeOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import {TranslateApi} from "../apis/TranslateApi.ts";
+import {CacheApi} from "../apis/CacheApi.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -19,38 +20,49 @@ const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
 
 const contextMenus: MenuProps['items'] = [
     {label: t("Translate Into Current Language"), key: 'translate'},
+    {label: t("Restore"), key: 'restore'},
 ];
 
 interface ModioPageState {
     dataSource?: ModInfo[],
     loading: boolean,
+    disable: boolean,
+    hasMore: boolean,
 }
 
 class ModioPage extends React.Component<any, ModioPageState> {
 
     private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
+    private pageSize: number = 50;
+    private pageNo: number = 0;
 
     public constructor(props: any, context: ModioPageState) {
         super(props, context);
 
         this.state = {
             dataSource: [],
-            loading: true,
+            loading: false,
+            disable: true,
+            hasMore: false
         }
 
         this.onAddClick = this.onAddClick.bind(this);
         this.onSearch = this.onSearch.bind(this);
         this.onMenuClick = this.onMenuClick.bind(this);
+        this.loadModList = this.loadModList.bind(this);
     }
 
     private async onSearch(value: string) {
         this.setState({
             loading: true,
+            disable: true,
         });
-        const list = await ModioApi.getModList(value);
+        const dataSource = await ModioApi.getModList(this.pageNo, this.pageSize, value);
         this.setState({
-            dataSource: list,
+            dataSource: dataSource,
             loading: false,
+            disable: false,
+            hasMore: dataSource.length === this.pageSize,
         });
     }
 
@@ -67,8 +79,19 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 let foundItem = this.state.dataSource.find((mod) => {
                     return mod.name === item.name;
                 });
-                foundItem.name = await TranslateApi.translate(item.name);
-                foundItem.summary = await TranslateApi.translate(item.summary);
+                foundItem.name_trans = await TranslateApi.translate(item.name);
+                foundItem.summary_trans = await TranslateApi.translate(item.summary);
+                this.setState({
+                    dataSource: this.state.dataSource,
+                })
+            }
+                break;
+            case 'restore': {
+                let foundItem = this.state.dataSource.find((mod) => {
+                    return mod.name === item.name;
+                });
+                foundItem.name_trans = undefined;
+                foundItem.summary_trans = undefined;
                 this.setState({
                     dataSource: this.state.dataSource,
                 })
@@ -79,15 +102,36 @@ class ModioPage extends React.Component<any, ModioPageState> {
         }
     }
 
-    componentDidMount() {
-        if (this.state.dataSource.length == 0) {
-            ModioApi.getModList().then((list: any[]) => {
-                this.setState({
-                    dataSource: list,
-                    loading: false,
-                })
-            });
+    private async loadModList() {
+        if (this.state.loading) {
+            return;
         }
+        this.setState({
+            loading: true,
+            disable: true,
+        });
+        const list = await ModioApi.getModList(this.pageNo, this.pageSize);
+        this.setState({
+            loading: false,
+        });
+        const dataSource = this.state.dataSource;
+        for (let item of list) {
+            item.logo.thumb_320x180 = await CacheApi.cacheImage(item.logo.thumb_320x180);
+            item.submitted_by.avatar.thumb_50x50 = await CacheApi.cacheImage(item.submitted_by.avatar.thumb_50x50);
+            dataSource.push(item);
+            this.setState({
+                dataSource: dataSource,
+            })
+        }
+        this.setState({
+            disable: false,
+            hasMore: dataSource.length === this.pageSize,
+        });
+    }
+
+    componentDidMount() {
+        this.loadModList().then(_ => {
+        })
     }
 
     render() {
@@ -103,15 +147,33 @@ class ModioPage extends React.Component<any, ModioPageState> {
                 <AddModDialog ref={this.addModDialogRef}/>
 
                 <Flex vertical={true}>
-                    <Search placeholder={t("Search on mod.io")} onSearch={this.onSearch}/>
+                    <Flex>
+                        <Button type={"text"}
+                                icon={<HomeOutlined/>}
+                                disabled={this.state.disable}
+                                onClick={async () => {
+                                    this.pageNo = 0;
+                                    await this.onSearch("");
+                                }}/>
+                        <Search placeholder={t("Search on mod.io")}
+                                onSearch={this.onSearch}
+                                disabled={this.state.disable}
+                        />
+                    </Flex>
                     <InfiniteScroll
                         scrollableTarget="scrollableDiv"
                         dataLength={this.state.dataSource?.length}
-                        hasMore={true}
-                        loader={null}
+                        hasMore={this.state.hasMore}
+                        loader={
+                            this.state.hasMore &&
+                            <Skeleton avatar
+                                      paragraph={{rows: 2}}
+                                      />
+                        }
                         endMessage={null}
-                        next={() => {
-                            console.log('next');
+                        next={async () => {
+                            this.pageNo++;
+                            await this.loadModList();
                         }}
                     >
                         <List
@@ -135,27 +197,30 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                             <IconText icon={DownloadOutlined}
                                                       text={item.stats.downloads_total.toString()}/>,
                                             <IconText icon={LikeOutlined}
-                                                      text={item.stats.subscribers_total.toString()}/>,
-
+                                                      text={item.stats.subscribers_total.toString()}/>
                                         ]}
                                         extra={
                                             <img
                                                 width={180}
                                                 style={{border: '1px solid #eee'}}
                                                 alt="logo"
-                                                src={"https://api.v1st.net/" + item.logo.thumb_320x180}
+                                                src={item.logo.thumb_320x180}
                                             />
                                         }
                                     >
                                         <List.Item.Meta
                                             avatar={
                                                 <Avatar style={{width: '60px', height: '60px', marginTop: '4px'}}
-                                                        src={"https://api.v1st.net/" + item.submitted_by.avatar.thumb_50x50}
+                                                        src={item.submitted_by.avatar.thumb_50x50}
                                                 />
                                             }
                                             title={
                                                 <>
-                                                    <a href={item.name_id}>{item.name}</a>
+                                                    <a href={item.name_id}>
+                                                        {
+                                                            item.name_trans ? item.name_trans : item.name
+                                                        }
+                                                    </a>
                                                     <Button type={"text"}
                                                             onClick={() => {
                                                                 this.onAddClick(item.profile_url)
@@ -164,7 +229,9 @@ class ModioPage extends React.Component<any, ModioPageState> {
                                                     </Button>
                                                 </>
                                             }
-                                            description={item.summary}
+                                            description={
+                                                item.summary_trans ? item.summary_trans : item.summary
+                                            }
                                         />
                                     </List.Item>
                                 </Dropdown>
