@@ -9,6 +9,3 @@ import {InitLog} from "./apis/LogApi.ts";
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <App/>
 );
-
-
-

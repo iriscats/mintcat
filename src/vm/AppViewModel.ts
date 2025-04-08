@@ -12,7 +12,7 @@ import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {MOD_INVALID_ID} from "./config/ModList.ts";
-import {emit} from "@tauri-apps/api/event";
+import {emit, once} from "@tauri-apps/api/event";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -51,7 +51,7 @@ export class AppViewModel {
         return true;
     }
 
-    public async installMods() {
+    public async installMods(callback = undefined) {
         if (!await this.checkGamePath()) {
             return;
         }
@@ -87,9 +87,21 @@ export class AppViewModel {
                 });
             }
         }
-        await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
 
-        await emit("status-bar-log", t("Installation Finish"));
+        await IntegrateApi.install(this.setting.drgPakPath, JSON.stringify(installModList));
+        await once<string>('install-success', async () => {
+            await emit("status-bar-log", t("Installation Finish"));
+            callback?.call(this);
+        });
+    }
+
+    public async uninstall() {
+        if (!await this.checkGamePath()) {
+            return;
+        }
+        if (await IntegrateApi.uninstall(this.setting.drgPakPath)) {
+            message.success(t("Uninstall Success"));
+        }
     }
 
     private async checkOauth(): Promise<boolean> {

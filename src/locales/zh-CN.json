@@ -93,5 +93,6 @@
   "Update Failed": "更新失败",
   "Installation Finish": "安装完成",
   "Uninstall Mods": "卸载 Mod",
-  "Uninstall Success": "卸载成功"
+  "Uninstall Success": "卸载成功",
+  "Profile Name Cannot Be Empty": "配置名称不能为空"
 }

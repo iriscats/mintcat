@@ -23,15 +23,17 @@ fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
                 integrator.install(app, mods).unwrap();
             }
             Err(_) => {
-                app.emit("status-bar-log", "Failed to load Mods ...").unwrap();
+                app.emit("status-bar-log", "Failed to load Mods ...")
+                    .unwrap();
             }
         }
     });
 }
 
 #[tauri::command]
-fn uninstall_mods(game_path: String) {
+fn uninstall_mods(game_path: String) -> bool {
     PakIntegrator::uninstall(game_path).unwrap();
+    true
 }
 
 #[tauri::command]

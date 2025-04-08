@@ -126,8 +126,9 @@ export class ModList {
     }
 
     private makeId() {
-        const rand = Math.floor(Math.random() * 9000) + 1000;
-        return parseInt(Date.now().toString() + rand.toString());
+        const hex = crypto.randomUUID().replace(/-/g, '');
+        const bigNum = BigInt('0x' + hex);
+        return parseInt(bigNum.toString().padStart(39, '0').substring(0, 10));
     }
 
     public add(modItem: ModListItem): ModListItem {
