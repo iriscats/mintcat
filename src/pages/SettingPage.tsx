@@ -114,7 +114,13 @@ class SettingPage extends React.Component<any, any> {
 
     private async onClearCacheClick() {
         if (await CacheApi.cleanOldCacheFiles()) {
-            message.success(t("Clean cache success"));
+            message.success(t("Clean Cache Success"));
+        }
+    }
+
+    private async onUninstallClick() {
+        if (await IntegrateApi.uninstall(this.context.setting.drgPakPath)) {
+            message.success(t("Uninstall Success"));
         }
     }
 
@@ -204,6 +210,13 @@ class SettingPage extends React.Component<any, any> {
                                     {t("Open")}
                                 </Button>
                             </Flex>
+                        </Form.Item>
+                        <Form.Item label={t("Uninstall Mods")}>
+                            <Button type="dashed"
+                                    {...ButtonLayout}
+                                    onClick={this.onUninstallClick}>
+                                {t("Delete")}
+                            </Button>
                         </Form.Item>
                         <Form.Item label={t("Old Version Mint Cache")}>
                             <Button type="dashed"

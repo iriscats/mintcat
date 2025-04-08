@@ -71,11 +71,11 @@ export class CacheApi {
             const cachePath = await cacheDir();
             const mintCachePath = await path.join(cachePath, "drg-mod-integration", "cache");
             if (await exists(mintCachePath)) {
-                await remove(mintCachePath);
+                await remove(mintCachePath, {recursive: true});
             }
             const mintcatCachePath = await path.join(cachePath, "mint", "cache");
             if (await exists(mintcatCachePath)) {
-                await remove(mintcatCachePath);
+                await remove(mintcatCachePath, {recursive: true});
             }
             return true;
         } catch (error) {

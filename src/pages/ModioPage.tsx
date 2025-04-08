@@ -9,6 +9,7 @@ import {ModInfo} from "../vm/modio/ModInfo.ts";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import {TranslateApi} from "../apis/TranslateApi.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
+import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -67,7 +68,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
     }
 
     private onAddClick(url: string) {
-        this.addModDialogRef.current?.setValue(0, url)
+        this.addModDialogRef.current?.setValue(ProfileTreeGroupType.MODIO, url)
             .setCallback(async () => {
                 await message.info(t("Add Successfully"));
             }).show();

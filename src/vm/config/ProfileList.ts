@@ -96,7 +96,8 @@ export class ProfileTree {
     }
 
     private makeId() {
-        return 90000 + this.groupNameMap.size;
+        const rand = Math.floor(Math.random() * 9000) + 1000;
+        return parseInt(Date.now().toString() + rand.toString());
     }
 
     private findNode(items: ProfileTreeItem[], targetId: number): ProfileTreeItem | undefined {

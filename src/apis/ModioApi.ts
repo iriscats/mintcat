@@ -3,9 +3,9 @@ import {t} from "i18next";
 import {ModInfo} from "../vm/modio/ModInfo.ts";
 import {ModListItem} from "../vm/config/ModList.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
-import {CacheApi} from "./CacheApi.ts";
 import {UserInfo} from "../vm/modio/UserInfo.ts";
 import {EventInfo} from "../vm/modio/EventInfo.ts";
+import {CacheApi} from "./CacheApi.ts";
 
 const PROXY_API_URL = "https://api.v1st.net/";
 const MODIO_API_URL = "https://api.mod.io";

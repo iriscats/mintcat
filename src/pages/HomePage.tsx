@@ -481,7 +481,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                             color: '#888',
                             marginRight: '20px',
                         }}>
-                          {this.context.ModList.Mods.filter((value) => value.enabled).length} / {this.context.ModList.Mods.length}
+                          {this.context.ActiveProfile.getModList(this.context.ModList).Mods.filter((value) => value.enabled).length} / {this.context.ActiveProfile.getModList(this.context.ModList).Mods.length}
                         </span>
                     </Flex>
                 </Flex>

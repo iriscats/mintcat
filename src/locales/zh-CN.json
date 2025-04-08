@@ -89,5 +89,9 @@
   "Mod Link is Empty": "Mod 链接为空",
   "Mod Path No Exists": "Mod 路径不存在",
   "Can't Remove Default Group": "无法删除默认分组",
-  "User Info": "用户信息"
+  "User Info": "用户信息",
+  "Update Failed": "更新失败",
+  "Installation Finish": "安装完成",
+  "Uninstall Mods": "卸载 Mod",
+  "Uninstall Success": "卸载成功"
 }

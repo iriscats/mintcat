@@ -251,8 +251,8 @@ export class HomeViewModel {
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
     }
 
-    public async addGroup(groupId: number, groupName: string): Promise<void> {
-        this.ActiveProfile.addGroup(groupName, groupId);
+    public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
+        this.ActiveProfile.addGroup(groupName, parentGroupId);
 
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
         this.updateTreeViewCallback?.call(this);
@@ -272,11 +272,13 @@ export class HomeViewModel {
 
     public async updateMod(mod: ModListItem) {
         const resp = await ModioApi.getModInfoByLink(mod.url);
-        let newItem = new ModListItem(resp);
-        if (resp) {
-            this.ModList.update(mod, newItem);
-            this.updateTreeViewCallback?.call(this);
+        if (!resp) {
+            throw new Error;
         }
+
+        let newItem = new ModListItem(resp);
+        this.ModList.update(mod, newItem);
+        this.updateTreeViewCallback?.call(this);
 
         await emit("status-bar-log", t("Update Mod") + mod.displayName);
         newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
@@ -289,7 +291,6 @@ export class HomeViewModel {
         this.ModList.update(mod, newItem);
         await ConfigApi.saveModListData(this.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
-        console.log(this.ModList);
     }
 
     public async checkLocalMod(modItem: ModListItem) {
@@ -302,24 +303,28 @@ export class HomeViewModel {
     }
 
     public async updateModList(isRefresh = false): Promise<void> {
-        const subModList = this.ActiveProfile.getModList(this.ModList);
-        for (const mod of subModList.Mods) {
-            if (isRefresh) {
-                if (mod.url.startsWith("http")) {
-                    await this.updateMod(mod);
+        try {
+            const subModList = this.ActiveProfile.getModList(this.ModList);
+            for (const mod of subModList.Mods) {
+                if (isRefresh) {
+                    if (mod.url.startsWith("http")) {
+                        await this.updateMod(mod);
+                    } else {
+                        await this.checkLocalMod(mod);
+                    }
                 } else {
-                    await this.checkLocalMod(mod);
-                }
-            } else {
-                if (mod.modId === MOD_INVALID_ID && mod.url.startsWith("http")) {
-                    await this.updateMod(mod);
+                    if (mod.modId === MOD_INVALID_ID && mod.url.startsWith("http")) {
+                        await this.updateMod(mod);
+                    }
                 }
             }
-        }
 
-        if (isRefresh) {
-            this.ActiveProfile.lastUpdate = new Date().getTime();
-            await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+            if (isRefresh) {
+                this.ActiveProfile.lastUpdate = new Date().getTime();
+                await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+            }
+        } catch (_) {
+            await emit("status-bar-log", t("Update Failed"));
         }
     }
 
