@@ -53,6 +53,7 @@ class SettingPage extends React.Component<any, any> {
         this.onOpenCacheDirClick = this.onOpenCacheDirClick.bind(this);
         this.onSelectCacheDirClick = this.onSelectCacheDirClick.bind(this);
         this.onFindGamePathClick = this.onFindGamePathClick.bind(this);
+        this.onUninstallClick = this.onUninstallClick.bind(this);
     }
 
     private async onOpenConfigDirClick() {
@@ -119,9 +120,7 @@ class SettingPage extends React.Component<any, any> {
     }
 
     private async onUninstallClick() {
-        if (await IntegrateApi.uninstall(this.context.setting.drgPakPath)) {
-            message.success(t("Uninstall Success"));
-        }
+        await this.context.uninstall();
     }
 
     private async onGamePathClick() {

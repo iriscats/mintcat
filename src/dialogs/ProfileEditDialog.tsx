@@ -1,6 +1,6 @@
 import React from "react";
 import {t} from "i18next";
-import {Button, Card, Flex, Input, List, Modal} from "antd";
+import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ModListPageContext} from "../AppContext.ts";
 import {ProfileTree} from "../vm/config/ProfileList.ts";
@@ -64,8 +64,15 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleAdd() {
-        await this.context.addProfile(this.state.newProfileName,
+        if (this.state.newProfileName === "") {
+            message.error(t("Profile Name Cannot Be Empty"));
+            return;
+        }
+
+        await this.context.addProfile(
+            this.state.newProfileName,
             new ProfileTree(this.state.newProfileName).toJson());
+
         this.forceUpdate();
         this.setState({
             newProfileName: ""

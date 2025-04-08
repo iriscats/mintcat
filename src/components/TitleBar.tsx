@@ -11,7 +11,6 @@ import {
 import packageJson from '../../package.json';
 import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import {once} from "@tauri-apps/api/event";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {MessageBox} from "./MessageBox.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
@@ -40,8 +39,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
     }
 
     private async onLaunchGameClick() {
-        await this.context.installMods();
-        await once<string>('install-success', async () => {
+        await this.context.installMods(async () => {
             await IntegrateApi.launchGame();
         });
     }
