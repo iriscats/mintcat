@@ -11,6 +11,7 @@ import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
+import {BasePage} from "./IBasePage.ts";
 
 const SettingLayout = {
     labelCol: {span: 7},
@@ -22,7 +23,7 @@ const ButtonLayout = {
     style: {width: 468},
 };
 
-class SettingPage extends React.Component<any, any> {
+class SettingPage extends BasePage<any, any> {
 
     private languageOptions = [
         {value: 'en', label: t("English")},
@@ -146,6 +147,8 @@ class SettingPage extends React.Component<any, any> {
     }
 
     componentDidMount(): void {
+        this.hookWindowResized();
+
         this.appSettingFormRef.current?.setFieldsValue({
             language: this.context.setting.language,
             theme: this.context.setting.guiTheme,

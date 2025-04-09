@@ -10,6 +10,7 @@ import AddModDialog from "../dialogs/AddModDialog.tsx";
 import {TranslateApi} from "../apis/TranslateApi.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
 import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
+import {BasePage} from "./IBasePage.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -31,7 +32,7 @@ interface ModioPageState {
     hasMore: boolean,
 }
 
-class ModioPage extends React.Component<any, ModioPageState> {
+class ModioPage extends BasePage<any, ModioPageState> {
 
     private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
     private pageSize: number = 50;
@@ -131,6 +132,8 @@ class ModioPage extends React.Component<any, ModioPageState> {
     }
 
     componentDidMount() {
+        this.hookWindowResized();
+
         this.loadModList().then(_ => {
         })
     }
@@ -169,7 +172,7 @@ class ModioPage extends React.Component<any, ModioPageState> {
                             this.state.hasMore &&
                             <Skeleton avatar
                                       paragraph={{rows: 2}}
-                                      />
+                            />
                         }
                         endMessage={null}
                         next={async () => {

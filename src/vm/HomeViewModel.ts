@@ -280,9 +280,9 @@ export class HomeViewModel {
         this.ModList.update(mod, newItem);
         this.updateTreeViewCallback?.call(this);
 
-        await emit("status-bar-log", t("Update Mod") + mod.displayName);
+        await emit("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
         newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
-            await emit("status-bar-log", t("Downloading") + `${mod.displayName} (${loaded} / ${total})`);
+            await emit("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
             newItem.downloadProgress = (loaded / total) * 100;
             this.ModList.update(mod, newItem);
             this.updateTreeViewCallback?.call(this);

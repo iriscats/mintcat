@@ -15,12 +15,13 @@ fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
                 app.emit("status-bar-log", "Start Install...").unwrap();
                 app.emit("status-bar-percent", 5).unwrap();
 
-                let mods: Vec<mod_info::ModInfo> = serde_json::from_str(&mod_list_json).unwrap();
+                let mut mods: Vec<mod_info::ModInfo> =
+                    serde_json::from_str(&mod_list_json).unwrap();
 
                 app.emit("status-bar-log", "Load Mods ...").unwrap();
                 app.emit("status-bar-percent", 10).unwrap();
 
-                integrator.install(app, mods).unwrap();
+                integrator.install(app, &mut mods).unwrap();
             }
             Err(_) => {
                 app.emit("status-bar-log", "Failed to load Mods ...")

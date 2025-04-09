@@ -94,5 +94,6 @@
   "Installation Finish": "安装完成",
   "Uninstall Mods": "卸载 Mod",
   "Uninstall Success": "卸载成功",
-  "Profile Name Cannot Be Empty": "配置名称不能为空"
+  "Profile Name Cannot Be Empty": "配置名称不能为空",
+  "Username": "用户名"
 }

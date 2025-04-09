@@ -168,13 +168,17 @@ export class AppViewModel {
     }
 
     public async loadSettings() {
-        const settingData = await ConfigApi.loadSettings();
-        if (settingData !== undefined) {
-            this.converter.setting = Setting.fromJson(settingData);
-        } else {
-            this.converter.setting = new Setting();
-            this.converter.setting.cachePath = await appCacheDir();
-            this.converter.setting.configPath = await appConfigDir();
+        try {
+            const settingData = await ConfigApi.loadSettings();
+            if (settingData !== undefined) {
+                this.converter.setting = Setting.fromJson(settingData);
+            } else {
+                this.converter.setting = new Setting();
+                this.converter.setting.cachePath = await appCacheDir();
+                this.converter.setting.configPath = await appConfigDir();
+            }
+        } catch (err) {
+            message.error(t("Load Settings Failed"));
         }
     }
 

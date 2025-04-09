@@ -8,6 +8,7 @@ export class SettingConverter {
     private async convertV00ToV02(config: string) {
         this.setting = Setting.fromJson(config);
         const data = JSON.parse(config);
+        this.setting.version = "0.2.0";
         this.setting.modioOAuth = data["provider_parameters"]["modio"]["oauth"];
         this.setting.cachePath = await appCacheDir();
         this.setting.configPath = await appConfigDir();
