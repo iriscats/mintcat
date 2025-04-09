@@ -19,6 +19,7 @@ import {CacheApi} from "../apis/CacheApi.ts";
 interface TitleBarState {
     profileUrl?: string,
     username: string,
+    modioId: number
 }
 
 class TitleBar extends React.Component<any, TitleBarState> {
@@ -33,6 +34,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
         this.state = {
             profileUrl: "",
             username: "",
+            modioId: 0,
         }
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
@@ -51,6 +53,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
             this.setState({
                 profileUrl: url,
                 username: userInfo.username,
+                modioId: userInfo.id
             })
         }
     }
@@ -127,7 +130,8 @@ class TitleBar extends React.Component<any, TitleBarState> {
                                 await MessageBox.confirm({
                                     title: t("User Info"),
                                     content: <>
-                                        {this.state.username}
+                                        <div>ID: {this.state.modioId}</div>
+                                        <div>{t("Username")}: {this.state.username}</div>
                                     </>
                                 })
                             }}

@@ -162,7 +162,12 @@ export class ProfileTree {
         const modList = new ModList();
         const traverse = (node: ProfileTreeItem) => {
             if (node.type === ProfileTreeType.ITEM) {
-                modList.Mods.push(mainList.get(node.id).clone());
+                const foundId = mainList.get(node.id);
+                if (foundId) {
+                    modList.Mods.push(foundId.clone());
+                } else {
+                    console.log("getModList not found id: " + node.id);
+                }
             } else {
                 for (const child of node.children) {
                     traverse(child);
@@ -174,11 +179,11 @@ export class ProfileTree {
     }
 
     public static fromJson(json_str: string): ProfileTree {
-        const json = JSON.parse(json_str);
+        const jsonObj = JSON.parse(json_str);
         let profile = new ProfileTree("");
-        profile.version = json.version;
-        profile.name = json.name;
-        profile.root = ProfileTreeItem.fromJson(json.root);
+        profile.version = jsonObj.version;
+        profile.name = jsonObj.name;
+        profile.root = ProfileTreeItem.fromJson(jsonObj.root);
         return profile;
     }
 

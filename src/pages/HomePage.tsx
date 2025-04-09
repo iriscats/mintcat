@@ -1,4 +1,5 @@
 import React from "react";
+import {t} from "i18next";
 import {save} from "@tauri-apps/plugin-dialog";
 import {copyFile} from "@tauri-apps/plugin-fs";
 import {
@@ -39,8 +40,7 @@ import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {MessageBox} from "../components/MessageBox.ts";
-import {t} from "i18next";
-import {HomeViewModel} from "../vm/HomeViewModel.ts";
+import {BasePage} from "./IBasePage.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -53,7 +53,7 @@ interface ModListPageState {
     displayMode?: string;
 }
 
-class HomePage extends React.Component<any, ModListPageState> {
+class HomePage extends BasePage<any, ModListPageState> {
 
     declare context: React.ContextType<typeof ModListPageContext>;
     static contextType = ModListPageContext;
@@ -351,7 +351,17 @@ class HomePage extends React.Component<any, ModListPageState> {
         }
     }
 
+    private renderCountLabel() {
+        if (!this.context.ActiveProfile) {
+            return "";
+        }
+        const subModList = this.context.ActiveProfile.getModList(this.context.ModList);
+        const enableCount = subModList.Mods.filter((value) => value.enabled).length;
+        return `${enableCount} / ${subModList.Mods.length}`;
+    }
+
     componentDidMount(): void {
+        this.hookWindowResized();
         this.updateProfileSelect().then(() => {
         });
         this.updateTreeView().then(() => {
@@ -481,7 +491,7 @@ class HomePage extends React.Component<any, ModListPageState> {
                             color: '#888',
                             marginRight: '20px',
                         }}>
-                          {this.context.ActiveProfile.getModList(this.context.ModList).Mods.filter((value) => value.enabled).length} / {this.context.ActiveProfile.getModList(this.context.ModList).Mods.length}
+                          {this.renderCountLabel()}
                         </span>
                     </Flex>
                 </Flex>

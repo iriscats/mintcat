@@ -115,11 +115,24 @@ impl PakIntegrator {
         Ok(())
     }
 
-    pub fn install(mut self, app: AppHandle, mods: Vec<ModInfo>) -> Result<(), Box<dyn Error>> {
-        for mut mod_info in mods.into_iter() {
-            self.process_mod(&mut mod_info)?;
-            app.emit("status-bar-log", format!("Process mod: {}", mod_info.name))
-                .unwrap();
+    pub fn install(
+        mut self,
+        app: AppHandle,
+        mods: &mut Vec<ModInfo>,
+    ) -> Result<(), Box<dyn Error>> {
+        let total_percent = 70.0;
+        let mods_size = mods.len();
+
+        for (current_index, mod_info) in mods.iter_mut().enumerate() {
+            app.emit(
+                "status-bar-log",
+                format!("Start Process Mod: {} ...", mod_info.name),
+            )
+            .unwrap();
+
+            let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
+            app.emit("status-bar-percent", current_percent).unwrap();
+            self.process_mod(mod_info)?;
         }
 
         app.emit("status-bar-log", "Patch Game Pak...").unwrap();
