@@ -5,6 +5,20 @@ export class SettingConverter {
 
     public setting?: Setting;
 
+    public async createDefault() {
+        this.setting = new Setting();
+        this.setting.version = "0.2.0";
+        this.setting.modioOAuth = "";
+        this.setting.drgPakPath = "";
+        this.setting.guiTheme = "Light";
+        this.setting.language = "en";
+        try {
+            this.setting.cachePath = await appCacheDir();
+            this.setting.configPath = await appConfigDir();
+        }catch(err) {
+        }
+    }
+
     private async convertV00ToV02(config: string) {
         this.setting = Setting.fromJson(config);
         const data = JSON.parse(config);

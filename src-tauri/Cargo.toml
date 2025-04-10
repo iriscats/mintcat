@@ -52,6 +52,9 @@ repak = { git = "https://github.com/trumank/repak", features = ["oodle"] }
 unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "patches" }
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+
 
 # patternsleuth = { git = "https://github.com/trumank/patternsleuth", features = ["process-internal", "image-pe"] }
 # proxy_dll = { git = "https://github.com/iriscats/proxy_dll.git", rev = "5930441", version = "0.1.1" }

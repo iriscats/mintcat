@@ -63,7 +63,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
                 tabActiveKey = AddModType.LOCAL;
                 break;
             case 0:
-                groupId = this.state.groupOptions[0].value;
+                groupId = ProfileTreeGroupType.LOCAL;
                 break;
             default:
                 break;

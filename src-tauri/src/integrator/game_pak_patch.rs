@@ -682,7 +682,7 @@ pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(
 pub fn patch_init_actors<C: Read + Seek>(
     asset: &mut Asset<C>,
     init_space_rig: HashSet<String>,
-    init_cave: HashSet<String>
+    init_cave: HashSet<String>,
 ) {
     let init_spacerig_fnames = init_space_rig
         .into_iter()
@@ -732,6 +732,5 @@ pub fn patch_init_actors<C: Read + Seek>(
                 );
             }
         }
-
     }
 }

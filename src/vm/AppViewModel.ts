@@ -173,12 +173,10 @@ export class AppViewModel {
             if (settingData !== undefined) {
                 this.converter.setting = Setting.fromJson(settingData);
             } else {
-                this.converter.setting = new Setting();
-                this.converter.setting.cachePath = await appCacheDir();
-                this.converter.setting.configPath = await appConfigDir();
+                await this.converter.createDefault();
             }
         } catch (err) {
-            message.error(t("Load Settings Failed"));
+            await this.converter.createDefault();
         }
     }
 

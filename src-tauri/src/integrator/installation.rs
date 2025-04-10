@@ -69,5 +69,4 @@ impl DRGInstallation {
             None // TODO
         }
     }
-
 }

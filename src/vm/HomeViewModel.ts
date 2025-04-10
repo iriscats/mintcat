@@ -118,7 +118,7 @@ export class HomeViewModel {
 
         const subModList = this.ActiveProfile.getModList(this.ModList);
         if (subModList.getByUrl(modPath)) {
-            message.error(t("Mod already exists"));
+            message.error(t("Mod Already Exists"));
             return false;
         }
 
@@ -344,7 +344,6 @@ export class HomeViewModel {
                 }
             }
         } catch (err) {
-            message.error("初始化 Mod 列表失败");
             this.converter.createDefault()
         }
     }
