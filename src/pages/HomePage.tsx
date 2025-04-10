@@ -18,7 +18,7 @@ import {
     Typography,
 } from 'antd';
 import {
-    CloseCircleOutlined,
+    CloseCircleOutlined, CopyOutlined,
     EditOutlined,
     PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined,
@@ -41,6 +41,7 @@ import {TreeViewItem} from "../components/TreeViewItem.tsx";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {BasePage} from "./IBasePage.ts";
+import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -113,6 +114,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         this.onMultiEnableClick = this.onMultiEnableClick.bind(this);
         this.onMultiUpdateClick = this.onMultiUpdateClick.bind(this);
         this.onSearchSelectChange = this.onSearchSelectChange.bind(this);
+        this.onCopyListClick = this.onCopyListClick.bind(this);
 
         this.updateProfileSelect = this.updateProfileSelect.bind(this);
         this.updateTreeView = this.updateTreeView.bind(this);
@@ -154,6 +156,18 @@ class HomePage extends BasePage<any, ModListPageState> {
         await this.updateTreeView();
     }
 
+    private async onCopyListClick() {
+        const subModList = this.context.ActiveProfile.getModList(this.context.ModList);
+        let list = "";
+        for (const mod of subModList.Mods) {
+            if (!mod.isLocal) {
+                list += mod.url + "\n";
+            }
+        }
+        await navigator.clipboard.writeText(list);
+        message.success(t("Copied To Clipboard"));
+    }
+
     private async onSearchSelectChange(value: any) {
         this.filterList = [value];
         await this.updateTreeView();
@@ -169,7 +183,8 @@ class HomePage extends BasePage<any, ModListPageState> {
     }
 
     private async onUpdateClick() {
-        await this.context.updateModList(true);
+        //await this.context.updateModList(true);
+        await ModUpdateApi.checkModUpdate();
     }
 
     private onEditProfileClick() {
@@ -386,8 +401,11 @@ class HomePage extends BasePage<any, ModListPageState> {
                             <Tooltip title={t("Add Mod")}>
                                 <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
                             </Tooltip>
-                            <Tooltip title={t("Update All Mods")}>
+                            <Tooltip title={t("Check Mod Updates")}>
                                 <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onUpdateClick}/>
+                            </Tooltip>
+                            <Tooltip title={t("Copy List")}>
+                                <Button icon={<CopyOutlined/>} type={"text"} onClick={this.onCopyListClick}/>
                             </Tooltip>
                         </Typography.Link>
                         {

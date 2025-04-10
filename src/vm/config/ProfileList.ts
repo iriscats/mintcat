@@ -87,8 +87,7 @@ export class ProfileTree {
 
     public constructor(name: string) {
         this.name = name;
-        this.lastUpdate = Date.now();
-
+        this.lastUpdate = 0;
         this.root.add(ProfileTreeGroupType.MODIO, ProfileTreeType.FOLDER, "mod.io");
         this.root.add(ProfileTreeGroupType.LOCAL, ProfileTreeType.FOLDER, t("Local"));
         this.groupNameMap.set(ProfileTreeGroupType.MODIO, "mod.io");
@@ -183,6 +182,7 @@ export class ProfileTree {
         let profile = new ProfileTree("");
         profile.version = jsonObj.version;
         profile.name = jsonObj.name;
+        profile.lastUpdate = jsonObj.last_update;
         profile.root = ProfileTreeItem.fromJson(jsonObj.root);
         return profile;
     }
@@ -191,6 +191,7 @@ export class ProfileTree {
         const profile = {
             "version": this.version,
             "name": this.name,
+            "last_update": this.lastUpdate,
             "root": this.root.toJsonObject()
         }
         return JSON.stringify(profile, null, 4);
