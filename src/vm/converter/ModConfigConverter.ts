@@ -14,7 +14,7 @@ export class ModConfigConverter {
         this.modList = new ModList();
         this.profileList = new ProfileList();
         this.profileList.Profiles.push(t("Default"));
-        this.profileTreeList = [];
+        this.profileList.activeProfile = t("Default");
         this.profileTreeList.push(new ProfileTree(t("Default")));
     }
 

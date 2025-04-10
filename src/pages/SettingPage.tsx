@@ -106,6 +106,10 @@ class SettingPage extends BasePage<any, any> {
     }
 
     private async onOAuthChange(e: any) {
+        if (!e.target.value || e.target.value.length < 20) {
+            message.error(t("Invalid OAuth"));
+            return;
+        }
         this.context.setting.modioOAuth = e.target.value;
         await this.context.saveSettings();
     }

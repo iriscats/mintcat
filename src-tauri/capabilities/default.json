@@ -21,6 +21,7 @@
     "dialog:default",
     "process:default",
     "opener:default",
+    "updater:default",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [

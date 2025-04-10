@@ -39,7 +39,18 @@ export class ModioApi {
         const resp = await fetch(url, {
             headers: await ModioApi.getHeaders(),
         });
-        return await resp.json();
+        switch (resp.status) {
+            case 200:
+                return await resp.json();
+            case 401:
+                throw Error(`${t("Modio Unauthorized")}`);
+            case 404:
+                throw Error(`${t("Modio Not Found")}`);
+            case 429:
+                throw Error(`${t("Modio Too Many Requests")}`);
+            default:
+                throw Error(`${t("Modio Error")}: ${resp.status}`);
+        }
     }
 
     private static parseModLinks(link: string) {
@@ -75,7 +86,7 @@ export class ModioApi {
             const data = await ModioApi.getRequest(path);
             return data as UserInfo;
         } catch (e) {
-            message.error(`${t("Fetch UserInfo Error")}: ${e}`);
+            message.error(`${t("Fetch User Info Error")}: ${e}`);
         }
     }
 

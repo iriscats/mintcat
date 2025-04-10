@@ -18,6 +18,8 @@ interface StatusBarState {
 
 class StatusBar extends React.Component<any, StatusBarState> {
 
+    private isHook = false;
+
     public constructor(props: any, state: StatusBarState) {
         super(props, state);
 
@@ -42,14 +44,26 @@ class StatusBar extends React.Component<any, StatusBarState> {
         })
     }
 
-    componentDidMount() {
-        listen<string>('status-bar-log', (event) => {
-            this.onLogMessage(event.payload);
-        });
+    private registerListeners() {
+        try {
+            if (this.isHook) {
+                return;
+            }
+            this.isHook = true;
 
-        listen<number>('status-bar-percent', (event) => {
-            this.onProgress(event.payload);
-        });
+            listen<string>('status-bar-log', (event) => {
+                this.onLogMessage(event.payload);
+            });
+
+            listen<number>('status-bar-percent', (event) => {
+                this.onProgress(event.payload);
+            });
+        } catch (e) {
+        }
+    }
+
+    componentDidMount() {
+        this.registerListeners();
     }
 
     render() {

@@ -37,6 +37,15 @@
     "resources": {
       "assets/first_run": "first_run",
       "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJEMTIwOUY0Rjk4MTNFOTgKUldTWVBvSDU5QWtTTGRXajcyWkczT3crNUw0N1JSYk5XWkJhS2ZHMmpoYVdOUjFNMisxcFZIeisK",
+      "endpoints": [
+        "https://github.com/iriscats/mint/releases/latest/download/latest.json"
+      ]
     }
   }
 }

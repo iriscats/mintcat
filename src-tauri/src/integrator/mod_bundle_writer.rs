@@ -57,7 +57,8 @@ impl<W: Write + Seek> ModBundleWriter<W> {
 
     pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<(), Box<dyn Error>> {
         let normalized_path = self.normalize_path(path);
-        self.pak_writer.write_file(normalized_path.as_str(), true, data)?;
+        self.pak_writer
+            .write_file(normalized_path.as_str(), true, data)?;
         Ok(())
     }
 
