@@ -14,6 +14,7 @@ import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {MessageBox} from "./MessageBox.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
+import {AppViewModel} from "../vm/AppViewModel.ts";
 
 
 interface TitleBarState {
@@ -47,6 +48,11 @@ class TitleBar extends React.Component<any, TitleBarState> {
     }
 
     private async loadAvatar() {
+        const vm = await AppViewModel.getInstance();
+        if (!await vm.checkOauth()) {
+            return;
+        }
+
         const userInfo = await ModioApi.getUserInfo();
         if (userInfo) {
             const url = await CacheApi.cacheImage(userInfo.avatar.thumb_50x50);

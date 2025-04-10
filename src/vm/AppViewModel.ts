@@ -104,12 +104,8 @@ export class AppViewModel {
         }
     }
 
-    private async checkOauth(): Promise<boolean> {
-        if (!this.setting.modioOAuth || this.setting.modioOAuth === "") {
-            message.error(t("mod.io OAuth No Found"));
-            return false;
-        }
-        return true;
+    public async checkOauth(): Promise<boolean> {
+        return !(!this.setting.modioOAuth || this.setting.modioOAuth === "");
     }
 
     private async checkGamePath(): Promise<boolean> {
@@ -182,6 +178,7 @@ export class AppViewModel {
 
     public async checkModUpdate() {
         setTimeout(async () => {
+
             const viewModel = await HomeViewModel.getInstance();
             if (new Date().getTime() - viewModel.ActiveProfile.lastUpdate < 1000 * 60 * 60) {
                 return;
@@ -204,7 +201,6 @@ export class AppViewModel {
 
             const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
             for (const event of events) {
-                console.log(event);
                 switch (event.event_type) {
                     case "MODFILE_CHANGED": {
                         let modItem = viewModel.ModList.getByModId(event.mod_id);
@@ -294,10 +290,14 @@ export class AppViewModel {
 
         await appVM.loadUserLanguages();
         await appVM.checkAppPath();
-        await appVM.checkOauth();
         await appVM.checkGamePath();
         await appVM.loadTheme();
-        await appVM.checkModUpdate();
+
+        if (await appVM.checkOauth()) {
+            await appVM.checkModUpdate();
+        } else {
+            message.error(t("mod.io OAuth No Found"));
+        }
 
         AppViewModel.instance = appVM;
         return appVM;

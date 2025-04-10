@@ -6,13 +6,14 @@ import {AppViewModel} from "../vm/AppViewModel.ts";
 import {UserInfo} from "../vm/modio/UserInfo.ts";
 import {EventInfo} from "../vm/modio/EventInfo.ts";
 import {CacheApi} from "./CacheApi.ts";
+import {DownloadApi} from "./DownloadApi.ts";
 
 const PROXY_API_URL = "https://api.v1st.net/";
 const IS_PROXY = false;
 
 //const MODIO_API_URL = "https://api.mod.io/v1";
-//const MODIO_API_URL = "https://u-13595141.modapi.io/v1";
-const MODIO_API_URL = "https://u-35860046.modapi.io/v1";
+const MODIO_API_URL = "https://u-13595141.modapi.io/v1";
+//const MODIO_API_URL = "https://u-35860046.modapi.io/v1";
 const MODIO_GAME_ID = 2475;
 
 
@@ -162,51 +163,22 @@ export class ModioApi {
                                         onProgress?: (loaded: number, total: number) => void) {
 
         if (await CacheApi.checkCacheFile(modInfo.nameId, modInfo.fileSize)) {
-            //modInfo.downloadProgress = 100;
             modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId);
             onProgress(modInfo.fileSize, modInfo.fileSize);
-            //console.log("Load Cache " + modInfo.cachePath);
             return modInfo;
         }
 
-        const response = await fetch(modInfo.downloadUrl);
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+        console.log(modInfo.fileSize);
+        if (modInfo.fileSize < 100 * 1024 * 1024) {
+            const data = await DownloadApi.downloadFile(modInfo.downloadUrl, onProgress);
+            modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, data);
+        } else {
+            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId);
+            await DownloadApi.downloadLargeFile(modInfo.downloadUrl, modInfo.cachePath, onProgress);
         }
 
-        const reader = response.body?.getReader();
-        if (!reader) {
-            throw new Error('Failed to get response reader');
-        }
-
-        const contentLength = Number(response.headers.get('Content-Length')) || 0;
-        let receivedLength = 0;
-        const chunks: Uint8Array[] = [];
-
-        while (true) {
-            const {done, value} = await reader.read();
-            if (done)
-                break;
-
-            chunks.push(value);
-            receivedLength += value.length;
-
-            // 触发进度回调
-            if (onProgress) {
-                onProgress(receivedLength, contentLength);
-            }
-        }
-
-        // 合并所有 chunk
-        const data = new Uint8Array(receivedLength);
-        let position = 0;
-        for (const chunk of chunks) {
-            data.set(chunk, position);
-            position += chunk.length;
-        }
-
-        modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, data);
         modInfo.downloadProgress = 100;
+        onProgress(modInfo.fileSize, modInfo.fileSize);
         return modInfo;
     }
 
