@@ -1,6 +1,6 @@
-import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir, remove, rename} from '@tauri-apps/plugin-fs';
-import {appConfigDir, configDir} from "@tauri-apps/api/path";
 import {path} from "@tauri-apps/api";
+import {appConfigDir, configDir} from "@tauri-apps/api/path";
+import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir, remove, rename} from '@tauri-apps/plugin-fs';
 
 export class ConfigApi {
 
@@ -119,7 +119,6 @@ export class ConfigApi {
             return await readTextFile(await ConfigApi.getModListDataV1Path());
         } catch (error) {
             console.error(error);
-            return undefined;
         }
     }
 
@@ -128,7 +127,6 @@ export class ConfigApi {
             return await readTextFile(await ConfigApi.getSettingV1Path());
         } catch (error) {
             console.error(error);
-            return undefined;
         }
     }
 

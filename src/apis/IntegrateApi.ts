@@ -4,7 +4,6 @@ import {invoke} from '@tauri-apps/api/core';
 export class IntegrateApi {
 
     public static async install(gamePath: string, modListJson: string) {
-        console.log(`Install mods: ${gamePath} ${modListJson}`);
         return await invoke('install_mods', {
             gamePath: gamePath,
             modListJson: modListJson,
