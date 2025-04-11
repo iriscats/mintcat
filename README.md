@@ -1,5 +1,5 @@
 # MINTCAT
-![Logo](.public/icon.ico)
+![Logo](https://raw.githubusercontent.com/iriscats/mintcat/refs/heads/main/public/icon.ico)
 
 # Introduction
 MintCat is a Deep Rock Galactic mod loader and integration tool. It is built with Rust and Tauri, and the frontend is built with React and Typescript.
