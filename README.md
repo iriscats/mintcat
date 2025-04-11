@@ -1,22 +1,53 @@
-# Tauri + React + Typescript
+# MINTCAT
+![Logo](.public/icon.ico)
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+# Introduction
+MintCat is a Deep Rock Galactic mod loader and integration tool. It is built with Rust and Tauri, and the frontend is built with React and Typescript.
 
-## Recommended IDE Setup
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+# Features
+1. Mod Management
+2. Mod Search
+3. Mod Download
+4. Mod Upload
 
-# AntDesign
 
+# Architecture
+1. Frontend: React + Typescript + Vite + AntDesign
+2. Backend: Rust + Tauri 
+
+
+## Tuari 2.0
+https://v2.tauri.app/start/
+
+
+## AntDesign
 https://ant-design.antgroup.com/index-cn
 
-# Tuari 2.0
 
-https://v2.tauri.app/start/
-Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+## Modio RESTful API
+https://docs.mod.io/restapiref/#getting-started
+
+
+# Build & Dev
+
+```
+pnpm install 
+pnpm tauri dev
+```
+
+# Publish
+
+```shell
+./release.sh
+```
+
+
+# App Path
 
 ## Config Path
 ```
+macOS:
 ~/Library/Application Support/com.mint.cat
 ```
 
@@ -31,21 +62,6 @@ macOS:
 
 ## Cache Path
 ```
-
 macOS:
 ~/Library/Caches/com.mint.cat
 ```
-
-# Modio RESTful API
-
-1. https://docs.mod.io/
-2. https://api.v1st.net/https://docs.mod.io/restapiref/#getting-started
-3. https://api.v1st.net/https://docs.mod.io/restapiref/#get-mod
-4. https://api.v1st.net/https://docs.mod.io/restapiref/#dependencies
-
-# Build
-
-```
-pnpm install 
-pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
- ```
