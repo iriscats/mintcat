@@ -1,24 +1,41 @@
-import {HomeViewModel} from "../vm/HomeViewModel.ts";
-import {MOD_INVALID_ID} from "../vm/config/ModList.ts";
-import {ModioApi} from "./ModioApi.ts";
-import {ConfigApi} from "./ConfigApi.ts";
 import {message} from "antd";
 import {t} from "i18next";
+import {exists} from "@tauri-apps/plugin-fs";
+import {ModioApi} from "./ModioApi.ts";
+import {ConfigApi} from "./ConfigApi.ts";
+import {HomeViewModel} from "../vm/HomeViewModel.ts";
+import {MOD_INVALID_ID} from "../vm/config/ModList.ts";
 
 export class ModUpdateApi {
 
+    public static async checkModList() {
+        const viewModel = await HomeViewModel.getInstance();
+        const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
+        for (const item of subModList.Mods) {
+            if (item.enabled) {
+                if (item.isLocal === true) {
+                    if (!await exists(item.cachePath)) {
+                        message.error(t("File Not Found") + item.cachePath);
+                        return false;
+                    }
+                } else {
+                    if (!await exists(item.cachePath)) {
+                        const mv = await HomeViewModel.getInstance();
+                        await mv.updateMod(item);
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
     public static async checkModUpdate() {
         const viewModel = await HomeViewModel.getInstance();
 
-        console.log("checkModUpdate", viewModel.ActiveProfile.lastUpdate);
-        if (viewModel.ActiveProfile.lastUpdate && new Date().getTime() - viewModel.ActiveProfile.lastUpdate < 1000 * 60 * 60) {
-            return;
-        }
 
         let updateTime = 0;
         if (!viewModel.ActiveProfile.lastUpdate) {
-            updateTime = Math.round(new Date().getTime() / 1000) - 60 * 60 * 24 * 30;
+            updateTime = Math.round(new Date().getTime() / 1000) - 60 * 60 * 24 * 30; // 最近 1 一个月的更新
         } else {
             updateTime = viewModel.ActiveProfile.lastUpdate;
         }

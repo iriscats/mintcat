@@ -31,32 +31,11 @@ export class AppViewModel {
     private constructor() {
     }
 
-    public async checkModList() {
-        const viewModel = await HomeViewModel.getInstance();
-        const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
-        for (const item of subModList.Mods) {
-            if (item.enabled) {
-                if (item.isLocal === true) {
-                    if (!await exists(item.cachePath)) {
-                        message.error(t("File Not Found") + item.cachePath);
-                        return false;
-                    }
-                } else {
-                    if (!await exists(item.cachePath)) {
-                        const mv = await HomeViewModel.getInstance();
-                        await mv.updateMod(item);
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
     public async installMods(callback = undefined) {
         if (!await this.checkGamePath()) {
             return;
         }
-        if (!await this.checkModList()) {
+        if (!await ModUpdateApi.checkModList()) {
             return;
         }
 
@@ -179,6 +158,14 @@ export class AppViewModel {
 
     public async checkModUpdate() {
         setTimeout(async () => {
+            const viewModel = await HomeViewModel.getInstance();
+
+            // 判断最近 1 小时内检查过更新不继续
+            if (viewModel.ActiveProfile.lastUpdate && new Date().getTime()
+                - viewModel.ActiveProfile.lastUpdate < 1000 * 60 * 60) {
+                return;
+            }
+
             await ModUpdateApi.checkModUpdate();
         }, 1000 * 60);
     }

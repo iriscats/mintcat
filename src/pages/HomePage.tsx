@@ -183,8 +183,8 @@ class HomePage extends BasePage<any, ModListPageState> {
     }
 
     private async onUpdateClick() {
-        //await this.context.updateModList(true);
         await ModUpdateApi.checkModUpdate();
+        await ModUpdateApi.checkModList();
     }
 
     private onEditProfileClick() {
