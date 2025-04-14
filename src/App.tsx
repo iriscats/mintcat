@@ -1,7 +1,6 @@
 import React from 'react';
 import {Layout, ConfigProvider} from 'antd';
 import {I18nextProvider} from "react-i18next"
-import {getCurrentWindow} from "@tauri-apps/api/window";
 
 import TitleBar from "./components/TitleBar.tsx";
 import StatusBar from "./components/StatusBar.tsx";

@@ -14,6 +14,7 @@ import {
     ProfileTreeItem,
     ProfileTreeType
 } from "./config/ProfileList.ts";
+import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 
 
 export class HomeViewModel {
@@ -71,7 +72,7 @@ export class HomeViewModel {
             const addedModItem = this.ModList.add(modItem);
             this.ActiveProfile.addMod(addedModItem.id, groupId);
             this.updateTreeViewCallback?.call(this);
-            await this.updateMod(addedModItem);
+            await ModUpdateApi.updateMod(addedModItem);
         }
     }
 
@@ -93,7 +94,7 @@ export class HomeViewModel {
         const addedModItem = this.ModList.add(modItem);
         this.ActiveProfile.addMod(addedModItem.id, groupId);
         this.updateTreeViewCallback?.call(this);
-        await this.updateMod(addedModItem);
+        await ModUpdateApi.updateMod(addedModItem);
 
         if (resp.dependencies) {
             await this.addModDependencies(subModList, resp.id, groupId);
@@ -270,51 +271,19 @@ export class HomeViewModel {
         this.updateTreeViewCallback?.call(this);
     }
 
-    public async updateMod(mod: ModListItem) {
-        const resp = await ModioApi.getModInfoByLink(mod.url);
-        if (!resp) {
-            throw new Error;
-        }
-
-        let newItem = new ModListItem(resp);
-        this.ModList.update(mod, newItem);
-        this.updateTreeViewCallback?.call(this);
-
-        await emit("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
-        newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
-            await emit("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
-            newItem.downloadProgress = (loaded / total) * 100;
-            this.ModList.update(mod, newItem);
-            this.updateTreeViewCallback?.call(this);
-        });
-
-        this.ModList.update(mod, newItem);
-        await ConfigApi.saveModListData(this.ModList.toJson());
-        await emit("status-bar-log", t("Update Finish"));
-    }
-
-    public async checkLocalMod(modItem: ModListItem) {
-        if (modItem.isLocal === true && modItem.enabled === true) {
-            if (!await exists(modItem.cachePath)) {
-                message.error(t("File Not Found") + modItem.cachePath);
-                return false;
-            }
-        }
-    }
-
     public async updateModList(isRefresh = false): Promise<void> {
         try {
             const subModList = this.ActiveProfile.getModList(this.ModList);
             for (const mod of subModList.Mods) {
                 if (isRefresh) {
                     if (mod.url.startsWith("http")) {
-                        await this.updateMod(mod);
+                        await ModUpdateApi.updateMod(mod);
                     } else {
-                        await this.checkLocalMod(mod);
+                        await ModUpdateApi.checkLocalMod(mod);
                     }
                 } else {
                     if (mod.modId === MOD_INVALID_ID && mod.url.startsWith("http")) {
-                        await this.updateMod(mod);
+                        await ModUpdateApi.updateMod(mod);
                     }
                 }
             }

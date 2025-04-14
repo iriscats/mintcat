@@ -1,5 +1,6 @@
-import {Setting} from "../config/Setting.ts";
 import {appCacheDir, appConfigDir} from "@tauri-apps/api/path";
+import {Setting} from "../config/Setting.ts";
+import {DeviceApi} from "../../apis/DeviceApi.ts";
 
 export class SettingConverter {
 
@@ -11,21 +12,25 @@ export class SettingConverter {
         this.setting.modioOAuth = "";
         this.setting.drgPakPath = "";
         this.setting.guiTheme = "Light";
-        this.setting.language = "en";
         try {
+            this.setting.language = await DeviceApi.getLanguage();
             this.setting.cachePath = await appCacheDir();
             this.setting.configPath = await appConfigDir();
-        }catch(err) {
+        } catch (err) {
         }
     }
 
     private async convertV00ToV02(config: string) {
-        this.setting = Setting.fromJson(config);
-        const data = JSON.parse(config);
-        this.setting.version = "0.2.0";
-        this.setting.modioOAuth = data["provider_parameters"]["modio"]["oauth"];
-        this.setting.cachePath = await appCacheDir();
-        this.setting.configPath = await appConfigDir();
+        try {
+            this.setting = Setting.fromJson(config);
+            const data = JSON.parse(config);
+            this.setting.version = "0.2.0";
+            this.setting.cachePath = await appCacheDir();
+            this.setting.configPath = await appConfigDir();
+            this.setting.modioOAuth = data["provider_parameters"]["modio"]["oauth"];
+        }catch (e) {
+            console.error(e);
+        }
     }
 
     public async convertTo(config: string) {

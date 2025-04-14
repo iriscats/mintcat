@@ -42,6 +42,7 @@ import {AppViewModel} from "../vm/AppViewModel.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {BasePage} from "./IBasePage.ts";
 import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
+import {IntegrateApi} from "../apis/IntegrateApi.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -150,7 +151,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         for (const key of this.state.selectedKeys) {
             const modItem = this.context.ModList.get(key);
             if (modItem) {
-                await this.context.updateMod(modItem)
+                await ModUpdateApi.updateMod(modItem)
             }
         }
         await this.updateTreeView();
@@ -178,8 +179,7 @@ class HomePage extends BasePage<any, ModListPageState> {
     }
 
     private async onSaveChangesClick() {
-        const vm = await AppViewModel.getInstance();
-        await vm.installMods();
+        await IntegrateApi.installMods();
     }
 
     private async onUpdateClick() {
@@ -312,7 +312,7 @@ class HomePage extends BasePage<any, ModListPageState> {
             case "update": {
                 const mod = this.context.ModList.get(id);
                 if (mod) {
-                    await this.context.updateMod(mod);
+                    await ModUpdateApi.updateMod(mod);
                 }
             }
                 break;

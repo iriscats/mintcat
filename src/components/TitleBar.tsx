@@ -8,6 +8,7 @@ import {
     SkinOutlined,
     UserOutlined
 } from '@ant-design/icons';
+import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
@@ -41,10 +42,13 @@ class TitleBar extends React.Component<any, TitleBarState> {
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
     }
 
+    private async onOpenWikiClick() {
+        await open("https://mintcat.v1st.net");
+    }
+
     private async onLaunchGameClick() {
-        await this.context.installMods(async () => {
+        if (await IntegrateApi.installMods())
             await IntegrateApi.launchGame();
-        });
     }
 
     private async loadAvatar() {
@@ -127,7 +131,10 @@ class TitleBar extends React.Component<any, TitleBarState> {
                     </Popconfirm>
                     </span>
                     <span>
-                        <QuestionCircleOutlined/>
+                        <Button type={"text"}
+                                icon={<QuestionCircleOutlined/>}
+                                onClick={this.onOpenWikiClick}
+                        />
                     </span>
                     <Avatar className={"app-header-avatar"}
                             icon={<UserOutlined/>}

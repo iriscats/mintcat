@@ -12,6 +12,7 @@ import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
 import {BasePage} from "./IBasePage.ts";
+import i18n from "../locales/i18n"
 
 const SettingLayout = {
     labelCol: {span: 7},
@@ -94,9 +95,9 @@ class SettingPage extends BasePage<any, any> {
     private async onLanguageChange() {
         const language = this.appSettingFormRef.current?.getFieldValue("language");
         this.context.setting.language = language;
+        await i18n.changeLanguage(language);
         await this.context.saveSettings();
-        localStorage.setItem('lang', language);
-        window.location.reload();
+        this.forceUpdate();
     }
 
     private async onThemeChange() {
@@ -125,7 +126,7 @@ class SettingPage extends BasePage<any, any> {
     }
 
     private async onUninstallClick() {
-        await this.context.uninstall();
+        await IntegrateApi.uninstallMods();
     }
 
     private async onGamePathClick() {
