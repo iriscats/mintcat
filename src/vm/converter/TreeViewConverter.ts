@@ -49,6 +49,7 @@ export class TreeViewConverter {
                         key: modItem.id,
                         isLeaf: true,
                         title: title,
+                        url: modItem.url,
                         tags: modItem.tags,
                         required: modItem.required,
                         enabled: modItem.enabled,

@@ -4,9 +4,44 @@ import {exists} from "@tauri-apps/plugin-fs";
 import {ModioApi} from "./ModioApi.ts";
 import {ConfigApi} from "./ConfigApi.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
-import {MOD_INVALID_ID} from "../vm/config/ModList.ts";
+import {MOD_INVALID_ID, ModListItem} from "../vm/config/ModList.ts";
+import {emit} from "@tauri-apps/api/event";
 
 export class ModUpdateApi {
+
+
+    public static async updateMod(mod: ModListItem) {
+        const viewModel = await HomeViewModel.getInstance();
+        const resp = await ModioApi.getModInfoByLink(mod.url);
+        if (!resp) {
+            throw new Error;
+        }
+
+        let newItem = new ModListItem(resp);
+        newItem = viewModel.ModList.update(mod, newItem);
+        await viewModel.updateUI();
+        await emit("status-bar-log", `${t("Update Mod")} [${newItem.displayName}]`);
+
+        newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
+            await emit("status-bar-log", `${t("Downloading")} [${newItem.displayName}] (${loaded} / ${total})`);
+            newItem.downloadProgress = (loaded / total) * 100;
+            viewModel.ModList.update(mod, newItem);
+            await viewModel.updateUI();
+        });
+
+        viewModel.ModList.update(mod, newItem);
+        await ConfigApi.saveModListData(viewModel.ModList.toJson());
+        await emit("status-bar-log", t("Update Finish"));
+    }
+
+    public static async checkLocalMod(modItem: ModListItem) {
+        if (modItem.isLocal === true && modItem.enabled === true) {
+            if (!await exists(modItem.cachePath)) {
+                message.error(t("File Not Found") + modItem.cachePath);
+                return false;
+            }
+        }
+    }
 
     public static async checkModList() {
         const viewModel = await HomeViewModel.getInstance();
@@ -19,9 +54,8 @@ export class ModUpdateApi {
                         return false;
                     }
                 } else {
-                    if (!await exists(item.cachePath)) {
-                        const mv = await HomeViewModel.getInstance();
-                        await mv.updateMod(item);
+                    if (!await exists(item.cachePath) || item.onlineUpdateDate > item.lastUpdateDate ) {
+                        await ModUpdateApi.updateMod(item);
                     }
                 }
             }
@@ -30,8 +64,9 @@ export class ModUpdateApi {
     }
 
     public static async checkModUpdate() {
-        const viewModel = await HomeViewModel.getInstance();
+        await emit("status-bar-log", t("Mod Update Check Start"));
 
+        const viewModel = await HomeViewModel.getInstance();
 
         let updateTime = 0;
         if (!viewModel.ActiveProfile.lastUpdate) {
@@ -75,12 +110,12 @@ export class ModUpdateApi {
             }
         }
 
-        viewModel.ActiveProfile.lastUpdate = new Date().getTime();
+        viewModel.ActiveProfile.lastUpdate = Math.round(new Date().getTime() / 1000);
         await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile.toJson());
         await ConfigApi.saveModListData(viewModel.ModList.toJson());
         await viewModel.updateUI();
 
-        message.info(t("Mod Update Checked"));
+        await emit("status-bar-log", t("Mod Update Check Finish"));
     }
 
 

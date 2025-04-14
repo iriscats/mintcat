@@ -132,7 +132,20 @@ impl PakIntegrator {
 
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             app.emit("status-bar-percent", current_percent).unwrap();
-            self.process_mod(mod_info)?;
+            let result = self.process_mod(mod_info);
+            match result {
+                Ok(_) => {
+                    app.emit(
+                        "status-bar-log",
+                        format!("Process Mod: {} Success", mod_info.name),
+                    )
+                   .unwrap();
+                }
+                Err(e) => {
+                    app.emit("install-error", {}).unwrap();
+                    return Err(e);
+                }
+            }
         }
 
         app.emit("status-bar-log", "Patch Game Pak...").unwrap();

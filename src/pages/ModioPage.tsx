@@ -11,6 +11,7 @@ import {TranslateApi} from "../apis/TranslateApi.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
 import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
 import {BasePage} from "./IBasePage.ts";
+import {open} from "@tauri-apps/plugin-shell";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -195,8 +196,6 @@ class ModioPage extends BasePage<any, ModioPageState> {
                                           }}>
                                     <List.Item
                                         key={item.name}
-                                        onDoubleClick={() => {
-                                        }}
                                         actions={[
                                             <IconText icon={DownloadOutlined}
                                                       text={item.stats.downloads_total.toString()}/>,
@@ -220,7 +219,7 @@ class ModioPage extends BasePage<any, ModioPageState> {
                                             }
                                             title={
                                                 <>
-                                                    <a href={item.name_id}>
+                                                    <a onClick={async () => await open(item.profile_url)}>
                                                         {
                                                             item.name_trans ? item.name_trans : item.name
                                                         }

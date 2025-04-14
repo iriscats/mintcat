@@ -2,6 +2,7 @@ import React from "react";
 import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag, Tooltip} from "antd";
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {t} from "i18next";
+import {open} from "@tauri-apps/plugin-shell";
 
 
 export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: any) {
@@ -97,7 +98,11 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                     {nodeData.isLocal === true && <a style={{color: "#403c3c"}}> {nodeData.title}</a>}
                     {
                         nodeData.isLocal === false &&
-                        <a style={{color: nodeData.downloadProgress === 100 ? "#1f81f8" : "lightblue"}}>
+                        <a style={{color: nodeData.downloadProgress === 100 ? "#1f81f8" : "lightblue"}}
+                           onClick={async () => {
+                               await open(nodeData.url);
+                           }}
+                        >
                             {nodeData.title}
                         </a>
                     }
