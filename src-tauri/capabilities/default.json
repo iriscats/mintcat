@@ -95,6 +95,14 @@
       ]
     },
     {
+      "identifier": "fs:allow-stat",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
       "identifier": "opener:allow-open-path",
       "allow": [
         {

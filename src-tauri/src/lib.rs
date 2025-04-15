@@ -40,8 +40,8 @@ fn uninstall_mods(game_path: String) -> bool {
 }
 
 #[tauri::command]
-fn check_installed(game_path: String) -> String {
-    PakIntegrator::check_installed(game_path).unwrap()
+fn check_installed(game_path: String, install_time: u64) -> String {
+    PakIntegrator::check_installed(game_path, install_time).unwrap()
 }
 
 #[tauri::command]
@@ -114,7 +114,7 @@ fn download_large_file(app: AppHandle, url: String, file_path: String) -> Result
             Err(e) => {
                 app.emit("download-api-statue", format!("请求失败: {}", e))
                     .unwrap();
-                return ;
+                return;
             }
         };
 
@@ -125,7 +125,7 @@ fn download_large_file(app: AppHandle, url: String, file_path: String) -> Result
                 format!("HTTP错误: {}", response.status()),
             )
             .unwrap();
-            return ;
+            return;
         }
 
         // 获取文件总大小
@@ -137,7 +137,7 @@ fn download_large_file(app: AppHandle, url: String, file_path: String) -> Result
             Err(e) => {
                 app.emit("download-api-statue", format!("创建文件失败: {}", e))
                     .unwrap();
-                return ;
+                return;
             }
         };
 
@@ -152,14 +152,14 @@ fn download_large_file(app: AppHandle, url: String, file_path: String) -> Result
                 Err(e) => {
                     app.emit("download-api-statue", format!("读取失败: {}", e))
                         .unwrap();
-                    return ;
+                    return;
                 }
             };
 
             if let Err(e) = file.write_all(&buffer[..bytes_read]) {
                 app.emit("download-api-statue", format!("写入失败: {}", e))
                     .unwrap();
-                return ;
+                return;
             }
 
             // 更新进度

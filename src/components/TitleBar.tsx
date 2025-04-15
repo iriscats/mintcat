@@ -122,7 +122,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
                     <span>
                     <Popconfirm
                         placement="bottom"
-                        title={"开发中"}
+                        title={"In development"}
                         description={"未完成的功能，敬请期待"}
                         okText="Yes"
                         cancelText="No"

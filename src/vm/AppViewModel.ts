@@ -1,16 +1,14 @@
-import {message} from "antd";
 import {t} from "i18next";
-import {exists} from '@tauri-apps/plugin-fs';
+import {message} from "antd";
 import {appCacheDir} from '@tauri-apps/api/path';
 
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
+import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
-import {emit, once} from "@tauri-apps/api/event";
-import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 import i18n from "../locales/i18n"
 
 const IS_DEV = window.location.host === "localhost:1420";
