@@ -14,6 +14,7 @@ export class DeviceApi {
                 return "en";
             }
         } catch (e) {
+            return "en";
         }
     }
 

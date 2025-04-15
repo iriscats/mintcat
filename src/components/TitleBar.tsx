@@ -20,7 +20,7 @@ import {AppViewModel} from "../vm/AppViewModel.ts";
 
 interface TitleBarState {
     profileUrl?: string,
-    username: string,
+    username?: string,
     modioId: number
 }
 
@@ -34,7 +34,6 @@ class TitleBar extends React.Component<any, TitleBarState> {
         super(props, context);
 
         this.state = {
-            profileUrl: "",
             username: "",
             modioId: 0,
         }
@@ -138,7 +137,10 @@ class TitleBar extends React.Component<any, TitleBarState> {
                     </span>
                     <Avatar className={"app-header-avatar"}
                             icon={<UserOutlined/>}
-                            src={<img src={this.state.profileUrl} alt="avatar"/>}
+                            src={
+                                this.state.profileUrl &&
+                                <img src={this.state.profileUrl} alt="avatar"/>
+                            }
                             onClick={async () => {
                                 await MessageBox.confirm({
                                     title: t("User Info"),
