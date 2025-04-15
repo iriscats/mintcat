@@ -131,6 +131,7 @@ class SettingPage extends BasePage<any, any> {
 
     private async onGamePathClick() {
         const result = await open({
+            defaultPath: this.context.setting.drgPakPath,
             filters: [{
                 name: 'FSD-WindowsNoEditor',
                 extensions: ['pak'],
@@ -153,7 +154,6 @@ class SettingPage extends BasePage<any, any> {
 
     componentDidMount(): void {
         this.hookWindowResized();
-
         this.appSettingFormRef.current?.setFieldsValue({
             language: this.context.setting.language,
             theme: this.context.setting.guiTheme,

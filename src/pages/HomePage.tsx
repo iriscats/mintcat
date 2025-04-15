@@ -455,22 +455,27 @@ class HomePage extends BasePage<any, ModListPageState> {
                             />
                         </Typography.Link>
                     </Space>
-                    <Tree className="ant-tree-content"
-                          style={{minHeight: window.innerHeight - 155}}
-                          height={window.innerHeight - 155}
-                          draggable
-                          blockNode
-                          checkable={this.state.isMultiSelect}
-                          expandedKeys={this.state.expandedKeys}
-                          selectedKeys={this.state.selectedKeys}
-                          treeData={this.state.treeData}
-                          onCheck={this.onTreeNodeSelect}
-                          onSelect={this.onTreeNodeSelect}
-                          onRightClick={this.onTreeRightClick}
-                          onExpand={this.onTreeNodeExpand}
-                          onDrop={this.onDrop}
-                          titleRender={this.onCustomTitleRender}
-                    />
+                    <div style={{
+                        height: window.innerHeight - 145,
+                        overflow: 'auto',
+                    }}>
+                        <Tree className="ant-tree-content"
+                              draggable
+                              blockNode
+                              style={{minHeight: window.innerHeight - 155}}
+                            //height={window.innerHeight - 155}
+                              checkable={this.state.isMultiSelect}
+                              expandedKeys={this.state.expandedKeys}
+                              selectedKeys={this.state.selectedKeys}
+                              treeData={this.state.treeData}
+                              onCheck={this.onTreeNodeSelect}
+                              onSelect={this.onTreeNodeSelect}
+                              onRightClick={this.onTreeRightClick}
+                              onExpand={this.onTreeNodeExpand}
+                              onDrop={this.onDrop}
+                              titleRender={this.onCustomTitleRender}
+                        />
+                    </div>
                     <Flex style={{
                         borderTop: "1px solid #eee",
                         padding: "2px 10px 0 10px",
