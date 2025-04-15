@@ -185,6 +185,7 @@ class HomePage extends BasePage<any, ModListPageState> {
     private async onUpdateClick() {
         await ModUpdateApi.checkModUpdate();
         await ModUpdateApi.checkModList();
+        message.success(t("Update Finish"));
     }
 
     private onEditProfileClick() {

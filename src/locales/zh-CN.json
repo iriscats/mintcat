@@ -41,6 +41,7 @@
   "Fetch Mod Info Error": "获取 Mod 信息失败",
   "Fetch User Info Error": "获取用户信息失败",
   "File Not Found": "文件不存在",
+  "Found Update": "发现更新",
   "Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?": "发现旧版 MINT(0.2, 0.3) 配置文件，注意将会覆盖当前配置，是否导入？",
   "Game Path": "游戏路径",
   "Game Path Not Found": "游戏路径不存在",

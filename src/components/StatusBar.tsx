@@ -19,6 +19,7 @@ interface StatusBarState {
 class StatusBar extends React.Component<any, StatusBarState> {
 
     private isHook = false;
+    private timer = 0;
 
     public constructor(props: any, state: StatusBarState) {
         super(props, state);
@@ -35,7 +36,19 @@ class StatusBar extends React.Component<any, StatusBarState> {
     public onLogMessage(message: string) {
         this.setState({
             message: message
-        })
+        });
+
+        const new_timer = setTimeout(() => {
+            this.timer = 0;
+            this.setState({
+                message: ""
+            })
+        }, 10000);
+
+        if (this.timer !== 0) {
+            clearTimeout(this.timer);
+        }
+        this.timer = new_timer;
     }
 
     public onProgress(percent: number) {
