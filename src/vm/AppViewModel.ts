@@ -10,6 +10,7 @@ import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import i18n from "../locales/i18n"
+import {checkUpdate} from "../apis/UpdateApi.ts";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -105,43 +106,47 @@ export class AppViewModel {
         if (AppViewModel.instance) {
             return AppViewModel.instance;
         }
-        const appVM = new AppViewModel();
-        const modListVM = await HomeViewModel.getInstance();
+        const appViewModel = new AppViewModel();
+        const homeViewModel = await HomeViewModel.getInstance();
 
-        appVM.isFirstRun = await IntegrateApi.isFirstRun();
-        let settingDataV1 = appVM.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
+        appViewModel.isFirstRun = await IntegrateApi.isFirstRun();
+        let settingDataV1 = appViewModel.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
         if (settingDataV1 !== undefined) {
             const confirmed = await MessageBox.confirm({
                 title: t("Import Config"),
                 content: t("Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?"),
             });
             if (confirmed) {
-                await appVM.converter.convertTo(settingDataV1);
-                await ConfigApi.saveSettings(appVM.setting.toJson());
-                await modListVM.loadOldConfig()
+                await appViewModel.converter.convertTo(settingDataV1);
+                await ConfigApi.saveSettings(appViewModel.setting.toJson());
+                await homeViewModel.loadOldConfig()
             } else {
                 settingDataV1 = undefined;
             }
         }
 
-        if (!settingDataV1 || !appVM.isFirstRun) {
-            await appVM.loadSettings();
-            await modListVM.loadConfig()
+        if (!settingDataV1 || !appViewModel.isFirstRun) {
+            await appViewModel.loadSettings();
+            await homeViewModel.loadConfig()
         }
 
-        await appVM.loadUserLanguages();
-        await appVM.checkAppPath();
-        await IntegrateApi.checkGamePath(appVM.setting.drgPakPath);
+        await appViewModel.loadUserLanguages();
+        await appViewModel.checkAppPath();
+        await IntegrateApi.checkGamePath(appViewModel.setting.drgPakPath);
 
-        await appVM.loadTheme();
-        if (await appVM.checkOauth()) {
-            appVM.checkModUpdate();
+        await appViewModel.loadTheme();
+        if (await appViewModel.checkOauth()) {
+            appViewModel.checkModUpdate();
         } else {
             message.error(t("mod.io OAuth No Found"));
         }
 
-        AppViewModel.instance = appVM;
-        return appVM;
+        setTimeout(() => {
+            checkUpdate();
+        }, 120 * 1000);
+
+        AppViewModel.instance = appViewModel;
+        return appViewModel;
     }
 
 }

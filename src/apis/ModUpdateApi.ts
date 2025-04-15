@@ -134,7 +134,6 @@ export class ModUpdateApi {
         await viewModel.updateUI();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));
-        message.success(t("Update Finish"));
     }
 
 
