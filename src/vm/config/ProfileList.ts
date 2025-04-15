@@ -65,7 +65,9 @@ export enum ProfileTreeGroupType {
 export class ProfileTree {
     public version: string = "0.2.0";
     public name: string = "";
-    public lastUpdate: number = -1;
+    public lastUpdate: number = 0;
+    public installTime: number = 0;
+    public editTime: number = 0;
     public root: ProfileTreeItem = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
     public groupNameMap: Map<number, string> = new Map<number, string>();
 
@@ -183,6 +185,8 @@ export class ProfileTree {
         profile.version = jsonObj.version;
         profile.name = jsonObj.name;
         profile.lastUpdate = jsonObj.last_update;
+        profile.installTime = jsonObj.install_time ? jsonObj.install_time : 0;
+        profile.editTime = jsonObj.edit_time ? jsonObj.edit_time : 0;
         profile.root = ProfileTreeItem.fromJson(jsonObj.root);
         return profile;
     }
@@ -192,6 +196,8 @@ export class ProfileTree {
             "version": this.version,
             "name": this.name,
             "last_update": this.lastUpdate,
+            "install_time": this.installTime,
+            "edit_time": this.editTime,
             "root": this.root.toJsonObject()
         }
         return JSON.stringify(profile, null, 4);

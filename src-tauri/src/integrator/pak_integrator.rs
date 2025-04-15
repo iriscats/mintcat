@@ -139,10 +139,11 @@ impl PakIntegrator {
                         "status-bar-log",
                         format!("Process Mod: {} Success", mod_info.name),
                     )
-                   .unwrap();
+                    .unwrap();
                 }
                 Err(e) => {
-                    app.emit("install-error", {}).unwrap();
+                    app.emit("install-error", format!("{}", mod_info.name))
+                        .unwrap();
                     return Err(e);
                 }
             }
@@ -171,7 +172,15 @@ impl PakIntegrator {
 
         app.emit("status-bar-log", "Install Mod Success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
-        app.emit("install-success", {}).unwrap();
+
+        let mod_pak_path = self.installation.paks_path().join(FSD_MOD_PAK_NAME);
+
+        let metadata = fs::metadata(&mod_pak_path)?;
+        let mod_pak_timestamp = metadata
+            .modified()?
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
+        app.emit("install-success", mod_pak_timestamp).unwrap();
 
         Ok(())
     }
@@ -445,7 +454,7 @@ impl PakIntegrator {
         Ok(())
     }
 
-    pub fn check_installed(fsd_path_pak: String) -> Result<String, Box<dyn Error>> {
+    pub fn check_installed(fsd_path_pak: String, timestamp: u64) -> Result<String, Box<dyn Error>> {
         let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
@@ -457,7 +466,14 @@ impl PakIntegrator {
 
         let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
         if mod_pak_path.exists() {
-            return Ok("mintcat_installed".parse().unwrap());
+            let metadata = fs::metadata(&mod_pak_path)?;
+            let mod_pak_timestamp = metadata
+                .modified()?
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs();
+            if mod_pak_timestamp == timestamp {
+                return Ok("mintcat_installed".parse().unwrap());
+            }
         }
 
         Ok("no_installed".parse().unwrap())

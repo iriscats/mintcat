@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {exists} from "@tauri-apps/plugin-fs";
+import {exists, stat} from "@tauri-apps/plugin-fs";
 import {ModioApi} from "./ModioApi.ts";
 import {ConfigApi} from "./ConfigApi.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
@@ -34,13 +34,34 @@ export class ModUpdateApi {
         await emit("status-bar-log", t("Update Finish"));
     }
 
-    public static async checkLocalMod(modItem: ModListItem) {
+    public static async checkOnlineModUpdate(modItem: ModListItem) {
+        if (modItem.isLocal === false) {
+            if (!await exists(modItem.cachePath) || modItem.onlineUpdateDate > modItem.lastUpdateDate) {
+                await ModUpdateApi.updateMod(modItem);
+            }
+        }
+    }
+
+    public static async checkLocalModCache(modItem: ModListItem) {
         if (modItem.isLocal === true && modItem.enabled === true) {
             if (!await exists(modItem.cachePath)) {
                 message.error(t("File Not Found") + modItem.cachePath);
                 return false;
             }
         }
+        return true;
+    }
+
+    public static async checkLocalModModify(modItem: ModListItem) {
+        if (modItem.isLocal === true && modItem.enabled === true) {
+            if (await exists(modItem.cachePath)) {
+                const fileInfo = await stat(modItem.cachePath);
+                if (fileInfo.mtime.getTime() === modItem.lastUpdateDate) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public static async checkModList() {
@@ -48,15 +69,12 @@ export class ModUpdateApi {
         const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
         for (const item of subModList.Mods) {
             if (item.enabled) {
-                if (item.isLocal === true) {
-                    if (!await exists(item.cachePath)) {
-                        message.error(t("File Not Found") + item.cachePath);
-                        return false;
-                    }
-                } else {
-                    if (!await exists(item.cachePath) || item.onlineUpdateDate > item.lastUpdateDate ) {
-                        await ModUpdateApi.updateMod(item);
-                    }
+                await this.checkOnlineModUpdate(item);
+                if (!await this.checkLocalModModify(item)) {
+                    viewModel.ActiveProfile.editTime = 0;
+                }
+                if (!await this.checkLocalModCache(item)) {
+                    return false;
                 }
             }
         }
@@ -111,11 +129,12 @@ export class ModUpdateApi {
         }
 
         viewModel.ActiveProfile.lastUpdate = Math.round(new Date().getTime() / 1000);
-        await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile);
         await ConfigApi.saveModListData(viewModel.ModList.toJson());
         await viewModel.updateUI();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));
+        message.success(t("Update Finish"));
     }
 
 

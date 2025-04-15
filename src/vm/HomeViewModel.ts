@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {exists} from "@tauri-apps/plugin-fs";
+import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {emit} from "@tauri-apps/api/event";
 import {ConfigApi} from "../apis/ConfigApi.ts";
@@ -101,7 +101,7 @@ export class HomeViewModel {
         }
 
         await ConfigApi.saveModListData(this.ModList.toJson());
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
 
         return true;
     }
@@ -111,7 +111,6 @@ export class HomeViewModel {
         modListItem.displayName = await path.basename(modPath);
         modListItem.url = modPath;
         modListItem.cachePath = modPath;
-
         if (!await exists(modPath)) {
             message.error(t("Mod Path No Exists" + modPath));
             return false;
@@ -123,6 +122,9 @@ export class HomeViewModel {
             return false;
         }
 
+        const fileInfo = await stat(modPath);
+        modListItem.lastUpdateDate = fileInfo.mtime.getTime();
+
         const foundItem = this.ModList.getByUrl(modPath);
         let addedModItem: ModListItem;
         if (foundItem) {
@@ -133,7 +135,7 @@ export class HomeViewModel {
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
 
         return true;
@@ -164,12 +166,12 @@ export class HomeViewModel {
         if (this.ActiveProfile.LocalFolder) {
             this.ActiveProfile.LocalFolder.children = this.sortNode(this.ActiveProfile.LocalFolder, order);
         }
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async removeMod(id: number): Promise<void> {
         this.ActiveProfile.removeMod(id);
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
     }
 
@@ -181,7 +183,7 @@ export class HomeViewModel {
         this.converter.profileTreeList.push(profileTree);
 
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
-        await ConfigApi.saveProfileDetails(name, profileTree.toJson());
+        await ConfigApi.saveProfileDetails(name, profileTree);
 
         this.updateSelectCallback?.call(this);
     }
@@ -206,7 +208,7 @@ export class HomeViewModel {
 
         const profileTree = this.converter.profileTreeList.find(p => p.name === oldName);
         profileTree.name = newName;
-        await ConfigApi.saveProfileDetails(newName, profileTree.toJson());
+        await ConfigApi.saveProfileDetails(newName, profileTree);
         await ConfigApi.renameProfileDetails(oldName, newName);
 
         this.updateSelectCallback?.call(this);
@@ -227,6 +229,7 @@ export class HomeViewModel {
             modItem.enabled = enable;
         }
         await ConfigApi.saveModListData(this.ModList.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
     }
 
@@ -243,19 +246,19 @@ export class HomeViewModel {
     public async setGroupName(id: number, name: string): Promise<void> {
         this.ActiveProfile.setGroupName(id, name);
 
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
     }
 
     public async setProfileData(root: ProfileTreeItem): Promise<void> {
         this.ActiveProfile.root = root;
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
         this.ActiveProfile.addGroup(groupName, parentGroupId);
 
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
     }
 
@@ -267,7 +270,7 @@ export class HomeViewModel {
 
         this.ActiveProfile.removeGroup(groupId);
 
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
     }
 
@@ -279,7 +282,7 @@ export class HomeViewModel {
                     if (mod.url.startsWith("http")) {
                         await ModUpdateApi.updateMod(mod);
                     } else {
-                        await ModUpdateApi.checkLocalMod(mod);
+                        await ModUpdateApi.checkLocalModCache(mod);
                     }
                 } else {
                     if (mod.modId === MOD_INVALID_ID && mod.url.startsWith("http")) {
@@ -290,7 +293,7 @@ export class HomeViewModel {
 
             if (isRefresh) {
                 this.ActiveProfile.lastUpdate = new Date().getTime();
-                await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile.toJson());
+                await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
             }
         } catch (_) {
             await emit("status-bar-log", t("Update Failed"));
@@ -325,7 +328,7 @@ export class HomeViewModel {
             await ConfigApi.saveProfileData(this.converter.profileList.toJson());
             for (const profile of this.converter.profileList.Profiles) {
                 await ConfigApi.saveProfileDetails(profile,
-                    this.converter.profileTreeList.find(p => p.name === profile)!.toJson());
+                    this.converter.profileTreeList.find(p => p.name === profile));
             }
         } catch (e) {
             this.converter.createDefault();

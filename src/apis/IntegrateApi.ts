@@ -8,6 +8,7 @@ import {MessageBox} from "../components/MessageBox.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {ILock} from "./ILock.ts";
+import {ConfigApi} from "./ConfigApi.ts";
 
 
 export class IntegrateApi extends ILock {
@@ -35,15 +36,28 @@ export class IntegrateApi extends ILock {
         const release = await this.acquireLock();
 
         try {
+            await emit("status-bar-log", t("Start installation"));
+
             const appViewModel = await AppViewModel.getInstance();
+            const homeViewModel = await HomeViewModel.getInstance();
+
             if (!await IntegrateApi.checkGamePath()) {
                 return false;
             }
             if (!await ModUpdateApi.checkModList()) {
+                console.log("checkModList");
                 return false;
             }
 
-            const installType = await IntegrateApi.checkInstalled(appViewModel.setting.drgPakPath);
+            let installTime = homeViewModel.ActiveProfile.installTime;
+            if (installTime < homeViewModel.ActiveProfile.editTime) {
+                installTime = homeViewModel.ActiveProfile.editTime;
+            }
+            const installType = await IntegrateApi.checkInstalled(
+                appViewModel.setting.drgPakPath,
+                installTime
+            );
+
             switch (installType) {
                 case "old_version_mint_installed": {
                     const result = await MessageBox.confirm({
@@ -56,11 +70,15 @@ export class IntegrateApi extends ILock {
                     }
                 }
                     break;
+                case "mintcat_installed": {
+                    await emit("status-bar-log", t("Installation Finish"));
+                    message.success(t("Installation Finish"));
+                }
+                    return true;
             }
 
             await IntegrateApi.uninstall(appViewModel.setting.drgPakPath);
 
-            const homeViewModel = await HomeViewModel.getInstance();
             const subModList = homeViewModel.ActiveProfile.getModList(homeViewModel.ModList);
             const installModList = [];
             for (const item of subModList.Mods) {
@@ -97,12 +115,15 @@ export class IntegrateApi extends ILock {
                 modListJson: modListJson,
             });
 
-            await once('install-success', async () => {
+            await once<number>('install-success', async (event) => {
+                const homeViewModel = await HomeViewModel.getInstance();
+                homeViewModel.ActiveProfile.installTime = event.payload;
+                await ConfigApi.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });
-            await once('install-error', async () => {
-                await emit("status-bar-log", t("Installation Failed"));
+            await once<string>('install-error', async (event) => {
+                await emit("status-bar-log", `${t("Installation Failed")} Mod: ${event.payload}`);
                 await emit("status-bar-percent", 0);
                 reject(false);
             });
@@ -131,9 +152,10 @@ export class IntegrateApi extends ILock {
         }
     }
 
-    public static async checkInstalled(gamePath: string): Promise<string> {
+    public static async checkInstalled(gamePath: string, installTime: number): Promise<string> {
         return await invoke('check_installed', {
             gamePath: gamePath,
+            installTime: installTime,
         });
     }
 
