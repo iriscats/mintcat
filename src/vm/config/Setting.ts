@@ -2,6 +2,7 @@ export class Setting {
 
     public version: string = "0.2.0";
     public modioOAuth: string = "";
+    public modioUid: number = 0;
     public drgPakPath: string = "";
     public guiTheme: string = "Light";
     public language: string = "en";
@@ -13,6 +14,7 @@ export class Setting {
         let setting = new Setting();
         setting.version = json.version;
         setting.modioOAuth = json.modio_oauth;
+        setting.modioUid = json.modio_uid;
         setting.drgPakPath = json.drg_pak_path;
         setting.guiTheme = json.gui_theme;
         setting.language = json.language;
@@ -25,6 +27,7 @@ export class Setting {
         const setting = {
             "version": this.version,
             "modio_oauth": this.modioOAuth,
+            "modio_uid": this.modioUid,
             "drg_pak_path": this.drgPakPath,
             "gui_theme": this.guiTheme,
             "language": this.language,

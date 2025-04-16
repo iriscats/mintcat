@@ -6,10 +6,13 @@ MintCat is a Deep Rock Galactic mod loader and integration tool. It is built wit
 
 
 # Features
-1. Mod Management
-2. Mod Search
-3. Mod Download
-4. Mod Upload
+## 1. Mod Management:
+- Add mods from mod.io
+- Add mods from local files
+- Update mods
+- Mod rename
+
+2. mod.io Search, Download, Update
 
 
 # Architecture
@@ -47,6 +50,9 @@ pnpm tauri dev
 
 ## Config Path
 ```
+Windows: 
+C:\Users\bytedance\AppData\Roaming\com.mint.cat
+
 macOS:
 ~/Library/Application Support/com.mint.cat
 ```
@@ -62,6 +68,9 @@ macOS:
 
 ## Cache Path
 ```
+Windows: 
+C:\Users\Alice\AppData\Local\com.mint.cat\
+
 macOS:
 ~/Library/Caches/com.mint.cat
 ```

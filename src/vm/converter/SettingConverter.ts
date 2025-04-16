@@ -12,12 +12,14 @@ export class SettingConverter {
         this.setting.version = "0.2.0";
         this.setting.guiTheme = "Light";
         this.setting.modioOAuth = "";
+
         try {
             this.setting.language = await DeviceApi.getLanguage();
             this.setting.cachePath = await appCacheDir();
             this.setting.configPath = await appConfigDir();
             this.setting.drgPakPath = await IntegrateApi.findGamePak();
-        } catch (err) {
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -25,13 +27,14 @@ export class SettingConverter {
         try {
             this.setting = new Setting();
             this.setting.version = "0.2.0";
+            this.setting.guiTheme = "Light";
             this.setting.cachePath = await appCacheDir();
             this.setting.configPath = await appConfigDir();
             this.setting.language = await DeviceApi.getLanguage();
 
             const data = JSON.parse(config);
             this.setting.modioOAuth = data["provider_parameters"]["modio"]["oauth"];
-            this.setting.drgPakPath = data["drg_pak_path"];
+            this.setting.drgPakPath = await IntegrateApi.findGamePak();
         } catch (e) {
             console.error(e);
         }

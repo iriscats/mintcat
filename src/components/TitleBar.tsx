@@ -59,6 +59,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
         const userInfo = await ModioApi.getUserInfo();
         if (userInfo) {
             const url = await CacheApi.cacheImage(userInfo.avatar.thumb_50x50);
+            vm.setting.modioUid = userInfo.id;
             this.setState({
                 profileUrl: url,
                 username: userInfo.username,
