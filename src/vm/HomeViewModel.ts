@@ -316,7 +316,8 @@ export class HomeViewModel {
                 }
             }
         } catch (err) {
-            this.converter.createDefault()
+            this.converter.createDefault();
+            await ConfigApi.saveProfileData(this.converter.profileList.toJson());
         }
     }
 
@@ -332,6 +333,7 @@ export class HomeViewModel {
             }
         } catch (e) {
             this.converter.createDefault();
+            await ConfigApi.saveProfileData(this.converter.profileList.toJson());
         }
     }
 
