@@ -4,7 +4,7 @@
   "pub_date": "2025-04-16T10:59:51.555Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTGNqelROS3Q0T1dIZldvYmNybWxJUEZ4SUlzWDFtZW1JbkxnSDBtNDBETWFaRE9mbFZsaUd4UnQxb2pwc2l5b1NRNVNpeHVSRk0rR2tDNGt4eFFYNWd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ0Nzk0NTA2CWZpbGU6bWludGNhdF8wLjQuMF94NjQtc2V0dXAuZXhlCktZNktGSTFudVI5N1kvT3ZxeWM1RjJ3aGV0OUNZMVN2TTJWZ2k1bSsvZEk3TGVSUi8yZVlINGRwMldpN0Y0MkI3d3p2QStadjVPZ1RGdUNrTXQ4NEN3PT0K",
       "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.0/mintcat_0.4.0_x64-setup.exe"
     }
   }

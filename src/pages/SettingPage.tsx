@@ -2,6 +2,7 @@ import React from 'react';
 import {t} from "i18next";
 import {open} from '@tauri-apps/plugin-dialog'
 import {openPath} from '@tauri-apps/plugin-opener';
+import {open as openShell} from "@tauri-apps/plugin-shell";
 import {appCacheDir} from "@tauri-apps/api/path";
 import {Form, Input, Select, Card, message, Button, Flex} from 'antd';
 import {FolderAddOutlined} from "@ant-design/icons";
@@ -40,7 +41,6 @@ class SettingPage extends BasePage<any, any> {
     static contextType = AppContext;
 
     private readonly appSettingFormRef: any = React.createRef();
-    private readonly userSettingFormRef: any = React.createRef();
     private readonly gameSettingFormRef: any = React.createRef();
 
     public constructor(props: any, context: any) {
@@ -81,6 +81,10 @@ class SettingPage extends BasePage<any, any> {
         }
     }
 
+    private async onOpenModioClick() {
+        await openShell("https://mod.io/me/access");
+    }
+
     private async onFindGamePathClick() {
         const path = await IntegrateApi.findGamePak();
         if (path) {
@@ -113,6 +117,7 @@ class SettingPage extends BasePage<any, any> {
         }
         this.context.setting.modioOAuth = e.target.value;
         await this.context.saveSettings();
+        this.forceUpdate();
     }
 
     private async onDevToolsClick() {
@@ -159,9 +164,6 @@ class SettingPage extends BasePage<any, any> {
             theme: this.context.setting.guiTheme,
             configDirectory: this.context.setting.configPath,
             cacheDirectory: this.context.setting.cachePath,
-        });
-        this.userSettingFormRef.current?.setFieldsValue({
-            oauth: this.context.setting.modioOAuth,
         });
         this.gameSettingFormRef.current?.setFieldsValue({
             gamePath: this.context.setting.drgPakPath,
@@ -245,11 +247,17 @@ class SettingPage extends BasePage<any, any> {
                 <Card title={t("User Authentication")}
                       style={{marginBottom: "10px"}}
                 >
-                    <Form ref={this.userSettingFormRef}
-                          {...SettingLayout}
-                    >
+                    <Form {...SettingLayout}>
                         <Form.Item label={t("mod.io key")} name="oauth">
-                            <Input onChange={this.onOAuthChange}/>
+                            <Flex>
+                                <Input onChange={this.onOAuthChange}
+                                       value={this.context.setting.modioOAuth}
+                                />
+                                <Button type="default"
+                                        onClick={this.onOpenModioClick}>
+                                    {t("Open mod.io")}
+                                </Button>
+                            </Flex>
                         </Form.Item>
                     </Form>
                 </Card>

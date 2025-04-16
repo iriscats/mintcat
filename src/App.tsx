@@ -5,6 +5,7 @@ import {I18nextProvider} from "react-i18next"
 import TitleBar from "./components/TitleBar.tsx";
 import StatusBar from "./components/StatusBar.tsx";
 import MenuBar, {MenuPage} from "./components/MenuBar.tsx";
+import UpdateDialog from "./dialogs/UpdateDialog.tsx";
 import HomePage from "./pages/HomePage.tsx";
 import SettingPage from "./pages/SettingPage.tsx";
 import ModioPage from "./pages/ModioPage.tsx";
@@ -12,7 +13,6 @@ import defaultTheme from './themes/default.ts';
 import i18n from "./locales/i18n"
 
 import './App.css';
-import UpdateDialog from "./dialogs/UpdateDialog.tsx";
 
 const {
     Header,
