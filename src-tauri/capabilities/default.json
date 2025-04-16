@@ -19,7 +19,7 @@
     "os:default",
     "log:default",
     "dialog:default",
-    "process:default",
+    "process:allow-restart",
     "opener:default",
     "updater:default",
     {

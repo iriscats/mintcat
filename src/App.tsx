@@ -12,6 +12,7 @@ import defaultTheme from './themes/default.ts';
 import i18n from "./locales/i18n"
 
 import './App.css';
+import UpdateDialog from "./dialogs/UpdateDialog.tsx";
 
 const {
     Header,
@@ -89,6 +90,7 @@ class App extends React.Component<any, any> {
             <I18nextProvider i18n={i18n}>
                 <ConfigProvider theme={defaultTheme}>
                     <Layout className={"app"}>
+                        <UpdateDialog/>
                         <Header className={"app-header"}>
                             <TitleBar/>
                         </Header>

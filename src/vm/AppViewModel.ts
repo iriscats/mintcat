@@ -10,7 +10,6 @@ import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import i18n from "../locales/i18n"
-import {checkUpdate} from "../apis/UpdateApi.ts";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -140,10 +139,6 @@ export class AppViewModel {
         } else {
             message.error(t("mod.io OAuth No Found"));
         }
-
-        setTimeout(() => {
-            checkUpdate();
-        }, 120 * 1000);
 
         AppViewModel.instance = appViewModel;
         return appViewModel;

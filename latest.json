@@ -1,11 +1,11 @@
 {
-  "version": "v0.4.0",
+  "version": "0.4.0",
   "notes": "",
-  "pub_date": "2025-04-15T05:59:51.555Z",
+  "pub_date": "2025-04-16T10:59:51.555Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": ""
+      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.0/mintcat_0.4.0_x64-setup.exe"
     }
   }
 }
