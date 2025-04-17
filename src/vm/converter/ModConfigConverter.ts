@@ -22,7 +22,12 @@ export class ModConfigConverter {
 
         for (const profile in data.profiles) {
             const profileTree = new ProfileTree(profile);
-            const mods = data.profiles[profile]["mods"];
+            let mods = data.profiles[profile]["mods"];
+
+            // 去除 mods 中 ["spec"]["url"] 相同的项
+            mods = mods.filter((mod: any, index: number, self: any[]) =>
+                index === self.findIndex((t) => (t["spec"]["url"] === mod["spec"]["url"]))
+            );
 
             const localFolder = profileTree.LocalFolder;
             const modioFolder = profileTree.ModioFolder;
