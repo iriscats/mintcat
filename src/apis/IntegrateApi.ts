@@ -44,14 +44,26 @@ export class IntegrateApi extends ILock {
             if (!await IntegrateApi.checkGamePath()) {
                 return false;
             }
-            if (!await ModUpdateApi.checkModList()) {
-                console.log("checkModList");
-                return false;
+
+            let editTime = homeViewModel.ActiveProfile.editTime;
+            let installTime = homeViewModel.ActiveProfile.installTime;
+            const subModList = homeViewModel.ActiveProfile.getModList(homeViewModel.ModList);
+            for (const item of subModList.Mods) {
+                if (item.enabled) {
+                    await ModUpdateApi.checkOnlineModUpdate(item);
+                    if (await ModUpdateApi.checkLocalModModify(item)) {
+                        editTime = Math.round(new Date().getTime() / 1000);
+                        homeViewModel.ActiveProfile.editTime = editTime;
+                        await ConfigApi.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
+                    }
+                    if (!await ModUpdateApi.checkLocalModCache(item)) {
+                        return false;
+                    }
+                }
             }
 
-            let installTime = homeViewModel.ActiveProfile.installTime;
-            if (installTime < homeViewModel.ActiveProfile.editTime) {
-                installTime = homeViewModel.ActiveProfile.editTime;
+            if (installTime < editTime) {
+                installTime = editTime;
             }
             const installType = await IntegrateApi.checkInstalled(
                 appViewModel.setting.drgPakPath,
@@ -79,7 +91,6 @@ export class IntegrateApi extends ILock {
 
             await IntegrateApi.uninstall(appViewModel.setting.drgPakPath);
 
-            const subModList = homeViewModel.ActiveProfile.getModList(homeViewModel.ModList);
             const installModList = [];
             for (const item of subModList.Mods) {
                 const modName = item.nameId === "" ? item.displayName : item.nameId;
