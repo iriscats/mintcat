@@ -56,7 +56,9 @@ export class ModUpdateApi {
         if (modItem.isLocal === true && modItem.enabled === true) {
             if (await exists(modItem.cachePath)) {
                 const fileInfo = await stat(modItem.cachePath);
+                console.log(fileInfo.mtime.getTime(), modItem.lastUpdateDate);
                 if (fileInfo.mtime.getTime() === modItem.lastUpdateDate) {
+                    console.log(false);
                     return false;
                 }
             }
@@ -70,9 +72,6 @@ export class ModUpdateApi {
         for (const item of subModList.Mods) {
             if (item.enabled) {
                 await this.checkOnlineModUpdate(item);
-                if (!await this.checkLocalModModify(item)) {
-                    viewModel.ActiveProfile.editTime = 0;
-                }
                 if (!await this.checkLocalModCache(item)) {
                     return false;
                 }
