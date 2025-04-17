@@ -218,7 +218,7 @@ export class ProfileTreeItem {
     }
 
     public add(id: number, type: ProfileTreeType, name: string = "") {
-        this.children.push(new ProfileTreeItem(id, type, name));
+        this.children.unshift(new ProfileTreeItem(id, type, name));
     }
 
     public remove(id: number) {
