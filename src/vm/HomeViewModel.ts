@@ -229,6 +229,8 @@ export class HomeViewModel {
             modItem.enabled = enable;
         }
         await ConfigApi.saveModListData(this.ModList.toJson());
+
+        // update edit time
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
     }
