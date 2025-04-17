@@ -35,7 +35,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                 <Flex align="center"
                       style={{
                           width: "calc(100% - 20px)",
-                          backgroundColor: "rgba(238,238,238,0.1)",
+                          backgroundColor: "rgba(238,238,238,0.05)",
                           display: "block"
                       }}
                 >
@@ -144,11 +144,11 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                     <span style={{
                         width: "100%",
                         display: "block",
-                        backgroundColor: "rgba(238,238,238,0.4)",
+                        backgroundColor: "rgba(238,238,238,0.2)",
                         paddingLeft: "6px",
                         borderRadius: "6px"
                     }}>
-                       <FolderOutlined/> {nodeData.title}
+                      <b><FolderOutlined/> {nodeData.title}</b>
                     </span>
             </Dropdown>
         );
