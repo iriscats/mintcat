@@ -43,6 +43,7 @@ import {MessageBox} from "../components/MessageBox.ts";
 import {BasePage} from "./IBasePage.ts";
 import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
+import {ConfigApi} from "../apis/ConfigApi.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -126,24 +127,36 @@ class HomePage extends BasePage<any, ModListPageState> {
             title: t("Delete Mods"),
             content: t("Are you sure you want to delete the selected mods?"),
         });
+
+        if (this.state.selectedKeys.length === 0) {
+            return;
+        }
+
         if (confirm) {
             for (const key of this.state.selectedKeys) {
                 const modItem = this.context.ModList.get(key);
                 if (modItem) {
-                    await this.context.removeMod(key);
+                    this.context.ActiveProfile.removeMod(modItem.id);
                 }
             }
+            await ConfigApi.saveProfileDetails(this.context.ActiveProfileName, this.context.ActiveProfile);
             await this.updateTreeView();
         }
     }
 
     private async onMultiEnableClick(isEnable: boolean) {
+        if (this.state.selectedKeys.length === 0) {
+            return;
+        }
+
         for (const key of this.state.selectedKeys) {
             const modItem = this.context.ModList.get(key);
             if (modItem) {
-                await this.context.setModEnabled(key, isEnable)
+                modItem.enabled = isEnable;
             }
         }
+        await ConfigApi.saveModListData(this.context.ModList.toJson());
+        await ConfigApi.saveProfileDetails(this.context.ActiveProfileName, this.context.ActiveProfile);
         await this.updateTreeView();
     }
 
@@ -154,7 +167,6 @@ class HomePage extends BasePage<any, ModListPageState> {
                 await ModUpdateApi.updateMod(modItem)
             }
         }
-        await this.updateTreeView();
     }
 
     private async onCopyListClick() {
