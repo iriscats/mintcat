@@ -51,7 +51,7 @@ fn launch_game() {
         use std::process::Command;
 
         let game_id = "548430";
-        let url = format!("steam://rungameid/{} -disablemodding", game_id);
+        let url = format!("steam://run/{}//-disablemodding", game_id);
         let status = Command::new("cmd")
             .args(&["/C", "start", "", &url])
             .status()
