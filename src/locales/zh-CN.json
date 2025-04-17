@@ -41,6 +41,7 @@
   "Fetch Mod Info": "获取 Mod 信息",
   "Fetch Mod Info Error": "获取 Mod 信息失败",
   "Fetch User Info Error": "获取用户信息失败",
+  "Fetch Events Error": "获取更新事件失败",
   "File Not Found": "文件不存在",
   "Found Update": "发现更新",
   "Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?": "发现旧版 MINT(0.2, 0.3) 配置文件，注意将会覆盖当前配置，是否导入？",
@@ -105,5 +106,9 @@
   "User Info": "用户信息",
   "Username": "用户名",
   "mod.io OAuth No Found": "mod.io 授权不存在",
-  "mod.io key": "mod.io 授权"
+  "mod.io key": "mod.io 授权",
+  "mod.io Error": "mod.io 错误",
+  "mod.io Too Many Requests": "mod.io 请求过多",
+  "mod.io Not Found": "mod.io 未找到",
+  "mod.io Unauthorized": "mod.io 未授权"
 }

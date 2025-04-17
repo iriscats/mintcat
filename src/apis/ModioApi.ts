@@ -50,13 +50,13 @@ export class ModioApi {
             case 200:
                 return await resp.json();
             case 401:
-                throw Error(`${t("Modio Unauthorized")}`);
+                throw Error(`${t("mod.io Unauthorized")}`);
             case 404:
-                throw Error(`${t("Modio Not Found")}`);
+                throw Error(`${t("mod.io Not Found")}`);
             case 429:
-                throw Error(`${t("Modio Too Many Requests")}`);
+                throw Error(`${t("mod.io Too Many Requests")}`);
             default:
-                throw Error(`${t("Modio Error")}: ${resp.status}`);
+                throw Error(`${t("mod.io Error")}: ${resp.status}`);
         }
     }
 

@@ -35,6 +35,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                 <Flex align="center"
                       style={{
                           width: "calc(100% - 20px)",
+                          backgroundColor: "rgba(238,238,238,0.1)",
                           display: "block"
                       }}
                 >
@@ -95,10 +96,15 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                         </span>
                     }
 
-                    {nodeData.isLocal === true && <a style={{color: "#403c3c"}}> {nodeData.title}</a>}
+                    {
+                        nodeData.isLocal === true &&
+                        <a style={{color: nodeData.enabled ? "#403c3c" : "gray"}}>
+                            {nodeData.title}
+                        </a>
+                    }
                     {
                         nodeData.isLocal === false &&
-                        <a style={{color: nodeData.downloadProgress === 100 ? "#1f81f8" : "lightblue"}}
+                        <a style={{color: nodeData.enabled && nodeData.downloadProgress === 100 ? "#1f81f8" : "lightblue"}}
                            onClick={async () => {
                                await open(nodeData.url);
                            }}
@@ -138,7 +144,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                     <span style={{
                         width: "100%",
                         display: "block",
-                        backgroundColor: "rgba(238,238,238,0.2)",
+                        backgroundColor: "rgba(238,238,238,0.4)",
                         paddingLeft: "6px",
                         borderRadius: "6px"
                     }}>
