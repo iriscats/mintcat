@@ -61,34 +61,20 @@ export class ModioApi {
     }
 
     private static parseModLinks(link: string) {
-        if (link.endsWith("#description")) {
-            link = link.substring(0, link.length - "#description".length);
-        }
-
-        let regex = new RegExp('^https://mod\.io/g/drg/m/([^/#]+)(?:#(\\d+)(?:/(\\d+))?)?$');
+        let regex = new RegExp('^https://mod\.io/g/drg/m/([^/#]+)');
         let match = link.match(regex);
         if (match !== null) {
-            let nameId = match[1];
-            let modId = match[2];
-            let modifyId = match[3];
-
-            console.log(`name_id: ${nameId}, mod_id: ${modId}, modify_id: ${modifyId}`);
-            return {nameId, modId, modifyId};
+            return match[1];
         }
     }
 
     public static async getModInfoByLink(url: string): Promise<ModInfo> {
-        const result = ModioApi.parseModLinks(url);
-        if (result === undefined) {
+        const nameId = ModioApi.parseModLinks(url);
+        if (nameId === undefined) {
             message.error(`${t("Invalid Mod Link")}: ${url}`);
             return;
         }
-
-        if (result.modId === undefined) {
-            return await ModioApi.getModInfoByName(result.nameId);
-        } else {
-            return await ModioApi.getModInfoById(result.modId);
-        }
+        return await ModioApi.getModInfoByName(nameId);
     }
 
     public static async getUserInfo() {
