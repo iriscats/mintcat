@@ -43,7 +43,7 @@ class StatusBar extends React.Component<any, StatusBarState> {
             this.setState({
                 message: ""
             })
-        }, 10000);
+        }, 30000);
 
         if (this.timer !== 0) {
             clearTimeout(this.timer);
