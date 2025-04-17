@@ -232,6 +232,8 @@ class HomePage extends BasePage<any, ModListPageState> {
         this.setState({
             defaultProfile: value as string,
         })
+        await ModUpdateApi.checkModUpdate();
+        await ModUpdateApi.checkModList();
     };
 
     private async onSwitchChange(checked: boolean, node: any) {
