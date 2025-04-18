@@ -6,6 +6,7 @@ use crate::integrator::game_pak_patch::{
 use crate::integrator::installation::DRGInstallation;
 use crate::integrator::mod_bundle_writer::ModBundleWriter;
 use crate::integrator::mod_info::ModInfo;
+use crate::integrator::modio_patch::recovery_modio;
 use crate::integrator::raw_asset::RawAsset;
 use crate::integrator::ue4ss_integrate::{install_ue4ss, install_ue4ss_mod, uninstall_ue4ss};
 use crate::integrator::{game_pak_patch, ReadSeek};
@@ -175,6 +176,8 @@ impl PakIntegrator {
 
         let mod_pak_path = self.installation.paks_path().join(FSD_MOD_PAK_NAME);
 
+        //recovery_modio(&self.installation).unwrap();
+
         let metadata = fs::metadata(&mod_pak_path)?;
         let mod_pak_timestamp = metadata
             .modified()?
@@ -246,14 +249,6 @@ impl PakIntegrator {
     ) -> Result<(), Box<dyn Error>> {
         for pak_file in pak_files {
             if let Some(filename) = pak_file.0.file_name() {
-                if filename == "AssetRegistry.bin" {
-                    continue;
-                }
-                if pak_file.0.extension().and_then(std::ffi::OsStr::to_str)
-                    == Some("ushaderbytecode")
-                {
-                    continue;
-                }
                 let lower = filename.to_string_lossy().to_lowercase();
                 if lower == "initspacerig.uasset" {
                     self.init_space_rig_assets
@@ -331,15 +326,26 @@ impl PakIntegrator {
         pak_files: HashMap<PathBuf, String>,
         pak_buf: &mut Box<dyn ReadSeek>,
     ) -> Result<(), Box<dyn Error>> {
-        for (normalized, pak_path) in pak_files {
-            let lowercase = normalized.to_str().unwrap().to_lowercase();
+        for (pak_file, pak_path) in pak_files {
+            let lowercase = pak_file.to_str().unwrap().to_lowercase();
             if self.added_paths.contains(&lowercase) {
                 continue;
             }
 
+            if let Some(filename) = pak_file.file_name(){
+                if filename == "AssetRegistry.bin" {
+                    continue;
+                }
+                if pak_file.extension().and_then(std::ffi::OsStr::to_str)
+                    == Some("ushaderbytecode")
+                {
+                    continue;
+                }
+            }
+
             let file_data = pak.get(&pak_path, pak_buf)?;
             self.bundle
-                .write_file(&file_data, normalized.to_str().unwrap())?;
+                .write_file(&file_data, pak_file.to_str().unwrap())?;
 
             self.added_paths.insert(lowercase);
         }
