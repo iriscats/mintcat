@@ -276,32 +276,6 @@ export class HomeViewModel {
         this.updateTreeViewCallback?.call(this);
     }
 
-    public async updateModList(isRefresh = false): Promise<void> {
-        try {
-            const subModList = this.ActiveProfile.getModList(this.ModList);
-            for (const mod of subModList.Mods) {
-                if (isRefresh) {
-                    if (mod.url.startsWith("http")) {
-                        await ModUpdateApi.updateMod(mod);
-                    } else {
-                        await ModUpdateApi.checkLocalModCache(mod);
-                    }
-                } else {
-                    if (mod.modId === MOD_INVALID_ID && mod.url.startsWith("http")) {
-                        await ModUpdateApi.updateMod(mod);
-                    }
-                }
-            }
-
-            if (isRefresh) {
-                this.ActiveProfile.lastUpdate = new Date().getTime();
-                await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
-            }
-        } catch (_) {
-            await emit("status-bar-log", t("Update Failed"));
-        }
-    }
-
     public async updateUI() {
         this.updateTreeViewCallback?.call(this);
     }

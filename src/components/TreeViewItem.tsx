@@ -3,6 +3,7 @@ import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag, Tooltip} from 
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {t} from "i18next";
 import {open} from "@tauri-apps/plugin-shell";
+import {ModSourceType} from "../vm/config/ModList.ts";
 
 
 export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: any) {
@@ -45,7 +46,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                             style={{marginRight: "8px", marginTop: "-3px"}}
                     />
 
-                    {nodeData.isLocal === false &&
+                    {nodeData.sourceType === ModSourceType.Modio &&
                         <Select size={"small"}
                                 suffixIcon={null}
                                 popupMatchSelectWidth={false}
@@ -59,7 +60,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                         </Select>
                     }
 
-                    {nodeData.isLocal === false && nodeData.onlineUpdateDate > nodeData.lastUpdateDate &&
+                    {nodeData.sourceType === ModSourceType.Modio && nodeData.onlineUpdateDate > nodeData.lastUpdateDate &&
                         <Tooltip title={t("Discovered New Version")}>
                             <span style={{color: "orange", marginRight: "4px"}}>
                                 <ClockCircleOutlined/>
@@ -67,7 +68,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                         </Tooltip>
                     }
 
-                    {nodeData.isLocal === false && nodeData.onlineAvailable === false &&
+                    {nodeData.sourceType === ModSourceType.Modio && nodeData.onlineAvailable === false &&
                         <Tooltip title={t("Online Mod has been Deleted by Author")}>
                             <span style={{color: "red", marginRight: "4px"}}>
                                 <ExclamationCircleOutlined/>
@@ -75,7 +76,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                         </Tooltip>
                     }
 
-                    {nodeData.isLocal === false &&
+                    {nodeData.sourceType === ModSourceType.Modio &&
                         <span style={{
                             display: "inline-flex",
                             alignItems: "center",
@@ -97,13 +98,13 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                     }
 
                     {
-                        nodeData.isLocal === true &&
+                        nodeData.sourceType === ModSourceType.Local &&
                         <a style={{color: nodeData.enabled ? "#403c3c" : "gray"}}>
                             {nodeData.title}
                         </a>
                     }
                     {
-                        nodeData.isLocal === false &&
+                        nodeData.sourceType === ModSourceType.Modio &&
                         <a style={{color: nodeData.enabled && nodeData.downloadProgress === 100 ? "#1f81f8" : "lightblue"}}
                            onClick={async () => {
                                await open(nodeData.url);

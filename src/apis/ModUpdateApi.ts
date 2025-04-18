@@ -4,11 +4,10 @@ import {exists, stat} from "@tauri-apps/plugin-fs";
 import {ModioApi} from "./ModioApi.ts";
 import {ConfigApi} from "./ConfigApi.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
-import {MOD_INVALID_ID, ModListItem} from "../vm/config/ModList.ts";
+import {MOD_INVALID_ID, ModListItem, ModSourceType} from "../vm/config/ModList.ts";
 import {emit} from "@tauri-apps/api/event";
 
 export class ModUpdateApi {
-
 
     public static async updateMod(mod: ModListItem) {
         const viewModel = await HomeViewModel.getInstance();
@@ -35,7 +34,7 @@ export class ModUpdateApi {
     }
 
     public static async checkOnlineModUpdate(modItem: ModListItem) {
-        if (modItem.isLocal === false) {
+        if (modItem.sourceType === ModSourceType.Modio && modItem.enabled === true) {
             if (!await exists(modItem.cachePath) || modItem.onlineUpdateDate > modItem.lastUpdateDate) {
                 await ModUpdateApi.updateMod(modItem);
             }
@@ -43,9 +42,9 @@ export class ModUpdateApi {
     }
 
     public static async checkLocalModCache(modItem: ModListItem) {
-        if (modItem.isLocal === true && modItem.enabled === true) {
+        if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
             if (!await exists(modItem.cachePath)) {
-                message.error(t("File Not Found") + modItem.cachePath);
+                message.error(`${t("File Not Found")} id:${modItem.id} path: ${modItem.cachePath}`);
                 return false;
             }
         }
@@ -53,7 +52,7 @@ export class ModUpdateApi {
     }
 
     public static async checkLocalModModify(modItem: ModListItem) {
-        if (modItem.isLocal === true && modItem.enabled === true) {
+        if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
             if (await exists(modItem.cachePath)) {
                 const fileInfo = await stat(modItem.cachePath);
                 console.log(fileInfo.mtime.getTime(), modItem.lastUpdateDate);
@@ -95,7 +94,7 @@ export class ModUpdateApi {
         const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
         const modIdList = [];
         for (const item of subModList.Mods) {
-            if (item.isLocal === false || item.modId !== MOD_INVALID_ID) {
+            if (item.sourceType === ModSourceType.Modio || item.modId !== MOD_INVALID_ID) {
                 modIdList.push(item.modId);
             }
         }
