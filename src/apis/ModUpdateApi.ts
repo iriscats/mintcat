@@ -44,7 +44,7 @@ export class ModUpdateApi {
     public static async checkLocalModCache(modItem: ModListItem) {
         if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
             if (!await exists(modItem.cachePath)) {
-                message.error(`${t("File Not Found")} id:${modItem.id} path: ${modItem.cachePath}`);
+                message.error(`${t("File Not Found")}: ${modItem.displayName}: ${modItem.cachePath}`);
                 return false;
             }
         }
