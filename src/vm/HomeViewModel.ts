@@ -87,8 +87,8 @@ export class HomeViewModel {
         const modItem = new ModListItem(resp);
         const subModList = this.ActiveProfile.getModList(this.ModList);
         if (subModList.getByModId(modItem.modId)) {
-            message.error(t("Mod Already Exists"));
-            return false;
+            message.warning(`${t("Mod Already Exists")} ${modItem.nameId}`);
+            return true;
         }
 
         const addedModItem = this.ModList.add(modItem);
@@ -112,8 +112,8 @@ export class HomeViewModel {
         modListItem.url = modPath;
         modListItem.cachePath = modPath;
         if (!await exists(modPath)) {
-            message.error(t("Mod Path No Exists" + modPath));
-            return false;
+            message.warning(t("Mod Path No Exists" + modPath));
+            return true;
         }
 
         const subModList = this.ActiveProfile.getModList(this.ModList);
