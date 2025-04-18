@@ -53,7 +53,7 @@ export class TreeViewConverter {
                         tags: modItem.tags,
                         required: modItem.required,
                         enabled: modItem.enabled,
-                        isLocal: modItem.isLocal,
+                        sourceType: modItem.sourceType,
                         approval: modItem.approval,
                         versions: modItem.versions,
                         fileVersion: modItem.fileVersion,

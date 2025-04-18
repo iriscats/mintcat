@@ -1,5 +1,5 @@
 import {path} from "@tauri-apps/api";
-import {ModList, ModListItem} from "../config/ModList.ts";
+import {ModList, ModListItem, ModSourceType} from "../config/ModList.ts";
 import {ProfileList, ProfileTree, ProfileTreeType} from "../config/ProfileList.ts";
 import {t} from "i18next";
 
@@ -38,12 +38,13 @@ export class ModConfigConverter {
                 item.required = modItem["required"];
                 item.enabled = modItem["enabled"];
                 if (item.url.startsWith("http")) {
+                    item.sourceType = ModSourceType.Modio;
                     const addedModItem = this.modList.add(item);
                     modioFolder.add(addedModItem.id, ProfileTreeType.ITEM);
                 } else {
                     item.displayName = await path.basename(modItem["spec"]["url"]);
                     item.cachePath = modItem["spec"]["url"];
-                    item.isLocal = true;
+                    item.sourceType = ModSourceType.Local;
                     item.downloadProgress = 100;
                     const addedModItem = this.modList.add(item);
                     localFolder.add(addedModItem.id, ProfileTreeType.ITEM);

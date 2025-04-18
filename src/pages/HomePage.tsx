@@ -44,6 +44,7 @@ import {BasePage} from "./IBasePage.ts";
 import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
+import {ModSourceType} from "../vm/config/ModList.ts";
 
 interface ModListPageState {
     options?: SelectProps['options'];
@@ -173,7 +174,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         const subModList = this.context.ActiveProfile.getModList(this.context.ModList);
         let list = "";
         for (const mod of subModList.Mods) {
-            if (!mod.isLocal) {
+            if (mod.sourceType === ModSourceType.Modio) {
                 list += mod.url + "\n";
             }
         }
@@ -392,12 +393,9 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     componentDidMount(): void {
         this.hookWindowResized();
-        this.updateProfileSelect().then(() => {
-        });
-        this.updateTreeView().then(() => {
-        });
-        this.context.updateModList().then(() => {
-        })
+        this.updateProfileSelect().then();
+        this.updateTreeView().then();
+        ModUpdateApi.checkModList().then();
     }
 
     render() {

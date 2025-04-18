@@ -2,6 +2,13 @@ import {ModInfo} from "../modio/ModInfo.ts";
 
 export const MOD_INVALID_ID = 999999;
 
+export enum ModSourceType {
+    Local = "Local",
+    Modio = "Modio",
+    Unknown = "Unknown"
+}
+
+
 export class ModListItem {
     public id: number = MOD_INVALID_ID;
     public modId: number = MOD_INVALID_ID;
@@ -15,7 +22,7 @@ export class ModListItem {
     public usedVersion: string = "";
     public versions: string[] = [];
     public approval: string = "Sandbox";
-    public isLocal: boolean = true;
+    public sourceType: ModSourceType = ModSourceType.Unknown;
     public downloadUrl: string = "";
     public cachePath: string = "";
     public downloadProgress: number = 100;
@@ -37,7 +44,7 @@ export class ModListItem {
                 this.tags.push(tag.name);
             }
 
-            this.isLocal = false;
+            this.sourceType = ModSourceType.Modio;
             this.downloadProgress = 0;
             this.fileSize = modInfo.modfile.filesize;
 
@@ -45,7 +52,7 @@ export class ModListItem {
             this.convertModApprovalType();
             this.convertModRequired();
         } else {
-            this.isLocal = true;
+            this.sourceType = ModSourceType.Local;
             this.downloadProgress = 100;
             this.approval = "";
         }
@@ -107,7 +114,7 @@ export class ModListItem {
         modItem.tags = this.tags;
         modItem.versions = this.versions;
         modItem.approval = this.approval;
-        modItem.isLocal = this.isLocal;
+        modItem.sourceType = this.sourceType;
         modItem.downloadUrl = this.downloadUrl;
         modItem.cachePath = this.cachePath;
         modItem.downloadProgress = this.downloadProgress;
@@ -176,9 +183,6 @@ export class ModList {
             if (oldItem.displayName !== "") {
                 newItem.displayName = oldItem.displayName;
             }
-            if (newItem.url.startsWith("http") === true) {
-                newItem.isLocal = false;
-            }
             newItem.lastUpdateDate = Date.now();
             this.mods[index] = newItem;
             return this.mods[index];
@@ -190,7 +194,17 @@ export class ModList {
         let modList = new ModList();
         modList.version = json.version;
         modList.mods = [];
+
         for (const mod of json.mods) {
+            // patch old version
+            if (!mod.source_type) {
+                if (mod.url.startsWith("http")) {
+                    mod.source_type = ModSourceType.Modio;
+                } else {
+                    mod.source_type = ModSourceType.Local;
+                }
+            }
+
             const modItem = new ModListItem();
             modItem.id = mod.id;
             modItem.modId = mod.mod_id;
@@ -203,7 +217,6 @@ export class ModList {
             modItem.tags = mod.tags;
             modItem.versions = mod.versions;
             modItem.approval = mod.approval;
-            modItem.isLocal = mod.is_local;
             modItem.downloadUrl = mod.download_url;
             modItem.cachePath = mod.cache_path;
             modItem.downloadProgress = mod.download_progress;
@@ -211,6 +224,7 @@ export class ModList {
             modItem.lastUpdateDate = mod.last_update_date;
             modItem.onlineUpdateDate = mod.online_update_date;
             modItem.onlineAvailable = mod.online_available;
+            modItem.sourceType = mod.source_type;
             modList.mods.push(modItem);
         }
         return modList;
@@ -231,7 +245,7 @@ export class ModList {
                 "tags": mod.tags,
                 "versions": mod.versions,
                 "approval": mod.approval,
-                "is_local": mod.isLocal,
+                "source_type": mod.sourceType,
                 "download_url": mod.downloadUrl,
                 "cache_path": mod.cachePath,
                 "file_size": mod.fileSize,
