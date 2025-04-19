@@ -10,6 +10,7 @@ import {Setting} from "./config/Setting.ts";
 import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import i18n from "../locales/i18n"
+import {exists} from "@tauri-apps/plugin-fs";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -33,10 +34,15 @@ export class AppViewModel {
 
     public async checkAppPath() {
         try {
-            if (this.setting.cachePath === "" || this.setting.cachePath === undefined) {
+            if (this.setting.cachePath === "" ||
+                this.setting.cachePath === undefined ||
+                !await exists(this.setting.cachePath)) {
                 this.converter.setting.cachePath = await appCacheDir();
             }
-            if (this.setting.configPath === "" || this.setting.configPath === undefined) {
+            if (this.setting.configPath === "" ||
+                this.setting.configPath === undefined ||
+                !await exists(this.setting.configPath)
+            ) {
                 this.converter.setting.configPath = await ConfigApi.getConfigPath();
             }
             await ConfigApi.saveSettings(this.setting.toJson());

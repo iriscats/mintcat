@@ -44,11 +44,10 @@ export class HomeViewModel {
     }
 
     public set ActiveProfile(activeProfile: string) {
-        console.log("set ActiveProfile " + activeProfile);
         this.converter.profileList.activeProfile = activeProfile;
-        ConfigApi.saveProfileData(this.converter.profileList.toJson()).then(_ => {
-        });
+
         this.updateTreeViewCallback?.call(this);
+        ConfigApi.saveProfileData(this.converter.profileList.toJson()).then();
     }
 
     private constructor() {
@@ -134,9 +133,9 @@ export class HomeViewModel {
         }
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
+        this.updateTreeViewCallback?.call(this);
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
-        this.updateTreeViewCallback?.call(this);
 
         return true;
     }
@@ -171,8 +170,8 @@ export class HomeViewModel {
 
     public async removeMod(id: number): Promise<void> {
         this.ActiveProfile.removeMod(id);
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async addProfile(name: string, data: string): Promise<void> {
@@ -182,10 +181,9 @@ export class HomeViewModel {
         this.converter.profileList.add(name);
         this.converter.profileTreeList.push(profileTree);
 
+        this.updateSelectCallback?.call(this);
         await ConfigApi.saveProfileData(this.converter.profileList.toJson());
         await ConfigApi.saveProfileDetails(name, profileTree);
-
-        this.updateSelectCallback?.call(this);
     }
 
     public async removeProfile(name: string): Promise<void> {
@@ -208,10 +206,11 @@ export class HomeViewModel {
 
         const profileTree = this.converter.profileTreeList.find(p => p.name === oldName);
         profileTree.name = newName;
-        await ConfigApi.saveProfileDetails(newName, profileTree);
-        await ConfigApi.renameProfileDetails(oldName, newName);
 
         this.updateSelectCallback?.call(this);
+
+        await ConfigApi.saveProfileDetails(newName, profileTree);
+        await ConfigApi.renameProfileDetails(oldName, newName);
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
@@ -219,8 +218,9 @@ export class HomeViewModel {
         if (modItem) {
             modItem.displayName = name;
         }
-        await ConfigApi.saveModListData(this.ModList.toJson());
+
         this.updateTreeViewCallback?.call(this);
+        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
@@ -229,10 +229,10 @@ export class HomeViewModel {
             modItem.enabled = enable;
         }
         await ConfigApi.saveModListData(this.ModList.toJson());
+        this.updateTreeViewCallback?.call(this);
 
         // update edit time
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
-        this.updateTreeViewCallback?.call(this);
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
@@ -260,8 +260,8 @@ export class HomeViewModel {
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
         this.ActiveProfile.addGroup(groupName, parentGroupId);
 
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async removeGroup(groupId: number): Promise<void> {
@@ -272,8 +272,8 @@ export class HomeViewModel {
 
         this.ActiveProfile.removeGroup(groupId);
 
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
+        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async updateUI() {

@@ -1,7 +1,7 @@
+import {t} from "i18next";
 import React from "react";
 import {Dropdown, Flex, MenuProps, Progress, Select, Switch, Tag, Tooltip} from "antd";
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
-import {t} from "i18next";
 import {open} from "@tauri-apps/plugin-shell";
 import {ModSourceType} from "../vm/config/ModList.ts";
 
