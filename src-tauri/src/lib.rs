@@ -12,6 +12,11 @@ use tauri::{AppHandle, Emitter, Manager};
 #[tauri::command]
 fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
     std::thread::spawn(move || {
+        #[cfg(target_os = "windows")]
+        {
+            crate::capability::steam::set_steam_launch_options();
+        }
+
         let integrator = PakIntegrator::new(game_path);
         match integrator {
             Ok(integrator) => {
@@ -51,7 +56,7 @@ fn launch_game() {
         use std::process::Command;
 
         let game_id = "548430";
-        let url = format!("steam://run/{}//-disablemodding", game_id);
+        let url = format!("steam://run/{}", game_id);
         let status = Command::new("cmd")
             .args(&["/C", "start", "", &url])
             .status()
@@ -90,7 +95,6 @@ fn is_first_run() -> bool {
     let path = std::env::current_dir().unwrap();
     let first_run_path = path.join("first_run");
     if first_run_path.exists() {
-        std::fs::remove_file(first_run_path).unwrap();
         true
     } else {
         false
@@ -201,7 +205,8 @@ pub fn run() {
             launch_game,
             find_game_pak,
             is_first_run,
-            download_large_file
+            download_large_file,
+            //capability::steam::set_steam_launch_options,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
