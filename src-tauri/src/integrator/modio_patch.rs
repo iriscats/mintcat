@@ -19,7 +19,7 @@ struct ModioMod {
 #[tracing::instrument(level = "debug")]
 pub fn recovery_modio(
     installation: &DRGInstallation,
-    modio_mods: HashSet<u32>,
+    //modio_mods: HashSet<u32>,
 ) -> Result<(), Error> {
     let Some(modio_dir) = installation.modio_directory() else {
         return Ok(());
@@ -63,11 +63,11 @@ pub fn recovery_modio(
         for m in modio_state.mods {
             ugc_section.insert(
                 m.id.to_string(),
-                if modio_mods.contains(&m.id) {
-                    "True"
-                } else {
+                // if modio_mods.contains(&m.id) {
+                //     "True"
+                // } else {
                     "False"
-                },
+                //},
             );
         }
         for m in local_mods.into_iter().flatten() {

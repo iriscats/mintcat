@@ -1,6 +1,7 @@
 use mintcat_lib::integrator::pak_integrator::PakIntegrator;
 use mintcat_lib::integrator::mod_info::ModInfo;
 use std::path::PathBuf;
+use std::ptr::null;
 
 #[test]
 fn test_pak_integrator() {
@@ -28,7 +29,7 @@ fn test_pak_integrator() {
                 }
             }
 
-            let install_result = integrator.install(,"");
+            let install_result = integrator.install(mods);
             match install_result {
                 Ok(_) => println!("Installation succeeded."),
                 Err(e) => eprintln!("Installation failed: {}", e),
