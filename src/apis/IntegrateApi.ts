@@ -21,6 +21,13 @@ export class IntegrateApi extends ILock {
 
         try {
             if (!await exists(drgPakPath)) {
+                //TODO
+/*              const found = await this.findGamePak();
+                if (found !== undefined) {
+                    appViewModel.setting.drgPakPath = found;
+                    await ConfigApi.saveSettings(appViewModel.setting.toJson());
+                    return true;
+                }*/
                 message.error(t("Game Path Not Found"));
                 return false;
             }
