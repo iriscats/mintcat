@@ -23,7 +23,7 @@ export class TreeViewConverter {
             if (filter === "All") {
                 return true;
             }
-            if (modItem.displayName?.indexOf(filter) > -1) {
+            if (modItem.displayName?.toLocaleLowerCase().indexOf(filter.toLocaleLowerCase()) > -1) {
                 return true;
             }
             if (modItem.approval === filter) {

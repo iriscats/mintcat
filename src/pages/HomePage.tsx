@@ -47,7 +47,7 @@ import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModSourceType} from "../vm/config/ModList.ts";
 
 interface ModListPageState {
-    options?: SelectProps['options'];
+    profileOptions?: SelectProps['options'];
     treeData?: TreeProps['treeData'];
     contextMenus?: MenuProps['items'];
     isMultiSelect?: boolean;
@@ -55,6 +55,8 @@ interface ModListPageState {
     selectedKeys?: any[];
     defaultProfile?: string;
     displayMode?: string;
+    searchOptions?: SelectProps['options'];
+    searchValue?: string;
 }
 
 class HomePage extends BasePage<any, ModListPageState> {
@@ -70,8 +72,7 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     private filterList: string[] = [];
 
-    private filterOptions: SelectProps['options'] = [
-        {value: 'All', label: 'All'},
+    private defaultFilterOptions: SelectProps['options'] = [
         {value: 'Verified', label: 'Verified'},
         {value: 'Approved', label: 'Approved'},
         {value: 'Sandbox', label: 'Sandbox'},
@@ -88,7 +89,8 @@ class HomePage extends BasePage<any, ModListPageState> {
         super(props, state);
 
         this.state = {
-            options: [],
+            profileOptions: [],
+            searchOptions: this.defaultFilterOptions,
             contextMenus: [],
             expandedKeys: [],
             selectedKeys: [],
@@ -117,6 +119,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         this.onMultiEnableClick = this.onMultiEnableClick.bind(this);
         this.onMultiUpdateClick = this.onMultiUpdateClick.bind(this);
         this.onSearchSelectChange = this.onSearchSelectChange.bind(this);
+        this.onSearch = this.onSearch.bind(this);
         this.onCopyListClick = this.onCopyListClick.bind(this);
 
         this.updateProfileSelect = this.updateProfileSelect.bind(this);
@@ -182,8 +185,28 @@ class HomePage extends BasePage<any, ModListPageState> {
         message.success(t("Copied To Clipboard"));
     }
 
+    private async onSearch(newValue: string) {
+        this.filterList = [newValue];
+
+        let searchOptions: SelectProps['options'] = [];
+        if (newValue !== "") {
+            searchOptions.push({value: newValue, label: newValue});
+        }
+        for (const option of this.defaultFilterOptions) {
+            searchOptions.push(option);
+        }
+
+        this.setState({
+            searchOptions: searchOptions
+        })
+        await this.updateTreeView();
+    }
+
     private async onSearchSelectChange(value: any) {
-        this.filterList = [value];
+        this.filterList = value;
+        this.setState({
+            searchValue: value
+        });
         await this.updateTreeView();
     }
 
@@ -268,7 +291,7 @@ class HomePage extends BasePage<any, ModListPageState> {
             });
         }
         this.setState({
-            options,
+            profileOptions: options,
             defaultProfile: this.context.ActiveProfileName,
         })
     }
@@ -451,7 +474,7 @@ class HomePage extends BasePage<any, ModListPageState> {
                                 size={"small"}
                                 style={{width: "300px"}}
                                 value={this.state.defaultProfile}
-                                options={this.state.options}
+                                options={this.state.profileOptions}
                                 onChange={this.onSelectChange}
                             />
                             <Tooltip title={t("Edit Profile")}>
@@ -460,10 +483,18 @@ class HomePage extends BasePage<any, ModListPageState> {
                         </Typography.Link>
                         <Typography.Link>
                             <Select size={"small"}
+                                    value={this.state.searchValue}
                                     style={{width: "300px"}}
                                     suffixIcon={<SearchOutlined/>}
-                                    options={this.filterOptions}
+                                    options={this.state.searchOptions}
+                                    filterOption={false}
+                                    notFoundContent={null}
+                                    defaultActiveFirstOption={false}
                                     onChange={this.onSearchSelectChange}
+                                    onSearch={this.onSearch}
+                                    showSearch={true}
+                                    allowClear={true}
+                                    mode={"multiple"}
                             />
                         </Typography.Link>
                     </Space>
