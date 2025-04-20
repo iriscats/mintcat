@@ -114,10 +114,10 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onSwitchChange: an
                         </a>
                     }
 
-                    {nodeData.approval === "Verified" ? (<Tag color="blue" style={{float: "right"}}>V</Tag>) :
-                        nodeData.approval === "Approved" ? (<Tag color="green" style={{float: "right"}}>A</Tag>) :
+                    {nodeData.approval === "Verified" ? (<Tag color="blue" title={t("Verified")} style={{float: "right"}}>V</Tag>) :
+                        nodeData.approval === "Approved" ? (<Tag color="green" title={t("Approved")} style={{float: "right"}}>A</Tag>) :
                             nodeData.approval === "Sandbox" ? (
-                                    <Tag color="orange" style={{float: "right"}}>S</Tag>) :
+                                    <Tag color="orange" title={t("Sandbox")} style={{float: "right"}}>S</Tag>) :
                                 (<></>)}
 
                     {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (

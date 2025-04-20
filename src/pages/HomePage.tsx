@@ -19,7 +19,7 @@ import {
 } from 'antd';
 import {
     CloseCircleOutlined, CopyOutlined,
-    EditOutlined,
+    EditOutlined, FieldTimeOutlined,
     PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined,
     SaveOutlined,
@@ -468,6 +468,11 @@ class HomePage extends BasePage<any, ModListPageState> {
                                         onClick={() => this.onSortClick("dasc")}
                                 />
                             </Tooltip>
+                            {/*<Tooltip title={t("Sort By Add Time")}>*/}
+                            {/*    <Button icon={<FieldTimeOutlined />}*/}
+                            {/*            type={"text"}*/}
+                            {/*            onClick={this.onEditProfileClick}/>*/}
+                            {/*</Tooltip>*/}
                         </Typography.Link>
                         <Typography.Link>
                             <Select

@@ -110,5 +110,8 @@
   "mod.io Error": "mod.io 错误",
   "mod.io Too Many Requests": "mod.io 请求过多",
   "mod.io Not Found": "mod.io 未找到",
-  "mod.io Unauthorized": "mod.io 未授权"
+  "mod.io Unauthorized": "mod.io 未授权",
+  "Verified": "已验证",
+  "Approved": "已批准",
+  "Sandbox": "沙盒"
 }
