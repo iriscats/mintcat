@@ -95,6 +95,7 @@ fn is_first_run() -> bool {
     let path = std::env::current_dir().unwrap();
     let first_run_path = path.join("first_run");
     if first_run_path.exists() {
+        std::fs::remove_file(first_run_path).unwrap();
         true
     } else {
         false

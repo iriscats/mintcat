@@ -2,6 +2,7 @@ import {path} from "@tauri-apps/api";
 import {appConfigDir, configDir} from "@tauri-apps/api/path";
 import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir, remove, rename} from '@tauri-apps/plugin-fs';
 import {ProfileTree} from "../vm/config/ProfileList.ts";
+import {TimeUtils} from "../utils/TimeUtils.ts";
 
 export class ConfigApi {
 
@@ -82,7 +83,7 @@ export class ConfigApi {
     public static async saveProfileDetails(name: string, tree: ProfileTree, noEdit: boolean = false): Promise<boolean> {
         const fileName = `profile_${name}.json`;
         if (!noEdit)
-            tree.editTime = Math.round(new Date().getTime() / 1000);
+            tree.editTime = TimeUtils.getCurrentTime();
         return await ConfigApi.saveDataToFile(fileName, tree.toJson());
     }
 
