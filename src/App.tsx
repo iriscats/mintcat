@@ -82,9 +82,6 @@ class App extends React.Component<any, any> {
         // });
     }
 
-    componentDidMount() {
-    }
-
     render() {
         return (
             <I18nextProvider i18n={i18n}>

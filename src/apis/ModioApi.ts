@@ -63,7 +63,7 @@ export class ModioApi {
         }
     }
 
-    private static parseModLinks(link: string) {
+    public static parseModLinks(link: string) {
         let regex = new RegExp('^https://mod\.io/g/drg/m/([^/#]+)');
         let match = link.match(regex);
         if (match !== null) {
