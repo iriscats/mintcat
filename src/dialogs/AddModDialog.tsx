@@ -1,12 +1,14 @@
 import React from 'react';
+import {t} from "i18next";
 import {Form, message, Modal, Select, Tabs} from 'antd';
 import TextArea from "antd/es/input/TextArea";
 import {FolderAddOutlined} from "@ant-design/icons";
-import {ModListPageContext} from "../AppContext.ts";
-import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
 import Search from "antd/es/input/Search";
 import {open} from "@tauri-apps/plugin-dialog";
-import {t} from "i18next";
+import {ModListPageContext} from "../AppContext.ts";
+import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
+import {ModioApi} from "../apis/ModioApi.ts";
+import {ClipboardApi} from "../apis/ClipboardApi.ts";
 
 interface AddModDialogStates {
     isModalOpen?: boolean;
@@ -51,6 +53,7 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         this.handleTabChange = this.handleTabChange.bind(this);
         this.onSelectPathClick = this.onSelectPathClick.bind(this);
         this.onSelectGroupChange = this.onSelectGroupChange.bind(this);
+        this.onClipboardChange = this.onClipboardChange.bind(this);
     }
 
     public setValue(groupId: number = 0, url: string = undefined) {
@@ -213,8 +216,32 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
         })
     }
 
+    private async onClipboardChange(text: string) {
+        if (!text) {
+            return;
+        }
+        const links = text.split("\n");
+        for (const link of links) {
+            if (!ModioApi.parseModLinks(link)) {
+                return;
+            }
+        }
+
+        this.modioFormRef.current?.setFieldsValue({
+            modLinks: text,
+        })
+
+        this.setState({
+            url: text,
+            isModalOpen: true,
+            tabActiveKey: AddModType.MODIO,
+            groupId: ProfileTreeGroupType.MODIO
+        })
+    }
+
     componentDidMount() {
         this.updateGroupList();
+        ClipboardApi.setClipboardWatcher(this.onClipboardChange).then();
     }
 
     render() {

@@ -45,6 +45,7 @@ import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModSourceType} from "../vm/config/ModList.ts";
+import {ClipboardApi} from "../apis/ClipboardApi.ts";
 
 interface ModListPageState {
     profileOptions?: SelectProps['options'];
@@ -181,6 +182,8 @@ class HomePage extends BasePage<any, ModListPageState> {
                 list += mod.url + "\n";
             }
         }
+
+        ClipboardApi.setLastClipboardText(list);
         await navigator.clipboard.writeText(list);
         message.success(t("Copied To Clipboard"));
     }
@@ -374,6 +377,7 @@ class HomePage extends BasePage<any, ModListPageState> {
                 try {
                     const mod = this.context.ModList.get(id);
                     if (mod?.url) {
+                        ClipboardApi.setLastClipboardText(mod.url);
                         await navigator.clipboard.writeText(mod.url);
                         message.success(t("Copied To Clipboard") + `: ${mod.url} `);
                     } else {
