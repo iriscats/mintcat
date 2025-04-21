@@ -9,6 +9,7 @@ import {HomeViewModel} from "../vm/HomeViewModel.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {ILock} from "./ILock.ts";
 import {ConfigApi} from "./ConfigApi.ts";
+import {TimeUtils} from "../utils/TimeUtils.ts";
 
 
 export class IntegrateApi extends ILock {
@@ -59,7 +60,7 @@ export class IntegrateApi extends ILock {
                 if (item.enabled) {
                     await ModUpdateApi.checkOnlineModUpdate(item);
                     if (await ModUpdateApi.checkLocalModModify(item)) {
-                        editTime = Math.round(new Date().getTime() / 1000);
+                        editTime = TimeUtils.getCurrentTime();
                         homeViewModel.ActiveProfile.editTime = editTime;
                         await ConfigApi.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                     }

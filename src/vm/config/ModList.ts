@@ -1,4 +1,5 @@
 import {ModInfo} from "../modio/ModInfo.ts";
+import {TimeUtils} from "../../utils/TimeUtils.ts";
 
 export const MOD_INVALID_ID = 999999;
 
@@ -27,8 +28,8 @@ export class ModListItem {
     public cachePath: string = "";
     public downloadProgress: number = 100;
     public fileSize: number = 0;
-    public lastUpdateDate: number = Date.now();
-    public onlineUpdateDate: number = Date.now();
+    public lastUpdateDate: number = TimeUtils.getCurrentTime();
+    public onlineUpdateDate: number = TimeUtils.getCurrentTime();
     public onlineAvailable: boolean = true;
 
     public constructor(modInfo?: ModInfo) {
@@ -183,7 +184,7 @@ export class ModList {
             if (oldItem.displayName !== "") {
                 newItem.displayName = oldItem.displayName;
             }
-            newItem.lastUpdateDate = Date.now();
+            newItem.lastUpdateDate = TimeUtils.getCurrentTime();
             this.mods[index] = newItem;
             return this.mods[index];
         }

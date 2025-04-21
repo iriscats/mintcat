@@ -7,6 +7,7 @@ import {UserInfo} from "../vm/modio/UserInfo.ts";
 import {EventInfo} from "../vm/modio/EventInfo.ts";
 import {CacheApi} from "./CacheApi.ts";
 import {DownloadApi} from "./DownloadApi.ts";
+import {TimeUtils} from "../utils/TimeUtils.ts";
 
 const PROXY_API_URL = "https://api.v1st.net/";
 //const MODIO_API_URL = "https://api.mod.io/v1";
@@ -53,6 +54,8 @@ export class ModioApi {
                 throw Error(`${t("mod.io Unauthorized")}`);
             case 404:
                 throw Error(`${t("mod.io Not Found")}`);
+            case 422:
+                throw Error(`${t("mod.io Request Parameter Error")}: ${url}`);
             case 429:
                 throw Error(`${t("mod.io Too Many Requests")}`);
             default:
@@ -146,6 +149,11 @@ export class ModioApi {
 
     public static async getEvents(dateAdded: number, modIds: string) {
         try {
+            // 如果时间小 10 分钟，不请求
+            if (TimeUtils.getCurrentTime() - dateAdded < 10 * 60) {
+                return [];
+            }
+
             const event_type = ["MODFILE_CHANGED", "MOD_UNAVAILABLE", "MOD_DELETED"];
             const path = `/games/${MODIO_GAME_ID}/mods/events?mod_id-in=${modIds}&date_added-min=${dateAdded}&event_type-in=${event_type.join(",")}`;
             const data = await ModioApi.getRequest(path);

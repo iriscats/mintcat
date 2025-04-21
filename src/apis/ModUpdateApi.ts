@@ -6,6 +6,7 @@ import {ConfigApi} from "./ConfigApi.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 import {MOD_INVALID_ID, ModListItem, ModSourceType} from "../vm/config/ModList.ts";
 import {emit} from "@tauri-apps/api/event";
+import {TimeUtils} from "../utils/TimeUtils.ts";
 
 export class ModUpdateApi {
 
@@ -86,7 +87,7 @@ export class ModUpdateApi {
 
         let updateTime = 0;
         if (!viewModel.ActiveProfile.lastUpdate) {
-            updateTime = Math.round(new Date().getTime() / 1000) - 60 * 60 * 24 * 30; // 最近 1 一个月的更新
+            updateTime = TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30; // 最近 1 一个月的更新
         } else {
             updateTime = viewModel.ActiveProfile.lastUpdate;
         }
@@ -106,7 +107,7 @@ export class ModUpdateApi {
                     let modItem = viewModel.ModList.getByModId(event.mod_id);
                     console.log("MODFILE_CHANGED", modItem);
                     if (modItem) {
-                        modItem.onlineUpdateDate = event.date_added * 1000;
+                        modItem.onlineUpdateDate = event.date_added;
                         if (!modItem.lastUpdateDate) {
                             modItem.lastUpdateDate = 0;
                         }
@@ -118,15 +119,15 @@ export class ModUpdateApi {
                     let modItem = viewModel.ModList.getByModId(event.mod_id);
                     if (modItem) {
                         modItem.onlineAvailable = false;
-                        modItem.lastUpdateDate = event.date_added * 1000;
-                        modItem.onlineUpdateDate = event.date_added * 1000;
+                        modItem.lastUpdateDate = event.date_added;
+                        modItem.onlineUpdateDate = event.date_added;
                     }
                 }
                     break;
             }
         }
 
-        viewModel.ActiveProfile.lastUpdate = Math.round(new Date().getTime() / 1000);
+        viewModel.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
         await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile);
         await ConfigApi.saveModListData(viewModel.ModList.toJson());
         await viewModel.updateUI();

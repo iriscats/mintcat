@@ -68,18 +68,10 @@ export class AppViewModel {
         }
     }
 
-    public checkModUpdate() {
+    public appStartAutoCheckModUpdate() {
         setTimeout(async () => {
-            const viewModel = await HomeViewModel.getInstance();
-
-            // 判断最近 1 小时内检查过更新不继续
-            if (viewModel.ActiveProfile.lastUpdate && new Date().getTime()
-                - viewModel.ActiveProfile.lastUpdate < 1000 * 60 * 60) {
-                return;
-            }
-
             await ModUpdateApi.checkModUpdate();
-        }, 1000 * 60);
+        }, 1000 * 120);
     }
 
     public async loadTheme() {
@@ -141,7 +133,7 @@ export class AppViewModel {
 
         await appViewModel.loadTheme();
         if (await appViewModel.checkOauth()) {
-            appViewModel.checkModUpdate();
+            appViewModel.appStartAutoCheckModUpdate();
         } else {
             message.error(t("mod.io OAuth No Found"));
         }
