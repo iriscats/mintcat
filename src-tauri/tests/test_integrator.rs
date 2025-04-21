@@ -1,5 +1,5 @@
-use mintcat_lib::integrator::pak_integrator::PakIntegrator;
 use mintcat_lib::integrator::mod_info::ModInfo;
+use mintcat_lib::integrator::pak_integrator::PakIntegrator;
 use std::path::PathBuf;
 use std::ptr::null;
 

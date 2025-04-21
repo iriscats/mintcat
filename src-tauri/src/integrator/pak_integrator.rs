@@ -332,12 +332,11 @@ impl PakIntegrator {
                 continue;
             }
 
-            if let Some(filename) = pak_file.file_name(){
+            if let Some(filename) = pak_file.file_name() {
                 if filename == "AssetRegistry.bin" {
                     continue;
                 }
-                if pak_file.extension().and_then(std::ffi::OsStr::to_str)
-                    == Some("ushaderbytecode")
+                if pak_file.extension().and_then(std::ffi::OsStr::to_str) == Some("ushaderbytecode")
                 {
                     continue;
                 }

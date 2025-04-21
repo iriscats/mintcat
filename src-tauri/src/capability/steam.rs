@@ -23,10 +23,12 @@ fn check_launch_options(store: &mut Vdf) -> Option<()> {
                 return Some(());
             }
         }
-        _ => {}
+        _ => {
+            return None;
+        }
     }
 
-    None
+    Some(())
 }
 
 // 设置 LaunchOptions 为 -disablemodding
@@ -54,7 +56,7 @@ fn set_launch_options(store: &mut Vdf, new_option: String) -> Option<()> {
 }
 
 fn kill_steam() {
-    //#[cfg(windows)]
+    #[cfg(windows)]
     std::thread::spawn(move || {
         loop {
             // 添加进程存在性检查
@@ -79,28 +81,60 @@ fn kill_steam() {
 }
 
 #[tauri::command]
-pub fn set_steam_launch_options()  {
+pub fn check_steam_game(exe_name: String) -> bool {
+    let output = Command::new("tasklist")
+        .args(&["/FI", format!("IMAGENAME eq {}", exe_name).as_str()])
+        .output()
+        .unwrap();
+
+    if String::from_utf8_lossy(&output.stdout).contains(exe_name.as_str()) {
+        true
+    } else {
+        false
+    }
+}
+
+#[tauri::command]
+pub fn set_steam_launch_options() {
+    log::info!("set_steam_launch_options");
+
     let steam = steamlocate::SteamDir::locate();
-    let userdata_dir = steam.unwrap().path().join("userdata");
+    let userdata_dir = "/Users/bytedance/Desktop/userdata"; //steam.unwrap().path().join("userdata");
+                                                            // 判断文件夹是否存在
+                                                            // if !userdata_dir.exists() {
+                                                            //     log::error!("no userdata dir found {}", userdata_dir.display());
+                                                            //     return;
+                                                            // }
 
     //获取 userdata_dir 下全部个人用户文件夹
     let userdata_dirs = fs::read_dir(userdata_dir).unwrap();
     for entry in userdata_dirs {
         let entry = entry.unwrap();
         let path = entry.path();
+
         if path.is_dir() {
             let local_config_path = path.join("config").join("localconfig.vdf");
-            let vdf_text = fs::read_to_string(&local_config_path).unwrap();
-            let mut store = Vdf::parse(&vdf_text).unwrap();
-
-            if let Some(_) = check_launch_options(&mut store) {
+            // 判断文件是否存在
+            if !local_config_path.exists() {
                 continue;
             }
 
-            kill_steam();
-            set_launch_options(&mut store, "-disablemodding".to_string());
-            fs::write(local_config_path, store.to_string()).unwrap();
+            let vdf_text = fs::read_to_string(&local_config_path).unwrap();
+            let store_result = Vdf::parse_raw(&vdf_text);
+            match store_result {
+                Ok(mut store) => {
+                    if let Some(_) = check_launch_options(&mut store) {
+                        continue;
+                    }
+
+                    kill_steam();
+                    set_launch_options(&mut store, "-disablemodding".to_string());
+                    fs::write(local_config_path, store.to_string()).unwrap();
+                }
+                Err(_) => {
+                    log::info!("parse vdf error {}", path.display());
+                }
+            }
         }
     }
-    
 }

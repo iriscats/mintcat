@@ -1,6 +1,6 @@
 [package]
 name = "mintcat"
-version = "0.4.1"
+version = "0.4.2"
 description = "Mod Integrate Tool"
 authors = ["iriscat"]
 edition = "2021"
@@ -33,7 +33,9 @@ tauri-plugin-dialog = "2.2.1"
 tauri-plugin-process = "2.2.1"
 tauri-plugin-opener = "2.2.6"
 tauri-plugin-updater = "2.7.0"
+tauri-plugin-clipboard-manager = "2"
 
+log = "0.4.27"
 tracing = { version = "0.1.41", features = ["attributes"] }
 
 # http
@@ -58,6 +60,7 @@ include_dir = "0.7.4"
 repak = { git = "https://github.com/trumank/repak", features = ["oodle"] }
 unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "patches" }
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
+
 
 
 # patternsleuth = { git = "https://github.com/trumank/patternsleuth", features = ["process-internal", "image-pe"] }

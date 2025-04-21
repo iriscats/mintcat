@@ -1,4 +1,4 @@
-use keyvalues_parser::{Vdf};
+use keyvalues_parser::Vdf;
 #[test]
 fn test_vdf_edit() {
     let contents = std::fs::read_to_string("/Users/bytedance/Desktop/localconfig.vdf").unwrap();
