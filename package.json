@@ -1,7 +1,7 @@
 {
   "name": "mintcat",
   "private": true,
-  "version": "0.4.1-dev",
+  "version": "0.4.2-dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-clipboard-manager": "~2",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-fs": "^2.2.0",
     "@tauri-apps/plugin-log": "~2",
@@ -20,7 +21,8 @@
     "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-shell": "~2",
     "@tauri-apps/plugin-updater": "~2",
-    "antd": "^5.24.7",
+    "antd": "^5.24.8",
+    "easy-keyvalues": "^1.2.7",
     "i18next": "^24.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -114,5 +114,7 @@
   "mod.io Request Parameter Error": "mod.io 请求参数错误",
   "Verified": "已验证",
   "Approved": "已批准",
-  "Sandbox": "沙盒"
+  "Sandbox": "沙盒",
+  "Sort By Time": "按时间排序",
+  "Game Not Closed": "游戏未关闭"
 }

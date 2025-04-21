@@ -1,11 +1,11 @@
 {
-  "version": "0.4.0",
-  "notes": "",
-  "pub_date": "2025-04-16T10:59:51.555Z",
+  "version": "0.4.1",
+  "notes": "# 新增\n1. 新增列表搜索功能。\n2. 新增部分 TAG 的中文提示。\n\n# 优化：\n1. 调整添加 mod 顺序。\n3. 当 mod 禁用时，将颜色改为灰色。\n4. 点击 “启动游戏时”，以 “-disablemodding” 启动项运行，用以解决 mod 失效或者冲突问题。\n5. 支持 mod.io 复制的其他格式的 url。\n6. 优化批量操作的逻辑，减少卡顿。\n7. 优化批量导入 mod 列表逻辑。\n8. 自动重置不存在的配置文件夹路径。\n9. 优化请求错误 442 的提示。 \n\n# 修复\n1. 修复切换列表后不会更新 mod 列表。\n2. 修复导入旧数据时重复 mod 导致的错误。\n3. 修复部分 mod 中存在脏数据（ushaderbytecode) 导致游戏崩溃。\n4. 修复本地 pak 更新，但无法重新打包的问题。",
+  "pub_date": "2025-04-21T20:59:51.555Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTGNqelROS3Q0T1dIZldvYmNybWxJUEZ4SUlzWDFtZW1JbkxnSDBtNDBETWFaRE9mbFZsaUd4UnQxb2pwc2l5b1NRNVNpeHVSRk0rR2tDNGt4eFFYNWd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ0Nzk0NTA2CWZpbGU6bWludGNhdF8wLjQuMF94NjQtc2V0dXAuZXhlCktZNktGSTFudVI5N1kvT3ZxeWM1RjJ3aGV0OUNZMVN2TTJWZ2k1bSsvZEk3TGVSUi8yZVlINGRwMldpN0Y0MkI3d3p2QStadjVPZ1RGdUNrTXQ4NEN3PT0K",
-      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.0/mintcat_0.4.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTFh3cEI5OFJtOHA3aXJPU2JQRDhwcjRRNFdwdmpkcER3Z0xQaEZGOEYrQkJyZmV1U0NmL3UvcGZOWm5lcjNleHZ6d2ZGQUk4M3VHMXAyRUJJQkhjbnc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ1MjM3MTI0CWZpbGU6bWludGNhdF8wLjQuMV94NjQtc2V0dXAuZXhlCk5aYkZrTnhrd1hCSWc1U3RpbWFTKzJCbnNHSFFBS2pMWHZ0Q2lzVVdaVSs2MFFuYzV0MVBCTDdWZjY1ZE5WaUFQbkJ5NS96bGpmYUVUMTBwV3l3NUJ3PT0K",
+      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.1/mintcat_0.4.1_x64-setup.exe"
     }
   }
 }

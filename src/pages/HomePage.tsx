@@ -38,7 +38,6 @@ import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
 import {dragAndDrop} from "../components/DragAndDropTree.ts";
 import {TreeViewOutlined} from "../components/SvgIcon.tsx";
 import {TreeViewItem} from "../components/TreeViewItem.tsx";
-import {AppViewModel} from "../vm/AppViewModel.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {BasePage} from "./IBasePage.ts";
 import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
@@ -469,14 +468,14 @@ class HomePage extends BasePage<any, ModListPageState> {
                             <Tooltip title={t("Sort Descending")}>
                                 <Button icon={<SortDescendingOutlined/>}
                                         type={"text"}
-                                        onClick={() => this.onSortClick("dasc")}
+                                        onClick={() => this.onSortClick("desc")}
                                 />
                             </Tooltip>
-                            {/*<Tooltip title={t("Sort By Add Time")}>*/}
-                            {/*    <Button icon={<FieldTimeOutlined />}*/}
-                            {/*            type={"text"}*/}
-                            {/*            onClick={this.onEditProfileClick}/>*/}
-                            {/*</Tooltip>*/}
+                            <Tooltip title={t("Sort By Time")}>
+                                <Button icon={<FieldTimeOutlined/>}
+                                        type={"text"}
+                                        onClick={() => this.onSortClick("time")}/>
+                            </Tooltip>
                         </Typography.Link>
                         <Typography.Link>
                             <Select

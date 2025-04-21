@@ -147,8 +147,10 @@ export class HomeViewModel {
                 const modB = this.ModList.get(b.id);
                 if (order === "asc") {
                     return modA.displayName.localeCompare(modB.displayName);
-                } else {
+                } else if (order === "desc") {
                     return modA.displayName.localeCompare(modB.displayName) * -1;
+                } else if (order === "time") {
+                    return modA.lastUpdateDate > modB.lastUpdateDate ? 1 : -1;
                 }
             } else if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.FOLDER) {
                 return -1;

@@ -123,7 +123,7 @@ export class ModioApi {
 
     public static async getModList(pageNo: number = 0, pageSize: number = 20, name: string = undefined): Promise<ModInfo[]> {
         try {
-            let path = "";
+            let path: string;
             if (name) {
                 path = `/games/${MODIO_GAME_ID}/mods?name-lk=*${name}*`;
             } else {
