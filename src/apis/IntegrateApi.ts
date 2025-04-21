@@ -23,12 +23,12 @@ export class IntegrateApi extends ILock {
         try {
             if (!await exists(drgPakPath)) {
                 //TODO
-/*              const found = await this.findGamePak();
-                if (found !== undefined) {
-                    appViewModel.setting.drgPakPath = found;
-                    await ConfigApi.saveSettings(appViewModel.setting.toJson());
-                    return true;
-                }*/
+                /*              const found = await this.findGamePak();
+                                if (found !== undefined) {
+                                    appViewModel.setting.drgPakPath = found;
+                                    await ConfigApi.saveSettings(appViewModel.setting.toJson());
+                                    return true;
+                                }*/
                 message.error(t("Game Path Not Found"));
                 return false;
             }
@@ -50,6 +50,11 @@ export class IntegrateApi extends ILock {
             const homeViewModel = await HomeViewModel.getInstance();
 
             if (!await IntegrateApi.checkGamePath()) {
+                return false;
+            }
+
+            if (await IntegrateApi.checkSteamGame()) {
+                await emit("status-bar-log", `${t("Installation Failed")}: ${t("Game Not Closed")}`);
                 return false;
             }
 
@@ -161,6 +166,12 @@ export class IntegrateApi extends ILock {
 
     public static async launchGame() {
         return await invoke('launch_game');
+    }
+
+    public static async checkSteamGame() {
+        return await invoke('check_steam_game', {
+            exeName: "FSD.exe"
+        });
     }
 
     public static async isFirstRun(): Promise<boolean> {
