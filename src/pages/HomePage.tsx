@@ -3,35 +3,22 @@ import {t} from "i18next";
 import {save} from "@tauri-apps/plugin-dialog";
 import {copyFile} from "@tauri-apps/plugin-fs";
 import {
-    Button,
-    Checkbox,
-    Divider,
-    Flex,
-    MenuProps,
-    message,
-    Select,
-    SelectProps,
-    Space,
-    Tooltip,
-    Tree,
-    TreeProps,
-    Typography,
+    Button, Checkbox, Divider,
+    Flex, MenuProps, message, Select,
+    SelectProps, Space, Tooltip, Tree, TreeProps, Typography,
 } from 'antd';
 import {
     CloseCircleOutlined, CopyOutlined,
     EditOutlined, FieldTimeOutlined,
     PauseCircleOutlined, PlayCircleOutlined,
-    PlusCircleOutlined,
-    SaveOutlined,
-    SearchOutlined,
-    SortAscendingOutlined,
-    SortDescendingOutlined,
-    SyncOutlined,
+    PlusCircleOutlined, SaveOutlined,
+    SearchOutlined, SortAscendingOutlined,
+    SortDescendingOutlined, SyncOutlined,
     UnorderedListOutlined
 } from "@ant-design/icons";
 import AddModDialog from "../dialogs/AddModDialog.tsx";
 import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
-import {CheckboxChangeEvent} from "antd/es/checkbox";
+import * as checkbox from "antd/es/checkbox";
 import InputDialog from "../dialogs/InputDialog.tsx";
 import {ModListPageContext} from "../AppContext.ts"
 import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
@@ -45,6 +32,7 @@ import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModSourceType} from "../vm/config/ModList.ts";
 import {ClipboardApi} from "../apis/ClipboardApi.ts";
+import {autoBind} from "../utils/ReactUtils.ts";
 
 interface ModListPageState {
     profileOptions?: SelectProps['options'];
@@ -102,30 +90,17 @@ class HomePage extends BasePage<any, ModListPageState> {
             async () => await this.updateProfileSelect()
         );
 
-        this.onAddModClick = this.onAddModClick.bind(this);
-        this.onEditProfileClick = this.onEditProfileClick.bind(this);
-        this.onUpdateClick = this.onUpdateClick.bind(this);
-        this.onSelectChange = this.onSelectChange.bind(this);
-        this.onTreeNodeSelect = this.onTreeNodeSelect.bind(this);
-        this.onTreeNodeExpand = this.onTreeNodeExpand.bind(this);
-        this.onTreeRightClick = this.onTreeRightClick.bind(this);
-        this.onMultiCheckboxChange = this.onMultiCheckboxChange.bind(this);
-        this.onMenuClick = this.onMenuClick.bind(this);
-        this.onDrop = this.onDrop.bind(this);
-        this.onSwitchChange = this.onSwitchChange.bind(this);
-        this.onCustomTitleRender = this.onCustomTitleRender.bind(this);
-        this.onSaveChangesClick = this.onSaveChangesClick.bind(this);
-        this.onMultiDeleteClick = this.onMultiDeleteClick.bind(this);
-        this.onMultiEnableClick = this.onMultiEnableClick.bind(this);
-        this.onMultiUpdateClick = this.onMultiUpdateClick.bind(this);
-        this.onSearchSelectChange = this.onSearchSelectChange.bind(this);
-        this.onSearch = this.onSearch.bind(this);
-        this.onCopyListClick = this.onCopyListClick.bind(this);
-
-        this.updateProfileSelect = this.updateProfileSelect.bind(this);
-        this.updateTreeView = this.updateTreeView.bind(this);
     }
 
+    // Multi Operations
+    @autoBind
+    private onMultiCheckboxChange(e: checkbox.CheckboxChangeEvent) {
+        this.setState({
+            isMultiSelect: e.target.checked
+        })
+    }
+
+    @autoBind
     private async onMultiDeleteClick() {
         const confirm = await MessageBox.confirm({
             title: t("Delete Mods"),
@@ -148,6 +123,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         }
     }
 
+    @autoBind
     private async onMultiEnableClick(isEnable: boolean) {
         if (this.state.selectedKeys.length === 0) {
             return;
@@ -164,6 +140,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         await this.updateTreeView();
     }
 
+    @autoBind
     private async onMultiUpdateClick() {
         for (const key of this.state.selectedKeys) {
             const modItem = this.context.ModList.get(key);
@@ -173,7 +150,9 @@ class HomePage extends BasePage<any, ModListPageState> {
         }
     }
 
-    private async onCopyListClick() {
+    // Menu Bar Operations
+    @autoBind
+    private async onMenuBarCopyListClick() {
         const subModList = this.context.ActiveProfile.getModList(this.context.ModList);
         let list = "";
         for (const mod of subModList.Mods) {
@@ -187,6 +166,30 @@ class HomePage extends BasePage<any, ModListPageState> {
         message.success(t("Copied To Clipboard"));
     }
 
+    @autoBind
+    private async onMenuBarAddModClick() {
+        this.addModDialogRef.current?.setValue().show();
+    }
+
+    @autoBind
+    private async onMenuBarSaveChangesClick() {
+        await IntegrateApi.installMods();
+    }
+
+    @autoBind
+    private async onMenuBarUpdateClick() {
+        await ModUpdateApi.checkModUpdate();
+        await ModUpdateApi.checkModList();
+        message.success(t("Update Finish"));
+    }
+
+    @autoBind
+    private async onMenuBarSortClick(order: string) {
+        await this.context.sortMods(order);
+        await this.updateTreeView();
+    }
+
+    @autoBind
     private async onSearch(newValue: string) {
         this.filterList = [newValue];
 
@@ -204,6 +207,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         await this.updateTreeView();
     }
 
+    @autoBind
     private async onSearchSelectChange(value: any) {
         this.filterList = value;
         this.setState({
@@ -212,20 +216,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         await this.updateTreeView();
     }
 
-    private async onAddModClick() {
-        this.addModDialogRef.current?.setValue().show();
-    }
-
-    private async onSaveChangesClick() {
-        await IntegrateApi.installMods();
-    }
-
-    private async onUpdateClick() {
-        await ModUpdateApi.checkModUpdate();
-        await ModUpdateApi.checkModList();
-        message.success(t("Update Finish"));
-    }
-
+    @autoBind
     private onEditProfileClick() {
         this.profileEditDialogRef
             .current?.setCallback(async () => {
@@ -233,17 +224,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         }).show();
     }
 
-    private onMultiCheckboxChange(e: CheckboxChangeEvent) {
-        this.setState({
-            isMultiSelect: e.target.checked
-        })
-    }
-
-    private async onSortClick(order: string) {
-        await this.context.sortMods(order);
-        await this.updateTreeView();
-    }
-
+    @autoBind
     private async onDrop(info: any) {
         const newTreeData = dragAndDrop(info, this.state.treeData);
         this.setState({
@@ -253,6 +234,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         await this.context.setProfileData(converter.convertFrom(newTreeData));
     }
 
+    @autoBind
     private async onSelectChange(value: string) {
         this.context.ActiveProfile = value;
         this.setState({
@@ -262,28 +244,33 @@ class HomePage extends BasePage<any, ModListPageState> {
         await ModUpdateApi.checkModList();
     };
 
+    @autoBind
     private async onSwitchChange(checked: boolean, node: any) {
         await this.context.setModEnabled(node.key, checked);
     }
 
+    @autoBind
     private onTreeNodeSelect(keys) {
         this.setState({
             selectedKeys: keys,
         })
     }
 
+    @autoBind
     private onTreeNodeExpand(keys) {
         this.setState({
             expandedKeys: keys,
         })
     };
 
+    @autoBind
     private onTreeRightClick(info) {
         this.setState({
             selectedKeys: [info.node.key],
         })
     };
 
+    @autoBind
     private async updateProfileSelect() {
         let options: SelectProps['options'] = [];
         for (const profileKey of this.context.ProfileList) {
@@ -298,6 +285,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         })
     }
 
+    @autoBind
     private async updateTreeView() {
         const converter = new TreeViewConverter(this.context.ModList, this.filterList);
         converter.convertTo(this.context.ActiveProfile);
@@ -313,10 +301,7 @@ class HomePage extends BasePage<any, ModListPageState> {
         }
     }
 
-    private onCustomTitleRender(nodeData: any) {
-        return TreeViewItem(nodeData, this.onMenuClick, this.onSwitchChange);
-    }
-
+    @autoBind
     private async onMenuClick(key: string, id: number) {
         switch (key) {
             case "add_new_group": {
@@ -408,6 +393,12 @@ class HomePage extends BasePage<any, ModListPageState> {
         }
     }
 
+    @autoBind
+    private onCustomTitleRender(nodeData: any) {
+        return TreeViewItem(nodeData, this.onMenuClick, this.onSwitchChange);
+    }
+
+    @autoBind
     private renderCountLabel() {
         if (!this.context.ActiveProfile) {
             return "";
@@ -435,16 +426,16 @@ class HomePage extends BasePage<any, ModListPageState> {
                            style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
                         <Typography.Link>
                             <Tooltip title={t("Save Changes")}>
-                                <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onSaveChangesClick}/>
+                                <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onMenuBarSaveChangesClick}/>
                             </Tooltip>
                             <Tooltip title={t("Add Mod")}>
-                                <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onAddModClick}/>
+                                <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onMenuBarAddModClick}/>
                             </Tooltip>
                             <Tooltip title={t("Check Mod Updates")}>
-                                <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onUpdateClick}/>
+                                <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onMenuBarUpdateClick}/>
                             </Tooltip>
                             <Tooltip title={t("Copy List")}>
-                                <Button icon={<CopyOutlined/>} type={"text"} onClick={this.onCopyListClick}/>
+                                <Button icon={<CopyOutlined/>} type={"text"} onClick={this.onMenuBarCopyListClick}/>
                             </Tooltip>
                         </Typography.Link>
                         {
@@ -462,19 +453,19 @@ class HomePage extends BasePage<any, ModListPageState> {
                             <Tooltip title={t("Sort Ascending")}>
                                 <Button icon={<SortAscendingOutlined/>}
                                         type={"text"}
-                                        onClick={() => this.onSortClick("asc")}
+                                        onClick={() => this.onMenuBarSortClick("asc")}
                                 />
                             </Tooltip>
                             <Tooltip title={t("Sort Descending")}>
                                 <Button icon={<SortDescendingOutlined/>}
                                         type={"text"}
-                                        onClick={() => this.onSortClick("desc")}
+                                        onClick={() => this.onMenuBarSortClick("desc")}
                                 />
                             </Tooltip>
                             <Tooltip title={t("Sort By Time")}>
                                 <Button icon={<FieldTimeOutlined/>}
                                         type={"text"}
-                                        onClick={() => this.onSortClick("time")}/>
+                                        onClick={() => this.onMenuBarSortClick("time")}/>
                             </Tooltip>
                         </Typography.Link>
                         <Typography.Link>
