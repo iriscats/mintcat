@@ -14,7 +14,7 @@ export class ModUpdateApi {
         const viewModel = await HomeViewModel.getInstance();
         const resp = await ModioApi.getModInfoByLink(mod.url);
         if (!resp) {
-            throw new Error;
+            return;
         }
 
         let newItem = new ModListItem(resp);
@@ -22,14 +22,22 @@ export class ModUpdateApi {
         await viewModel.updateUI();
         await emit("status-bar-log", `${t("Update Mod")} [${newItem.displayName}]`);
 
-        newItem = await ModioApi.downloadModFile(newItem, async (loaded: number, total: number) => {
-            await emit("status-bar-log", `${t("Downloading")} [${newItem.displayName}] (${loaded} / ${total})`);
-            newItem.downloadProgress = (loaded / total) * 100;
-            viewModel.ModList.update(mod, newItem);
-            await viewModel.updateUI();
-        });
+        await this.updateModFile(newItem);
+        
+        await ConfigApi.saveModListData(viewModel.ModList.toJson());
+        await emit("status-bar-log", t("Update Finish"));
+    }
 
+    public static async updateModFile(mod: ModListItem) {
+        const viewModel = await HomeViewModel.getInstance();
+
+        const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
+            await emit("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
+            mod.downloadProgress = (loaded / total) * 100;
+            await emit("mod-treeview-update" + mod.id, mod);
+        });
         viewModel.ModList.update(mod, newItem);
+
         await ConfigApi.saveModListData(viewModel.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
     }

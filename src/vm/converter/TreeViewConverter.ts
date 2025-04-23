@@ -47,6 +47,7 @@ export class TreeViewConverter {
                 if (this.filter(modItem)) {
                     parent.children.push({
                         key: modItem.id,
+                        modId: modItem.modId,
                         isLeaf: true,
                         title: title,
                         url: modItem.url,
@@ -57,6 +58,7 @@ export class TreeViewConverter {
                         approval: modItem.approval,
                         versions: modItem.versions,
                         fileVersion: modItem.fileVersion,
+                        usedVersion: modItem.usedVersion,
                         downloadProgress: modItem.downloadProgress,
                         lastUpdateDate: modItem.lastUpdateDate,
                         onlineUpdateDate: modItem.onlineUpdateDate,

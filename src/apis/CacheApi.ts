@@ -15,12 +15,12 @@ export class CacheApi {
         return vm.setting.cachePath;
     }
 
-    public static async getModCachePath(modName: string) {
+    public static async getModCachePath(modName: string, version: string) {
         const appCachePath = await this.getCacheDir();
         if (!await exists(appCachePath)) {
             await mkdir(appCachePath)
         }
-        return await path.join(appCachePath, `${modName}.zip`);
+        return await path.join(appCachePath, `${modName}-${version}.zip`);
     }
 
     public static async getImageCachePath(url: string) {
@@ -46,9 +46,9 @@ export class CacheApi {
         }
     }
 
-    public static async saveCacheFile(modName: string, data: Uint8Array): Promise<any> {
+    public static async saveCacheFile(modName: string, version: string, data: Uint8Array): Promise<any> {
         try {
-            const fileName = await CacheApi.getModCachePath(modName);
+            const fileName = await CacheApi.getModCachePath(modName, version);
             await writeFile(fileName, data);
             return fileName;
         } catch (error) {
@@ -56,9 +56,9 @@ export class CacheApi {
         }
     }
 
-    public static async checkCacheFile(modName: string, fileSize: number): Promise<boolean> {
+    public static async checkCacheFile(modName: string, version: string, fileSize: number): Promise<boolean> {
         try {
-            const fileName = await CacheApi.getModCachePath(modName);
+            const fileName = await CacheApi.getModCachePath(modName, version);
             const _fileSize = await size(fileName);
             if (_fileSize === fileSize) {
                 return true;
