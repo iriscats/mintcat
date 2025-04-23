@@ -395,7 +395,7 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private onCustomTitleRender(nodeData: any) {
-        return TreeViewItem(nodeData, this.onMenuClick, this.onSwitchChange);
+        return TreeViewItem(nodeData, this.onMenuClick);
     }
 
     @autoBind

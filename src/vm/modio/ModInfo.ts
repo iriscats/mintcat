@@ -1,3 +1,4 @@
+
 export interface ModInfo {
     id: number;
     game_id: number;
@@ -28,7 +29,7 @@ export interface ModInfo {
     media: Media;
     modfile: ModFile;
     dependencies: boolean;
-    platforms?: Array<any>;
+    platforms?: Array<Platforms>;
     metadata_kvp?: Array<any>;
     tags: Array<Tags>;
     stats: Stats;
@@ -78,7 +79,7 @@ export interface ModFile {
     changelog: string;
     metadata_blob?: any;
     download: Download;
-    platforms?: Array<any>;
+    platforms: Array<Platforms>;
 }
 
 export interface Tags {
@@ -124,5 +125,10 @@ export interface FileHash {
 export interface Download {
     binary_url: string;
     date_expires: number;
+}
+
+export interface Platforms {
+    platform: string;
+    status: number;
 }
 

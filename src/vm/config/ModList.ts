@@ -39,6 +39,7 @@ export class ModListItem {
             this.displayName = modInfo.name;
             this.nameId = modInfo.name_id;
             this.fileVersion = modInfo.modfile.version === null ? "-" : modInfo.modfile.version;
+            this.usedVersion = this.fileVersion;
             this.downloadUrl = modInfo.modfile.download.binary_url;
 
             for (const tag of modInfo.tags) {
@@ -104,22 +105,7 @@ export class ModListItem {
 
     public clone() {
         const modItem = new ModListItem();
-        modItem.id = this.id;
-        modItem.modId = this.modId;
-        modItem.url = this.url;
-        modItem.nameId = this.nameId;
-        modItem.displayName = this.displayName;
-        modItem.required = this.required;
-        modItem.enabled = this.enabled;
-        modItem.fileVersion = this.fileVersion;
-        modItem.tags = this.tags;
-        modItem.versions = this.versions;
-        modItem.approval = this.approval;
-        modItem.sourceType = this.sourceType;
-        modItem.downloadUrl = this.downloadUrl;
-        modItem.cachePath = this.cachePath;
-        modItem.downloadProgress = this.downloadProgress;
-        modItem.fileSize = this.fileSize;
+        Object.assign(modItem, this);
         return modItem;
     }
 }
@@ -215,6 +201,7 @@ export class ModList {
             modItem.required = mod.required;
             modItem.enabled = mod.enabled;
             modItem.fileVersion = mod.file_version;
+            modItem.usedVersion = mod.used_version ? mod.used_version : mod.file_version;
             modItem.tags = mod.tags;
             modItem.versions = mod.versions;
             modItem.approval = mod.approval;
@@ -243,6 +230,7 @@ export class ModList {
                 "required": mod.required,
                 "enabled": mod.enabled,
                 "file_version": mod.fileVersion,
+                "used_version": mod.usedVersion,
                 "tags": mod.tags,
                 "versions": mod.versions,
                 "approval": mod.approval,

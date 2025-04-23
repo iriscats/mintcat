@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {ModInfo} from "../vm/modio/ModInfo.ts";
+import {ModFile, ModInfo} from "../vm/modio/ModInfo.ts";
 import {ModListItem} from "../vm/config/ModList.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {UserInfo} from "../vm/modio/UserInfo.ts";
@@ -163,11 +163,21 @@ export class ModioApi {
         }
     }
 
+    public static async getModFiles(modId: number) {
+        try {
+            const path = `/games/${MODIO_GAME_ID}/mods/${modId}/files`;
+            const data = await ModioApi.getRequest(path);
+            return data.data as ModFile[];
+        } catch (e) {
+            message.error(`${t("Fetch Events Error")}: ${e}`);
+        }
+    }
+
     public static async downloadModFile(modInfo: ModListItem,
                                         onProgress?: (loaded: number, total: number) => void) {
 
-        if (await CacheApi.checkCacheFile(modInfo.nameId, modInfo.fileSize)) {
-            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId);
+        if (await CacheApi.checkCacheFile(modInfo.nameId, modInfo.usedVersion, modInfo.fileSize)) {
+            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId, modInfo.usedVersion);
             onProgress(modInfo.fileSize, modInfo.fileSize);
             return modInfo;
         }
@@ -175,9 +185,9 @@ export class ModioApi {
         console.log(modInfo.fileSize);
         if (modInfo.fileSize < 100 * 1024 * 1024) {
             const data = await DownloadApi.downloadFile(modInfo.downloadUrl, onProgress);
-            modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, data);
+            modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, modInfo.usedVersion, data);
         } else {
-            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId);
+            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId, modInfo.usedVersion);
             await DownloadApi.downloadLargeFile(modInfo.downloadUrl, modInfo.cachePath, onProgress);
         }
 
