@@ -1,7 +1,7 @@
 import React from "react";
+import {t} from "i18next";
 import {Flex, Progress, ProgressProps} from "antd";
 import {listen} from "@tauri-apps/api/event";
-import {t} from "i18next";
 
 
 const ProgressColors: ProgressProps['strokeColor'] = {
@@ -19,7 +19,7 @@ interface StatusBarState {
 class StatusBar extends React.Component<any, StatusBarState> {
 
     private isHook = false;
-    private timer = 0;
+    private timer = undefined;
 
     public constructor(props: any, state: StatusBarState) {
         super(props, state);

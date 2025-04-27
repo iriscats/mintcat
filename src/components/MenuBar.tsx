@@ -1,6 +1,6 @@
 import React from "react";
 import {Menu, MenuProps} from "antd";
-import {HomeOutlined, SettingOutlined} from "@ant-design/icons";
+import {HomeOutlined, SettingOutlined, WechatOutlined} from "@ant-design/icons";
 import {ModioOutlined} from "./SvgIcon.tsx";
 import {t} from "i18next";
 
@@ -10,7 +10,8 @@ type MenuItem = Required<MenuProps>['items'][number];
 export enum MenuPage {
     Home = 'home',
     Setting = 'setting',
-    Modio = 'modio'
+    Modio = 'modio',
+    Chat = 'chat',
 }
 
 interface MenuBarProps {
@@ -22,7 +23,8 @@ class MenuBar extends React.Component<MenuBarProps, any> {
     private items: MenuItem[] = [
         {key: MenuPage.Home, icon: <HomeOutlined/>, label: t("Home")},
         {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io'},
-        {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")}
+        // {key: MenuPage.Chat, icon: <WechatOutlined/>, label: t("Chat")},
+        {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")},
     ];
 
     public constructor(props: any, context: any) {

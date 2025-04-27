@@ -2,9 +2,9 @@ import React from "react";
 import {t} from "i18next";
 import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
-import {ModListPageContext} from "../AppContext.ts";
 import {ProfileTree} from "../vm/config/ProfileList.ts";
 import {ConfigApi} from "../apis/ConfigApi.ts";
+import {HomeViewModel} from "../vm/HomeViewModel.ts";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
@@ -16,9 +16,6 @@ interface ProfileEditDialogStates {
 type InputCallback = (name: string) => void;
 
 class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
-
-    declare context: React.ContextType<typeof ModListPageContext>;
-    static contextType = ModListPageContext;
 
     private callback: InputCallback;
 
@@ -69,7 +66,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
             return;
         }
 
-        await this.context.addProfile(
+        const vm = await HomeViewModel.getInstance();
+        await vm.addProfile(
             this.state.newProfileName,
             new ProfileTree(this.state.newProfileName).toJson());
 
@@ -80,12 +78,14 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleDelete(key: string) {
-        await this.context.removeProfile(key);
+        const vm = await HomeViewModel.getInstance();
+        await vm.removeProfile(key);
         this.forceUpdate();
     }
 
     private async handleRename(key: string, newName: string) {
-        await this.context.renameProfile(key, newName);
+        const vm = await HomeViewModel.getInstance();
+        await vm.renameProfile(key, newName);
         this.setState({
             editingKey: null,
             editingValue: ""
@@ -94,7 +94,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     private async handleCopy(key: string) {
         const data = await ConfigApi.loadProfileDetails(key);
-        await this.context.addProfile(key + "_copy", data);
+        const vm = await HomeViewModel.getInstance();
+        await vm.addProfile(key + "_copy", data);
         this.forceUpdate();
     }
 

@@ -16,23 +16,26 @@ import {
     SortDescendingOutlined, SyncOutlined,
     UnorderedListOutlined
 } from "@ant-design/icons";
-import AddModDialog from "../dialogs/AddModDialog.tsx";
-import ProfileEditDialog from "../dialogs/ProfileEditDialog.tsx";
 import * as checkbox from "antd/es/checkbox";
-import InputDialog from "../dialogs/InputDialog.tsx";
-import {ModListPageContext} from "../AppContext.ts"
-import {TreeViewConverter} from "../vm/converter/TreeViewConverter.ts";
-import {dragAndDrop} from "../components/DragAndDropTree.ts";
-import {TreeViewOutlined} from "../components/SvgIcon.tsx";
-import {TreeViewItem} from "../components/TreeViewItem.tsx";
-import {MessageBox} from "../components/MessageBox.ts";
-import {BasePage} from "./IBasePage.ts";
-import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
-import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import {ConfigApi} from "../apis/ConfigApi.ts";
-import {ModSourceType} from "../vm/config/ModList.ts";
-import {ClipboardApi} from "../apis/ClipboardApi.ts";
-import {autoBind} from "../utils/ReactUtils.ts";
+
+import {openWindow} from "@/dialogs/AddModDialog";
+import ProfileEditDialog from "@/dialogs/ProfileEditDialog.tsx";
+import {InputDialog} from "@/dialogs/InputDialog.tsx";
+import {TreeViewConverter} from "@/vm/converter/TreeViewConverter.ts";
+import {TreeViewOutlined} from "@/components/SvgIcon.tsx";
+import {MessageBox} from "@/components/MessageBox.ts";
+import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {IntegrateApi} from "@/apis/IntegrateApi.ts";
+import {ConfigApi} from "@/apis/ConfigApi.ts";
+import {ModSourceType} from "@/vm/config/ModList.ts";
+import {ClipboardApi} from "@/apis/ClipboardApi.ts";
+import {autoBind} from "@/utils/ReactUtils.ts";
+import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {dragAndDrop} from "./DragAndDropTree.ts";
+import {TreeViewItem} from "./TreeViewItem.tsx";
+import {CountLabel} from "./CountLabel.tsx";
+import {BasePage} from "../IBasePage.ts";
+
 
 interface ModListPageState {
     profileOptions?: SelectProps['options'];
@@ -47,12 +50,8 @@ interface ModListPageState {
     searchValue?: string;
 }
 
-class HomePage extends BasePage<any, ModListPageState> {
 
-    declare context: React.ContextType<typeof ModListPageContext>;
-    static contextType = ModListPageContext;
-
-    private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
+export class HomePage extends BasePage<any, ModListPageState> {
 
     private readonly profileEditDialogRef: React.RefObject<ProfileEditDialog> = React.createRef();
 
@@ -85,10 +84,10 @@ class HomePage extends BasePage<any, ModListPageState> {
             defaultProfile: "",
         }
 
-        this.context.setUpdateViewCallback(
-            async () => await this.updateTreeView(),
-            async () => await this.updateProfileSelect()
-        );
+        // this.context.setUpdateViewCallback(
+        //     async () => await this.updateTreeView(),
+        //     async () => await this.updateProfileSelect()
+        // );
 
     }
 
@@ -102,6 +101,8 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMultiDeleteClick() {
+        const vm = await HomeViewModel.getInstance();
+
         const confirm = await MessageBox.confirm({
             title: t("Delete Mods"),
             content: t("Are you sure you want to delete the selected mods?"),
@@ -113,37 +114,40 @@ class HomePage extends BasePage<any, ModListPageState> {
 
         if (confirm) {
             for (const key of this.state.selectedKeys) {
-                const modItem = this.context.ModList.get(key);
+                const modItem = vm.ModList.get(key);
                 if (modItem) {
-                    this.context.ActiveProfile.removeMod(modItem.id);
+                    await vm.removeMod(modItem.id);
                 }
             }
-            await ConfigApi.saveProfileDetails(this.context.ActiveProfileName, this.context.ActiveProfile);
+            await ConfigApi.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
             await this.updateTreeView();
         }
     }
 
     @autoBind
     private async onMultiEnableClick(isEnable: boolean) {
+        const vm = await HomeViewModel.getInstance();
         if (this.state.selectedKeys.length === 0) {
             return;
         }
 
         for (const key of this.state.selectedKeys) {
-            const modItem = this.context.ModList.get(key);
+            const modItem = vm.ModList.get(key);
             if (modItem) {
                 modItem.enabled = isEnable;
             }
         }
-        await ConfigApi.saveModListData(this.context.ModList.toJson());
-        await ConfigApi.saveProfileDetails(this.context.ActiveProfileName, this.context.ActiveProfile);
+        await ConfigApi.saveModListData(vm.ModList.toJson());
+        await ConfigApi.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
         await this.updateTreeView();
     }
 
     @autoBind
     private async onMultiUpdateClick() {
+        const vm = await HomeViewModel.getInstance();
+
         for (const key of this.state.selectedKeys) {
-            const modItem = this.context.ModList.get(key);
+            const modItem = vm.ModList.get(key);
             if (modItem) {
                 await ModUpdateApi.updateMod(modItem)
             }
@@ -153,7 +157,9 @@ class HomePage extends BasePage<any, ModListPageState> {
     // Menu Bar Operations
     @autoBind
     private async onMenuBarCopyListClick() {
-        const subModList = this.context.ActiveProfile.getModList(this.context.ModList);
+        const vm = await HomeViewModel.getInstance();
+
+        const subModList = vm.ActiveProfile.getModList(vm.ModList);
         let list = "";
         for (const mod of subModList.Mods) {
             if (mod.sourceType === ModSourceType.Modio) {
@@ -168,7 +174,7 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarAddModClick() {
-        this.addModDialogRef.current?.setValue().show();
+        openWindow();
     }
 
     @autoBind
@@ -185,7 +191,8 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarSortClick(order: string) {
-        await this.context.sortMods(order);
+        const vm = await HomeViewModel.getInstance();
+        await vm.sortMods(order);
         await this.updateTreeView();
     }
 
@@ -226,28 +233,27 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onDrop(info: any) {
+        const vm = await HomeViewModel.getInstance();
+
         const newTreeData = dragAndDrop(info, this.state.treeData);
         this.setState({
             treeData: newTreeData,
         })
-        const converter = new TreeViewConverter(this.context.ModList, this.filterList);
-        await this.context.setProfileData(converter.convertFrom(newTreeData));
+        const converter = new TreeViewConverter(vm.ModList, this.filterList);
+        await vm.setProfileData(converter.convertFrom(newTreeData));
     }
 
     @autoBind
     private async onSelectChange(value: string) {
-        this.context.ActiveProfile = value;
+        const vm = await HomeViewModel.getInstance();
+
+        vm.ActiveProfile = value;
         this.setState({
             defaultProfile: value as string,
         })
         await ModUpdateApi.checkModUpdate();
         await ModUpdateApi.checkModList();
     };
-
-    @autoBind
-    private async onSwitchChange(checked: boolean, node: any) {
-        await this.context.setModEnabled(node.key, checked);
-    }
 
     @autoBind
     private onTreeNodeSelect(keys) {
@@ -272,8 +278,10 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async updateProfileSelect() {
+        const vm = await HomeViewModel.getInstance();
+
         let options: SelectProps['options'] = [];
-        for (const profileKey of this.context.ProfileList) {
+        for (const profileKey of vm.ProfileList) {
             options.push({
                 value: profileKey,
                 label: profileKey,
@@ -281,14 +289,17 @@ class HomePage extends BasePage<any, ModListPageState> {
         }
         this.setState({
             profileOptions: options,
-            defaultProfile: this.context.ActiveProfileName,
+            defaultProfile: vm.ActiveProfileName,
         })
     }
 
     @autoBind
     private async updateTreeView() {
-        const converter = new TreeViewConverter(this.context.ModList, this.filterList);
-        converter.convertTo(this.context.ActiveProfile);
+        const vm = await HomeViewModel.getInstance();
+        console.log(vm.ActiveProfile);
+
+        const converter = new TreeViewConverter(vm.ModList, this.filterList);
+        converter.convertTo(vm.ActiveProfile);
 
         this.setState({
             treeData: converter.treeData,
@@ -303,13 +314,14 @@ class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuClick(key: string, id: number) {
+        const vm = await HomeViewModel.getInstance();
         switch (key) {
             case "add_new_group": {
                 this.inputDialogRef.current?.setCallback(
                     t("Add New Group"),
                     t("New Group"),
                     async (text) => {
-                        await this.context.addGroup(0, text);
+                        await vm.addGroup(0, text);
                     })
                     .show();
             }
@@ -319,47 +331,47 @@ class HomePage extends BasePage<any, ModListPageState> {
                     t("Add Sub Group"),
                     t("New Group"),
                     async (text) => {
-                        await this.context.addGroup(id, text);
+                        await vm.addGroup(id, text);
                     }).show();
                 break;
             case "delete_group":
-                await this.context.removeGroup(id);
+                await vm.removeGroup(id);
                 await this.updateTreeView();
                 break;
             case "rename_group":
-                const groupName = this.context.ActiveProfile.groupNameMap.get(id);
+                const groupName = vm.ActiveProfile.groupNameMap.get(id);
                 this.inputDialogRef.current?.setCallback(
                     t("Rename Group"),
                     groupName,
                     async (text) => {
-                        await this.context.setGroupName(id, text);
+                        await vm.setGroupName(id, text);
                     }).show();
                 break;
             case "update": {
-                const mod = this.context.ModList.get(id);
+                const mod = vm.ModList.get(id);
                 if (mod) {
                     await ModUpdateApi.updateMod(mod);
                 }
             }
                 break;
             case "add_mod":
-                this.addModDialogRef.current?.setValue(id).show();
+                openWindow();
                 break;
             case "rename":
-                const modName = this.context.ModList.get(id)?.displayName;
+                const modName = vm.ModList.get(id)?.displayName;
                 this.inputDialogRef.current.setCallback(
                     "Rename Mod",
                     modName,
                     async (text) => {
-                        await this.context.setDisplayName(id, text);
+                        await vm.setDisplayName(id, text);
                     }).show();
                 break;
             case "delete":
-                await this.context.removeMod(id);
+                await vm.removeMod(id);
                 break;
             case "copy_link":
                 try {
-                    const mod = this.context.ModList.get(id);
+                    const mod = vm.ModList.get(id);
                     if (mod?.url) {
                         ClipboardApi.setLastClipboardText(mod.url);
                         await navigator.clipboard.writeText(mod.url);
@@ -374,7 +386,7 @@ class HomePage extends BasePage<any, ModListPageState> {
                 break;
             case "export": {
                 try {
-                    const mod = this.context.ModList.get(id);
+                    const mod = vm.ModList.get(id);
                     const path = await save({
                         filters: [{
                             name: mod.displayName,
@@ -398,16 +410,6 @@ class HomePage extends BasePage<any, ModListPageState> {
         return TreeViewItem(nodeData, this.onMenuClick);
     }
 
-    @autoBind
-    private renderCountLabel() {
-        if (!this.context.ActiveProfile) {
-            return "";
-        }
-        const subModList = this.context.ActiveProfile.getModList(this.context.ModList);
-        const enableCount = subModList.Mods.filter((value) => value.enabled).length;
-        return `${enableCount} / ${subModList.Mods.length}`;
-    }
-
     componentDidMount(): void {
         this.hookWindowResized();
         this.updateProfileSelect().then();
@@ -418,7 +420,7 @@ class HomePage extends BasePage<any, ModListPageState> {
     render() {
         return (
             <div className="mod-list-page-card">
-                <AddModDialog ref={this.addModDialogRef}/>
+
                 <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <InputDialog ref={this.inputDialogRef}/>
                 <Flex vertical={true}>
@@ -551,21 +553,11 @@ class HomePage extends BasePage<any, ModListPageState> {
                                 </Button>
                             </span>
                         }
-                        <span style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: '#888',
-                            marginRight: '20px',
-                        }}>
-                          {this.renderCountLabel()}
-                        </span>
+                        <CountLabel/>
                     </Flex>
                 </Flex>
             </div>
         )
     }
-
 }
 
-
-export default HomePage;

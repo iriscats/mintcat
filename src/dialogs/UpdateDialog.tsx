@@ -3,7 +3,7 @@ import {t} from "i18next";
 import {Modal} from "antd";
 import {check} from "@tauri-apps/plugin-updater";
 import {emit} from "@tauri-apps/api/event";
-import {relaunch} from "@tauri-apps/plugin-process";
+import Markdown from "react-markdown";
 
 class UpdateDialog extends React.Component<any, any> {
 
@@ -57,16 +57,19 @@ class UpdateDialog extends React.Component<any, any> {
     }
 
     componentDidMount() {
-        check().then((update) => {
-            if (update) {
-                this.update = update;
-                this.setState({
-                    isModalOpen: true,
-                    version: update.version,
-                    changelog: update.body,
-                });
-            }
-        });
+        try {
+            check().then((update) => {
+                if (update) {
+                    this.update = update;
+                    this.setState({
+                        isModalOpen: true,
+                        version: update.version,
+                        changelog: update.body,
+                    });
+                }
+            });
+        } catch (e) {
+        }
     }
 
     render() {
@@ -79,7 +82,7 @@ class UpdateDialog extends React.Component<any, any> {
             >
                 <h1>{t("Found Update")}</h1>
                 <h2>{this.state.version}</h2>
-                <p>{this.state.changelog}</p>
+                <Markdown>{this.state.changelog}</Markdown>
             </Modal>
         );
     }

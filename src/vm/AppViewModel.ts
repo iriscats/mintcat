@@ -11,6 +11,7 @@ import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import i18n from "../locales/i18n"
 import {exists} from "@tauri-apps/plugin-fs";
+import {renderTheme} from "@/themes/default.ts";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
@@ -74,23 +75,6 @@ export class AppViewModel {
         }, 1000 * 120);
     }
 
-    public async loadTheme() {
-        const theme = this.converter.setting.guiTheme
-        if (theme === "Light") {
-            window.document.documentElement.style.filter = "none";
-            // Remove dark mode style tag if exists
-            const darkStyle = document.getElementById('dark-theme-style');
-            darkStyle?.remove();
-        } else if (theme === "Dark") {
-            window.document.documentElement.style.filter = "invert(100%)";
-            // Create new style element with unique ID
-            const style = document.createElement('style');
-            style.id = 'dark-theme-style';
-            style.textContent = 'img { filter: brightness(0.8) invert(100%); }';
-            document.head.appendChild(style);
-        }
-    }
-
     public async loadUserLanguages() {
         let language = this.converter.setting?.language;
         if (language && language !== "") {
@@ -131,7 +115,6 @@ export class AppViewModel {
         await appViewModel.checkAppPath();
         await IntegrateApi.checkGamePath(appViewModel.setting.drgPakPath);
 
-        await appViewModel.loadTheme();
         if (await appViewModel.checkOauth()) {
             appViewModel.appStartAutoCheckModUpdate();
         } else {
