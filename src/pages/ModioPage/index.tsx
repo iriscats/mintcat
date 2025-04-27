@@ -4,14 +4,13 @@ import {Avatar, Button, Dropdown, Flex, List, MenuProps, message, Skeleton, Spac
 import {DownloadOutlined, HomeOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
-import {ModioApi} from "../apis/ModioApi.ts";
-import {ModInfo} from "../vm/modio/ModInfo.ts";
-import AddModDialog from "../dialogs/AddModDialog.tsx";
-import {TranslateApi} from "../apis/TranslateApi.ts";
-import {CacheApi} from "../apis/CacheApi.ts";
-import {ProfileTreeGroupType} from "../vm/config/ProfileList.ts";
-import {BasePage} from "./IBasePage.ts";
 import {open} from "@tauri-apps/plugin-shell";
+import {ModioApi} from "@/apis/ModioApi.ts";
+import {ModInfo} from "@/vm/modio/ModInfo.ts";
+import {TranslateApi} from "@/apis/TranslateApi.ts";
+import {CacheApi} from "@/apis/CacheApi.ts";
+import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {BasePage} from "../IBasePage.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -33,9 +32,9 @@ interface ModioPageState {
     hasMore: boolean,
 }
 
-class ModioPage extends BasePage<any, ModioPageState> {
+export class ModioPage extends BasePage<any, ModioPageState> {
 
-    private readonly addModDialogRef: React.RefObject<AddModDialog> = React.createRef();
+    private readonly addModDialogRef = React.createRef();
     private pageSize: number = 50;
     private pageNo: number = 0;
 
@@ -149,7 +148,6 @@ class ModioPage extends BasePage<any, ModioPageState> {
                      padding: '10px',
                  }}
             >
-                <AddModDialog ref={this.addModDialogRef}/>
 
                 <Flex vertical={true}>
                     <Flex>
@@ -248,5 +246,3 @@ class ModioPage extends BasePage<any, ModioPageState> {
 
 
 }
-
-export default ModioPage;

@@ -5,6 +5,7 @@ export class DeviceApi {
     public static async getLanguage() {
         try {
             const userLocale = await locale();
+            console.log(userLocale);
             if (!userLocale) {
                 return "en";
             }
@@ -14,6 +15,7 @@ export class DeviceApi {
                 return "en";
             }
         } catch (e) {
+            console.log(e);
             return "en";
         }
     }

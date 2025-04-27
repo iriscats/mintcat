@@ -76,6 +76,7 @@ export class ModUpdateApi {
 
     public static async checkModList() {
         const viewModel = await HomeViewModel.getInstance();
+        console.log(viewModel);
         const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
         for (const item of subModList.Mods) {
             if (item.enabled) {

@@ -2,7 +2,7 @@ import React from 'react';
 import {Form, Input, Modal} from 'antd';
 import {t} from "i18next";
 
-interface AddModDialogStates {
+interface InputDialogStates {
     isModalOpen?: boolean;
     title?: string;
     defaultValue?: any;
@@ -11,13 +11,13 @@ interface AddModDialogStates {
 type InputCallback = (name: string) => void;
 
 
-class AddModDialog extends React.Component<any, AddModDialogStates> {
+export class InputDialog extends React.Component<any, InputDialogStates> {
 
     private readonly localFormRef: any = React.createRef();
 
     private callback: InputCallback;
 
-    public constructor(props: any, context: AddModDialogStates) {
+    public constructor(props: any, context: InputDialogStates) {
         super(props, context);
 
         this.state = {
@@ -78,4 +78,3 @@ class AddModDialog extends React.Component<any, AddModDialogStates> {
     }
 }
 
-export default AddModDialog;

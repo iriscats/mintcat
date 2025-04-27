@@ -1,18 +1,18 @@
 import React from 'react';
-import {Layout, ConfigProvider} from 'antd';
-import {I18nextProvider} from "react-i18next"
+import {Layout} from 'antd';
 
-import TitleBar from "./components/TitleBar.tsx";
-import StatusBar from "./components/StatusBar.tsx";
-import MenuBar, {MenuPage} from "./components/MenuBar.tsx";
-import UpdateDialog from "./dialogs/UpdateDialog.tsx";
-import HomePage from "./pages/HomePage.tsx";
-import SettingPage from "./pages/SettingPage.tsx";
-import ModioPage from "./pages/ModioPage.tsx";
-import defaultTheme from './themes/default.ts';
-import i18n from "./locales/i18n"
+import TitleBar from "@/components/TitleBar.tsx";
+import StatusBar from "@/components/StatusBar.tsx";
+import MenuBar, {MenuPage} from "@/components/MenuBar.tsx";
+import UpdateDialog from "@/dialogs/UpdateDialog.tsx";
+import {HomePage} from "@/pages/HomePage";
+import {ModioPage} from "@/pages/ModioPage";
+import {SettingPage} from "@/pages/SettingPage";
+import {AppViewModel} from "@/vm/AppViewModel.ts";
 
+import defaultTheme from '@/themes/default.ts';
 import './App.css';
+
 
 const {
     Header,
@@ -28,9 +28,7 @@ class App extends React.Component<any, any> {
         currentPage: MenuPage.Home,
     }
 
-    private pageConfigs = [
-        {key: MenuPage.Home, component: <HomePage/>},
-    ];
+    private pageConfigs = [];
 
     public constructor(props: any, context: any) {
         super(props, context);
@@ -82,36 +80,40 @@ class App extends React.Component<any, any> {
         // });
     }
 
+    componentDidMount() {
+        AppViewModel.getInstance().then((instance: any) => {
+            this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
+            this.forceUpdate();
+        });
+    }
+
     render() {
         return (
-            <I18nextProvider i18n={i18n}>
-                <ConfigProvider theme={defaultTheme}>
-                    <Layout className={"app"}>
-                        <UpdateDialog/>
-                        <Header className={"app-header"}>
-                            <TitleBar/>
-                        </Header>
-                        <Layout>
-                            <Sider width="50px">
-                                <MenuBar onClick={this.clickMenu}/>
-                            </Sider>
-                            <Content>
-                                {this.pageConfigs.map(({key, component}) => (
-                                    <div key={key} style={{
-                                        display: this.state.currentPage === key ? 'block' : 'none',
-                                        height: '100%'
-                                    }}>
-                                        {component}
-                                    </div>
-                                ))}
-                            </Content>
-                        </Layout>
-                        <Footer style={{height: "30px"}}>
-                            <StatusBar/>
-                        </Footer>
+
+                <Layout className={"app"}>
+                    <UpdateDialog/>
+                    <Header className={"app-header"}>
+                        <TitleBar/>
+                    </Header>
+                    <Layout>
+                        <Sider width="50px">
+                            <MenuBar onClick={this.clickMenu}/>
+                        </Sider>
+                        <Content>
+                            {this.pageConfigs.map(({key, component}) => (
+                                <div key={key} style={{
+                                    display: this.state.currentPage === key ? 'block' : 'none',
+                                    height: '100%'
+                                }}>
+                                    {component}
+                                </div>
+                            ))}
+                        </Content>
                     </Layout>
-                </ConfigProvider>
-            </I18nextProvider>
+                    <Footer style={{height: "30px"}}>
+                        <StatusBar/>
+                    </Footer>
+                </Layout>
         );
     }
 }

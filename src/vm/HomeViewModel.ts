@@ -3,8 +3,8 @@ import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {emit} from "@tauri-apps/api/event";
-import {ConfigApi} from "../apis/ConfigApi.ts";
-import {ModioApi} from "../apis/ModioApi.ts";
+import {ConfigApi} from "@/apis/ConfigApi.ts";
+import {ModioApi} from "@/apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {MOD_INVALID_ID, ModList, ModListItem} from "./config/ModList.ts";
 import {
@@ -14,7 +14,7 @@ import {
     ProfileTreeItem,
     ProfileTreeType
 } from "./config/ProfileList.ts";
-import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
+import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 
 
 export class HomeViewModel {
@@ -231,7 +231,7 @@ export class HomeViewModel {
             modItem.enabled = enable;
         }
         await ConfigApi.saveModListData(this.ModList.toJson());
-        this.updateTreeViewCallback?.call(this);
+        //this.updateTreeViewCallback?.call(this);
 
         // update edit time
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
@@ -242,9 +242,9 @@ export class HomeViewModel {
         if (modItem) {
             modItem.usedVersion = version;
         }
+        // this.updateTreeViewCallback?.call(this);
 
         await ConfigApi.saveModListData(this.ModList.toJson());
-        this.updateTreeViewCallback?.call(this);
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {

@@ -10,7 +10,6 @@ import {
 } from '@ant-design/icons';
 import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
-import {AppContext} from "../AppContext.ts";
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {ModioApi} from "../apis/ModioApi.ts";
 import {MessageBox} from "./MessageBox.ts";
@@ -25,10 +24,6 @@ interface TitleBarState {
 }
 
 class TitleBar extends React.Component<any, TitleBarState> {
-
-    declare context: React.ContextType<typeof AppContext>;
-    static contextType = AppContext;
-
 
     public constructor(props: any, context: any) {
         super(props, context);
