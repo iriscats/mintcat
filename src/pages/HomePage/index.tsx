@@ -18,7 +18,7 @@ import {
 } from "@ant-design/icons";
 import * as checkbox from "antd/es/checkbox";
 
-import {openWindow} from "@/dialogs/AddModDialog";
+import {openWindow} from "@/dialogs/AddModDialog/open";
 import ProfileEditDialog from "@/dialogs/ProfileEditDialog.tsx";
 import {InputDialog} from "@/dialogs/InputDialog.tsx";
 import {TreeViewConverter} from "@/vm/converter/TreeViewConverter.ts";
@@ -174,7 +174,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarAddModClick() {
-        openWindow();
+        openWindow().then();
     }
 
     @autoBind
@@ -233,14 +233,15 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onDrop(info: any) {
-        const vm = await HomeViewModel.getInstance();
-
         const newTreeData = dragAndDrop(info, this.state.treeData);
-        this.setState({
-            treeData: newTreeData,
-        })
+        // this.setState({
+        //     treeData: newTreeData,
+        //     selectedKeys: []
+        // });
+        const vm = await HomeViewModel.getInstance();
         const converter = new TreeViewConverter(vm.ModList, this.filterList);
-        await vm.setProfileData(converter.convertFrom(newTreeData));
+        await vm.setProfileData(converter.convertFrom(newTreeData)).then();
+        await this.updateTreeView();
     }
 
     @autoBind
@@ -410,6 +411,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
         return TreeViewItem(nodeData, this.onMenuClick);
     }
 
+    private allowDrop({dropNode, dropPosition}) {
+        return !dropNode.isLeaf;
+    }
+
     componentDidMount(): void {
         this.hookWindowResized();
         this.updateProfileSelect().then();
@@ -506,7 +511,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         <Tree className="ant-tree-content"
                               draggable
                               blockNode
-                              style={{minHeight: window.innerHeight - 155}}
                             //height={window.innerHeight - 155}
                               checkable={this.state.isMultiSelect}
                               expandedKeys={this.state.expandedKeys}

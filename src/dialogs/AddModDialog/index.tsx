@@ -1,82 +1,28 @@
 import React from 'react';
 import {t} from "i18next";
-import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
-import {Button, Flex, Tabs} from 'antd';
-
-import {ModioApi} from "@/apis/ModioApi.ts";
-import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {Button, Flex, Form, Select, Tabs} from 'antd';
+import {emit, listen} from "@tauri-apps/api/event";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
 import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
 import {BasePage} from "@/pages/IBasePage.ts";
-import {emit, once} from "@tauri-apps/api/event";
-import {ClipboardApi} from "@/apis/ClipboardApi.ts";
-
-
-export async function openWindow(text: string = ""): Promise<void> {
-    const vm = await HomeViewModel.getInstance();
-
-    const window = new WebviewWindow('add-mod-dialog', {
-        url: '/add_mod_dialog',
-        width: 400,
-        height: 480,
-        title: t("Add Mod"),
-        dragDropEnabled: true,
-    });
-
-    await window.once('tauri://created', () => {
-        const groupOptions = Array.from(vm.ActiveProfile?.groupNameMap)
-            .map(([key, value]) => ({
-                label: value,
-                value: key,
-            }));
-
-        window.emit('init-data', {key: 'value'});
-    });
-
-    await window.onDragDropEvent(
-        (event) => {
-            if (event.payload.type === 'drop') {
-                console.log('User dropped', event.payload);
-            }
-        }
-    );
-
-    await once('add-mod-dialog-close', async () => {
-        console.log("add-mod-dialog-close");
-        await window.close();
-    })
-
-}
-
-async function onClipboardChange(text: string) {
-    if (!text) {
-        return;
-    }
-    const links = text.split("\n");
-    for (const link of links) {
-        if (!ModioApi.parseModLinks(link)) {
-            return;
-        }
-    }
-
-    openWindow(text);
-}
-
-ClipboardApi.setClipboardWatcher(onClipboardChange).then();
-
-
-interface AddModDialogStates {
-    tabActiveKey?: string;
-}
+import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {autoBind} from "@/utils/ReactUtils.ts";
 
 type InputCallback = (name: string) => void;
 
-enum AddModType {
+export enum AddModType {
     MODIO = "mod.io",
     LOCAL = "local"
 }
 
+
+interface AddModDialogStates {
+    addModType?: string;
+    groupOptions?: any[];
+    groupId?: number;
+    loading?: boolean;
+    text?: string;
+}
 
 export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
@@ -85,26 +31,24 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     private callback?: InputCallback;
 
-    public constructor(props: any, context: AddModDialogStates) {
+    public constructor(props: any, context: any) {
         super(props, context);
 
         this.state = {
-            tabActiveKey: AddModType.LOCAL,
+            addModType: AddModType.LOCAL,
+            groupId: ProfileTreeGroupType.LOCAL,
         }
-
-        this.handleOk = this.handleOk.bind(this);
-        this.handleCancel = this.handleCancel.bind(this);
-        this.setCallback = this.setCallback.bind(this);
-        this.handleTabChange = this.handleTabChange.bind(this);
     }
 
+    @autoBind
     public setCallback(callback: any = undefined) {
         this.callback = callback;
         return this;
     }
 
+    @autoBind
     private async handleOk() {
-        switch (this.state.tabActiveKey) {
+        switch (this.state.addModType) {
             case AddModType.MODIO:
                 this.modioFormRef.current?.submit();
                 break;
@@ -118,18 +62,48 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         this.callback?.call(this);
     }
 
+    @autoBind
     private async handleCancel() {
         await emit('add-mod-dialog-close');
     }
 
+    @autoBind
     private handleTabChange(key: string) {
+        let groupId = 0;
+        switch (key) {
+            case AddModType.MODIO:
+                groupId = ProfileTreeGroupType.MODIO;
+                break;
+            case AddModType.LOCAL:
+                groupId = ProfileTreeGroupType.LOCAL;
+                break;
+            default:
+                break;
+        }
         this.setState({
-            tabActiveKey: key
+            groupId: groupId,
+            addModType: key
+        });
+    }
+
+    @autoBind
+    private onSelectGroupChange(value: number) {
+        this.setState({
+            groupId: value
         });
     }
 
     componentDidMount() {
         this.hookWindowResized();
+
+        listen<any>("init-data", (event) => {
+            this.setState({
+                addModType: event.payload.addModType,
+                groupId: event.payload.groupId,
+                groupOptions: event.payload.groupOptions,
+                text: event.payload.text
+            });
+        }).then();
     }
 
     render() {
@@ -139,8 +113,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                 height: window.innerHeight - 40,
                 padding: "20px 30px"
             }}>
-                <Tabs defaultActiveKey={this.state.tabActiveKey}
-                      activeKey={this.state.tabActiveKey}
+                <Tabs activeKey={this.state.addModType}
                       onChange={this.handleTabChange}
                       items={
                           [
@@ -152,11 +125,23 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                               {
                                   key: AddModType.MODIO,
                                   label: 'mod.io',
-                                  children: <ModioTab ref={this.modioFormRef}/>,
+                                  children: <ModioTab ref={this.modioFormRef} text={this.state.text}/>,
                               }
                           ]
                       }>
                 </Tabs>
+                <Form layout="vertical">
+                    <Form.Item name="groupId"
+                               label={t("Group")}
+                               rules={[{required: true}]}>
+                        <Flex>
+                            <Select value={this.state.groupId}
+                                    options={this.state.groupOptions}
+                                    onChange={this.onSelectGroupChange}
+                            />
+                        </Flex>
+                    </Form.Item>
+                </Form>
                 <Flex gap={"large"}
                       style={{
                           alignItems: "center",

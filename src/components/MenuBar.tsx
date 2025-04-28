@@ -1,6 +1,6 @@
 import React from "react";
 import {Menu, MenuProps} from "antd";
-import {HomeOutlined, SettingOutlined, WechatOutlined} from "@ant-design/icons";
+import {HomeOutlined, MoneyCollectOutlined, SettingOutlined} from "@ant-design/icons";
 import {ModioOutlined} from "./SvgIcon.tsx";
 import {t} from "i18next";
 
@@ -23,7 +23,7 @@ class MenuBar extends React.Component<MenuBarProps, any> {
     private items: MenuItem[] = [
         {key: MenuPage.Home, icon: <HomeOutlined/>, label: t("Home")},
         {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io'},
-        // {key: MenuPage.Chat, icon: <WechatOutlined/>, label: t("Chat")},
+        {key: MenuPage.Chat, icon: <MoneyCollectOutlined/>, label: t("Chat")},
         {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")},
     ];
 

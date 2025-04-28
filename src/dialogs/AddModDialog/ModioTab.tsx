@@ -1,26 +1,23 @@
 import React, {useState} from "react";
-import {Form, Select} from "antd";
+import {Flex, Form} from "antd";
 import {t} from "i18next";
 import TextArea from "antd/es/input/TextArea";
 
-export const ModioTab = React.forwardRef(({groupId, groupOptions}: any, ref) => {
+export const ModioTab = React.forwardRef(({text}: any, ref) => {
 
-    const [url, setUrl] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [url, setUrl] = useState(text);
 
     React.useImperativeHandle(ref, () => ({
         submit: async () => {
-            setLoading(true);
 
-            // const vm = await HomeViewModel.getInstance();
-            // const links = url.split("\n");
-            // for (const link of links) {
-            //     const success = await vm.addModFromUrl(link, groupId);
-            //     if (!success) {
-            //         break;
-            //     }
-            // }
-            // setLoading(false);
+            const links = url.split("\n");
+            for (const link of links) {
+                //const success = await vm.addModFromUrl(link, groupId);
+                // if (!success) {
+                //     break;
+                // }
+            }
+
         }
     }));
 
@@ -28,34 +25,19 @@ export const ModioTab = React.forwardRef(({groupId, groupOptions}: any, ref) => 
         setUrl(e.target.value);
     }
 
-    const onSelectGroupChange = (value: number) => {
-        groupId = value
-    }
 
     return (
-        <Form layout="vertical"
-              disabled={loading}
-              initialValues={{
-                  modLinks: url,
-                  groupId: groupId
-              }}
-        >
-            <Form.Item name="groupId"
-                       label={t("Group")}
-                       rules={[{required: true}]}
-            >
-                <Select options={groupOptions}
-                        onChange={onSelectGroupChange}
-                />
-            </Form.Item>
+        <Form layout="vertical">
             <Form.Item name="modLinks"
                        label={t("Mod Links")}
                        rules={[{required: true}]}
             >
-                <TextArea value={url}
-                          onChange={onTextChange}
-                          rows={6}
-                />
+                <Flex>
+                    <TextArea value={url}
+                              onChange={onTextChange}
+                              rows={6}
+                    />
+                </Flex>
             </Form.Item>
         </Form>
     )

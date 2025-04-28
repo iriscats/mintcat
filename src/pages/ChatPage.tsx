@@ -9,7 +9,11 @@ const ChatPage = () => {
             backgroundColor: "#fff"
         }}>
             <iframe src={"https://webim-h5.easemob.com/login"}
-                    style={{width: '100%', height: '100%', border: 0}}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 0
+                    }}
             />
         </div>
     );

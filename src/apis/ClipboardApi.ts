@@ -2,6 +2,8 @@ import {readText} from "@tauri-apps/plugin-clipboard-manager";
 
 export class ClipboardApi {
 
+    private static isHook = false;
+
     private static lastClipboardText = "";
 
     public static setLastClipboardText(text: string) {
@@ -10,6 +12,11 @@ export class ClipboardApi {
 
     public static async setClipboardWatcher(callback: (text: string) => void) {
         try {
+            if (this.isHook) {
+                return;
+            }
+            this.isHook = true;
+
             this.lastClipboardText = await readText();
             setInterval(async () => {
                 try {

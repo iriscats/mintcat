@@ -6,7 +6,7 @@ import {emit} from "@tauri-apps/api/event";
 import {ConfigApi} from "@/apis/ConfigApi.ts";
 import {ModioApi} from "@/apis/ModioApi.ts";
 import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
-import {MOD_INVALID_ID, ModList, ModListItem} from "./config/ModList.ts";
+import {ModList, ModListItem} from "./config/ModList.ts";
 import {
     ProfileList,
     ProfileTree,
