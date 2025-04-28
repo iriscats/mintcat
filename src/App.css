@@ -147,3 +147,13 @@ body::before {
     height: 20px !important;
 }
 
+.ant-tree-list-holder {
+    overscroll-behavior: none !important;
+    scroll-behavior: auto !important;
+}
+
+
+.ant-tree-list-holder-inner {
+    overscroll-behavior: none !important;
+    scroll-behavior: auto !important;
+}

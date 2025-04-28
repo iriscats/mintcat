@@ -8,9 +8,9 @@ import UpdateDialog from "@/dialogs/UpdateDialog.tsx";
 import {HomePage} from "@/pages/HomePage";
 import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
+import ChatPage from "@/pages/ChatPage.tsx";
 import {AppViewModel} from "@/vm/AppViewModel.ts";
 
-import defaultTheme from '@/themes/default.ts';
 import './App.css';
 
 
@@ -58,26 +58,16 @@ class App extends React.Component<any, any> {
                 });
             }
                 break;
+            case MenuPage.Chat: {
+                this.pageConfigs.push({
+                    key: MenuPage.Setting,
+                    component: <ChatPage/>
+                });
+            }
+                break;
             default:
                 break;
         }
-    }
-
-    private async onDragDropEvent() {
-        // getCurrentWindow().onDragDropEvent((event) => {
-        //     if (event.payload.type === 'drop') {
-        //         console.log('User dropped', event.payload);
-        //         if (event.payload.paths.length === 0) {
-        //             return;
-        //         }
-        //
-        //         this.addModDialogRef.current?.setValue(ProfileTreeGroupType.LOCAL, event.payload.paths[0])
-        //             .setCallback(async () => {
-        //                 await message.info("Add Successfully");
-        //             }).show();
-        //     }
-        // }).then(_ => {
-        // });
     }
 
     componentDidMount() {
@@ -90,30 +80,30 @@ class App extends React.Component<any, any> {
     render() {
         return (
 
-                <Layout className={"app"}>
-                    <UpdateDialog/>
-                    <Header className={"app-header"}>
-                        <TitleBar/>
-                    </Header>
-                    <Layout>
-                        <Sider width="50px">
-                            <MenuBar onClick={this.clickMenu}/>
-                        </Sider>
-                        <Content>
-                            {this.pageConfigs.map(({key, component}) => (
-                                <div key={key} style={{
-                                    display: this.state.currentPage === key ? 'block' : 'none',
-                                    height: '100%'
-                                }}>
-                                    {component}
-                                </div>
-                            ))}
-                        </Content>
-                    </Layout>
-                    <Footer style={{height: "30px"}}>
-                        <StatusBar/>
-                    </Footer>
+            <Layout className={"app"}>
+                <UpdateDialog/>
+                <Header className={"app-header"}>
+                    <TitleBar/>
+                </Header>
+                <Layout>
+                    <Sider width="50px">
+                        <MenuBar onClick={this.clickMenu}/>
+                    </Sider>
+                    <Content>
+                        {this.pageConfigs.map(({key, component}) => (
+                            <div key={key} style={{
+                                display: this.state.currentPage === key ? 'block' : 'none',
+                                height: '100%'
+                            }}>
+                                {component}
+                            </div>
+                        ))}
+                    </Content>
                 </Layout>
+                <Footer style={{height: "30px"}}>
+                    <StatusBar/>
+                </Footer>
+            </Layout>
         );
     }
 }

@@ -11,6 +11,8 @@ import {TranslateApi} from "@/apis/TranslateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {BasePage} from "../IBasePage.ts";
+import {AddModType} from "@/dialogs/AddModDialog";
+import {openWindow} from "@/dialogs/AddModDialog/open.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
@@ -69,10 +71,12 @@ export class ModioPage extends BasePage<any, ModioPageState> {
     }
 
     private onAddClick(url: string) {
-        this.addModDialogRef.current?.setValue(ProfileTreeGroupType.MODIO, url)
-            .setCallback(async () => {
-                await message.info(t("Add Successfully"));
-            }).show();
+        openWindow(AddModType.MODIO, ProfileTreeGroupType.MODIO, url).then();
+
+        // this.addModDialogRef.current?.setValue(ProfileTreeGroupType.MODIO, url)
+        //     .setCallback(async () => {
+        //         await message.info(t("Add Successfully"));
+        //     }).show();
     }
 
     private async onMenuClick(key: string, item: ModInfo) {

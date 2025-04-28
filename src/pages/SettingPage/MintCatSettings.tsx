@@ -2,7 +2,6 @@ import {t} from "i18next";
 import React from "react";
 import {openPath} from "@tauri-apps/plugin-opener";
 import {open} from "@tauri-apps/plugin-dialog";
-import {appCacheDir} from "@tauri-apps/api/path";
 import i18n from "@/locales/i18n.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
