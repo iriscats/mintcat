@@ -2,7 +2,7 @@
     width: 100%;
     height: 100%;
     font-family: "Microsoft YaHei", "Roboto", sans-serif;
-    background-color: #F5F8FF;
+    background-color: white;
     padding: 0;
     margin: 0;
     border: 0;
@@ -28,7 +28,7 @@ body::before {
     z-index: 9999;
     pointer-events: none;
     opacity: 0.1;
-    background-image: url("https://www.loliapi.com/acg/pc/");
+    /*background-image: url("https://www.loliapi.com/acg/pc/");*/
 }
 
 .app {

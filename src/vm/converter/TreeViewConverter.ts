@@ -5,21 +5,22 @@ import {ModList, ModListItem} from "../config/ModList.ts";
 
 export class TreeViewConverter {
 
+    public static filterList?: string[] = [];
+
     public treeData?: TreeProps['treeData'] = []
     public expandedKeys?: TreeProps['expandedKeys'] = [];
     private modList?: ModList;
-    public filterList?: string[] = [];
 
-    public constructor(modList: ModList, filterList: string[] = []) {
+    public constructor(modList: ModList) {
         this.modList = modList;
-        this.filterList = filterList;
     }
 
     private filter(modItem: ModListItem) {
-        if (this.filterList.length === 0) {
+        if (TreeViewConverter.filterList.length === 0) {
             return true;
         }
-        for (let filter of this.filterList) {
+
+        for (let filter of TreeViewConverter.filterList) {
             if (filter === "All") {
                 return true;
             }

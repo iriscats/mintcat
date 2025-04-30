@@ -101,5 +101,9 @@ async function onClipboardChange(text: string) {
     openWindow(AddModType.MODIO, ProfileTreeGroupType.MODIO, text).then();
 }
 
-ClipboardApi.setClipboardWatcher(onClipboardChange).then();
+
+export function initClipboardWatcher() {
+    ClipboardApi.setClipboardWatcher(onClipboardChange).then();
+}
+
 

@@ -4,6 +4,5 @@ export class TimeUtils {
         return Math.floor(Date.now() / 1000);
     }
 
-
 }
 
