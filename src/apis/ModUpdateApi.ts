@@ -76,7 +76,6 @@ export class ModUpdateApi {
 
     public static async checkModList() {
         const viewModel = await HomeViewModel.getInstance();
-        console.log(viewModel);
         const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
         for (const item of subModList.Mods) {
             if (item.enabled) {
@@ -93,7 +92,6 @@ export class ModUpdateApi {
         await emit("status-bar-log", t("Mod Update Check Start"));
 
         const viewModel = await HomeViewModel.getInstance();
-
         let updateTime = 0;
         if (!viewModel.ActiveProfile.lastUpdate) {
             updateTime = TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30; // 最近 1 一个月的更新

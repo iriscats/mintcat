@@ -14,6 +14,7 @@ import ChatPage from "@/pages/ChatPage.tsx";
 import {AppViewModel} from "@/vm/AppViewModel.ts";
 
 import './App.css';
+import {EmptyPage} from "@/pages/EmptyPage.tsx";
 
 const {
     Header,
@@ -72,17 +73,17 @@ class App extends React.Component<any, any> {
     }
 
     componentDidMount() {
-        initClipboardWatcher();
-
-        AppViewModel.getInstance().then((instance: any) => {
+        console.log("App mounted.");
+        AppViewModel.getInstance().then(() => {
             this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
             this.forceUpdate();
         });
+
+        initClipboardWatcher();
     }
 
     render() {
         return (
-
             <Layout className={"app"}>
                 <UpdateDialog/>
                 <Header className={"app-header"}>
@@ -93,14 +94,19 @@ class App extends React.Component<any, any> {
                         <MenuBar onClick={this.clickMenu}/>
                     </Sider>
                     <Content>
-                        {this.pageConfigs.map(({key, component}) => (
-                            <div key={key} style={{
-                                display: this.state.currentPage === key ? 'block' : 'none',
-                                height: '100%'
-                            }}>
-                                {component}
-                            </div>
-                        ))}
+                        {
+                            this.pageConfigs.length === 0 && <EmptyPage/>
+                        }
+                        {
+                            this.pageConfigs.map(({key, component}) => (
+                                <div key={key} style={{
+                                    display: this.state.currentPage === key ? 'block' : 'none',
+                                    height: '100%'
+                                }}>
+                                    {component}
+                                </div>
+                            ))
+                        }
                     </Content>
                 </Layout>
                 <Footer style={{height: "30px"}}>
