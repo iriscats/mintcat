@@ -28,7 +28,7 @@ body::before {
     z-index: 9999;
     pointer-events: none;
     opacity: 0.1;
-    /*  background-image: url("https://wx3.sinaimg.cn/mw690/006einQdly1hnol3nv8u2j30sf0sf77h.jpg");*/
+    background-image: url("https://www.loliapi.com/acg/pc/");
 }
 
 .app {
@@ -147,13 +147,40 @@ body::before {
     height: 20px !important;
 }
 
-.ant-tree-list-holder {
-    overscroll-behavior: none !important;
-    scroll-behavior: auto !important;
+.ant-upload-drag {
+    border: 1px dashed #cccccc;
+    padding: 0 20px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 8px;
 }
 
+.ant-upload-drag:hover {
+    border: 1px dashed #1677FF;
+}
 
-.ant-tree-list-holder-inner {
-    overscroll-behavior: none !important;
-    scroll-behavior: auto !important;
+.app-drag-icon {
+    color: #1677FF;
+    font-size: 30px;
+    line-height: 0;
+    margin: 0;
+    padding-top: 10px;
+}
+
+.app-drag-hint {
+    color: #AAAAAA;
+}
+
+.app-drag-list {
+    border: 1px dashed #cccccc;
+    border-radius: 8px;
+    overflow-y: auto;
+}
+
+.app-drag-list-item {
+    background-color: transparent;
+}
+
+.app-drag-list-item:hover {
+    background-color: #EEEEEE;
 }

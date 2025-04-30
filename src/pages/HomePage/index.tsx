@@ -35,6 +35,9 @@ import {dragAndDrop} from "./DragAndDropTree.ts";
 import {TreeViewItem} from "./TreeViewItem.tsx";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
+import {listen} from "@tauri-apps/api/event";
+import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {AddModType} from "@/dialogs/AddModDialog";
 
 
 interface ModListPageState {
@@ -83,11 +86,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
             selectedKeys: [],
             defaultProfile: "",
         }
-
-        // this.context.setUpdateViewCallback(
-        //     async () => await this.updateTreeView(),
-        //     async () => await this.updateProfileSelect()
-        // );
 
     }
 
@@ -234,10 +232,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onDrop(info: any) {
         const newTreeData = dragAndDrop(info, this.state.treeData);
-        // this.setState({
-        //     treeData: newTreeData,
-        //     selectedKeys: []
-        // });
         const vm = await HomeViewModel.getInstance();
         const converter = new TreeViewConverter(vm.ModList, this.filterList);
         await vm.setProfileData(converter.convertFrom(newTreeData)).then();
@@ -297,8 +291,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async updateTreeView() {
         const vm = await HomeViewModel.getInstance();
-        console.log(vm.ActiveProfile);
-
         const converter = new TreeViewConverter(vm.ModList, this.filterList);
         converter.convertTo(vm.ActiveProfile);
 
@@ -355,8 +347,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 }
             }
                 break;
-            case "add_mod":
-                openWindow();
+            case "add_mod": {
+                switch (id) {
+                    case ProfileTreeGroupType.LOCAL:
+                        await openWindow(AddModType.LOCAL, id);
+                        break;
+                    case ProfileTreeGroupType.MODIO:
+                        await openWindow(AddModType.MODIO, id);
+                        break;
+                    default:
+                        await openWindow(AddModType.MODIO, id);
+                        break;
+                }
+            }
                 break;
             case "rename":
                 const modName = vm.ModList.get(id)?.displayName;
@@ -411,15 +414,15 @@ export class HomePage extends BasePage<any, ModListPageState> {
         return TreeViewItem(nodeData, this.onMenuClick);
     }
 
-    private allowDrop({dropNode, dropPosition}) {
-        return !dropNode.isLeaf;
-    }
-
     componentDidMount(): void {
         this.hookWindowResized();
         this.updateProfileSelect().then();
         this.updateTreeView().then();
         ModUpdateApi.checkModList().then();
+
+        listen("home-page-update-tree-view", async () => {
+            await this.updateTreeView();
+        }).then();
     }
 
     render() {
