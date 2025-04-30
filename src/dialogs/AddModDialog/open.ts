@@ -5,7 +5,7 @@ import {HomeViewModel} from "@/vm/HomeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
-import {AddModType} from "@/dialogs/AddModDialog/index.tsx";
+import {AddModDialogResult, AddModType} from "@/dialogs/AddModDialog/index.tsx";
 
 let windowInstance: WebviewWindow;
 
@@ -39,7 +39,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     windowInstance = new WebviewWindow('add-mod-dialog', {
         url: '/add_mod_dialog',
         width: 400,
-        height: 480,
+        height: 580,
         title: t("Add Mod"),
         dragDropEnabled: true,
     });
@@ -54,8 +54,33 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         windowInstance = null;
     }).then();
 
+    await once<AddModDialogResult>('add-mod-dialog-ok', async (event) => {
+        const result = event.payload;
+        switch (result.addModType) {
+            case AddModType.MODIO: {
+                const list = result.list;
+                for (const item of list) {
+                    await vm.addModFromUrl(item, result.groupId);
+                }
+            }
+                break;
+            case AddModType.LOCAL: {
+                const list = result.list;
+                for (const item of list) {
+                    await vm.addModFromPath(item, result.groupId);
+                }
+            }
+                break;
+            default:
+                break;
+        }
+
+        await vm.updateUI();
+        await windowInstance.close();
+        windowInstance = null;
+    });
+
     await once('add-mod-dialog-close', async () => {
-        console.log("add-mod-dialog-close");
         await windowInstance.close();
         windowInstance = null;
     });

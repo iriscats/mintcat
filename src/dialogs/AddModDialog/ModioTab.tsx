@@ -5,26 +5,29 @@ import TextArea from "antd/es/input/TextArea";
 
 export const ModioTab = React.forwardRef(({text}: any, ref) => {
 
-    const [url, setUrl] = useState(text);
+    const [url, setUrl] = useState<string>(text);
 
     React.useImperativeHandle(ref, () => ({
-        submit: async () => {
-
-            const links = url.split("\n");
-            for (const link of links) {
-                //const success = await vm.addModFromUrl(link, groupId);
-                // if (!success) {
-                //     break;
-                // }
+        submit: () => {
+            const result = [];
+            if (!url) {
+                return result;
             }
 
+            const mods = url.trim();
+            const list = mods.split("\n");
+            for (const item of list) {
+                if (result.indexOf(item) === -1) {
+                    result.push(item);
+                }
+            }
+            return result;
         }
     }));
 
     const onTextChange = (e) => {
         setUrl(e.target.value);
     }
-
 
     return (
         <Form layout="vertical">

@@ -53,11 +53,6 @@ export class HomeViewModel {
     private constructor() {
     }
 
-    public setUpdateViewCallback(treeviewCallback: () => void, selectCallback: () => void) {
-        this.updateTreeViewCallback = treeviewCallback;
-        this.updateSelectCallback = selectCallback;
-    }
-
     private async addModDependencies(modList: ModList, modId: number, groupId: number): Promise<void> {
         await emit("status-bar-log", t("Fetch Mod Dependencies"));
 
@@ -279,7 +274,7 @@ export class HomeViewModel {
     }
 
     public async updateUI() {
-        this.updateTreeViewCallback?.call(this);
+        await emit("home-page-update-tree-view");
     }
 
     public async loadConfig() {

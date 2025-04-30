@@ -1,6 +1,6 @@
 import React from 'react';
 import {t} from "i18next";
-import {Button, Flex, Form, Select, Tabs} from 'antd';
+import {Button, Flex, Form, message, Select, Tabs} from 'antd';
 import {emit, listen} from "@tauri-apps/api/event";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
 import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
@@ -8,13 +8,10 @@ import {BasePage} from "@/pages/IBasePage.ts";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 
-type InputCallback = (name: string) => void;
-
 export enum AddModType {
     MODIO = "mod.io",
     LOCAL = "local"
 }
-
 
 interface AddModDialogStates {
     addModType?: string;
@@ -24,12 +21,16 @@ interface AddModDialogStates {
     text?: string;
 }
 
+export interface AddModDialogResult {
+    addModType?: string;
+    groupId?: number;
+    list?: string[];
+}
+
 export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     private readonly modioFormRef: any = React.createRef();
     private readonly localFormRef: any = React.createRef();
-
-    private callback?: InputCallback;
 
     public constructor(props: any, context: any) {
         super(props, context);
@@ -40,26 +41,35 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         }
     }
 
-    @autoBind
-    public setCallback(callback: any = undefined) {
-        this.callback = callback;
-        return this;
-    }
 
     @autoBind
     private async handleOk() {
+        let list = [];
         switch (this.state.addModType) {
-            case AddModType.MODIO:
-                this.modioFormRef.current?.submit();
+            case AddModType.MODIO: {
+                list = this.modioFormRef.current?.submit();
+            }
                 break;
-            case AddModType.LOCAL:
-                this.localFormRef.current?.submit();
+            case AddModType.LOCAL: {
+                list = this.localFormRef.current?.submit();
+            }
                 break;
             default:
                 break;
         }
 
-        this.callback?.call(this);
+        console.log(list);
+
+        if (list.length === 0) {
+            message.warning(t("Please input mod"));
+            return;
+        }
+
+        await emit('add-mod-dialog-ok', {
+            groupId: this.state.groupId,
+            addModType: this.state.addModType,
+            list: list
+        });
     }
 
     @autoBind
@@ -125,7 +135,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                               {
                                   key: AddModType.MODIO,
                                   label: 'mod.io',
-                                  children: <ModioTab ref={this.modioFormRef} text={this.state.text}/>,
+                                  children: <ModioTab ref={this.modioFormRef}
+                                                      text={this.state.text}/>,
                               }
                           ]
                       }>
