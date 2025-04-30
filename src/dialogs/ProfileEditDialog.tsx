@@ -11,6 +11,7 @@ interface ProfileEditDialogStates {
     newProfileName?: string;
     editingKey?: string | null;
     editingValue?: string;
+    profileList?: string[];
 }
 
 type InputCallback = (name: string) => void;
@@ -112,7 +113,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
             >
                 <Card size={"small"}>
                     <List size="small"
-                          dataSource={this.context.ProfileList}
+                          dataSource={this.state.profileList}
                           header={
                               <Flex>
                                   <Input size="small"

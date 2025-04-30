@@ -5,6 +5,8 @@ import TitleBar from "@/components/TitleBar.tsx";
 import StatusBar from "@/components/StatusBar.tsx";
 import MenuBar, {MenuPage} from "@/components/MenuBar.tsx";
 import UpdateDialog from "@/dialogs/UpdateDialog.tsx";
+import {initClipboardWatcher} from "@/dialogs/AddModDialog/open.ts";
+
 import {HomePage} from "@/pages/HomePage";
 import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
@@ -12,7 +14,6 @@ import ChatPage from "@/pages/ChatPage.tsx";
 import {AppViewModel} from "@/vm/AppViewModel.ts";
 
 import './App.css';
-
 
 const {
     Header,
@@ -71,6 +72,8 @@ class App extends React.Component<any, any> {
     }
 
     componentDidMount() {
+        initClipboardWatcher();
+
         AppViewModel.getInstance().then((instance: any) => {
             this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
             this.forceUpdate();

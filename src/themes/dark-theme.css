@@ -1,0 +1,7 @@
+:root {
+    filter: invert(100%) !important;
+}
+
+img {
+    filter: brightness(0.8) invert(100%) !important;
+}

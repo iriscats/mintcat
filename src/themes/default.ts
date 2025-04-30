@@ -16,28 +16,35 @@ export default {
 
 export function renderTheme() {
     const theme = localStorage.getItem('theme');
-    if (theme === "Light") {
-        window.document.documentElement.style.filter = "none";
-        // Remove dark mode style tag if exists
-        const darkStyle = document.getElementById('dark-theme-style');
-        darkStyle?.remove();
-    } else if (theme === "Dark") {
-        window.document.documentElement.style.filter = "invert(100%)";
-        // Create new style element with unique ID
-        const style = document.createElement('style');
-        style.id = 'dark-theme-style';
-        style.textContent = 'img { filter: brightness(0.8) invert(100%); }';
-        document.head.appendChild(style);
+    const existingLink = document.getElementById('theme-style');
+
+    // 移除旧样式
+    if (existingLink) {
+        existingLink.remove();
     }
 
+    if (theme === "Light") {
+        const link = document.createElement('link');
+        link.id = 'theme-style';
+        link.rel = 'stylesheet';
+        link.href = '/src/themes/light-theme.css';
+        document.head.appendChild(link);
+    } else if (theme === "Dark") {
+        const link = document.createElement('link');
+        link.id = 'theme-style';
+        link.rel = 'stylesheet';
+        link.href = '/src/themes/dark-theme.css';
+        document.head.appendChild(link);
+    }
 }
+
 
 try {
     listen("theme-change", (event) => {
         renderTheme();
     }).then();
 
-}catch(_) {
+} catch (_) {
 
 }
 

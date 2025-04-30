@@ -1,4 +1,4 @@
-// 定义自动bind的装饰器
+// 定义自动 bind 的装饰器
 export function autoBind(
     _target: any,
     _propertyKey: string,

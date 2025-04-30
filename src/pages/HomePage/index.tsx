@@ -38,6 +38,7 @@ import {BasePage} from "../IBasePage.ts";
 import {listen} from "@tauri-apps/api/event";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
+import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
 
 
 interface ModListPageState {
@@ -49,8 +50,6 @@ interface ModListPageState {
     selectedKeys?: any[];
     defaultProfile?: string;
     displayMode?: string;
-    searchOptions?: SelectProps['options'];
-    searchValue?: string;
 }
 
 
@@ -60,27 +59,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
 
-    private filterList: string[] = [];
-
-    private defaultFilterOptions: SelectProps['options'] = [
-        {value: 'Verified', label: 'Verified'},
-        {value: 'Approved', label: 'Approved'},
-        {value: 'Sandbox', label: 'Sandbox'},
-        {value: 'RequiredByAll', label: 'RequiredByAll'},
-        {value: 'Optional', label: 'Optional'},
-        {value: 'Audio', label: 'Audio'},
-        {value: 'Framework', label: 'Framework'},
-        {value: 'Tools', label: 'Tools'},
-        {value: 'QoL', label: 'QoL'},
-        {value: 'Visual', label: 'Visual'},
-    ]
-
     public constructor(props: any, state: ModListPageState) {
         super(props, state);
 
         this.state = {
             profileOptions: [],
-            searchOptions: this.defaultFilterOptions,
             contextMenus: [],
             expandedKeys: [],
             selectedKeys: [],
@@ -195,33 +178,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     @autoBind
-    private async onSearch(newValue: string) {
-        this.filterList = [newValue];
-
-        let searchOptions: SelectProps['options'] = [];
-        if (newValue !== "") {
-            searchOptions.push({value: newValue, label: newValue});
-        }
-        for (const option of this.defaultFilterOptions) {
-            searchOptions.push(option);
-        }
-
-        this.setState({
-            searchOptions: searchOptions
-        })
-        await this.updateTreeView();
-    }
-
-    @autoBind
-    private async onSearchSelectChange(value: any) {
-        this.filterList = value;
-        this.setState({
-            searchValue: value
-        });
-        await this.updateTreeView();
-    }
-
-    @autoBind
     private onEditProfileClick() {
         this.profileEditDialogRef
             .current?.setCallback(async () => {
@@ -233,7 +189,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private async onDrop(info: any) {
         const newTreeData = dragAndDrop(info, this.state.treeData);
         const vm = await HomeViewModel.getInstance();
-        const converter = new TreeViewConverter(vm.ModList, this.filterList);
+        const converter = new TreeViewConverter(vm.ModList);
         await vm.setProfileData(converter.convertFrom(newTreeData)).then();
         await this.updateTreeView();
     }
@@ -291,7 +247,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async updateTreeView() {
         const vm = await HomeViewModel.getInstance();
-        const converter = new TreeViewConverter(vm.ModList, this.filterList);
+        const converter = new TreeViewConverter(vm.ModList);
         converter.convertTo(vm.ActiveProfile);
 
         this.setState({
@@ -491,20 +447,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                             </Tooltip>
                         </Typography.Link>
                         <Typography.Link>
-                            <Select size={"small"}
-                                    value={this.state.searchValue}
-                                    style={{width: "300px"}}
-                                    suffixIcon={<SearchOutlined/>}
-                                    options={this.state.searchOptions}
-                                    filterOption={false}
-                                    notFoundContent={null}
-                                    defaultActiveFirstOption={false}
-                                    onChange={this.onSearchSelectChange}
-                                    onSearch={this.onSearch}
-                                    showSearch={true}
-                                    allowClear={true}
-                                    mode={"multiple"}
-                            />
+                            <SearchBox/>
                         </Typography.Link>
                     </Space>
                     <div style={{
