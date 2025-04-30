@@ -11,11 +11,12 @@ import {SettingConverter} from "./converter/SettingConverter.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import i18n from "../locales/i18n"
 import {exists} from "@tauri-apps/plugin-fs";
-import {renderTheme} from "@/themes/default.ts";
+import {ILock} from "@/utils/ILock.ts";
+import {emit} from "@tauri-apps/api/event";
 
 const IS_DEV = window.location.host === "localhost:1420";
 
-export class AppViewModel {
+export class AppViewModel extends ILock {
 
     private static instance: AppViewModel;
     private converter: SettingConverter = new SettingConverter();
@@ -27,6 +28,7 @@ export class AppViewModel {
     }
 
     private constructor() {
+        super();
     }
 
     public async checkOauth(): Promise<boolean> {
@@ -87,6 +89,8 @@ export class AppViewModel {
         if (AppViewModel.instance) {
             return AppViewModel.instance;
         }
+
+        const release = await this.acquireLock();
         const appViewModel = new AppViewModel();
         const homeViewModel = await HomeViewModel.getInstance();
 
@@ -121,7 +125,9 @@ export class AppViewModel {
             message.error(t("mod.io OAuth No Found"));
         }
 
+        await emit("title-bar-load-avatar");
         AppViewModel.instance = appViewModel;
+        release();
         return appViewModel;
     }
 

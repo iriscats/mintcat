@@ -182,7 +182,6 @@ export class ModioApi {
             return modInfo;
         }
 
-        console.log(modInfo.fileSize);
         if (modInfo.fileSize < 100 * 1024 * 1024) {
             const data = await DownloadApi.downloadFile(modInfo.downloadUrl, onProgress);
             modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, modInfo.usedVersion, data);

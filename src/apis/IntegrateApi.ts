@@ -7,9 +7,9 @@ import {ModUpdateApi} from "./ModUpdateApi.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
-import {ILock} from "./ILock.ts";
 import {ConfigApi} from "./ConfigApi.ts";
-import {TimeUtils} from "../utils/TimeUtils.ts";
+import {ILock} from "@/utils/ILock.ts";
+import {TimeUtils} from "@/utils/TimeUtils.ts";
 
 
 export class IntegrateApi extends ILock {

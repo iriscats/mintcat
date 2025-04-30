@@ -103,6 +103,7 @@ export class TreeViewConverter {
         }
         this.buildTreeNode(root, tree.root);
         this.treeData = root.children;
+        return this.treeData;
     }
 
     public convertFrom(treeData: any) {

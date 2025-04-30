@@ -5,7 +5,7 @@ import {copyFile} from "@tauri-apps/plugin-fs";
 import {
     Button, Checkbox, Divider,
     Flex, MenuProps, message, Select,
-    SelectProps, Space, Tooltip, Tree, TreeProps, Typography,
+    SelectProps, Space, Tooltip, Tree, TreeDataNode, TreeProps, Typography,
 } from 'antd';
 import {
     CloseCircleOutlined, CopyOutlined,
@@ -187,10 +187,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onDrop(info: any) {
-        const newTreeData = dragAndDrop(info, this.state.treeData);
         const vm = await HomeViewModel.getInstance();
+        let treeData: TreeDataNode[];
         const converter = new TreeViewConverter(vm.ModList);
-        await vm.setProfileData(converter.convertFrom(newTreeData)).then();
+        if (TreeViewConverter.filterList.length > 0) {
+            const filterList = TreeViewConverter.filterList;
+            TreeViewConverter.filterList = [];
+            treeData = converter.convertTo(vm.ActiveProfile);
+            TreeViewConverter.filterList = filterList;
+        } else {
+            treeData = this.state.treeData;
+        }
+        const dragTreeData = dragAndDrop(info, treeData);
+        await vm.setProfileData(converter.convertFrom(dragTreeData)).then();
         await this.updateTreeView();
     }
 
@@ -371,6 +380,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     componentDidMount(): void {
+        console.log("HomePage mounted.");
+
         this.hookWindowResized();
         this.updateProfileSelect().then();
         this.updateTreeView().then();
