@@ -1,6 +1,9 @@
-import {listen} from "@tauri-apps/api/event";
+import {ThemeConfig} from "antd";
 
-export default {
+export const defaultTheme :ThemeConfig= {
+    token:{
+        colorPrimary: "#FFFFFF",
+    },
     components: {
         Layout: {
             bodyBg: 'transparent',
@@ -23,29 +26,27 @@ export function renderTheme() {
         existingLink.remove();
     }
 
-    if (theme === "Light") {
-        const link = document.createElement('link');
-        link.id = 'theme-style';
-        link.rel = 'stylesheet';
-        link.href = '/src/themes/light-theme.css';
-        document.head.appendChild(link);
-    } else if (theme === "Dark") {
-        const link = document.createElement('link');
-        link.id = 'theme-style';
-        link.rel = 'stylesheet';
-        link.href = '/src/themes/dark-theme.css';
-        document.head.appendChild(link);
+    const link = document.createElement('link');
+    link.id = 'theme-style';
+    link.rel = 'stylesheet';
+    switch (theme) {
+        case "Light": {
+            defaultTheme.token.colorPrimary = "#1677FF";
+            link.href = '/src/themes/light-theme.css';
+        }
+            break;
+        case "Dark": {
+            defaultTheme.token.colorPrimary = "#1677FF";
+            link.href = '/src/themes/dark-theme.css';
+        }
+            break;
+        case "Pink":
+            defaultTheme.token.colorPrimary = "#ff69b4";
+            link.href = '/src/themes/pink-theme.css';
+            break;
     }
+    document.head.appendChild(link);
 }
 
-
-try {
-    listen("theme-change", (event) => {
-        renderTheme();
-    }).then();
-
-} catch (_) {
-
-}
 
 

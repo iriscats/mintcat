@@ -28,7 +28,6 @@ body::before {
     z-index: 9999;
     pointer-events: none;
     opacity: 0.1;
-    /*background-image: url("https://www.loliapi.com/acg/pc/");*/
 }
 
 .app {
