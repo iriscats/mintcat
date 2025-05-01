@@ -64,8 +64,8 @@ export function MintCatSettings() {
         const vm = await AppViewModel.getInstance();
         vm.setting.guiTheme = value;
         localStorage.setItem('theme', value);
-        await emit("theme-change");
         await vm.saveSettings();
+        await emit("theme-change");
     }
 
     const onDevToolsClick = async () => {
