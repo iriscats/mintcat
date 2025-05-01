@@ -21,6 +21,7 @@ const languageOptions = [
 const themeOptions = [
     {value: 'Light', label: t('Light')},
     {value: 'Dark', label: t('Dark')},
+    {value: 'Pink', label: t('Pink')},
 ];
 
 export function MintCatSettings() {

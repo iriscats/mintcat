@@ -1,6 +1,6 @@
 import {t} from "i18next";
 import React, {useState} from "react";
-import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, Tooltip} from "antd";
+import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emit, listen} from "@tauri-apps/api/event";
@@ -9,6 +9,8 @@ import {HomeViewModel} from "@/vm/HomeViewModel.ts";
 import {ModioApi} from "@/apis/ModioApi.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {ModFile} from "@/vm/modio/ModInfo.ts";
+
+const {useToken} = theme;
 
 
 function ModTreeViewFolder({nodeData, onMenuClick}) {
@@ -186,13 +188,17 @@ function ModTreeViewProgress({nodeData}) {
 function ModTreeViewTitle({nodeData}) {
 
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
+    const {token} = useToken();
 
     listen<ModListItem>("mod-treeview-update" + nodeData.key, (event) => {
         setDownloadProgress(event.payload.downloadProgress);
     }).then();
 
     return (
-        <a style={{color: nodeData.enabled && downloadProgress === 100 ? "#1f81f8" : "lightblue"}}
+        <a style={{
+            color: nodeData.enabled &&
+            downloadProgress === 100 ? token.colorPrimary : token.colorTextDisabled
+        }}
            onClick={async () => {
                await open(nodeData.url);
            }}

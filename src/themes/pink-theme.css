@@ -1,0 +1,13 @@
+:root {
+/*    --ant-primary-color: #ff69b4 !important;*/
+    background-color: rgba(237, 65, 146, 0.2) !important;
+}
+
+body::before {
+    background-image: url("https://www.loliapi.com/acg/pc/");
+}
+
+.app-header .ant-btn-primary:not([disabled]):not(.ant-btn-dangerous)::before {
+    background: linear-gradient(135deg, #d58cfa, #ff5959) !important;
+}
+
