@@ -1,10 +1,10 @@
 :root {
-/*    --ant-primary-color: #ff69b4 !important;*/
+    /*    --ant-primary-color: #ff69b4 !important;*/
     background-color: rgba(237, 65, 146, 0.2) !important;
 }
 
 body::before {
-    background-image: url("https://www.loliapi.com/acg/pc/");
+    background-image: url("https://www.loliapi.com/acg/pc/") !important;
 }
 
 .app-header .ant-btn-primary:not([disabled]):not(.ant-btn-dangerous)::before {
