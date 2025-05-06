@@ -12,7 +12,7 @@ export const defaultTheme :ThemeConfig= {
             siderBg: 'transparent'
         },
         Tree: {
-            indentSize: 8
+            indentSize: 4
         }
     }
 };
@@ -46,6 +46,8 @@ export function renderTheme() {
             break;
     }
     document.head.appendChild(link);
+
+
 }
 
 

@@ -5,3 +5,7 @@
 img {
     filter: brightness(0.8) invert(100%) !important;
 }
+
+.app-title-bar-skin-button {
+    filter: invert(100%) !important;
+}

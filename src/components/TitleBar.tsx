@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Badge, Button, Flex, Image, Popconfirm} from "antd";
+import {Avatar, Badge, Button, Flex, Image, List, Popover} from "antd";
 import {t} from "i18next";
 import {
     BellOutlined,
@@ -15,7 +15,7 @@ import {ModioApi} from "../apis/ModioApi.ts";
 import {MessageBox} from "./MessageBox.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
-import {once} from "@tauri-apps/api/event";
+import {emit, once} from "@tauri-apps/api/event";
 
 
 interface TitleBarState {
@@ -64,6 +64,14 @@ class TitleBar extends React.Component<any, TitleBarState> {
         }
     }
 
+    private async onThemeClick(value: string) {
+        const vm = await AppViewModel.getInstance();
+        vm.setting.guiTheme = value;
+        localStorage.setItem('theme', value);
+        await vm.saveSettings();
+        await emit("theme-change");
+    }
+
     componentDidMount(): void {
         once("title-bar-load-avatar", () => {
             this.loadAvatar().then();
@@ -97,7 +105,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
                         v{packageJson.version}
                     </span>
                 </Flex>
-                <Flex gap="middle" justify={"flex-end"} wrap>
+                <Flex gap="small" justify={"flex-end"} wrap>
                     <Button
                         type="primary"
                         onClick={this.onLaunchGameClick}
@@ -113,19 +121,42 @@ class TitleBar extends React.Component<any, TitleBarState> {
                         <Badge size={"small"}
                                count={0}
                         >
-                            <BellOutlined/>
+                         <Button type={"text"}
+                                 icon={<BellOutlined/>}
+                         />
                         </Badge>
                     </span>
                     <span>
-                    <Popconfirm
+                    <Popover
                         placement="bottom"
-                        title={"In development"}
-                        description={"未完成的功能，敬请期待"}
-                        okText="Yes"
-                        cancelText="No"
+                        title={""}
+                        content={
+                            <List grid={{gutter: 16, column: 3}}
+                                  dataSource={[
+                                      {key: 'Light', title: t('Light'), color: "#F5F8FF"},
+                                      {key: 'Dark', title: t('Dark'), color: "black"},
+                                      {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
+                                  ]}
+                                  renderItem={(item) => (
+                                      <List.Item>
+                                          <Button className={"app-title-bar-skin-button"}
+                                              title={item.title}
+                                              style={{backgroundColor: item.color}}
+                                              onClick={async () => {
+                                                  await this.onThemeClick(item.key)
+                                              }}
+                                          >
+                                          </Button>
+                                      </List.Item>
+                                  )}
+                            >
+                            </List>
+                        }
                     >
-                        <SkinOutlined/>
-                    </Popconfirm>
+                       <Button type={"text"}
+                               icon={<SkinOutlined/>}
+                       />
+                    </Popover>
                     </span>
                     <span>
                         <Button type={"text"}
