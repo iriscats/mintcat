@@ -1,5 +1,6 @@
 import React from "react";
 import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {listen} from "@tauri-apps/api/event";
 
 export const CountLabel = () => {
     const [enableCount, setEnableCount] = React.useState(0);
@@ -15,6 +16,10 @@ export const CountLabel = () => {
             setEnableCount(subModList.Mods.filter(mod => mod.enabled).length);
             setTotalCount(subModList.Mods.length);
         };
+
+        listen("tree-view-count-label-update", async () => {
+            await fetchData();
+        }).then();
 
         fetchData().then();
     }, []);
