@@ -13,18 +13,19 @@ import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {AppViewModel} from "@/vm/AppViewModel.ts";
 import {emit} from "@tauri-apps/api/event";
 
-const languageOptions = [
-    {value: 'en', label: t("English")},
-    {value: 'zh', label: t('Chinese')},
-];
-
-const themeOptions = [
-    {value: 'Light', label: t('Light')},
-    {value: 'Dark', label: t('Dark')},
-    {value: 'Pink', label: t('Pink')},
-];
 
 export function MintCatSettings() {
+
+    const languageOptions = [
+        {value: 'en', label: t("English")},
+        {value: 'zh', label: t('Chinese')},
+    ];
+
+    const themeOptions = [
+        {value: 'Light', label: t('Light')},
+        {value: 'Dark', label: t('Dark')},
+        {value: 'Pink', label: t('Pink')},
+    ];
 
     const [language, setLanguage] = React.useState<string>("en");
     const [theme, setTheme] = React.useState<string>("Light");
@@ -84,17 +85,15 @@ export function MintCatSettings() {
 
 
     React.useEffect(() => {
-        console.log("MintCatSettings mounted.");
         const fetchData = async () => {
             const vm = await AppViewModel.getInstance();
-            console.log(vm);
             setLanguage(vm.setting.language);
             setTheme(vm.setting.guiTheme);
             setConfigDirectory(vm.setting.configPath);
             setCacheDirectory(vm.setting.cachePath);
         }
         fetchData().then();
-    });
+    }, []);
 
     return (
         <Card title={t("MintCat Settings")}
