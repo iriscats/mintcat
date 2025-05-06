@@ -53,7 +53,7 @@ export function GameSettings() {
             setDrgPakPath(vm.setting.drgPakPath);
         }
         fetchData().then();
-    });
+    }, []);
 
 
     return (

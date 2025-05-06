@@ -14,7 +14,7 @@ export function UserAuthSettings() {
     }
 
     const onOAuthChange = async (e: any) => {
-        if (e.target.value.length < 20) {
+        if (e.target.value.length !== 0 && e.target.value.length < 20) {
             message.error(t("Invalid OAuth"));
         }
         setModioOAuth(e.target.value);
@@ -29,7 +29,7 @@ export function UserAuthSettings() {
             setModioOAuth(vm.setting.modioOAuth);
         }
         fetchData().then();
-    });
+    }, []);
 
 
     return (

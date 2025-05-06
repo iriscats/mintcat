@@ -19,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' http: https:",
+      "csp": null,
       "assetProtocol": {
         "scope": [
           "**/*"
