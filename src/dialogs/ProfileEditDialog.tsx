@@ -104,6 +104,17 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         this.setState({newProfileName: e.target.value})
     }
 
+    private async fetchData() {
+        const vm = await HomeViewModel.getInstance();
+        this.setState({
+            profileList: vm.ProfileList
+        })
+    }
+
+    componentDidMount() {
+        this.fetchData().then();
+    }
+
     render() {
         return (
             <Modal title={t("Edit Profile")}

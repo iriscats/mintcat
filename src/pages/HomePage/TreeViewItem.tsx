@@ -49,6 +49,8 @@ function ModTreeViewSwitch({nodeData}) {
         nodeData.enabled = checked;
         const viewModel = await HomeViewModel.getInstance();
         await viewModel.setModEnabled(nodeData.key, checked);
+
+        await emit("tree-view-count-label-update");
     };
 
     return (

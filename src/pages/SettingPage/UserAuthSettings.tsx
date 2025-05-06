@@ -19,6 +19,7 @@ export function UserAuthSettings() {
         }
         setModioOAuth(e.target.value);
         const vm = await AppViewModel.getInstance();
+        vm.setting.modioOAuth = e.target.value;
         await vm.saveSettings();
     }
 
