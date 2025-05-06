@@ -16,19 +16,13 @@ export class IntegrateApi extends ILock {
 
     public static async checkGamePath(drgPakPath: string = undefined): Promise<boolean> {
         if (drgPakPath === undefined) {
-            const appViewModel = await AppViewModel.getInstance();
-            drgPakPath = appViewModel.setting.drgPakPath;
+            const vm = await AppViewModel.getInstance();
+            drgPakPath = vm.setting.drgPakPath;
         }
 
         try {
             if (!await exists(drgPakPath)) {
-                //TODO
-                /*              const found = await this.findGamePak();
-                                if (found !== undefined) {
-                                    appViewModel.setting.drgPakPath = found;
-                                    await ConfigApi.saveSettings(appViewModel.setting.toJson());
-                                    return true;
-                                }*/
+                //TODO: auto found
                 message.error(t("Game Path Not Found"));
                 return false;
             }

@@ -1,5 +1,6 @@
 import {invoke} from '@tauri-apps/api/core';
 import {listen} from "@tauri-apps/api/event";
+import {NetworkApi} from "@/apis/NetworkApi.ts";
 
 export type DownloadProgressCallBack = (downloaded: number, total: number) => void
 
@@ -39,8 +40,7 @@ export class DownloadApi {
     }
 
     public static async downloadFile(url: string, callback?: DownloadProgressCallBack) {
-
-        const response = await fetch(url);
+        const response = await NetworkApi.get(url);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }

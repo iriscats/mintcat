@@ -23,7 +23,7 @@ export class ModUpdateApi {
         await emit("status-bar-log", `${t("Update Mod")} [${newItem.displayName}]`);
 
         await this.updateModFile(newItem);
-        
+
         await ConfigApi.saveModListData(viewModel.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
     }
@@ -43,8 +43,14 @@ export class ModUpdateApi {
     }
 
     public static async checkOnlineModUpdate(modItem: ModListItem) {
-        if (modItem.sourceType === ModSourceType.Modio && modItem.enabled === true) {
-            if (!await exists(modItem.cachePath) || modItem.onlineUpdateDate > modItem.lastUpdateDate) {
+        if (modItem.sourceType === ModSourceType.Modio &&
+            modItem.onlineAvailable === true &&
+            modItem.enabled === true
+        ) {
+            if (!await exists(modItem.cachePath) ||
+                modItem.onlineUpdateDate > modItem.lastUpdateDate ||
+                modItem.downloadProgress != 100
+            ) {
                 await ModUpdateApi.updateMod(modItem);
             }
         }

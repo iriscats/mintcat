@@ -47,7 +47,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     windowInstance.once('tauri://created', () => {
         sendInitData();
         //TODO: 这里需要延迟一下，否则会导致组件渲染失败
-        setTimeout(sendInitData, 400);
+        setTimeout(sendInitData, 500);
     }).then();
 
     windowInstance.once('tauri://destroyed', () => {

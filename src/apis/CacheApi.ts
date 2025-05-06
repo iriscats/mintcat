@@ -4,6 +4,7 @@ import {path} from "@tauri-apps/api";
 import {convertFileSrc} from "@tauri-apps/api/core";
 import {AppViewModel} from "../vm/AppViewModel.ts";
 import {md5} from "./CryptApi.ts";
+import {NetworkApi} from "@/apis/NetworkApi.ts";
 
 export class CacheApi {
 
@@ -36,7 +37,7 @@ export class CacheApi {
         try {
             const imgPath = await CacheApi.getImageCachePath(url);
             if (!await exists(imgPath)) {
-                const response = await fetch(url);
+                const response = await NetworkApi.get(url);
                 const data = await response.arrayBuffer();
                 const buffer = new Uint8Array(data);
                 await writeFile(imgPath, buffer);
@@ -63,8 +64,8 @@ export class CacheApi {
             if (_fileSize === fileSize) {
                 return true;
             }
-        } catch (error) {
-            console.error(error);
+        } catch (_) {
+            //console.error(error);
         }
         return false;
     }

@@ -74,7 +74,7 @@ function ModTreeViewVersionSelect({nodeData}) {
             fileInfos = await ModioApi.getModFiles(nodeData.modId);
             const optionList = [];
             for (const fileInfo of fileInfos) {
-                optionList.push({value: JSON.stringify(fileInfo), label: fileInfo.version});
+                optionList.push({value: JSON.stringify(fileInfo), label: fileInfo.version ? fileInfo.version : "-"});
             }
 
             setFetching(false);
@@ -85,7 +85,7 @@ function ModTreeViewVersionSelect({nodeData}) {
     const onChange = async (value: string) => {
         const fileInfo = JSON.parse(value);
         nodeData.usedVersion = fileInfo.version;
-        await emit("status-bar-log", `${t("Switch Version")}: ${nodeData.displayName} ${fileInfo.version}`);
+        await emit("status-bar-log", `${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
 
         const viewModel = await HomeViewModel.getInstance();
         await viewModel.setModUsedVersion(nodeData.key, fileInfo.version);
@@ -96,6 +96,7 @@ function ModTreeViewVersionSelect({nodeData}) {
         modItem.fileSize = fileInfo.filesize;
         modItem.usedVersion = fileInfo.version;
 
+        await emit("mod-treeview-update" + nodeData.key, modItem);
         await ModUpdateApi.updateModFile(modItem);
     }
 
