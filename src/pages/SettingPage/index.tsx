@@ -13,6 +13,7 @@ export class SettingPage extends BasePage<any, any> {
 
     componentDidMount(): void {
         this.hookWindowResized();
+        console.log("SettingPage mounted.");
     }
 
     render() {

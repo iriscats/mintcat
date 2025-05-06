@@ -84,8 +84,10 @@ export function MintCatSettings() {
 
 
     React.useEffect(() => {
+        console.log("MintCatSettings mounted.");
         const fetchData = async () => {
             const vm = await AppViewModel.getInstance();
+            console.log(vm);
             setLanguage(vm.setting.language);
             setTheme(vm.setting.guiTheme);
             setConfigDirectory(vm.setting.configPath);
@@ -93,7 +95,6 @@ export function MintCatSettings() {
         }
         fetchData().then();
     });
-
 
     return (
         <Card title={t("MintCat Settings")}

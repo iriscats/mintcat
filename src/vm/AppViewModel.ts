@@ -85,50 +85,57 @@ export class AppViewModel extends ILock {
         }
     }
 
-    public static async getInstance(): Promise<AppViewModel> {
-        if (AppViewModel.instance) {
-            return AppViewModel.instance;
-        }
-
-        const release = await this.acquireLock();
-        const appViewModel = new AppViewModel();
+    private async initAppViewModel() {
+        this.isFirstRun = await IntegrateApi.isFirstRun();
         const homeViewModel = await HomeViewModel.getInstance();
 
-        appViewModel.isFirstRun = await IntegrateApi.isFirstRun();
-        let settingDataV1 = appViewModel.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
+        let settingDataV1 = this.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
         if (settingDataV1 !== undefined) {
             const confirmed = await MessageBox.confirm({
                 title: t("Import Config"),
                 content: t("Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?"),
             });
             if (confirmed) {
-                await appViewModel.converter.convertTo(settingDataV1);
-                await ConfigApi.saveSettings(appViewModel.setting.toJson());
+                await this.converter.convertTo(settingDataV1);
+                await ConfigApi.saveSettings(this.setting.toJson());
                 await homeViewModel.loadOldConfig()
             } else {
                 settingDataV1 = undefined;
             }
         }
 
-        if (!settingDataV1 || !appViewModel.isFirstRun) {
-            await appViewModel.loadSettings();
+        if (!settingDataV1 || !this.isFirstRun) {
+            await this.loadSettings();
             await homeViewModel.loadConfig()
         }
 
-        await appViewModel.loadUserLanguages();
-        await appViewModel.checkAppPath();
-        await IntegrateApi.checkGamePath(appViewModel.setting.drgPakPath);
+        await this.loadUserLanguages();
+        await this.checkAppPath();
 
-        if (await appViewModel.checkOauth()) {
-            appViewModel.appStartAutoCheckModUpdate();
+        await IntegrateApi.checkGamePath(this.setting.drgPakPath);
+
+        if (await this.checkOauth()) {
+            this.appStartAutoCheckModUpdate();
         } else {
             message.error(t("mod.io OAuth No Found"));
         }
 
         await emit("title-bar-load-avatar");
-        AppViewModel.instance = appViewModel;
+
+    }
+
+    public static async getInstance(): Promise<AppViewModel> {
+        const release = await this.acquireLock();
+        if (!AppViewModel.instance) {
+            const appViewModel = new AppViewModel();
+            try {
+                await appViewModel.initAppViewModel();
+            } finally {
+                AppViewModel.instance = appViewModel;
+            }
+        }
         release();
-        return appViewModel;
+        return AppViewModel.instance;
     }
 
 }

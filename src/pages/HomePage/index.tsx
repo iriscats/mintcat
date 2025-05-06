@@ -294,7 +294,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 break;
             case "delete_group":
                 await vm.removeGroup(id);
-                await this.updateTreeView();
                 break;
             case "rename_group":
                 const groupName = vm.ActiveProfile.groupNameMap.get(id);
@@ -380,8 +379,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     componentDidMount(): void {
-        console.log("HomePage mounted.");
-
         this.hookWindowResized();
         this.updateProfileSelect().then();
         this.updateTreeView().then();
@@ -390,6 +387,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
         listen("home-page-update-tree-view", async () => {
             await this.updateTreeView();
         }).then();
+
+        listen("home-page-update-profile-select", async () => {
+            await this.updateProfileSelect();
+        }).then();
+
     }
 
     render() {

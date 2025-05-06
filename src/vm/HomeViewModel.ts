@@ -23,9 +23,13 @@ export class HomeViewModel {
 
     private converter: ModConfigConverter = new ModConfigConverter();
 
-    private updateTreeViewCallback?: () => void;
+    private updateTreeViewCallback() {
+        emit("home-page-update-tree-view").then();
+    }
 
-    private updateSelectCallback?: () => void;
+    private updateSelectCallback() {
+        emit("home-page-update-profile-select").then();
+    }
 
     public get ModList(): ModList {
         return this.converter.modList;

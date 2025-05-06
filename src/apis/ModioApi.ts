@@ -8,8 +8,9 @@ import {EventInfo} from "../vm/modio/EventInfo.ts";
 import {CacheApi} from "./CacheApi.ts";
 import {DownloadApi} from "./DownloadApi.ts";
 import {TimeUtils} from "../utils/TimeUtils.ts";
+import {retry} from "ts-retry";
+import {NetworkApi} from "@/apis/NetworkApi.ts";
 
-const PROXY_API_URL = "https://api.v1st.net/";
 //const MODIO_API_URL = "https://api.mod.io/v1";
 const MODIO_GAME_ID = 2475;
 const MODIO_UID = "13595141";
@@ -21,12 +22,7 @@ export class ModioApi {
     private static async getHost() {
         const vm = await AppViewModel.getInstance();
         const modioUid = vm.setting?.modioUid ?? MODIO_UID;
-        const MODIO_API_URL = `https://u-${modioUid}.modapi.io/v1`;
-        if (this.IS_PROXY) {
-            return PROXY_API_URL + MODIO_API_URL;
-        } else {
-            return MODIO_API_URL;
-        }
+        return `https://u-${modioUid}.modapi.io/v1`;
     }
 
     private static async getHeaders() {
@@ -37,16 +33,11 @@ export class ModioApi {
     }
 
     private static async getRequest(path: string) {
-        const host = await ModioApi.getHost();
-        const url = host + path;
-        let resp: Response = undefined;
-        try {
-            resp = await fetch(url, {
-                headers: await ModioApi.getHeaders(),
-            });
-        } catch (e) {
-            throw Error(`${t("Network Error")}`);
-        }
+        let host = await ModioApi.getHost();
+        let url = host + path;
+
+        let resp: Response = await NetworkApi.get(url, await ModioApi.getHeaders());
+
         switch (resp.status) {
             case 200:
                 return await resp.json();
