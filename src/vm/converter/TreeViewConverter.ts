@@ -63,7 +63,8 @@ export class TreeViewConverter {
                         downloadProgress: modItem.downloadProgress,
                         lastUpdateDate: modItem.lastUpdateDate,
                         onlineUpdateDate: modItem.onlineUpdateDate,
-                        onlineAvailable: modItem.onlineAvailable
+                        onlineAvailable: modItem.onlineAvailable,
+                        localNoFound: modItem.localNoFound,
                     });
                 }
             } else if (item.type === ProfileTreeType.FOLDER) {

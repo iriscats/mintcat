@@ -64,6 +64,7 @@ export class IntegrateApi extends ILock {
                         await ConfigApi.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                     }
                     if (!await ModUpdateApi.checkLocalModCache(item)) {
+                        message.error(`${t("File Not Found")}: ${item.displayName}: ${item.cachePath}`);
                         return false;
                     }
                 }

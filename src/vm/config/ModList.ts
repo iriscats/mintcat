@@ -31,6 +31,7 @@ export class ModListItem {
     public lastUpdateDate: number = TimeUtils.getCurrentTime();
     public onlineUpdateDate: number = TimeUtils.getCurrentTime();
     public onlineAvailable: boolean = true;
+    public localNoFound: boolean = false;
 
     public constructor(modInfo?: ModInfo) {
         if (modInfo) {
@@ -212,6 +213,7 @@ export class ModList {
             modItem.lastUpdateDate = mod.last_update_date;
             modItem.onlineUpdateDate = mod.online_update_date;
             modItem.onlineAvailable = mod.online_available;
+            modItem.localNoFound = mod.local_no_found;
             modItem.sourceType = mod.source_type;
             modList.mods.push(modItem);
         }
@@ -242,6 +244,7 @@ export class ModList {
                 "last_update_date": mod.lastUpdateDate,
                 "online_update_date": mod.onlineUpdateDate,
                 "online_available": mod.onlineAvailable,
+                "local_no_found": mod.localNoFound
             }
             mods.push(modItem);
         }

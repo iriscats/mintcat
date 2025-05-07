@@ -1,5 +1,5 @@
 import {t} from "i18next";
-import {once} from "@tauri-apps/api/event";
+import {emit, once} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/ModioApi.ts";
 import {HomeViewModel} from "@/vm/HomeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
@@ -75,6 +75,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                 break;
         }
 
+        await emit("status-bar-log", t("Add Successfully"));
         await vm.updateUI();
         await windowInstance.close();
         windowInstance = null;
