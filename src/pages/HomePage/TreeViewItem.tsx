@@ -119,17 +119,30 @@ function ModTreeViewVersionSelect({nodeData}) {
 
 function ModTreeViewWarring({nodeData}) {
 
-    const check = () => {
-        return nodeData.downloadProgress === 100 &&
-            (nodeData.onlineUpdateDate > nodeData.lastUpdateDate ||
-                nodeData.usedVersion !== nodeData.fileVersion);
+    const checkExpired = () => {
+        return nodeData.sourceType === ModSourceType.Modio &&
+                nodeData.downloadProgress === 100 &&
+                (nodeData.onlineUpdateDate > nodeData.lastUpdateDate ||
+                    nodeData.usedVersion !== nodeData.fileVersion);
     }
 
-    const [isExpired, setIsExpired] = useState(check());
+    const checkLocalNoFound = () => {
+        return nodeData.localNoFound === true;
+    }
+
+    const checkOnlineUnavailable = () => {
+        return nodeData.onlineAvailable === false;
+    }
+
+    const [isExpired, setIsExpired] = useState(checkExpired());
+    const [isLocalNoFound, setIsLocalNoFound] = useState(checkLocalNoFound());
+    const [isOnlineUnavailable, setIsOnlineUnavailable] = useState(checkOnlineUnavailable());
 
     listen<ModListItem>("mod-treeview-update" + nodeData.key, (event) => {
         nodeData = event.payload;
-        setIsExpired(check());
+        setIsExpired(checkExpired());
+        setIsLocalNoFound(checkLocalNoFound());
+        setIsOnlineUnavailable(checkOnlineUnavailable());
     }).then();
 
     return (
@@ -144,8 +157,17 @@ function ModTreeViewWarring({nodeData}) {
             }
 
             {
-                nodeData.onlineAvailable === false &&
+                isOnlineUnavailable &&
                 <Tooltip title={t("Online Mod has been Deleted by Author")}>
+                                <span style={{color: "red", marginRight: "4px"}}>
+                                    <ExclamationCircleOutlined/>
+                                </span>
+                </Tooltip>
+            }
+
+            {
+                isLocalNoFound &&
+                <Tooltip title={t("File Not Found")}>
                                 <span style={{color: "red", marginRight: "4px"}}>
                                     <ExclamationCircleOutlined/>
                                 </span>
@@ -246,7 +268,8 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
                         <ModTreeViewVersionSelect nodeData={nodeData}/>
                     }
 
-                    {nodeData.sourceType === ModSourceType.Modio &&
+                    {
+                        //nodeData.sourceType === ModSourceType.Modio &&
                         <ModTreeViewWarring nodeData={nodeData}/>
                     }
 

@@ -59,7 +59,12 @@ export class ModUpdateApi {
     public static async checkLocalModCache(modItem: ModListItem) {
         if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
             if (!await exists(modItem.cachePath)) {
-                message.error(`${t("File Not Found")}: ${modItem.displayName}: ${modItem.cachePath}`);
+                modItem.localNoFound = true;
+
+                const viewModel = await HomeViewModel.getInstance();
+                viewModel.ModList.update(modItem, modItem);
+                await ConfigApi.saveModListData(viewModel.ModList.toJson());
+                await emit("mod-treeview-update" + modItem.id, modItem);
                 return false;
             }
         }
@@ -86,11 +91,10 @@ export class ModUpdateApi {
         for (const item of subModList.Mods) {
             if (item.enabled) {
                 await this.checkOnlineModUpdate(item);
-                if (!await this.checkLocalModCache(item)) {
-                    return false;
-                }
+                await this.checkLocalModCache(item);
             }
         }
+        await ConfigApi.saveModListData(viewModel.ModList.toJson());
         return true;
     }
 

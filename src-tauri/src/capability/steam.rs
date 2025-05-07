@@ -82,15 +82,19 @@ fn kill_steam() {
 
 #[tauri::command]
 pub fn check_steam_game(exe_name: String) -> bool {
-    let output = Command::new("tasklist")
-        .args(&["/FI", format!("IMAGENAME eq {}", exe_name).as_str()])
-        .output()
-        .unwrap();
+    return false;
+    #[cfg(windows)]
+    {
+        let output = Command::new("tasklist")
+            .args(&["/FI", format!("IMAGENAME eq {}", exe_name).as_str()])
+            .output()
+            .unwrap();
 
-    if String::from_utf8_lossy(&output.stdout).contains(exe_name.as_str()) {
-        true
-    } else {
-        false
+        if String::from_utf8_lossy(&output.stdout).contains(exe_name.as_str()) {
+            true
+        } else {
+            false
+        }
     }
 }
 
