@@ -1,11 +1,11 @@
 {
-  "version": "0.4.2",
-  "notes": "# 新增\n+ 新增独立的 MOD 添加窗口\n  + 支持本地文件拖入\n  + 批量导入本地文件\n  + 剪切板链接监控\n+ 主题新增功能\n  + 新增粉色主题\n  + 新增主页切换主题按钮\n+ MOD 版本切换功能\n+ 按照时间排序\n\n# 优化\n+ 优化 MOD 更新检测机制\n+ 优化 MOD 列表操作时卡顿问题\n+ 优化更新界面 Markdown 显示\n+ 优化用户提示\n \n# 修复\n+ 修复 MOD 安装时，如果游戏启动中会导致崩溃的问题\n+ 修复存在过滤条件时拖动 MOD 导致数据丢失\n+ 修复搜索框取消时过滤词消失问题",
-  "pub_date": "2025-05-8T09:27:51.555Z",
+  "version": "0.4.3",
+  "notes": "# 修复\n+ 修复初始化时没有导入数据，导致无限加载的问题",
+  "pub_date": "2025-05-09T00:27:51.555Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTGZKaFBFV3N5T1dEVlJwOGg0c0MydTBURG5pMnRqcUNtd21USHhTK2k5ZGFHYytwK1hudXRRRDQ3cTFEWnovaGhEbWJoYUY1RmdnUEN4TVlUMmZ5bUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ2NjY1MDQ0CWZpbGU6bWludGNhdF8wLjQuMl94NjQtc2V0dXAuZXhlCjg2TkpGV3RQQStRMWkxUEVuSW1TNFIvY2N3YzdOeVpjMjRFYWFsaVJFVjR6YzZDR3gvd2pVUi9DU0FnUFlWOEJQUU1xUHQ3Wi9VaWZUZ2RiZlJXRkJnPT0K",
-      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.2/mintcat_0.4.2_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTFJ1VGEyb2hDMzRXNkRhbkRrMm5QMkVrUkJyZVE5Y21nQUJjRERIZ3Zwd3VYMTJhY3pabFlJQXBraWlKVldtcVMwUlRnTm1HTjhyVEsrVHkyemk0VndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ2NzIwMTMyCWZpbGU6bWludGNhdF8wLjQuM194NjQtc2V0dXAuZXhlCnVoOUkzZnkvMStJSk9IenNxait6UGhTL3BGNS9MZUpTMFlTODhXN2cxNzhZUkpUbXd3Z3NtakVjSU8wdjVTWjRFYnFjaUhlUitPRSttTlNFZzZIRUN3PT0K",
+      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.3/mintcat_0.4.3_x64-setup.exe"
     }
   }
 }
