@@ -10,6 +10,8 @@ import {TimeUtils} from "../utils/TimeUtils.ts";
 
 export class ModUpdateApi {
 
+    private static loading = false;
+
     public static async updateMod(mod: ModListItem) {
         const viewModel = await HomeViewModel.getInstance();
         const resp = await ModioApi.getModInfoByLink(mod.url);
@@ -57,7 +59,7 @@ export class ModUpdateApi {
     }
 
     public static async checkLocalModCache(modItem: ModListItem) {
-        if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
+        if (modItem.sourceType === ModSourceType.Local) {
             if (!await exists(modItem.cachePath)) {
                 modItem.localNoFound = true;
 
@@ -75,17 +77,25 @@ export class ModUpdateApi {
         if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
             if (await exists(modItem.cachePath)) {
                 const fileInfo = await stat(modItem.cachePath);
-                console.log(fileInfo.mtime.getTime(), modItem.lastUpdateDate);
-                if (fileInfo.mtime.getTime() === modItem.lastUpdateDate) {
-                    console.log(false);
+                const mtime = TimeUtils.getTimeSecond(fileInfo.mtime.getTime());
+                if (mtime === modItem.lastUpdateDate) {
                     return false;
+                } else {
+                    modItem.lastUpdateDate = mtime;
+                    const viewModel = await HomeViewModel.getInstance();
+                    viewModel.ModList.update(modItem, modItem, true);
+                    await ConfigApi.saveModListData(viewModel.ModList.toJson());
+                    return true;
                 }
             }
         }
-        return true;
+        return false;
     }
 
     public static async checkModList() {
+        await emit("home-page-loading", true);
+        ModUpdateApi.loading = true;
+
         const viewModel = await HomeViewModel.getInstance();
         const subModList = viewModel.ActiveProfile.getModList(viewModel.ModList);
         for (const item of subModList.Mods) {
@@ -95,11 +105,17 @@ export class ModUpdateApi {
             }
         }
         await ConfigApi.saveModListData(viewModel.ModList.toJson());
+
+        ModUpdateApi.loading = false;
+        await emit("home-page-loading", false);
         return true;
     }
 
     public static async checkModUpdate() {
         await emit("status-bar-log", t("Mod Update Check Start"));
+        if (ModUpdateApi.loading) {
+            return;
+        }
 
         const viewModel = await HomeViewModel.getInstance();
         let updateTime = 0;

@@ -5,12 +5,11 @@ import {copyFile} from "@tauri-apps/plugin-fs";
 import {
     Button, Checkbox, Divider,
     Flex, MenuProps, message, Select,
-    SelectProps, Space, Tooltip, Tree, TreeDataNode, TreeProps, Typography,
+    SelectProps, Space, Spin, Tooltip, Tree, TreeDataNode, TreeProps, Typography,
 } from 'antd';
 import {
     CloseCircleOutlined, CopyOutlined,
-    EditOutlined, FieldTimeOutlined,
-    PauseCircleOutlined, PlayCircleOutlined,
+    EditOutlined, FieldTimeOutlined, PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined, SaveOutlined,
     SearchOutlined, SortAscendingOutlined,
     SortDescendingOutlined, SyncOutlined,
@@ -50,6 +49,7 @@ interface ModListPageState {
     selectedKeys?: any[];
     defaultProfile?: string;
     displayMode?: string;
+    loading?: boolean;
 }
 
 
@@ -68,6 +68,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             expandedKeys: [],
             selectedKeys: [],
             defaultProfile: "",
+            loading: false,
         }
 
     }
@@ -380,9 +381,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     componentDidMount(): void {
         this.hookWindowResized();
-        this.updateProfileSelect().then();
-        this.updateTreeView().then();
-        ModUpdateApi.checkModList().then();
+
+        listen<boolean>("home-page-loading", async (event) => {
+            this.setState({
+                loading: event.payload,
+            });
+        }).then();
 
         listen("home-page-update-tree-view", async () => {
             await this.updateTreeView();
@@ -392,108 +396,119 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await this.updateProfileSelect();
         }).then();
 
+
+        this.updateProfileSelect().then();
+        this.updateTreeView().then();
+
+        ModUpdateApi.checkModList().then();
+
     }
 
     render() {
         return (
             <div className="mod-list-page-card">
-
                 <ProfileEditDialog ref={this.profileEditDialogRef}/>
                 <InputDialog ref={this.inputDialogRef}/>
-                <Flex vertical={true}>
-                    <Space split={<Divider type="vertical"/>} size={2}
-                           style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
-                        <Typography.Link>
-                            <Tooltip title={t("Save Changes")}>
-                                <Button icon={<SaveOutlined/>} type={"text"} onClick={this.onMenuBarSaveChangesClick}/>
-                            </Tooltip>
-                            <Tooltip title={t("Add Mod")}>
-                                <Button icon={<PlusCircleOutlined/>} type={"text"} onClick={this.onMenuBarAddModClick}/>
-                            </Tooltip>
-                            <Tooltip title={t("Check Mod Updates")}>
-                                <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onMenuBarUpdateClick}/>
-                            </Tooltip>
-                            <Tooltip title={t("Copy List")}>
-                                <Button icon={<CopyOutlined/>} type={"text"} onClick={this.onMenuBarCopyListClick}/>
-                            </Tooltip>
-                        </Typography.Link>
-                        {
-                            this.state.displayMode === "ListView" &&
+                <Spin spinning={this.state.loading}
+                      delay={500}
+                      size={"large"}
+                >
+                    <Flex vertical={true}>
+                        <Space split={<Divider type="vertical"/>} size={2}
+                               style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
                             <Typography.Link>
-                                <Tooltip title="List View">
-                                    <Button icon={<UnorderedListOutlined/>} type={"text"}/>
+                                <Tooltip title={t("Save Changes")}>
+                                    <Button icon={<SaveOutlined/>} type={"text"}
+                                            onClick={this.onMenuBarSaveChangesClick}/>
                                 </Tooltip>
-                                <Tooltip title="Group View">
-                                    <Button icon={<TreeViewOutlined/>} type={"text"}/>
+                                <Tooltip title={t("Add Mod")}>
+                                    <Button icon={<PlusCircleOutlined/>} type={"text"}
+                                            onClick={this.onMenuBarAddModClick}/>
+                                </Tooltip>
+                                <Tooltip title={t("Check Mod Updates")}>
+                                    <Button icon={<SyncOutlined/>} type={"text"} onClick={this.onMenuBarUpdateClick}/>
+                                </Tooltip>
+                                <Tooltip title={t("Copy List")}>
+                                    <Button icon={<CopyOutlined/>} type={"text"} onClick={this.onMenuBarCopyListClick}/>
                                 </Tooltip>
                             </Typography.Link>
-                        }
-                        <Typography.Link>
-                            <Tooltip title={t("Sort Ascending")}>
-                                <Button icon={<SortAscendingOutlined/>}
-                                        type={"text"}
-                                        onClick={() => this.onMenuBarSortClick("asc")}
+                            {
+                                this.state.displayMode === "ListView" &&
+                                <Typography.Link>
+                                    <Tooltip title="List View">
+                                        <Button icon={<UnorderedListOutlined/>} type={"text"}/>
+                                    </Tooltip>
+                                    <Tooltip title="Group View">
+                                        <Button icon={<TreeViewOutlined/>} type={"text"}/>
+                                    </Tooltip>
+                                </Typography.Link>
+                            }
+                            <Typography.Link>
+                                <Tooltip title={t("Sort Ascending")}>
+                                    <Button icon={<SortAscendingOutlined/>}
+                                            type={"text"}
+                                            onClick={() => this.onMenuBarSortClick("asc")}
+                                    />
+                                </Tooltip>
+                                <Tooltip title={t("Sort Descending")}>
+                                    <Button icon={<SortDescendingOutlined/>}
+                                            type={"text"}
+                                            onClick={() => this.onMenuBarSortClick("desc")}
+                                    />
+                                </Tooltip>
+                                <Tooltip title={t("Sort By Time")}>
+                                    <Button icon={<FieldTimeOutlined/>}
+                                            type={"text"}
+                                            onClick={() => this.onMenuBarSortClick("time")}/>
+                                </Tooltip>
+                            </Typography.Link>
+                            <Typography.Link>
+                                <Select
+                                    size={"small"}
+                                    style={{width: "300px"}}
+                                    value={this.state.defaultProfile}
+                                    options={this.state.profileOptions}
+                                    onChange={this.onSelectChange}
                                 />
-                            </Tooltip>
-                            <Tooltip title={t("Sort Descending")}>
-                                <Button icon={<SortDescendingOutlined/>}
-                                        type={"text"}
-                                        onClick={() => this.onMenuBarSortClick("desc")}
-                                />
-                            </Tooltip>
-                            <Tooltip title={t("Sort By Time")}>
-                                <Button icon={<FieldTimeOutlined/>}
-                                        type={"text"}
-                                        onClick={() => this.onMenuBarSortClick("time")}/>
-                            </Tooltip>
-                        </Typography.Link>
-                        <Typography.Link>
-                            <Select
-                                size={"small"}
-                                style={{width: "300px"}}
-                                value={this.state.defaultProfile}
-                                options={this.state.profileOptions}
-                                onChange={this.onSelectChange}
+                                <Tooltip title={t("Edit Profile")}>
+                                    <Button icon={<EditOutlined/>} type={"text"} onClick={this.onEditProfileClick}/>
+                                </Tooltip>
+                            </Typography.Link>
+                            <Typography.Link>
+                                <SearchBox/>
+                            </Typography.Link>
+                        </Space>
+                        <div style={{
+                            height: window.innerHeight - 145,
+                            overflow: 'auto',
+                        }}>
+                            <Tree className="ant-tree-content"
+                                  draggable
+                                  blockNode
+                                //height={window.innerHeight - 155}
+                                  checkable={this.state.isMultiSelect}
+                                  expandedKeys={this.state.expandedKeys}
+                                  selectedKeys={this.state.selectedKeys}
+                                  treeData={this.state.treeData}
+                                  onCheck={this.onTreeNodeSelect}
+                                  onSelect={this.onTreeNodeSelect}
+                                  onRightClick={this.onTreeRightClick}
+                                  onExpand={this.onTreeNodeExpand}
+                                  onDrop={this.onDrop}
+                                  titleRender={this.onCustomTitleRender}
                             />
-                            <Tooltip title={t("Edit Profile")}>
-                                <Button icon={<EditOutlined/>} type={"text"} onClick={this.onEditProfileClick}/>
-                            </Tooltip>
-                        </Typography.Link>
-                        <Typography.Link>
-                            <SearchBox/>
-                        </Typography.Link>
-                    </Space>
-                    <div style={{
-                        height: window.innerHeight - 145,
-                        overflow: 'auto',
-                    }}>
-                        <Tree className="ant-tree-content"
-                              draggable
-                              blockNode
-                            //height={window.innerHeight - 155}
-                              checkable={this.state.isMultiSelect}
-                              expandedKeys={this.state.expandedKeys}
-                              selectedKeys={this.state.selectedKeys}
-                              treeData={this.state.treeData}
-                              onCheck={this.onTreeNodeSelect}
-                              onSelect={this.onTreeNodeSelect}
-                              onRightClick={this.onTreeRightClick}
-                              onExpand={this.onTreeNodeExpand}
-                              onDrop={this.onDrop}
-                              titleRender={this.onCustomTitleRender}
-                        />
-                    </div>
-                    <Flex style={{
-                        borderTop: "1px solid #eee",
-                        padding: "2px 10px 0 10px",
-                        width: "100%",
-                        justifyContent: "space-between",
-                    }}>
-                        <Checkbox onChange={this.onMultiCheckboxChange}
-                        />
-                        {
-                            this.state.isMultiSelect === true &&
-                            <span style={{marginRight: 'auto'}}>
+                        </div>
+                        <Flex style={{
+                            borderTop: "1px solid #eee",
+                            padding: "2px 10px 0 10px",
+                            width: "100%",
+                            justifyContent: "space-between",
+                        }}>
+                            <Checkbox onChange={this.onMultiCheckboxChange}
+                            />
+                            {
+                                this.state.isMultiSelect === true &&
+                                <span style={{marginRight: 'auto'}}>
                                 <Button type="text" size={"small"}
                                         icon={<CloseCircleOutlined/>}
                                         onClick={this.onMultiDeleteClick}>
@@ -515,10 +530,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                     {t("Update")}
                                 </Button>
                             </span>
-                        }
-                        <CountLabel/>
+                            }
+                            <CountLabel/>
+                        </Flex>
                     </Flex>
-                </Flex>
+                </Spin>
             </div>
         )
     }
