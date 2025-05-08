@@ -290,11 +290,15 @@ export class HomeViewModel {
                 const profileDetailData = await ConfigApi.loadProfileDetails(profile);
                 if (profileDetailData) {
                     this.converter.profileTreeList.push(ProfileTree.fromJson(profileDetailData));
+                } else {
+                    throw new Error("Unable to load profile");
                 }
             }
         } catch (err) {
+            console.log("loadConfig");
             this.converter.createDefault();
             await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+            await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         }
     }
 
@@ -311,6 +315,7 @@ export class HomeViewModel {
         } catch (e) {
             this.converter.createDefault();
             await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+            await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         }
     }
 
