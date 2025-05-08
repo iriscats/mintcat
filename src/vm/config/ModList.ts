@@ -162,7 +162,7 @@ export class ModList {
         return this.mods.find(m => m.url === url);
     }
 
-    public update(oldItem: ModListItem, newItem: ModListItem) {
+    public update(oldItem: ModListItem, newItem: ModListItem, noUpdate: boolean = false): ModListItem {
         const index = this.mods.findIndex(m => m.id === oldItem.id);
         if (index !== -1) {
             newItem.id = oldItem.id;
@@ -171,7 +171,8 @@ export class ModList {
             if (oldItem.displayName !== "") {
                 newItem.displayName = oldItem.displayName;
             }
-            newItem.lastUpdateDate = TimeUtils.getCurrentTime();
+            if (!noUpdate)
+                newItem.lastUpdateDate = TimeUtils.getCurrentTime();
             this.mods[index] = newItem;
             return this.mods[index];
         }

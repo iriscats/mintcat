@@ -14,8 +14,6 @@ import {exists} from "@tauri-apps/plugin-fs";
 import {ILock} from "@/utils/ILock.ts";
 import {emit} from "@tauri-apps/api/event";
 
-const IS_DEV = window.location.host === "localhost:1420";
-
 export class AppViewModel extends ILock {
 
     private static instance: AppViewModel;

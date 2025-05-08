@@ -1,8 +1,8 @@
 import {ThemeConfig} from "antd";
 
-export const defaultTheme :ThemeConfig= {
-    token:{
-        colorPrimary: "#FFFFFF",
+export const defaultTheme: ThemeConfig = {
+    token: {
+        colorPrimary: "#1677FF",
     },
     components: {
         Layout: {
@@ -30,11 +30,6 @@ export function renderTheme() {
     link.id = 'theme-style';
     link.rel = 'stylesheet';
     switch (theme) {
-        case "Light": {
-            defaultTheme.token.colorPrimary = "#1677FF";
-            link.href = '/themes/light-theme.css';
-        }
-            break;
         case "Dark": {
             defaultTheme.token.colorPrimary = "#1677FF";
             link.href = '/themes/dark-theme.css';
@@ -43,6 +38,12 @@ export function renderTheme() {
         case "Pink":
             defaultTheme.token.colorPrimary = "#ff69b4";
             link.href = '/themes/pink-theme.css';
+            break;
+        case "Light":
+        default: {
+            defaultTheme.token.colorPrimary = "#1677FF";
+            link.href = '/themes/light-theme.css';
+        }
             break;
     }
     document.head.appendChild(link);

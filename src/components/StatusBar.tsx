@@ -1,7 +1,8 @@
 import React from "react";
 import {t} from "i18next";
-import {Flex, Progress, ProgressProps} from "antd";
-import {listen} from "@tauri-apps/api/event";
+import {Button, Flex, Progress, ProgressProps} from "antd";
+import {emit, listen} from "@tauri-apps/api/event";
+import {CloseCircleOutlined, CloseOutlined} from "@ant-design/icons";
 
 
 const ProgressColors: ProgressProps['strokeColor'] = {
@@ -98,6 +99,19 @@ class StatusBar extends React.Component<any, StatusBarState> {
                     marginLeft: "10px",
                     color: "#666"
                 }}>
+                    {
+                        this.state.message &&
+                        <Button title={t("Cancel")}
+                                icon={<CloseCircleOutlined/>}
+                                type={"link"}
+                                onClick={async () => {
+                                    await emit("home-page-loading", false);
+                                    this.setState({
+                                        message: ""
+                                    })
+                                }}
+                        />
+                    }
                     {this.state.message}
                 </div>
             </Flex>
