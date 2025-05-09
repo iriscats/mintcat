@@ -15,14 +15,23 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
 
     const vm = await HomeViewModel.getInstance();
 
-    const sendInitData = () => {
-        windowInstance.emit('init-data', {
+    const setInitData = () => {
+        localStorage.setItem('add-mod-dialog-init-data', JSON.stringify({
+            text: text,
+            groupId: groupId,
+            groupOptions: groupOptions,
+            addModType: addModType,
+        }));
+    };
+
+    const sendInitData = async () => {
+        await emit("add-mod-dialog-init-data", {
             text: text,
             groupId: groupId,
             groupOptions: groupOptions,
             addModType: addModType,
         });
-    };
+    }
 
     const groupOptions = Array.from(vm.ActiveProfile?.groupNameMap)
         .map(([key, value]) => ({
@@ -31,7 +40,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         }));
 
     if (windowInstance) {
-        sendInitData();
+        await sendInitData();
         await windowInstance.show();
         return;
     }
@@ -45,9 +54,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     });
 
     windowInstance.once('tauri://created', () => {
-        sendInitData();
-        //TODO: 这里需要延迟一下，否则会导致组件渲染失败
-        setTimeout(sendInitData, 500);
+        setInitData();
     }).then();
 
     windowInstance.once('tauri://destroyed', () => {
