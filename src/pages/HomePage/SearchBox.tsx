@@ -19,7 +19,7 @@ const defaultFilterOptions: SelectProps['options'] = [
 
 export const SearchBox = () => {
 
-    const [searchValue, setSearchValue] = React.useState<string>(undefined);
+    const [searchValue, setSearchValue] = React.useState<string[]>(undefined);
     const [searchOptions, setSearchOptions] = React.useState<SelectProps['options']>(defaultFilterOptions);
 
     const onSearch = async (newValue: string) => {
@@ -46,12 +46,17 @@ export const SearchBox = () => {
         await vm.updateUI();
     }
 
+    const onBlur = async () => {
+        setSearchValue(TreeViewConverter.filterList);
+    }
+
     return (
         <Select size={"small"}
                 value={searchValue}
                 options={searchOptions}
                 onSearch={onSearch}
                 onChange={onSearchSelectChange}
+                onBlur={onBlur}
                 style={{width: "300px"}}
                 suffixIcon={<SearchOutlined/>}
                 filterOption={false}
