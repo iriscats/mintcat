@@ -106,7 +106,17 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     componentDidMount() {
         this.hookWindowResized();
 
-        listen<any>("init-data", (event) => {
+        const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
+        const initData = JSON.parse(initDataStr);
+        this.setState({
+            addModType: initData.addModType,
+            groupId: initData.groupId,
+            groupOptions: initData.groupOptions,
+            text: initData.text
+        });
+
+        listen<any>("add-mod-dialog-init-data", async (event) => {
+            console.log("AddModDialog init event", event);
             this.setState({
                 addModType: event.payload.addModType,
                 groupId: event.payload.groupId,
