@@ -26,8 +26,8 @@ interface TitleBarState {
 
 class TitleBar extends React.Component<any, TitleBarState> {
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             username: "",

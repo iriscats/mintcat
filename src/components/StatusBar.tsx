@@ -22,8 +22,8 @@ class StatusBar extends React.Component<any, StatusBarState> {
     private isHook = false;
     private timer = undefined;
 
-    public constructor(props: any, state: StatusBarState) {
-        super(props, state);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             message: t("Ready"),

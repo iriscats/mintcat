@@ -40,8 +40,8 @@ export class ModioPage extends BasePage<any, ModioPageState> {
     private pageSize: number = 50;
     private pageNo: number = 0;
 
-    public constructor(props: any, context: ModioPageState) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             dataSource: [],

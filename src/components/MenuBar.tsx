@@ -27,8 +27,8 @@ class MenuBar extends React.Component<MenuBarProps, any> {
         {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")},
     ];
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
     }
 
     render() {

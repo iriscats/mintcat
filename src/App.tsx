@@ -15,6 +15,7 @@ import {AppViewModel} from "@/vm/AppViewModel.ts";
 
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";
+import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog.tsx";
 
 const {
     Header,
@@ -32,8 +33,8 @@ class App extends React.Component<any, any> {
 
     private pageConfigs = [];
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.clickMenu = this.clickMenu.bind(this);
     }
@@ -86,6 +87,7 @@ class App extends React.Component<any, any> {
         return (
             <Layout className={"app"}>
                 <UpdateDialog/>
+                <ConfigManageDialog/>
                 <Header className={"app-header"}>
                     <TitleBar/>
                 </Header>

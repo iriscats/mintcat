@@ -20,8 +20,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     private callback: InputCallback;
 
-    public constructor(props: any, context: ProfileEditDialogStates) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             isModalOpen: false,
