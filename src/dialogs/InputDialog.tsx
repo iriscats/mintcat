@@ -17,8 +17,8 @@ export class InputDialog extends React.Component<any, InputDialogStates> {
 
     private callback: InputCallback;
 
-    public constructor(props: any, context: InputDialogStates) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             isModalOpen: false

@@ -7,9 +7,12 @@ import App from "./App";
 import {AddModDialog} from "@/dialogs/AddModDialog";
 
 import i18n from "@/locales/i18n"
+import '@ant-design/v5-patch-for-react-19';
+
 import {I18nextProvider} from "react-i18next"
 import {listen} from "@tauri-apps/api/event";
 import packageJson from '../package.json';
+
 
 //import {InitLog} from "./apis/LogApi.ts";
 //InitLog();

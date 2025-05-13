@@ -4,8 +4,8 @@ import {BasePage} from "@/pages/IBasePage.ts";
 
 export class EmptyPage extends BasePage<any, any> {
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
     }
 
     componentDidMount(): void {

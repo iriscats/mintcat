@@ -7,8 +7,8 @@ import {GameSettings} from "@/pages/SettingPage/GameSettings.tsx";
 
 export class SettingPage extends BasePage<any, any> {
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
     }
 
     componentDidMount(): void {

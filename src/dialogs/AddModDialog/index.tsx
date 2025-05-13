@@ -32,8 +32,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     private readonly modioFormRef: any = React.createRef();
     private readonly localFormRef: any = React.createRef();
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             addModType: AddModType.LOCAL,

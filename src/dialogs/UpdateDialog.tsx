@@ -15,8 +15,8 @@ class UpdateDialog extends React.Component<any, any> {
 
     private update ? = undefined;
 
-    public constructor(props: any, context: any) {
-        super(props, context);
+    public constructor(props: any) {
+        super(props);
 
         this.handleOk = this.handleOk.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
