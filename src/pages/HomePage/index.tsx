@@ -50,6 +50,7 @@ interface ModListPageState {
     defaultProfile?: string;
     displayMode?: string;
     loading?: boolean;
+    virtual?: boolean;
 }
 
 
@@ -59,8 +60,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
 
-    public constructor(props: any, state: ModListPageState) {
-        super(props, state);
+    public constructor(props: any) {
+        super(props);
 
         this.state = {
             profileOptions: [],
@@ -69,6 +70,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             selectedKeys: [],
             defaultProfile: "",
             loading: false,
+            virtual: true,
         }
 
     }
@@ -480,12 +482,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         </Space>
                         <div style={{
                             height: window.innerHeight - 145,
-                            overflow: 'auto',
                         }}>
                             <Tree className="ant-tree-content"
                                   draggable
                                   blockNode
-                                //height={window.innerHeight - 155}
+                                  virtual={this.state.virtual}
+                                  height={window.innerHeight - 155}
                                   checkable={this.state.isMultiSelect}
                                   expandedKeys={this.state.expandedKeys}
                                   selectedKeys={this.state.selectedKeys}
@@ -495,6 +497,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                   onRightClick={this.onTreeRightClick}
                                   onExpand={this.onTreeNodeExpand}
                                   onDrop={this.onDrop}
+                                  onDragStart={() => {
+                                      this.setState({
+                                          virtual: false,
+                                      })
+                                  }}
+                                  onDragEnd={() => {
+                                      this.setState({
+                                          virtual: true,
+                                      })
+                                  }}
                                   titleRender={this.onCustomTitleRender}
                             />
                         </div>
