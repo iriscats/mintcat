@@ -62,13 +62,15 @@ export class ModUpdateApi {
         if (modItem.sourceType === ModSourceType.Local) {
             if (!await exists(modItem.cachePath)) {
                 modItem.localNoFound = true;
-
-                const viewModel = await HomeViewModel.getInstance();
-                viewModel.ModList.update(modItem, modItem);
-                await ConfigApi.saveModListData(viewModel.ModList.toJson());
-                await emit("mod-treeview-update" + modItem.id, modItem);
                 return false;
+            } else {
+                modItem.localNoFound = false;
             }
+
+            const viewModel = await HomeViewModel.getInstance();
+            viewModel.ModList.update(modItem, modItem);
+            await ConfigApi.saveModListData(viewModel.ModList.toJson());
+            await emit("mod-treeview-update" + modItem.id, modItem);
         }
         return true;
     }
