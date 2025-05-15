@@ -190,6 +190,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onDrop(info: any) {
+        this.setState({
+            virtual: false,
+        })
+        this.setState({
+            virtual: true,
+        })
+
         const vm = await HomeViewModel.getInstance();
         let treeData: TreeDataNode[];
         const converter = new TreeViewConverter(vm.ModList);
@@ -498,14 +505,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                   onExpand={this.onTreeNodeExpand}
                                   onDrop={this.onDrop}
                                   onDragStart={() => {
-                                      this.setState({
-                                          virtual: false,
-                                      })
-                                  }}
-                                  onDragEnd={() => {
-                                      this.setState({
-                                          virtual: true,
-                                      })
+                                      setTimeout(() => {
+                                          this.setState({
+                                              virtual: false,
+                                          })
+                                      }, 1000);
                                   }}
                                   titleRender={this.onCustomTitleRender}
                             />
