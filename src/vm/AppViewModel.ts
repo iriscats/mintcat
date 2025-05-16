@@ -90,6 +90,9 @@ export class AppViewModel extends ILock {
 
         await emit("theme-change", this.setting.guiTheme);
         await emit("title-bar-load-avatar");
+        if (this.isFirstRun) {
+            await emit("config-manage-dialog-open");
+        }
     }
 
     public static async getInstance(): Promise<AppViewModel> {
