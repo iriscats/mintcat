@@ -12,16 +12,12 @@ export const getDefaultTheme = (): ThemeConfig => {
                 headerBg: 'transparent',
                 siderBg: 'transparent'
             },
-            Tree: {
-                indentSize: 4
-            }
         }
     }
 }
 
 
 export function renderTheme(theme: string) {
-    //const theme = localStorage.getItem('theme');
     const existingLink = document.getElementById('theme-style');
 
     // 移除旧样式
