@@ -58,15 +58,16 @@ export function MintCatSettings() {
         const vm = await AppViewModel.getInstance();
         vm.setting.language = value;
         await vm.saveSettings();
+        window.location.reload();
     }
 
     const onThemeChange = async (value: string) => {
         setTheme(value);
         const vm = await AppViewModel.getInstance();
         vm.setting.guiTheme = value;
-        localStorage.setItem('theme', value);
+        //localStorage.setItem('theme', value);
+        await emit("theme-change", value);
         await vm.saveSettings();
-        await emit("theme-change");
     }
 
     const onDevToolsClick = async () => {
@@ -83,6 +84,9 @@ export function MintCatSettings() {
         await IntegrateApi.uninstallMods();
     }
 
+    const onImportConfigClick = async () => {
+        await emit("config-manage-dialog-open");
+    }
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -145,6 +149,13 @@ export function MintCatSettings() {
                             {...ButtonLayout}
                             onClick={onUninstallClick}>
                         {t("Delete")}
+                    </Button>
+                </Form.Item>
+                <Form.Item label={t("Import Config")}>
+                    <Button type="dashed"
+                            {...ButtonLayout}
+                            onClick={onImportConfigClick}>
+                        {t("Open")}
                     </Button>
                 </Form.Item>
                 <Form.Item label={t("Old Version Mint Cache")}>

@@ -3,6 +3,11 @@ import {appConfigDir, configDir} from "@tauri-apps/api/path";
 import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir, remove, rename} from '@tauri-apps/plugin-fs';
 import {ProfileTree} from "../vm/config/ProfileList.ts";
 import {TimeUtils} from "../utils/TimeUtils.ts";
+import {ConfigDataType, IConfig} from "@/apis/ConfigApi/DataType.ts";
+import {ConfigV4} from "@/apis/ConfigApi/ConfigV4.ts";
+import {ConfigV2} from "@/apis/ConfigApi/ConfigV2.ts";
+import {ConfigV3} from "@/apis/ConfigApi/ConfigV3.ts";
+
 
 export class ConfigApi {
 
@@ -118,9 +123,9 @@ export class ConfigApi {
         return oldFilePath;
     }
 
-    public static async loadModListDataV1(): Promise<string> {
+    public static async readTextFile(path: string): Promise<string> {
         try {
-            return await readTextFile(await ConfigApi.getModListDataV1Path());
+            return await readTextFile(path);
         } catch (error) {
             console.error(error);
         }
@@ -133,6 +138,40 @@ export class ConfigApi {
             console.error(error);
         }
     }
+
+    public static async getExistingConfigList() {
+        const configs = [
+            new ConfigV2(),
+            new ConfigV3(),
+            new ConfigV4(),
+        ];
+        const configDataList: ConfigDataType[] = [];
+        for (const config of configs) {
+            const configData = await config.checkConfig();
+            if (configData) {
+                configDataList.push(configData);
+            }
+        }
+        return configDataList;
+    }
+
+    public static async importConfig(configData: ConfigDataType) {
+        let config: IConfig;
+        switch (configData.version) {
+            case "0.2.0":
+                config = new ConfigV2();
+                break;
+            case "0.3.0":
+                config = new ConfigV3();
+                break;
+            case "0.4.0":
+            default:
+                config = new ConfigV4();
+                break;
+        }
+        await config.loadConfig();
+    }
+
 
     public static async loadModioUserData(): Promise<string> {
         const fileName = "user.json";

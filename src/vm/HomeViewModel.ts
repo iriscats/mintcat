@@ -5,7 +5,6 @@ import {path} from "@tauri-apps/api";
 import {emit} from "@tauri-apps/api/event";
 import {ConfigApi} from "@/apis/ConfigApi.ts";
 import {ModioApi} from "@/apis/ModioApi.ts";
-import {ModConfigConverter} from "./converter/ModConfigConverter.ts";
 import {ModList, ModListItem} from "./config/ModList.ts";
 import {
     ProfileList,
@@ -15,13 +14,15 @@ import {
     ProfileTreeType
 } from "./config/ProfileList.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {ConfigV4} from "@/apis/ConfigApi/ConfigV4.ts";
 
 
 export class HomeViewModel {
 
     private static instance: HomeViewModel;
-
-    private converter: ModConfigConverter = new ModConfigConverter();
+    public profileList: ProfileList = new ProfileList();
+    public profileTreeList: ProfileTree[] = [];
+    public modList: ModList = new ModList();
 
     private updateTreeViewCallback() {
         emit("home-page-update-tree-view").then();
@@ -32,26 +33,26 @@ export class HomeViewModel {
     }
 
     public get ModList(): ModList {
-        return this.converter.modList;
+        return this.modList;
     }
 
     public get ProfileList(): string[] {
-        return this.converter.profileList.Profiles;
+        return this.profileList.Profiles;
     }
 
     public get ActiveProfileName(): string {
-        return this.converter.profileList.activeProfile;
+        return this.profileList.activeProfile;
     }
 
     public get ActiveProfile(): ProfileTree {
-        return this.converter.profileTreeList.find(p => p.name === this.converter.profileList.activeProfile)!;
+        return this.profileTreeList.find(p => p.name === this.profileList.activeProfile)!;
     }
 
     public set ActiveProfile(activeProfile: string) {
-        this.converter.profileList.activeProfile = activeProfile;
+        this.profileList.activeProfile = activeProfile;
 
         this.updateTreeViewCallback?.call(this);
-        ConfigApi.saveProfileData(this.converter.profileList.toJson()).then();
+        ConfigApi.saveProfileData(this.profileList.toJson()).then();
     }
 
     private constructor() {
@@ -179,33 +180,33 @@ export class HomeViewModel {
         const profileTree = ProfileTree.fromJson(data);
         profileTree.name = name;
 
-        this.converter.profileList.add(name);
-        this.converter.profileTreeList.push(profileTree);
+        this.profileList.add(name);
+        this.profileTreeList.push(profileTree);
 
         this.updateSelectCallback?.call(this);
-        await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+        await ConfigApi.saveProfileData(this.profileList.toJson());
         await ConfigApi.saveProfileDetails(name, profileTree);
     }
 
     public async removeProfile(name: string): Promise<void> {
-        if (this.converter.profileList.Profiles.length <= 1) {
+        if (this.profileList.Profiles.length <= 1) {
             message.error(t("Profile must have at least one profile"));
             return;
         }
-        this.converter.profileList.remove(name);
+        this.profileList.remove(name);
 
         await ConfigApi.deleteProfileDetails(name);
-        await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+        await ConfigApi.saveProfileData(this.profileList.toJson());
 
         this.updateSelectCallback?.call(this);
         this.updateTreeViewCallback?.call(this);
     }
 
     public async renameProfile(oldName: string, newName: string): Promise<void> {
-        this.converter.profileList.rename(oldName, newName);
-        await ConfigApi.saveProfileData(this.converter.profileList.toJson());
+        this.profileList.rename(oldName, newName);
+        await ConfigApi.saveProfileData(this.profileList.toJson());
 
-        const profileTree = this.converter.profileTreeList.find(p => p.name === oldName);
+        const profileTree = this.profileTreeList.find(p => p.name === oldName);
         profileTree.name = newName;
 
         this.updateSelectCallback?.call(this);
@@ -242,7 +243,6 @@ export class HomeViewModel {
             modItem.usedVersion = version;
         }
         // this.updateTreeViewCallback?.call(this);
-
         await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
@@ -281,42 +281,10 @@ export class HomeViewModel {
         await emit("home-page-update-tree-view");
     }
 
-    public async loadConfig() {
-        try {
-            let config = await ConfigApi.loadModListData();
-            this.converter.modList = ModList.fromJson(config);
-            this.converter.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData());
-            for (const profile of this.converter.profileList.Profiles) {
-                const profileDetailData = await ConfigApi.loadProfileDetails(profile);
-                if (profileDetailData) {
-                    this.converter.profileTreeList.push(ProfileTree.fromJson(profileDetailData));
-                } else {
-                    throw new Error("Unable to load profile");
-                }
-            }
-        } catch (err) {
-            console.log("loadConfig");
-            this.converter.createDefault();
-            await ConfigApi.saveProfileData(this.converter.profileList.toJson());
-            await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
-        }
-    }
-
-    public async loadOldConfig() {
-        try {
-            const config = await ConfigApi.loadModListDataV1();
-            await this.converter.convertTo(config);
-            await ConfigApi.saveModListData(this.converter.modList.toJson());
-            await ConfigApi.saveProfileData(this.converter.profileList.toJson());
-            for (const profile of this.converter.profileList.Profiles) {
-                await ConfigApi.saveProfileDetails(profile,
-                    this.converter.profileTreeList.find(p => p.name === profile));
-            }
-        } catch (e) {
-            this.converter.createDefault();
-            await ConfigApi.saveProfileData(this.converter.profileList.toJson());
-            await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
-        }
+    public async loadConfig(config: ConfigV4) {
+        this.profileList = config.profileList;
+        this.profileTreeList = config.profileTreeList;
+        this.modList = config.modList;
     }
 
     public static async getInstance() {

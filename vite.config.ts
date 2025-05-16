@@ -1,14 +1,25 @@
 import {defineConfig} from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path"
 
 const host = process.env.TAURI_DEV_HOST;
 
+const ReactCompilerConfig = {
+    target: '19'
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-    plugins: [react({
-        tsDecorators: true
-    })],
+    plugins: [
+        react({
+            babel: {
+                plugins: [
+                    ["@babel/plugin-proposal-decorators", { legacy: true }],
+                    ["babel-plugin-react-compiler", ReactCompilerConfig],
+                ],
+            },
+        }),
+    ],
 
     // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
     //
