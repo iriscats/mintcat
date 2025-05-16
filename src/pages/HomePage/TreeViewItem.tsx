@@ -76,7 +76,10 @@ function ModTreeViewVersionSelect({nodeData}) {
             fileInfos = await ModioApi.getModFiles(nodeData.modId);
             const optionList = [];
             for (const fileInfo of fileInfos) {
-                optionList.push({value: JSON.stringify(fileInfo), label: fileInfo.version ? fileInfo.version : "-"});
+                optionList.push({
+                    value: JSON.stringify(fileInfo),
+                    label: fileInfo.version ? fileInfo.version : fileInfo.filename
+                });
             }
 
             setFetching(false);
@@ -121,9 +124,9 @@ function ModTreeViewWarring({nodeData}) {
 
     const checkExpired = () => {
         return nodeData.sourceType === ModSourceType.Modio &&
-                nodeData.downloadProgress === 100 &&
-                (nodeData.onlineUpdateDate > nodeData.lastUpdateDate ||
-                    nodeData.usedVersion !== nodeData.fileVersion);
+            nodeData.downloadProgress === 100 &&
+            (nodeData.onlineUpdateDate > nodeData.lastUpdateDate ||
+                nodeData.usedVersion !== nodeData.fileVersion);
     }
 
     const checkLocalNoFound = () => {

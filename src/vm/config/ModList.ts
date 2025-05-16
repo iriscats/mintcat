@@ -39,7 +39,7 @@ export class ModListItem {
             this.modId = modInfo.id;
             this.displayName = modInfo.name;
             this.nameId = modInfo.name_id;
-            this.fileVersion = modInfo.modfile.version === null ? "-" : modInfo.modfile.version;
+            this.fileVersion = modInfo.modfile.version ? modInfo.modfile.version : modInfo.modfile.filename;
             this.usedVersion = this.fileVersion;
             this.downloadUrl = modInfo.modfile.download.binary_url;
 
