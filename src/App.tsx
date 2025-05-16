@@ -74,7 +74,6 @@ class App extends React.Component<any, any> {
     }
 
     componentDidMount() {
-        console.log("App mounted.");
         AppViewModel.getInstance().then(() => {
             this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
             this.forceUpdate();

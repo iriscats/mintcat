@@ -1,24 +1,27 @@
 import {ThemeConfig} from "antd";
 
-export const defaultTheme: ThemeConfig = {
-    token: {
-        colorPrimary: "#1677FF",
-    },
-    components: {
-        Layout: {
-            bodyBg: 'transparent',
-            footerBg: 'transparent',
-            headerBg: 'transparent',
-            siderBg: 'transparent'
+export const getDefaultTheme = (): ThemeConfig => {
+    return {
+        token: {
+            colorPrimary: "#1677FF",
         },
-        Tree: {
-            indentSize: 4
+        components: {
+            Layout: {
+                bodyBg: 'transparent',
+                footerBg: 'transparent',
+                headerBg: 'transparent',
+                siderBg: 'transparent'
+            },
+            Tree: {
+                indentSize: 4
+            }
         }
     }
-};
+}
 
-export function renderTheme() {
-    const theme = localStorage.getItem('theme');
+
+export function renderTheme(theme: string) {
+    //const theme = localStorage.getItem('theme');
     const existingLink = document.getElementById('theme-style');
 
     // 移除旧样式
@@ -29,6 +32,8 @@ export function renderTheme() {
     const link = document.createElement('link');
     link.id = 'theme-style';
     link.rel = 'stylesheet';
+
+    const defaultTheme = getDefaultTheme();
     switch (theme) {
         case "Dark": {
             defaultTheme.token.colorPrimary = "#1677FF";
@@ -48,7 +53,7 @@ export function renderTheme() {
     }
     document.head.appendChild(link);
 
-
+    return defaultTheme;
 }
 
 

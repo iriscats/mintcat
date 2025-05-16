@@ -24,6 +24,7 @@
   "Delete": "删除",
   "Delete Group": "删除分组",
   "Delete Mods": "删除多个 Mod",
+  "Delete Config": "删除配置",
   "Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?": "检测到旧版 MINT(0.2, 0.3) 安装文件，是否卸载？",
   "Dev Tools": "开发者工具",
   "Disable": "禁用",
@@ -52,6 +53,7 @@
   "Group": "分组",
   "Home": "首页",
   "Import Config": "导入配置",
+  "Import Cancel": "取消导入",
   "Input New Profile": "输入新配置",
   "Input Text": "输入文本",
   "Installation Finish": "安装完成",
@@ -122,5 +124,11 @@
   "Click or drag file to this area": "点击图标选择文件或拖动文件到窗口",
   "Selected Files": "已选文件",
   "Please input mod": "请输入 mod",
-  "Pink": "粉色"
+  "Pink": "粉色",
+  "Configuration Management": "配置管理",
+  "Saved at": "保存于",
+  "Detected the following configurations. Please select the configurations to import": "检测到存在多个配置，请按需导入配置",
+  "Are you sure to delete the configuration folder?": "确定要删除配置文件夹吗？",
+  "Loaded": "已加载",
+  "Please select a config": "请选择一个配置"
 }

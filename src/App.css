@@ -183,3 +183,15 @@ body::before {
 .app-drag-list-item:hover {
     background-color: #EEEEEE;
 }
+
+.app-config-manage-list-item {
+    width: 100%;
+    line-height: 32px;
+    vertical-align: middle;
+    background-color: transparent;
+}
+
+.app-config-manage-list-item:hover {
+    background-color: #EEEEEE;
+}
+

@@ -6,8 +6,6 @@ import {CloseOutlined, FilePptOutlined, FileZipOutlined, InboxOutlined} from "@a
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import {path} from "@tauri-apps/api";
 
-let isHook = false;
-
 interface FileItem {
     name: string;
     path: string;
@@ -61,10 +59,6 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
     }
 
     const registerDragDropEvent = () => {
-        if (isHook) {
-            return;
-        }
-        isHook = true;
         getCurrentWindow().onDragDropEvent(
             async (event) => {
                 if (event.payload.type === 'drop') {
@@ -119,7 +113,7 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
                                           {
                                               item.type === ".pak" ? <FilePptOutlined/> : <FileZipOutlined/>
                                           }
-                                          <span className={"ml-2"}>
+                                          <span>
                                               {item.name}
                                           </span>
                                       </Flex>

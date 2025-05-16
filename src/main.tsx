@@ -1,5 +1,5 @@
 import React, {useEffect} from "react";
-import {defaultTheme, renderTheme} from "@/themes/default.ts";
+import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
 import {ConfigProvider} from "antd";
 import {BrowserRouter, Routes, Route} from "react-router-dom";
 import ReactDOM from "react-dom/client";
@@ -20,12 +20,13 @@ import packageJson from '../package.json';
 
 const Main = () => {
 
-    renderTheme();
+    const defaultTheme = getDefaultTheme();
+    const [theme, setTheme] = React.useState(defaultTheme);
 
     try {
-        listen("theme-change", () => {
-            renderTheme();
-            window.location.reload();
+        listen<string>("theme-change", (event) => {
+            const defaultTheme = renderTheme(event.payload);
+            setTheme(defaultTheme);
         }).then();
     } catch (_) {
     }
@@ -40,7 +41,7 @@ const Main = () => {
 
     return (
         <I18nextProvider i18n={i18n}>
-            <ConfigProvider theme={defaultTheme}>
+            <ConfigProvider theme={theme}>
                 <BrowserRouter>
                     <Routes>
                         <Route path="/" element={<App/>}/>

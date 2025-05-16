@@ -7,23 +7,17 @@ import {ConfigApi} from "../apis/ConfigApi.ts";
 import {ModUpdateApi} from "../apis/ModUpdateApi.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import {Setting} from "./config/Setting.ts";
-import {SettingConverter} from "./converter/SettingConverter.ts";
-import {MessageBox} from "../components/MessageBox.ts";
 import i18n from "../locales/i18n"
 import {exists} from "@tauri-apps/plugin-fs";
 import {ILock} from "@/utils/ILock.ts";
 import {emit} from "@tauri-apps/api/event";
+import {ConfigV4} from "@/apis/ConfigApi/ConfigV4.ts";
 
 export class AppViewModel extends ILock {
 
     private static instance: AppViewModel;
-    private converter: SettingConverter = new SettingConverter();
-
     public isFirstRun: boolean = false;
-
-    public get setting(): Setting {
-        return this.converter.setting;
-    }
+    public setting: Setting;
 
     private constructor() {
         super();
@@ -38,13 +32,13 @@ export class AppViewModel extends ILock {
             if (this.setting.cachePath === "" ||
                 this.setting.cachePath === undefined ||
                 !await exists(this.setting.cachePath)) {
-                this.converter.setting.cachePath = await appCacheDir();
+                this.setting.cachePath = await appCacheDir();
             }
             if (this.setting.configPath === "" ||
                 this.setting.configPath === undefined ||
                 !await exists(this.setting.configPath)
             ) {
-                this.converter.setting.configPath = await ConfigApi.getConfigPath();
+                this.setting.configPath = await ConfigApi.getConfigPath();
             }
             await ConfigApi.saveSettings(this.setting.toJson());
         } catch (err) {
@@ -57,16 +51,12 @@ export class AppViewModel extends ILock {
     }
 
     public async loadSettings() {
-        try {
-            const settingData = await ConfigApi.loadSettings();
-            if (settingData !== undefined) {
-                this.converter.setting = Setting.fromJson(settingData);
-            } else {
-                await this.converter.createDefault();
-            }
-        } catch (err) {
-            await this.converter.createDefault();
-        }
+        const config = new ConfigV4();
+        await config.loadConfig();
+        this.setting = config.setting;
+
+        const homeViewModel = await HomeViewModel.getInstance();
+        await homeViewModel.loadConfig(config);
     }
 
     public appStartAutoCheckModUpdate() {
@@ -76,7 +66,7 @@ export class AppViewModel extends ILock {
     }
 
     public async loadUserLanguages() {
-        let language = this.converter.setting?.language;
+        let language = this.setting?.language;
         if (language && language !== "") {
             localStorage.setItem('lang', language);
             await i18n.changeLanguage(language)
@@ -85,27 +75,7 @@ export class AppViewModel extends ILock {
 
     private async initAppViewModel() {
         this.isFirstRun = await IntegrateApi.isFirstRun();
-        const homeViewModel = await HomeViewModel.getInstance();
-
-        let settingDataV1 = this.isFirstRun ? await ConfigApi.loadSettingV1() : undefined;
-        if (settingDataV1 !== undefined) {
-            const confirmed = await MessageBox.confirm({
-                title: t("Import Config"),
-                content: t("Found old version MINT(0.2, 0.3) configuration file, do you want to import and overwrite?"),
-            });
-            if (confirmed) {
-                await this.converter.convertTo(settingDataV1);
-                await ConfigApi.saveSettings(this.setting.toJson());
-                await homeViewModel.loadOldConfig()
-            } else {
-                settingDataV1 = undefined;
-            }
-        }
-
-        if (!settingDataV1 || !this.isFirstRun) {
-            await this.loadSettings();
-            await homeViewModel.loadConfig()
-        }
+        await this.loadSettings();
 
         await this.loadUserLanguages();
         await this.checkAppPath();
@@ -118,8 +88,8 @@ export class AppViewModel extends ILock {
             message.error(t("mod.io OAuth No Found"));
         }
 
+        await emit("theme-change", this.setting.guiTheme);
         await emit("title-bar-load-avatar");
-
     }
 
     public static async getInstance(): Promise<AppViewModel> {
