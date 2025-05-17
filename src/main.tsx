@@ -37,6 +37,8 @@ const Main = () => {
             document.addEventListener('contextmenu', handler);
             return () => document.removeEventListener('contextmenu', handler);
         }
+
+        renderTheme();
     }, []);
 
     return (
