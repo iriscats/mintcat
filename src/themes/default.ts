@@ -17,8 +17,12 @@ export const getDefaultTheme = (): ThemeConfig => {
 }
 
 
-export function renderTheme(theme: string) {
+export function renderTheme(theme: string = undefined) {
     const existingLink = document.getElementById('theme-style');
+
+    if (!theme) {
+        theme = localStorage.getItem('theme');
+    }
 
     // 移除旧样式
     if (existingLink) {
