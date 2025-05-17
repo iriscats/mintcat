@@ -69,7 +69,7 @@ class TitleBar extends React.Component<any, TitleBarState> {
         vm.setting.guiTheme = value;
         localStorage.setItem('theme', value);
         await vm.saveSettings();
-        await emit("theme-change");
+        await emit("theme-change", value);
     }
 
     componentDidMount(): void {
@@ -140,11 +140,11 @@ class TitleBar extends React.Component<any, TitleBarState> {
                                   renderItem={(item) => (
                                       <List.Item>
                                           <Button className={"app-title-bar-skin-button"}
-                                              title={item.title}
-                                              style={{backgroundColor: item.color}}
-                                              onClick={async () => {
-                                                  await this.onThemeClick(item.key)
-                                              }}
+                                                  title={item.title}
+                                                  style={{backgroundColor: item.color}}
+                                                  onClick={async () => {
+                                                      await this.onThemeClick(item.key)
+                                                  }}
                                           >
                                           </Button>
                                       </List.Item>

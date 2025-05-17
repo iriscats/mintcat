@@ -3,8 +3,9 @@ import {open} from "@tauri-apps/plugin-dialog";
 import {Button, Flex, Form, List} from "antd";
 import {t} from "i18next";
 import {CloseOutlined, FilePptOutlined, FileZipOutlined, InboxOutlined} from "@ant-design/icons";
-import {getCurrentWindow} from "@tauri-apps/api/window";
+import {DragDropEvent, getCurrentWindow} from "@tauri-apps/api/window";
 import {path} from "@tauri-apps/api";
+import {listen} from "@tauri-apps/api/event";
 
 interface FileItem {
     name: string;
@@ -59,6 +60,16 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
     }
 
     const registerDragDropEvent = () => {
+
+        listen<DragDropEvent>('tauri://file-drop',
+            async (event) => {
+                if (event.payload.type === 'drop') {
+                    for (let path of event.payload.paths) {
+                        await addFileList(path);
+                    }
+                }
+            }).then();
+
         getCurrentWindow().onDragDropEvent(
             async (event) => {
                 if (event.payload.type === 'drop') {
