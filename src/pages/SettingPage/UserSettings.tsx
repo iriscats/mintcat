@@ -5,7 +5,7 @@ import {Button, Card, Flex, Form, Input, message} from "antd";
 import {SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {AppViewModel} from "@/vm/AppViewModel.ts";
 
-export function UserAuthSettings() {
+export function UserSettings() {
 
     const [modioOAuth, setModioOAuth] = React.useState<string>("");
 
@@ -34,7 +34,7 @@ export function UserAuthSettings() {
 
 
     return (
-        <Card title={t("User Authentication")}
+        <Card title={t("User Settings")}
               style={{marginBottom: "10px"}}
         >
             <Form {...SettingLayout}>

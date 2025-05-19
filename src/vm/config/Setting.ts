@@ -8,6 +8,7 @@ export class Setting {
     public language: string = "en";
     public cachePath: string = "";
     public configPath: string = "";
+    public ue4ss: string = "";
 
     public static fromJson(json_str: string): Setting {
         const json = JSON.parse(json_str);
@@ -20,6 +21,7 @@ export class Setting {
         setting.language = json.language;
         setting.cachePath = json.cache_path;
         setting.configPath = json.config_path;
+        setting.ue4ss = json.ue4ss;
         return setting;
     }
 
@@ -33,6 +35,7 @@ export class Setting {
             "language": this.language,
             "cache_path": this.cachePath,
             "config_path": this.configPath,
+            "ue4ss": this.ue4ss,
         }
         return JSON.stringify(setting, null, 4);
     }

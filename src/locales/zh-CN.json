@@ -130,5 +130,6 @@
   "Detected the following configurations. Please select the configurations to import": "检测到存在多个配置，请按需导入配置",
   "Are you sure to delete the configuration folder?": "确定要删除配置文件夹吗？",
   "Loaded": "已加载",
-  "Please select a config": "请选择一个配置"
+  "Please select a config": "请选择一个配置",
+  "Disclaimer: The installation of the Custom mode UE4SS will be taken over by the user, and all consequences are the user's sole responsibility.": "免责声明：安装 Custom 模式 UE4SS 将由用户接管，所有后果由用户自行承担。"
 }
