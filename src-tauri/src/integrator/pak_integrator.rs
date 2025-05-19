@@ -3,10 +3,9 @@ use crate::integrator::game_pak_patch::{
     get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
     SERVER_LIST_ENTRY_PATH,
 };
-use crate::integrator::installation::DRGInstallation;
+use crate::integrator::installation::{DRGInstallation, DRGInstallationType};
 use crate::integrator::mod_bundle_writer::ModBundleWriter;
 use crate::integrator::mod_info::ModInfo;
-use crate::integrator::modio_patch::recovery_modio;
 use crate::integrator::raw_asset::RawAsset;
 use crate::integrator::ue4ss_integrate::{install_ue4ss, install_ue4ss_mod, uninstall_ue4ss};
 use crate::integrator::{game_pak_patch, ReadSeek};
@@ -22,7 +21,6 @@ use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
 
 static FSD_AR_PATH: &str = "FSD/AssetRegistry.bin";
-static FSD_MOD_PAK_NAME: &str = "FSD-WindowsNoEditor_Mods.pak";
 
 pub struct PakIntegrator {
     installation: DRGInstallation,
@@ -64,7 +62,7 @@ impl PakIntegrator {
         )?;
 
         let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
-        let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
+        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         let bundle = ModBundleWriter::new(
             BufWriter::new(
                 fs::OpenOptions::new()
@@ -171,10 +169,20 @@ impl PakIntegrator {
         self.serialize_asset_registry()?;
         self.bundle.finish()?;
 
+        let hook_dll_path = self
+            .installation
+            .binaries_directory()
+            .join("x3daudio1_7.dll");
+        let hook_dll = include_bytes!("../../assets/x3daudio1_7.dll");
+        fs::write(hook_dll_path, hook_dll).unwrap();
+
         app.emit("status-bar-log", "Install Mod Success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
 
-        let mod_pak_path = self.installation.paks_path().join(FSD_MOD_PAK_NAME);
+        let mod_pak_path = self
+            .installation
+            .paks_path()
+            .join(self.installation.mod_pak_name());
 
         //recovery_modio(&self.installation).unwrap();
 
@@ -183,6 +191,7 @@ impl PakIntegrator {
             .modified()?
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs();
+
         app.emit("install-success", mod_pak_timestamp).unwrap();
 
         Ok(())
@@ -463,13 +472,13 @@ impl PakIntegrator {
         let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
-        let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
+        //let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
 
-        if old_mod_pak_path.exists() || hook_dll_path.exists() {
+        if old_mod_pak_path.exists() {
             return Ok("old_version_mint_installed".parse().unwrap());
         }
 
-        let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
+        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         if mod_pak_path.exists() {
             let metadata = fs::metadata(&mod_pak_path)?;
             let mod_pak_timestamp = metadata
@@ -484,11 +493,11 @@ impl PakIntegrator {
         Ok("no_installed".parse().unwrap())
     }
 
-    pub fn uninstall(fsd_path_pak: String) -> Result<(), Box<dyn Error>> {
+    pub fn uninstall(fsd_path_pak: String, is_delete_ue4ss: bool) -> Result<(), Box<dyn Error>> {
         let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
-        let mod_pak_path = installation.paks_path().join(FSD_MOD_PAK_NAME);
+        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
 
         if fs::exists(&old_mod_pak_path)? {
@@ -503,7 +512,9 @@ impl PakIntegrator {
             fs::remove_file(&hook_dll_path).unwrap();
         }
 
-        uninstall_ue4ss(&installation.binaries_directory())?;
+        if is_delete_ue4ss {
+            uninstall_ue4ss(&installation.binaries_directory())?;
+        }
 
         Ok(())
     }
