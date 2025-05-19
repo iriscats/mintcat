@@ -8,9 +8,9 @@ import {
     SelectProps, Space, Spin, Tooltip, Tree, TreeDataNode, TreeProps, Typography,
 } from 'antd';
 import {
-    CloseCircleOutlined, CopyOutlined,
-    EditOutlined, FieldTimeOutlined, PauseCircleOutlined, PlayCircleOutlined,
-    PlusCircleOutlined, SaveOutlined,
+    CloseCircleOutlined, CloseOutlined, CopyOutlined,
+    EditOutlined, FieldTimeOutlined, LoadingOutlined, PauseCircleOutlined, PlayCircleOutlined,
+    PlusCircleOutlined, PlusOutlined, SaveOutlined,
     SearchOutlined, SortAscendingOutlined,
     SortDescendingOutlined, SyncOutlined,
     UnorderedListOutlined
@@ -421,10 +421,36 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 <Spin spinning={this.state.loading}
                       delay={500}
                       size={"large"}
+                      indicator={<></>}
+                      tip={
+                          <Flex gap={"large"}
+                                vertical={false}
+                                style={{
+                                    fontSize: "large",
+                                    marginLeft: "41%",
+                                    lineHeight: "34px",
+                                }}
+                          >
+                              <LoadingOutlined spin/>
+                              <span>{t("Loading")}</span>
+                              <Button type={"text"}
+                                      icon={<CloseOutlined/>}
+                                      onClick={() => {
+                                          this.setState({
+                                              loading: false,
+                                          })
+                                      }}
+                              />
+                          </Flex>
+                      }
                 >
                     <Flex vertical={true}>
                         <Space split={<Divider type="vertical"/>} size={2}
-                               style={{borderBottom: "1px solid #eee", paddingBottom: "2px"}}>
+                               style={{
+                                   borderBottom: "1px solid #eee",
+                                   paddingBottom: "2px",
+                                   minWidth:"1000px",
+                               }}>
                             <Typography.Link>
                                 <Tooltip title={t("Save Changes")}>
                                     <Button icon={<SaveOutlined/>} type={"text"}
