@@ -99,19 +99,6 @@ class StatusBar extends React.Component<any, StatusBarState> {
                     marginLeft: "10px",
                     color: "#666"
                 }}>
-                    {
-                        this.state.message &&
-                        <Button title={t("Cancel")}
-                                icon={<CloseCircleOutlined/>}
-                                type={"link"}
-                                onClick={async () => {
-                                    await emit("home-page-loading", false);
-                                    this.setState({
-                                        message: ""
-                                    })
-                                }}
-                        />
-                    }
                     {this.state.message}
                 </div>
             </Flex>

@@ -76,6 +76,8 @@ export class ConfigV4 implements IConfig {
         this.setting.version = "0.2.0";
         this.setting.guiTheme = "Light";
         this.setting.modioOAuth = "";
+        this.setting.modioUid = 0;
+        this.setting.ue4ss = "UE4SS-Lite";
 
         try {
             this.setting.language = await DeviceApi.getLanguage();

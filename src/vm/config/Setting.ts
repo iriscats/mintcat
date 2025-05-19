@@ -21,7 +21,7 @@ export class Setting {
         setting.language = json.language;
         setting.cachePath = json.cache_path;
         setting.configPath = json.config_path;
-        setting.ue4ss = json.ue4ss;
+        setting.ue4ss = json.ue4ss? json.ue4ss : "UE4SS-Lite";
         return setting;
     }
 
