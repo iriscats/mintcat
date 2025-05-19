@@ -1,7 +1,7 @@
 import React from 'react';
 import {BasePage} from "../IBasePage.ts";
 import {MintCatSettings} from "@/pages/SettingPage/MintCatSettings.tsx";
-import {UserAuthSettings} from "@/pages/SettingPage/UserAuthSettings.tsx";
+import {UserSettings} from "@/pages/SettingPage/UserSettings.tsx";
 import {GameSettings} from "@/pages/SettingPage/GameSettings.tsx";
 
 
@@ -13,7 +13,6 @@ export class SettingPage extends BasePage<any, any> {
 
     componentDidMount(): void {
         this.hookWindowResized();
-        console.log("SettingPage mounted.");
     }
 
     render() {
@@ -26,7 +25,7 @@ export class SettingPage extends BasePage<any, any> {
                     padding: '30px',
                 }}>
                 <MintCatSettings/>
-                <UserAuthSettings/>
+                <UserSettings/>
                 <GameSettings/>
             </div>
         );

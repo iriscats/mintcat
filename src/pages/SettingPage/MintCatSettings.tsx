@@ -65,7 +65,7 @@ export function MintCatSettings() {
         setTheme(value);
         const vm = await AppViewModel.getInstance();
         vm.setting.guiTheme = value;
-        //localStorage.setItem('theme', value);
+        localStorage.setItem('theme', value);
         await emit("theme-change", value);
         await vm.saveSettings();
     }
@@ -78,10 +78,6 @@ export function MintCatSettings() {
         if (await CacheApi.cleanOldCacheFiles()) {
             message.success(t("Clean Cache Success"));
         }
-    }
-
-    const onUninstallClick = async () => {
-        await IntegrateApi.uninstallMods();
     }
 
     const onImportConfigClick = async () => {
@@ -131,6 +127,13 @@ export function MintCatSettings() {
                         </Button>
                     </Flex>
                 </Form.Item>
+                <Form.Item label={t("Import Config")}>
+                    <Button type="dashed"
+                            {...ButtonLayout}
+                            onClick={onImportConfigClick}>
+                        {t("Open")}
+                    </Button>
+                </Form.Item>
                 <Form.Item label={t("Cache Directory")}>
                     <Flex>
                         <Search value={cacheDirectory}
@@ -143,20 +146,6 @@ export function MintCatSettings() {
                             {t("Open")}
                         </Button>
                     </Flex>
-                </Form.Item>
-                <Form.Item label={t("Uninstall Mods")}>
-                    <Button type="dashed"
-                            {...ButtonLayout}
-                            onClick={onUninstallClick}>
-                        {t("Delete")}
-                    </Button>
-                </Form.Item>
-                <Form.Item label={t("Import Config")}>
-                    <Button type="dashed"
-                            {...ButtonLayout}
-                            onClick={onImportConfigClick}>
-                        {t("Open")}
-                    </Button>
                 </Form.Item>
                 <Form.Item label={t("Old Version Mint Cache")}>
                     <Button type="dashed"

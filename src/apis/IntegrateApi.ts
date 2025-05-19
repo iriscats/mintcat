@@ -58,6 +58,11 @@ export class IntegrateApi extends ILock {
             for (const item of subModList.Mods) {
                 if (item.enabled) {
                     await ModUpdateApi.checkOnlineModUpdate(item);
+                    if (item.cachePath === "") {
+                        message.error(`${t("File Not Found")}: ${item.url}`);
+                        return false;
+                    }
+
                     if (await ModUpdateApi.checkLocalModModify(item)) {
                         editTime = TimeUtils.getCurrentTime();
                         homeViewModel.ActiveProfile.editTime = editTime;
@@ -97,7 +102,11 @@ export class IntegrateApi extends ILock {
                     return true;
             }
 
-            await IntegrateApi.uninstall(appViewModel.setting.drgPakPath);
+            if (appViewModel.setting.ue4ss === "UE4SS-Lite") {
+                await IntegrateApi.uninstall(appViewModel.setting.drgPakPath);
+            } else {
+                await IntegrateApi.uninstall(appViewModel.setting.drgPakPath, false);
+            }
 
             const installModList = [];
             for (const item of subModList.Mods) {
@@ -149,9 +158,10 @@ export class IntegrateApi extends ILock {
         });
     }
 
-    private static async uninstall(gamePath: string) {
+    private static async uninstall(gamePath: string, isDeleteUe4ss: boolean = true) {
         return await invoke('uninstall_mods', {
             gamePath: gamePath,
+            isDeleteUe4ss: isDeleteUe4ss,
         });
     }
 
