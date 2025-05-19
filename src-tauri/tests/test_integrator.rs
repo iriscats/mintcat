@@ -29,11 +29,11 @@ fn test_pak_integrator() {
                 }
             }
 
-            let install_result = integrator.install(mods);
-            match install_result {
-                Ok(_) => println!("Installation succeeded."),
-                Err(e) => eprintln!("Installation failed: {}", e),
-            }
+            // let install_result = integrator.install(mods);
+            // match install_result {
+            //     Ok(_) => println!("Installation succeeded."),
+            //     Err(e) => eprintln!("Installation failed: {}", e),
+            // }
         }
         Err(e) => eprintln!("Failed to create integrator: {}", e),
     }

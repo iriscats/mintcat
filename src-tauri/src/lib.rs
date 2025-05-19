@@ -38,8 +38,8 @@ fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
 }
 
 #[tauri::command]
-fn uninstall_mods(game_path: String) -> bool {
-    PakIntegrator::uninstall(game_path).unwrap();
+fn uninstall_mods(game_path: String, is_delete_ue4ss: bool) -> bool {
+    PakIntegrator::uninstall(game_path, is_delete_ue4ss).unwrap();
     true
 }
 
