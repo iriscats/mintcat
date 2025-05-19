@@ -3,11 +3,19 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
 pub struct DRGInstallation {
+    pub pak_path: PathBuf,
     pub root: PathBuf,
+}
+
+#[derive(Debug)]
+pub enum DRGInstallationType {
+    Steam,
+    Xbox,
 }
 
 impl DRGInstallation {
     pub fn find() -> Option<Self> {
+        //C:\XboxGames\Deep Rock Galactic\Content\FSD\Content\Paks\FSD-WinGDK.pak
         steamlocate::SteamDir::locate()
             .ok()
             .and_then(|steam_dir| {
@@ -24,15 +32,35 @@ impl DRGInstallation {
             .and_then(|path| Self::from_pak_path(path).ok())
     }
 
-    pub fn from_pak_path<P: AsRef<Path>>(pak: P) -> Result<Self, Box<dyn Error>> {
-        let root = pak
+    pub fn from_pak_path<P: AsRef<Path>>(pak_path: P) -> Result<Self, Box<dyn Error>> {
+        let root = pak_path
             .as_ref()
             .parent()
             .and_then(Path::parent)
             .and_then(Path::parent)
             .expect("failed to get pak parent directory")
             .to_path_buf();
-        Ok(Self { root })
+        Ok(Self {
+            pak_path: pak_path.as_ref().to_path_buf(),
+            root,
+        })
+    }
+    
+    pub fn install_type(&self) -> DRGInstallationType {
+        let pak_name = self.pak_path.file_name().unwrap();
+        let name_str = pak_name.to_str().expect("Invalid UTF-8 path name");
+        match name_str {
+            "FSD-WindowsNoEditor.pak" => DRGInstallationType::Steam,
+            "FSD-WinGDK.pak" => DRGInstallationType::Xbox,
+            _ => panic!("Unknown installation type: {}", name_str),
+        }
+    }
+
+    pub fn mod_pak_name(&self) -> PathBuf {
+        match self.install_type() {
+            DRGInstallationType::Steam => "FSD-WindowsNoEditor_Mods.pak".parse().unwrap(),
+            DRGInstallationType::Xbox => "FSD-WinGDK_Mods.pak".parse().unwrap(),
+        }
     }
 
     pub fn binaries_directory(&self) -> PathBuf {
