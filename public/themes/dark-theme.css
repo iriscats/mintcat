@@ -1,5 +1,6 @@
 :root {
     filter: invert(100%) !important;
+    font-weight: 600;
 }
 
 img {
