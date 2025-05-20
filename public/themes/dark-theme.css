@@ -1,10 +1,10 @@
 :root {
-    filter: invert(100%) !important;
+    filter:invert(100%) brightness(0.8) !important;
     font-weight: 600;
 }
 
 img {
-    filter: brightness(0.8) invert(100%) !important;
+    filter: invert(100%) !important;
 }
 
 .app-title-bar-skin-button {
