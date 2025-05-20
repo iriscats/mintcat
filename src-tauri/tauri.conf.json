@@ -35,7 +35,6 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "assets/first_run": "first_run",
       "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll"
     },
     "createUpdaterArtifacts": true

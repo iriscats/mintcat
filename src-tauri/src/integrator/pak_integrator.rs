@@ -158,8 +158,8 @@ impl PakIntegrator {
         self.apply_mint_patch(&mut mint_files)?;
         self.apply_pcb_patch()?;
         self.apply_sandbox_patch()?;
-        self.apply_modding_tab_patch()?;
-        self.apply_escape_menu_patch()?;
+        //self.apply_modding_tab_patch()?;
+        //self.apply_escape_menu_patch()?;
         //self.apply_server_list_entry_patch()?;
 
         app.emit("status-bar-log", "Write Mod...").unwrap();

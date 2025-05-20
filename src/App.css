@@ -197,3 +197,7 @@ body::before {
     background-color: #EEEEEE;
 }
 
+.add-mod-dialog {
+    background-color: #fff;
+    padding: 20px 30px;
+}
