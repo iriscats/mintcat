@@ -60,6 +60,7 @@ include_dir = "0.7.4"
 repak = { git = "https://github.com/trumank/repak", features = ["oodle"] }
 unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "patches" }
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
+tauri-plugin-store = "2"
 
 
 

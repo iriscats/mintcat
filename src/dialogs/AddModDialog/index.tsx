@@ -128,11 +128,10 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     render() {
         return (
-            <div style={{
-                background: "white",
-                height: window.innerHeight - 40,
-                padding: "20px 30px"
-            }}>
+            <div className="add-mod-dialog"
+                 style={{
+                     height: window.innerHeight - 40
+                 }}>
                 <Tabs activeKey={this.state.addModType}
                       onChange={this.handleTabChange}
                       items={
