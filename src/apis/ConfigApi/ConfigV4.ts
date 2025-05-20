@@ -48,8 +48,13 @@ export class ConfigV4 implements IConfig {
 
     public async loadModDataConfig() {
         try {
-            let config = await ConfigApi.loadModListData();
-            this.modList = ModList.fromJson(config);
+            let modList = await ConfigApi.loadModListData();
+            if (modList) {
+                this.modList = ModList.fromJson(modList);
+            } else {
+                this.modList = new ModList();
+                await ConfigApi.saveModListData(this.modList.toJson());
+            }
             this.profileList = ProfileList.fromJson(await ConfigApi.loadProfileData());
             for (const profile of this.profileList.Profiles) {
                 const profileDetailData = await ConfigApi.loadProfileDetails(profile);
@@ -100,6 +105,7 @@ export class ConfigV4 implements IConfig {
         const defaultProfileTree = new ProfileTree(t("Default"));
         this.profileTreeList.push();
 
+        await ConfigApi.saveModListData(this.modList.toJson());
         await ConfigApi.saveProfileData(this.profileList.toJson());
         await ConfigApi.saveProfileDetails(this.profileList.activeProfile, defaultProfileTree);
     }
