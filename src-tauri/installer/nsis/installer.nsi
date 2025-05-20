@@ -78,7 +78,7 @@ OutFile "${OUTFILE}"
 # !define PLACEHOLDER_INSTALL_DIR "placeholder\${PRODUCTNAME}"
 # InstallDir "${PLACEHOLDER_INSTALL_DIR}"
 # === 默认安装路径（D 盘） ===
-InstallDir "D:\\${PRODUCTNAME}"
+InstallDir "D:\${PRODUCTNAME}"
 
 # === 安装路径验证：防止安装在 C 盘（可选） ===
 Function .onVerifyInstDir

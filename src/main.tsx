@@ -1,7 +1,7 @@
 import React, {useEffect} from "react";
 import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
 import {ConfigProvider} from "antd";
-import {BrowserRouter, Routes, Route} from "react-router-dom";
+import {Routes, Route, HashRouter} from "react-router-dom";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import {AddModDialog} from "@/dialogs/AddModDialog";
@@ -44,12 +44,12 @@ const Main = () => {
     return (
         <I18nextProvider i18n={i18n}>
             <ConfigProvider theme={theme}>
-                <BrowserRouter>
+                <HashRouter>
                     <Routes>
-                        <Route path="/" element={<App/>}/>
+                        <Route path="/home/*" element={<App/>}/>
                         <Route path="/add_mod_dialog" element={<AddModDialog/>}/>
                     </Routes>
-                </BrowserRouter>
+                </HashRouter>
             </ConfigProvider>
         </I18nextProvider>
     )
