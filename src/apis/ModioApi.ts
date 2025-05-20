@@ -68,7 +68,11 @@ export class ModioApi {
             message.error(`${t("Invalid Mod Link")}: ${url}`);
             return;
         }
-        return await ModioApi.getModInfoByName(nameId);
+        const modData = await ModioApi.getModInfoByName(nameId);
+        if (modData === undefined) {
+            message.error(`${t("Mod Not Existed")}: ${url}`);
+            return;
+        }
     }
 
     public static async getUserInfo() {

@@ -82,7 +82,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                 break;
         }
 
-        await emit("status-bar-log", t("Add Successfully"));
+        await emit("status-bar-log", t("Add Complete"));
         await vm.updateUI();
         await windowInstance.close();
         windowInstance = null;
