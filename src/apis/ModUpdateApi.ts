@@ -16,6 +16,9 @@ export class ModUpdateApi {
         const viewModel = await HomeViewModel.getInstance();
         const resp = await ModioApi.getModInfoByLink(mod.url);
         if (!resp) {
+            mod.onlineAvailable = false;
+            viewModel.ModList.update(mod, mod);
+            await emit("mod-treeview-update" + mod.id, mod);
             return;
         }
 
