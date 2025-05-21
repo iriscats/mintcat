@@ -6,7 +6,7 @@ use integrator::mod_info;
 use integrator::pak_integrator::PakIntegrator;
 use serde::Serialize;
 use std::io::{Read, Write};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 
 #[tauri::command]
 fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
@@ -88,6 +88,14 @@ fn open_devtools(app_handle: AppHandle) {
 
 pub fn run() {
     tauri::Builder::default()
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close(); // 阻止默认关闭行为
+                    window.app_handle().exit(0); // 手动退出应用
+                }
+            }
+        })
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
