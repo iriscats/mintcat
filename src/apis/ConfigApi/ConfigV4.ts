@@ -103,7 +103,7 @@ export class ConfigV4 implements IConfig {
         this.profileList.activeProfile = t("Default");
 
         const defaultProfileTree = new ProfileTree(t("Default"));
-        this.profileTreeList.push();
+        this.profileTreeList.push(defaultProfileTree);
 
         await ConfigApi.saveModListData(this.modList.toJson());
         await ConfigApi.saveProfileData(this.profileList.toJson());

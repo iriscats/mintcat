@@ -73,6 +73,7 @@ export class ModioApi {
             message.error(`${t("Mod Not Existed")}: ${url}`);
             return;
         }
+        return modData;
     }
 
     public static async getUserInfo() {
@@ -100,9 +101,14 @@ export class ModioApi {
         try {
             const path = `/games/${MODIO_GAME_ID}/mods?name_id=${nameId}`;
             const data = await ModioApi.getRequest(path);
-            return data["data"][0];
+            if (data["data"].length === 0)
+                return;
+            else {
+                return data["data"][0];
+            }
         } catch (e) {
             message.error(`${t("Fetch Mod Info Error")}: ${e}`);
+            throw e;
         }
     }
 

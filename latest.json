@@ -1,11 +1,11 @@
 {
-  "version": "0.4.3",
-  "notes": "# 修复\n+ 修复初始化时没有导入数据，导致无限加载的问题",
-  "pub_date": "2025-05-09T00:27:51.555Z",
+  "version": "0.4.4",
+  "notes": "**Full Changelog**: https://github.com/iriscats/mintcat/compare/v0.4.3...v0.4.4\n\n# 中文\n\n---\n\n## 新增\n\n* 新增存档管理窗口。\n* 新增自动禁用 Modding 补丁（auto disablemodding patch）。\n* 新增支持 Xbox 游戏版本 DRG。\n* 新增自定义 UE4SS 支持选项。\n\n---\n\n## 优化\n\n* 优化 AddModDialog 的初始化数据逻辑。\n* 优化 TreeView 的渲染和拖拽交互性能。\n* 优化首页布局（HomePage layout）。\n* 优化加载动画（Spin），增加取消按钮。\n* 优化暗黑模式的字体粗细和亮度。\n* 优化 mod 版本号的显示方式。\n* 调整 TreeView 缩进尺寸。\n* 更新了 React 到 19 版本。\n\n---\n\n## 修复\n\n* 修复添加 Mod 弹窗不能拖入 Mod 问题，（取消了管理员权限）。\n* 修复搜索框失去焦点时丢失关键词的问题。\n* 修复本地 Mod 检查状态错误的问题。\n* 修复添加 Mod 窗口，未加载主题的问题。\n* 修复缺少 `mod.json` 文件时无法创建的问题。\n* 修复添加已过期 Mod 时可能抛出异常的问题。\n\n# English\n\n---\n\n## Added\n\n* Added Import Config Dialog.\n* Added support for the Xbox game version of DRG.\n* Added custom UE4SS support options.\n* Added auto disablemodding patch feature.\n\n---\n\n## Optimized\n\n* Optimized initialization logic of `AddModDialog` data.\n* Improved rendering and drag interaction performance of the TreeView.\n* Optimized the HomePage layout.\n* Enhanced the loading animation (Spin) with a cancel button.\n* Refined font weight and brightness in dark mode.\n* Improved the display format of mod version numbers.\n* Adjusted TreeView indentation size.\n* Upgraded React to version 19.\n\n---\n\n## Fixed\n\n* Fixed issue where the Add Mod dialog could not accept drag-and-drop (admin privileges removed).\n* Fixed issue where the search box would lose the keyword when losing focus.\n* Fixed incorrect local mod status check.\n* Fixed missing theme loading in the Add Mod window.\n* Fixed failure to create mod when `mod.json` file is missing.\n* Fixed potential exception when adding an expired mod.",
+  "pub_date": "2025-05-20T22:27:51.555Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTFJ1VGEyb2hDMzRXNkRhbkRrMm5QMkVrUkJyZVE5Y21nQUJjRERIZ3Zwd3VYMTJhY3pabFlJQXBraWlKVldtcVMwUlRnTm1HTjhyVEsrVHkyemk0VndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ2NzIwMTMyCWZpbGU6bWludGNhdF8wLjQuM194NjQtc2V0dXAuZXhlCnVoOUkzZnkvMStJSk9IenNxait6UGhTL3BGNS9MZUpTMFlTODhXN2cxNzhZUkpUbXd3Z3NtakVjSU8wdjVTWjRFYnFjaUhlUitPRSttTlNFZzZIRUN3PT0K",
-      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.3/mintcat_0.4.3_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTFQ2SHdQeGhhU3psZ3hrLzc0dXJDaXN0VkgwZ1V3VnFhZ1RVRFkxdWFPUmNoU3BLQXZxRml3VER0eENPblpjUVk4TGpoblcxRmIvb2ZxNVphbG9OV1FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ3Nzg5MzcwCWZpbGU6bWludGNhdF8wLjQuNF94NjQtc2V0dXAuZXhlCmNvZEVFejU1bWIwbWhMZFJTZE44SlBCZXRLa2JXU3RpVW1kNlp5amwwM2xlQUdoSE5aTGJmZjdqY1NianRRZExCR0NmVjBKK2JaSmE0M1RiRVp4a0FnPT0K",
+      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.4/mintcat_0.4.4_x64-setup.exe"
     }
   }
 }

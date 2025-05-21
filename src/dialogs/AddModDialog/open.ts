@@ -46,7 +46,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     }
 
     windowInstance = new WebviewWindow('add-mod-dialog', {
-        url: '/add_mod_dialog',
+        url: 'index.html#/add_mod_dialog',
         width: 400,
         height: 580,
         title: t("Add Mod"),

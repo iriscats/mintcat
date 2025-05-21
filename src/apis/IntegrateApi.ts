@@ -179,14 +179,6 @@ export class IntegrateApi extends ILock {
         });
     }
 
-    public static async isFirstRun(): Promise<boolean> {
-        try {
-            return await invoke('is_first_run');
-        } catch (error) {
-            return false;
-        }
-    }
-
     public static async checkInstalled(gamePath: string, installTime: number): Promise<string> {
         return await invoke('check_installed', {
             gamePath: gamePath,

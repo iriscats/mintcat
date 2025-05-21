@@ -75,19 +75,19 @@ OutFile "${OUTFILE}"
 ; We don't actually use this value as default install path,
 ; it's just for nsis to append the product name folder in the directory selector
 ; https://nsis.sourceforge.io/Reference/InstallDir
-# !define PLACEHOLDER_INSTALL_DIR "placeholder\${PRODUCTNAME}"
+!define PLACEHOLDER_INSTALL_DIR "placeholder\${PRODUCTNAME}"
 # InstallDir "${PLACEHOLDER_INSTALL_DIR}"
 # === 默认安装路径（D 盘） ===
 InstallDir "D:\${PRODUCTNAME}"
 
 # === 安装路径验证：防止安装在 C 盘（可选） ===
-Function .onVerifyInstDir
-  StrCpy $0 $INSTDIR 1
-  StrCmp $0 "C" 0 done
-  # MessageBox MB_OK "请不要将程序安装在 C 盘。"
-  Abort
-done:
-FunctionEnd
+#Function .onVerifyInstDir
+#  StrCpy $0 $INSTDIR 1
+#  StrCmp $0 "C" 0 done
+#   MessageBox MB_OK "请不要将程序安装在 C 盘。"
+#  Abort
+#done:
+#FunctionEnd
 
 VIProductVersion "${VERSIONWITHBUILD}"
 VIAddVersionKey "ProductName" "${PRODUCTNAME}"

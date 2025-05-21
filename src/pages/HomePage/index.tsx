@@ -389,6 +389,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     componentDidMount(): void {
+        console.log("HomePage componentDidMount");
+
         this.hookWindowResized();
 
         listen<boolean>("home-page-loading", async (event) => {

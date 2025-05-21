@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "url": "index.html#/home/0.4.4",
+        "url": "index.html#/home_0.4.4",
         "title": "mintcat",
         "width": 1200,
         "height": 628,
@@ -36,7 +36,6 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "assets/first_run": "first_run",
       "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll"
     },
     "createUpdaterArtifacts": true
