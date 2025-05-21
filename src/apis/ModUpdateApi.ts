@@ -1,4 +1,3 @@
-import {message} from "antd";
 import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {ModioApi} from "./ModioApi.ts";
@@ -49,7 +48,7 @@ export class ModUpdateApi {
 
     public static async checkOnlineModUpdate(modItem: ModListItem) {
         if (modItem.sourceType === ModSourceType.Modio &&
-            modItem.onlineAvailable === true &&
+            //modItem.onlineAvailable === true &&
             modItem.enabled === true
         ) {
             if (!await exists(modItem.cachePath) ||

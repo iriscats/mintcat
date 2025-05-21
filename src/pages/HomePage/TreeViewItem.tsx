@@ -114,7 +114,7 @@ function ModTreeViewVersionSelect({nodeData}) {
                 notFoundContent={fetching ? <Spin size="small"/> : null}
                 options={options}
                 onChange={onChange}
-                onDropdownVisibleChange={onDropdownVisibleChange}
+                onOpenChange={onDropdownVisibleChange}
         />
     );
 }
@@ -161,7 +161,7 @@ function ModTreeViewWarring({nodeData}) {
 
             {
                 isOnlineUnavailable &&
-                <Tooltip title={t("Online Mod has been Deleted by Author")}>
+                <Tooltip title={t("Mod cannot be retrieved or has been deleted by the author")}>
                                 <span style={{color: "red", marginRight: "4px"}}>
                                     <ExclamationCircleOutlined/>
                                 </span>

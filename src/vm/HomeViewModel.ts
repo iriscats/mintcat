@@ -79,6 +79,7 @@ export class HomeViewModel {
         await emit("status-bar-log", t("Fetch Mod Info"));
 
         const resp = await ModioApi.getModInfoByLink(url);
+        console.log(resp);
         if (resp === undefined) {
             return false;
         }
@@ -102,6 +103,7 @@ export class HomeViewModel {
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
 
+        await emit("tree-view-count-label-update");
         return true;
     }
 
@@ -137,6 +139,7 @@ export class HomeViewModel {
         await ConfigApi.saveModListData(this.ModList.toJson());
         await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
 
+        await emit("tree-view-count-label-update");
         return true;
     }
 
