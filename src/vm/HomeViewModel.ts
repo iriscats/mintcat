@@ -212,10 +212,10 @@ export class HomeViewModel {
         const profileTree = this.profileTreeList.find(p => p.name === oldName);
         profileTree.name = newName;
 
-        this.updateSelectCallback?.call(this);
-
-        await ConfigApi.saveProfileDetails(newName, profileTree);
+        await ConfigApi.saveProfileDetails(oldName, profileTree);
         await ConfigApi.renameProfileDetails(oldName, newName);
+
+        this.updateSelectCallback?.call(this);
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
