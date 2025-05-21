@@ -67,6 +67,7 @@ export class ConfigV4 implements IConfig {
                 }
             }
         } catch (err) {
+            console.error(err);
             await this.createDefaultModData();
         }
     }

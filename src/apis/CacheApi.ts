@@ -16,12 +16,18 @@ export class CacheApi {
         return vm.setting.cachePath;
     }
 
+    private static sanitizeFileName(name: string): string {
+        const illegalChars = /[\\/:*?"<>|]/g;
+        return name.replace(illegalChars, '');
+    }
+
     public static async getModCachePath(modName: string, version: string) {
         const appCachePath = await this.getCacheDir();
         if (!await exists(appCachePath)) {
             await mkdir(appCachePath)
         }
-        return await path.join(appCachePath, `${modName}-${version}.zip`);
+        const newNodName = CacheApi.sanitizeFileName(`${modName}-${version}.zip`);
+        return await path.join(appCachePath, newNodName);
     }
 
     public static async getImageCachePath(url: string) {
@@ -50,6 +56,7 @@ export class CacheApi {
     public static async saveCacheFile(modName: string, version: string, data: Uint8Array): Promise<any> {
         try {
             const fileName = await CacheApi.getModCachePath(modName, version);
+
             await writeFile(fileName, data);
             return fileName;
         } catch (error) {
