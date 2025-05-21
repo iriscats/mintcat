@@ -85,17 +85,6 @@ fn open_devtools(app_handle: AppHandle) {
     }
 }
 
-#[tauri::command]
-fn is_first_run() -> bool {
-    let path = std::env::current_dir().unwrap();
-    let first_run_path = path.join("first_run");
-    if first_run_path.exists() {
-        std::fs::remove_file(first_run_path).unwrap();
-        true
-    } else {
-        false
-    }
-}
 
 pub fn run() {
     tauri::Builder::default()
@@ -116,7 +105,6 @@ pub fn run() {
             open_devtools,
             launch_game,
             find_game_pak,
-            is_first_run,
             capability::steam::check_steam_game,
             capability::download::download_large_file,
         ])

@@ -6,13 +6,13 @@ use std::ptr::null;
 #[test]
 fn test_pak_integrator() {
     let integrator_result =
-        PakIntegrator::new("/Users/bytedance/Desktop/data/Content/Paks/FSD-WindowsNoEditor.pak");
+        PakIntegrator::new("~/Desktop/data/Content/Paks/FSD-WindowsNoEditor.pak");
     match integrator_result {
         Ok(integrator) => {
             let mut mods: Vec<(ModInfo)> = Vec::new();
 
             //遍历 mods文件夹获取全部文件路径
-            let mut mod_dir = PathBuf::from("/Users/bytedance/Desktop/data/mods");
+            let mut mod_dir = PathBuf::from("~/Desktop/data/mods");
             if mod_dir.is_dir() {
                 for entry in mod_dir.read_dir().unwrap() {
                     let entry = entry.unwrap();
