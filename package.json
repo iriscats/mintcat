@@ -1,7 +1,7 @@
 {
   "name": "mintcat",
   "private": true,
-  "version": "0.4.5-dev",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,8 +24,10 @@
     "@tauri-apps/plugin-sql": "^2.2.0",
     "@tauri-apps/plugin-store": "~2",
     "@tauri-apps/plugin-updater": "~2",
-    "antd": "^5.25.1",
-    "easy-keyvalues": "^1.2.7",
+    "@ts-task/task": "^1.0.2",
+    "antd": "^5.25.2",
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.43.1",
     "i18next": "^25.1.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
