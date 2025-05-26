@@ -15,6 +15,12 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
 
     const vm = await HomeViewModel.getInstance();
 
+    const groupOptions = Array.from(vm.ActiveProfile?.groupNameMap)
+        .map(([key, value]) => ({
+            label: value,
+            value: key,
+        }));
+
     const setInitData = () => {
         localStorage.setItem('add-mod-dialog-init-data', JSON.stringify({
             text: text,
@@ -32,12 +38,6 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
             addModType: addModType,
         });
     }
-
-    const groupOptions = Array.from(vm.ActiveProfile?.groupNameMap)
-        .map(([key, value]) => ({
-            label: value,
-            value: key,
-        }));
 
     if (windowInstance) {
         await sendInitData();
@@ -63,6 +63,10 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
 
     await once<AddModDialogResult>('add-mod-dialog-ok', async (event) => {
         const result = event.payload;
+
+        // result.list 去重
+        result.list = [...new Set(result.list)];
+
         switch (result.addModType) {
             case AddModType.MODIO: {
                 const list = result.list;
