@@ -58,8 +58,6 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                 break;
         }
 
-        console.log(list);
-
         if (list.length === 0) {
             message.warning(t("Please input mod"));
             return;
