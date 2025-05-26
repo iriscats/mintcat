@@ -133,6 +133,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                                          placeholder={t("Input New Profile")}
                                          onChange={this.handleProfileInputChange}
                                          onPressEnter={this.handleAdd}
+                                         autoComplete={"off"}
                                   />
                                   <Button type={"text"}
                                           style={{marginLeft: "8px", marginRight: "20px"}}
@@ -154,6 +155,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                                                         onPressEnter={() => this.handleRename(item, this.state.editingValue)}
                                                         style={{width: "200px"}}
                                                         autoFocus
+                                                        autoComplete={"off"}
                                                     />
                                                 ) : (
                                                     <span>{item}</span>

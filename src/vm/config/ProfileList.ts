@@ -57,6 +57,7 @@ export enum ProfileTreeType {
 }
 
 export enum ProfileTreeGroupType {
+    ROOT = 0,
     MODIO = 90000,
     LOCAL = 90001
 }
@@ -68,7 +69,7 @@ export class ProfileTree {
     public lastUpdate: number = 0;
     public installTime: number = 0;
     public editTime: number = 0;
-    public root: ProfileTreeItem = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
+    public root: ProfileTreeItem = new ProfileTreeItem(ProfileTreeGroupType.ROOT, ProfileTreeType.FOLDER, "root");
     public groupNameMap: Map<number, string> = new Map<number, string>();
 
     public get ModioFolder(): ProfileTreeItem | undefined {
@@ -92,8 +93,8 @@ export class ProfileTree {
         this.lastUpdate = 0;
         this.root.add(ProfileTreeGroupType.MODIO, ProfileTreeType.FOLDER, "mod.io");
         this.root.add(ProfileTreeGroupType.LOCAL, ProfileTreeType.FOLDER, t("Local"));
-        this.groupNameMap.set(ProfileTreeGroupType.MODIO, "mod.io");
-        this.groupNameMap.set(ProfileTreeGroupType.LOCAL, t("Local"));
+        // this.groupNameMap.set(ProfileTreeGroupType.MODIO, "mod.io");
+        // this.groupNameMap.set(ProfileTreeGroupType.LOCAL, t("Local"));
     }
 
     private makeId() {
@@ -179,6 +180,20 @@ export class ProfileTree {
         return modList;
     }
 
+    private cacheGroupNameMap() {
+        const traverse = (node: ProfileTreeItem) => {
+            if (node.type === ProfileTreeType.FOLDER) {
+                if (node.id !== ProfileTreeGroupType.ROOT) {
+                    this.groupNameMap.set(node.id, node.name);
+                }
+                for (const child of node.children) {
+                    traverse(child);
+                }
+            }
+        };
+        traverse(this.root);
+    }
+
     public static fromJson(json_str: string): ProfileTree {
         const jsonObj = JSON.parse(json_str);
         let profile = new ProfileTree("");
@@ -188,6 +203,7 @@ export class ProfileTree {
         profile.installTime = jsonObj.install_time ? jsonObj.install_time : 0;
         profile.editTime = jsonObj.edit_time ? jsonObj.edit_time : 0;
         profile.root = ProfileTreeItem.fromJson(jsonObj.root);
+        profile.cacheGroupNameMap();
         return profile;
     }
 

@@ -134,7 +134,8 @@ function ModTreeViewWarring({nodeData}) {
     }
 
     const checkOnlineUnavailable = () => {
-        return nodeData.onlineAvailable === false;
+        return nodeData.sourceType === ModSourceType.Modio &&
+            nodeData.onlineAvailable === false;
     }
 
     const [isExpired, setIsExpired] = useState(checkExpired());

@@ -34,6 +34,7 @@ tauri-plugin-process = "2.2.1"
 tauri-plugin-opener = "2.2.6"
 tauri-plugin-updater = "2.7.0"
 tauri-plugin-clipboard-manager = "2"
+tauri-plugin-store = "2"
 
 log = "0.4.27"
 tracing = { version = "0.1.41", features = ["attributes"] }
@@ -60,8 +61,11 @@ include_dir = "0.7.4"
 repak = { git = "https://github.com/trumank/repak", features = ["oodle"] }
 unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "patches" }
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
-tauri-plugin-store = "2"
 
+minidump-writer = "0.10.2"
+windows-sys = { version = "0.59.0", features = [
+    "Win32_System_Threading"
+] }
 
 
 # patternsleuth = { git = "https://github.com/trumank/patternsleuth", features = ["process-internal", "image-pe"] }
