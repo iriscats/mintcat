@@ -70,7 +70,8 @@ export class InputDialog extends React.Component<any, InputDialogStates> {
                           text: this.state.defaultValue,
                       }}>
                     <Form.Item name="text" label={t("Please Input Name")} rules={[{required: true}]}>
-                        <Input allowClear/>
+                        <Input autoComplete={"off"}
+                               allowClear/>
                     </Form.Item>
                 </Form>
             </Modal>
