@@ -146,7 +146,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const subModList = vm.ActiveProfile.getModList(vm.ModList);
         let list = "";
         for (const mod of subModList.Mods) {
-            if (mod.sourceType === ModSourceType.Modio) {
+            if (TreeViewConverter.filter(mod) && mod.sourceType === ModSourceType.Modio) {
                 list += mod.url + "\n";
             }
         }
@@ -389,8 +389,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     componentDidMount(): void {
-        console.log("HomePage componentDidMount");
-
         this.hookWindowResized();
 
         listen<boolean>("home-page-loading", async (event) => {
@@ -451,7 +449,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                style={{
                                    borderBottom: "1px solid #eee",
                                    paddingBottom: "2px",
-                                   minWidth:"1000px",
+                                   minWidth: "1000px",
                                }}>
                             <Typography.Link>
                                 <Tooltip title={t("Save Changes")}>
