@@ -15,7 +15,7 @@ export class TreeViewConverter {
         this.modList = modList;
     }
 
-    private filter(modItem: ModListItem) {
+    public static filter(modItem: ModListItem) {
         if (TreeViewConverter.filterList.length === 0) {
             return true;
         }
@@ -45,7 +45,7 @@ export class TreeViewConverter {
                     continue;
                 }
                 const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
-                if (this.filter(modItem)) {
+                if (TreeViewConverter.filter(modItem)) {
                     parent.children.push({
                         key: modItem.id,
                         modId: modItem.modId,
