@@ -20,7 +20,7 @@ MintCat is a Deep Rock Galactic mod loader and integration tool. It is built wit
 2. Backend: Rust + Tauri 
 
 
-## Tuari 2.0
+## Tauri 2.0
 https://v2.tauri.app/start/
 
 
@@ -51,7 +51,7 @@ pnpm tauri dev
 ## Config Path
 ```
 Windows: 
-C:\Users\bytedance\AppData\Roaming\com.mint.cat
+C:\Users\Alice\AppData\Roaming\com.mint.cat
 
 macOS:
 ~/Library/Application Support/com.mint.cat
