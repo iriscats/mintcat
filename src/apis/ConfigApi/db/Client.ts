@@ -5,7 +5,7 @@ let dbInstance: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
     if (!dbInstance) {
-        const db = await Database.load('sqlite:test.db');
+        const db = await Database.load('sqlite:mintcat.db');
         dbInstance = drizzle(db);
     }
     return dbInstance;
