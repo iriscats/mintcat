@@ -1,11 +1,11 @@
 {
-  "version": "0.4.5",
-  "notes": "**Full Changelog**: https://github.com/iriscats/mintcat/compare/v0.4.4...v0.4.5\n\n# 中文\n---\n## 新增\n* 添加崩溃转储功能（crash dump）\n* 主窗口关闭时，自动退出应用。\n\n## 优化\n* 重构首次运行检测逻辑。\n* 禁用输入框自动填充字符。\n\n## 修复\n* 修复自定义分组，在添加 MOD 的对话框中不显示的问题。\n* 修复 MOD 是否可用判断图标错误显示的问题。\n* 修复 MOD 缓存路径中含有非法字符，导致无法安装的问题。\n* 修复配置重命名时 `name` 字段丢失导致配置丢失问题。\n* 修复能够输入重复配置名的问题。\n* 修复列表过滤时复制内容依然是全部 mod 的问题。\n\n# English\n\n---\n\n## Added\n\n* Added crash dump functionality.\n* Automatically exit the application when the main window is closed.\n\n## Optimized\n\n* Refactored the first-run detection logic.\n* Disabled auto-fill characters in input fields.\n\n## Fixed\n\n* Fixed the issue where custom groups were not displayed in the Add MOD dialog.\n* Fixed incorrect display of MOD availability status icons.\n* Fixed the issue where illegal characters in the MOD cache path prevented installation.\n* Fixed a problem where renaming a configuration caused data loss due to the `name` field being omitted.\n* Fixed the issue allowing duplicate configuration names to be entered.\n* Fixed the issue where copying during list filtering still copied all MODs.\n",
-  "pub_date": "2025-05-27T08:27:51.555Z",
+  "version": "0.4.6",
+  "notes": "**Full Changelog**: https://github.com/iriscats/mintcat/compare/v0.4.5...v0.4.6\n\n# 中文\n## 修复\n\n1. 修复游戏 7 月 1 日更新后，导致禁用游戏内部 MOD 管理补丁失效的问题。\n2. 修复配置名称过长问题。\n3. 修复切换配置后 Mod 列表数量未更新的问题。\n4. 修复主页切换主题后设置页面中主题未更新的问题。\n\n## 优化\n\n1. 禁用 WebView 自带 CTRL + F。\n\n# English\n\n## Fixes\n\n1. Fixed an issue where the internal mod management patch would become ineffective after the July 1 game update.\n2. Fixed an issue with overly long configuration names.\n3. Fixed an issue where the number of mods in the list would not update after switching configurations.\n4. Fixed an issue where the theme on the settings page did not update after changing the theme on the homepage.\n\n## Optimizations\n\n1. Disabled the default CTRL + F behavior in WebView.\n",
+  "pub_date": "2025-07-02T18:27:51.555Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTFlzdHBmZW92Y05pUDVwR0x4dmplTXVnL0JGdVMvNEpzeWFYUEY5UU55RGEzSTJLd0RLQmxCanRDc2VmVE5TQkN1cGdHWFF2d1F3Q0p5T3lRV0hhbXc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ4MzA1NDc4CWZpbGU6bWludGNhdF8wLjQuNV94NjQtc2V0dXAuZXhlCkJnemJMUHNsbWRTME9xdkZlbUdITnNMUjg0NkdZTDJjM1pndWZTRXl3Rmp1bHI1TUtlcWR1TzhCbEpQU2E4VlB5Y3V5a0pjT09ONjNmNFBQNHRBNUR3PT0K",
-      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.5/mintcat_0.4.5_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTWVBvSDU5QWtTTFZENmh4WFpvQndHOXRFdm5FZzhXWU42cEVlWGR4Z0V1MW5vZ3JVdVNrTlV1TUcrQ0FYUjRtNjlPdmI5MTg0bzl2Y09qRTRqU1V3aUpkWWRSVmNMRFFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzUxNDU1MDgxCWZpbGU6bWludGNhdF8wLjQuNl94NjQtc2V0dXAuZXhlCkRGS21XeEo2QUJyODJ4THpMc0lzbmFiaHhpRHAzbkxwZDZKWGdNQSt0WlZIVllPbXN0MTdNa29pTUF1eVh3VVdISFkydVlXSmFCWHhSRkUrdmswUUNRPT0K",
+      "url": "https://github.com/iriscats/mintcat/releases/download/v0.4.6/mintcat_0.4.6_x64-setup.exe"
     }
   }
 }
