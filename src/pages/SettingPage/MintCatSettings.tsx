@@ -11,7 +11,7 @@ import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {AppViewModel} from "@/vm/AppViewModel.ts";
-import {emit} from "@tauri-apps/api/event";
+import {emit, listen} from "@tauri-apps/api/event";
 
 
 export function MintCatSettings() {
@@ -83,6 +83,10 @@ export function MintCatSettings() {
     const onImportConfigClick = async () => {
         await emit("config-manage-dialog-open");
     }
+
+    listen<string>("theme-change", (event) => {
+        setTheme(event.payload);
+    }).then();
 
     React.useEffect(() => {
         const fetchData = async () => {
