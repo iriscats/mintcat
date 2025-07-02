@@ -80,7 +80,19 @@ class App extends React.Component<any, any> {
         });
 
         initClipboardWatcher();
+        window.addEventListener('keydown', this.handleKeyDown);
     }
+
+    componentWillUnmount() {
+        window.removeEventListener('keydown', this.handleKeyDown);
+    }
+
+    private handleKeyDown = (event: KeyboardEvent) => {
+        if (event.ctrlKey && event.key === 'f') {
+            event.preventDefault();
+        }
+    };
+
 
     render() {
         return (

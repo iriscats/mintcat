@@ -180,6 +180,11 @@ export class HomeViewModel {
     }
 
     public async addProfile(name: string, data: string): Promise<void> {
+        if (this.profileList.Profiles.includes(name)) {
+            message.error(t("Profile Already Exists"));
+            return;
+        }
+
         const profileTree = ProfileTree.fromJson(data);
         profileTree.name = name;
 
@@ -206,6 +211,11 @@ export class HomeViewModel {
     }
 
     public async renameProfile(oldName: string, newName: string): Promise<void> {
+        if (this.profileList.Profiles.includes(newName)) {
+            message.error(t("Profile Already Exists"));
+            return;
+        }
+
         this.profileList.rename(oldName, newName);
         await ConfigApi.saveProfileData(this.profileList.toJson());
 

@@ -61,10 +61,23 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         this.callback?.call(this);
     }
 
-    private async handleAdd() {
-        if (this.state.newProfileName === "") {
+    private async checkInput(name: string): Promise<boolean> {
+        if (name === "") {
             message.error(t("Profile Name Cannot Be Empty"));
-            return;
+            return false;
+        }
+
+        if (name.length > 20) {
+            message.error(t("Profile Name Too Long"));
+            return false;
+        }
+        return true;
+    }
+
+
+    private async handleAdd() {
+        if (!await this.checkInput(this.state.newProfileName)) {
+            return false;
         }
 
         const vm = await HomeViewModel.getInstance();
@@ -85,6 +98,10 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleRename(key: string, newName: string) {
+        if (!await this.checkInput(newName)) {
+            return false;
+        }
+
         const vm = await HomeViewModel.getInstance();
         await vm.renameProfile(key, newName);
         this.setState({
