@@ -88,6 +88,7 @@
   "Profile Name Cannot Be Empty": "配置名称不能为空",
   "Profile must have at least one profile": "配置必须至少有一个配置",
   "Profile Already Exists": "配置已存在",
+  "Profile Name Too Long": "配置名称过长",
   "Ready": "加载完成",
   "Rename": "重命名",
   "Rename Group": "重命名分组",
