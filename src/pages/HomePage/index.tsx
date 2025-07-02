@@ -34,7 +34,7 @@ import {dragAndDrop} from "./DragAndDropTree.ts";
 import {TreeViewItem} from "./TreeViewItem.tsx";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
-import {listen} from "@tauri-apps/api/event";
+import {emit, listen} from "@tauri-apps/api/event";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
@@ -223,6 +223,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
         })
         await ModUpdateApi.checkModUpdate();
         await ModUpdateApi.checkModList();
+
+        await emit("tree-view-count-label-update");
     };
 
     @autoBind

@@ -142,7 +142,6 @@ export class ModUpdateApi {
             switch (event.event_type) {
                 case "MODFILE_CHANGED": {
                     let modItem = viewModel.ModList.getByModId(event.mod_id);
-                    console.log("MODFILE_CHANGED", modItem);
                     if (modItem) {
                         modItem.onlineUpdateDate = event.date_added;
                         if (!modItem.lastUpdateDate) {
