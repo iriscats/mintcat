@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "url": "index.html#/home_0.4.4",
+        "url": "index.html#/home",
         "title": "mintcat",
         "width": 1200,
         "height": 628,
