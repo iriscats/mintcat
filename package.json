@@ -1,7 +1,7 @@
 {
   "name": "mintcat",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.0-dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,7 +25,7 @@
     "@tauri-apps/plugin-store": "~2",
     "@tauri-apps/plugin-updater": "~2",
     "@ts-task/task": "^1.0.2",
-    "antd": "^5.25.2",
+    "antd": "^5.26.3",
     "better-sqlite3": "^11.10.0",
     "drizzle-orm": "^0.43.1",
     "i18next": "^25.1.2",

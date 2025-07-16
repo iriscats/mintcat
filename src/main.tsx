@@ -46,7 +46,7 @@ const Main = () => {
             <ConfigProvider theme={theme}>
                 <HashRouter>
                     <Routes>
-                        <Route path="/home_0.4.4" element={<App/>}/>
+                        <Route path="/home" element={<App/>}/>
                         <Route path="/add_mod_dialog" element={<AddModDialog/>}/>
                     </Routes>
                 </HashRouter>
