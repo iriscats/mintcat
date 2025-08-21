@@ -131,6 +131,10 @@ impl PakIntegrator {
 
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             app.emit("status-bar-percent", current_percent).unwrap();
+            
+            // install ue4ssl
+            install_ue4ss(&self.installation.binaries_directory());
+            
             let result = self.process_mod(mod_info);
             match result {
                 Ok(_) => {
@@ -277,7 +281,6 @@ impl PakIntegrator {
         mod_info: &mut ModInfo,
         dll_buf: &mut Box<dyn ReadSeek>,
     ) -> Result<(), Box<dyn Error>> {
-        install_ue4ss(&self.installation.binaries_directory());
         install_ue4ss_mod(
             &self.installation.binaries_directory(),
             &mod_info.name,
@@ -365,8 +368,8 @@ impl PakIntegrator {
         mint_files: &mut HashMap<String, Vec<u8>>,
     ) -> Result<(), Box<dyn Error>> {
         let mint_path = (
-            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uasset",
-            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uexp",
+            "FSD/Content/ModIntegration/MI_SpawnMods.uasset",
+            "FSD/Content/ModIntegration/MI_SpawnMods.uexp",
         );
 
         let mut asset = unreal_asset::Asset::new(
@@ -384,7 +387,7 @@ impl PakIntegrator {
         );
         self.bundle.write_asset(
             asset,
-            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods",
+            "FSD/Content/ModIntegration/MI_SpawnMods",
         )?;
 
         Ok(())
@@ -436,8 +439,8 @@ impl PakIntegrator {
         mint_files: &mut HashMap<String, Vec<u8>>,
     ) -> Result<(), Box<dyn Error>> {
         let mint_path = (
-            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uasset",
-            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uexp",
+            "FSD/Content/ModIntegration/MI_SpawnMods.uasset",
+            "FSD/Content/ModIntegration/MI_SpawnMods.uexp",
         );
         mint_files.remove(mint_path.0);
         mint_files.remove(mint_path.1);
