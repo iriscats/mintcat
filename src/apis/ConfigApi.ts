@@ -3,10 +3,10 @@ import {appConfigDir, configDir} from "@tauri-apps/api/path";
 import {BaseDirectory, exists, readTextFile, writeTextFile, mkdir, remove, rename} from '@tauri-apps/plugin-fs';
 import {ProfileTree} from "../vm/config/ProfileList.ts";
 import {TimeUtils} from "../utils/TimeUtils.ts";
-import {ConfigDataType, IConfig} from "@/apis/ConfigApi/DataType.ts";
-import {ConfigV4} from "@/apis/ConfigApi/ConfigV4.ts";
-import {ConfigV2} from "@/apis/ConfigApi/ConfigV2.ts";
-import {ConfigV3} from "@/apis/ConfigApi/ConfigV3.ts";
+import {ConfigDataType, IConfig} from "@/storage/DataType.ts";
+import {ConfigV4} from "@/storage/ConfigV4.ts";
+import {ConfigV2} from "@/storage/ConfigV2.ts";
+import {ConfigV3} from "@/storage/ConfigV3.ts";
 
 
 export class ConfigApi {

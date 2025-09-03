@@ -2,6 +2,7 @@ fn main() {
     tauri_build::build()
 }
 
+// requireAdministrator
 // fn main() {
 //     let mut windows = tauri_build::WindowsAttributes::new();
 //     windows = windows.app_manifest(

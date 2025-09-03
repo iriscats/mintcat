@@ -11,7 +11,7 @@ import i18n from "../locales/i18n"
 import {exists} from "@tauri-apps/plugin-fs";
 import {ILock} from "@/utils/ILock.ts";
 import {emit} from "@tauri-apps/api/event";
-import {ConfigV4} from "@/apis/ConfigApi/ConfigV4.ts";
+import {ConfigV4} from "@/storage/ConfigV4.ts";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
 
 export class AppViewModel extends ILock {
@@ -77,7 +77,6 @@ export class AppViewModel extends ILock {
     private async initAppViewModel() {
         this.isFirstRun = await DeviceApi.isFirstRun();
         await this.loadSettings();
-
         await this.loadUserLanguages();
         await this.checkAppPath();
 

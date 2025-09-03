@@ -39,7 +39,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
             directories,
         })
     }
-    /// Used to normalize match path case to existing files in the DRG pak.
+    /// Used to normalize match path case to existing files in the drg pak.
     pub fn normalize_path(&self, path_str: &str) -> PakPathBuf {
         let mut dir = Some(&self.directories);
         let path = PakPath::new(path_str);

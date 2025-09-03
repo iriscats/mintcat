@@ -1,13 +1,16 @@
 use std::io::{Read, Seek};
+use serde::{Deserialize, Serialize};
 
-mod game_pak_patch;
-pub(crate) mod installation;
-mod mod_bundle_writer;
-pub mod mod_info;
-mod modio_patch;
-pub mod pak_integrator;
-mod raw_asset;
-mod ue4ss_integrate;
+pub mod drg;
+pub mod drgrc;
+mod ue4ss;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct ModInfo {
+    pub modio_id: Option<u32>,
+    pub name: String,
+    pub pak_path: String,
+}
 
 pub trait ReadSeek: Read + Seek + Send {}
 

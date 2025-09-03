@@ -24,8 +24,7 @@
     "@tauri-apps/plugin-sql": "^2.2.0",
     "@tauri-apps/plugin-store": "~2",
     "@tauri-apps/plugin-updater": "~2",
-    "@ts-task/task": "^1.0.2",
-    "antd": "^5.26.3",
+    "antd": "^5.27.1",
     "better-sqlite3": "^11.10.0",
     "drizzle-orm": "^0.43.1",
     "i18next": "^25.1.2",
@@ -34,8 +33,7 @@
     "react-i18next": "^15.5.1",
     "react-infinite-scroll-component": "^6.1.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.5.1",
-    "ts-retry": "^6.0.0"
+    "react-router-dom": "^7.5.1"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.27.1",

@@ -3,7 +3,7 @@ import {Button, Checkbox, Flex, List, message, Modal, Space, Tag} from 'antd';
 import {t} from "i18next";
 import {remove} from "@tauri-apps/plugin-fs";
 import {CloseOutlined, FileOutlined, FolderOpenOutlined} from "@ant-design/icons";
-import {ConfigDataType} from "@/apis/ConfigApi/DataType.ts";
+import {ConfigDataType} from "@/storage/DataType.ts";
 import {ConfigApi} from "@/apis/ConfigApi.ts";
 import {openPath} from "@tauri-apps/plugin-opener";
 import {MessageBox} from "@/components/MessageBox.ts";

@@ -1,14 +1,4 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
-use crate::integrator::game_pak_patch::{
-    get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
-    SERVER_LIST_ENTRY_PATH,
-};
-use crate::integrator::installation::{DRGInstallation, DRGInstallationType};
-use crate::integrator::mod_bundle_writer::ModBundleWriter;
-use crate::integrator::mod_info::ModInfo;
-use crate::integrator::raw_asset::RawAsset;
-use crate::integrator::ue4ss_integrate::{install_ue4ss, install_ue4ss_mod, uninstall_ue4ss};
-use crate::integrator::{game_pak_patch, ReadSeek};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
@@ -19,6 +9,13 @@ use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
 use uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
+use crate::integrator::{ModInfo, ReadSeek};
+use crate::integrator::drg::game_pak_patch::{get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH, SERVER_LIST_ENTRY_PATH};
+use crate::integrator::drg::installation::DRGInstallation;
+use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
+use crate::integrator::drg::raw_asset::RawAsset;
+use crate::integrator::drg::game_pak_patch;
+use crate::integrator::ue4ss::ue4ss_integrate::{install_ue4ss, install_ue4ss_mod, uninstall_ue4ss};
 
 static FSD_AR_PATH: &str = "FSD/AssetRegistry.bin";
 
@@ -177,7 +174,7 @@ impl PakIntegrator {
             .installation
             .binaries_directory()
             .join("x3daudio1_7.dll");
-        let hook_dll = include_bytes!("../../assets/x3daudio1_7.dll");
+        let hook_dll = include_bytes!("../../../assets/x3daudio1_7.dll");
         fs::write(hook_dll_path, hook_dll).unwrap();
 
         app.emit("status-bar-log", "Install Mod Success").unwrap();

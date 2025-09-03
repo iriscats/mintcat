@@ -1,18 +1,17 @@
 import React, {useEffect} from "react";
-import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
-import {ConfigProvider} from "antd";
-import {Routes, Route, HashRouter} from "react-router-dom";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import {AddModDialog} from "@/dialogs/AddModDialog";
-
-import i18n from "@/locales/i18n"
-import '@ant-design/v5-patch-for-react-19';
-
 import {I18nextProvider} from "react-i18next"
-import {listen} from "@tauri-apps/api/event";
-import packageJson from '../package.json';
+import ReactDOM from "react-dom/client";
+import {Routes, Route, HashRouter} from "react-router-dom";
 
+import {ConfigProvider} from "antd";
+import '@ant-design/v5-patch-for-react-19';
+import {listen} from "@tauri-apps/api/event";
+
+import App from "@/App";
+import {AddModDialog} from "@/dialogs/AddModDialog";
+import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
+import i18n from "@/locales/i18n"
+import packageJson from '../package.json';
 
 //import {InitLog} from "./apis/LogApi.ts";
 //InitLog();

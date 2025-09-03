@@ -1,12 +1,13 @@
-use mintcat_lib::integrator::mod_info::ModInfo;
-use mintcat_lib::integrator::pak_integrator::PakIntegrator;
 use std::path::PathBuf;
-use std::ptr::null;
+use mintcat_lib::integrator::ModInfo;
+use mintcat_lib::integrator::drg::pak_integrator::PakIntegrator;
 
 #[test]
 fn test_pak_integrator() {
+    
     let integrator_result =
         PakIntegrator::new("~/Desktop/data/Content/Paks/FSD-WindowsNoEditor.pak");
+    
     match integrator_result {
         Ok(integrator) => {
             let mut mods: Vec<(ModInfo)> = Vec::new();

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import {users} from "@/apis/ConfigApi/db/Schema.ts";
-import {getDb} from "@/apis/ConfigApi/db/Client.ts";
+import {users} from "@/storage/db/Schema.ts";
+import {getDb} from "@/storage/db/Client.ts";
 
 export async function addUser(name: string, email: string) {
     const db = await getDb();

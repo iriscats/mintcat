@@ -1,4 +1,4 @@
-import {ConfigDataType, IConfig} from "@/apis/ConfigApi/DataType.ts";
+import {ConfigDataType, IConfig} from "@/storage/DataType.ts";
 import {path} from "@tauri-apps/api";
 import {appCacheDir, appConfigDir, configDir} from "@tauri-apps/api/path";
 import {exists, stat} from "@tauri-apps/plugin-fs";

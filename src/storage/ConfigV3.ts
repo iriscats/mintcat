@@ -1,7 +1,7 @@
 import {path} from "@tauri-apps/api";
 import {configDir} from "@tauri-apps/api/path";
-import {ConfigV2} from "@/apis/ConfigApi/ConfigV2.ts";
-import {ConfigDataType} from "@/apis/ConfigApi/DataType.ts";
+import {ConfigV2} from "@/storage/ConfigV2.ts";
+import {ConfigDataType} from "@/storage/DataType.ts";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 

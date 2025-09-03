@@ -14,7 +14,7 @@ import {
     ProfileTreeType
 } from "./config/ProfileList.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
-import {ConfigV4} from "@/apis/ConfigApi/ConfigV4.ts";
+import {ConfigV4} from "@/storage/ConfigV4.ts";
 
 
 export class HomeViewModel {

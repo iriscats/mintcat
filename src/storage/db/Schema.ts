@@ -63,6 +63,13 @@ export const profileDetails = sqliteTable("profile_details", {
 });
 
 
+export const users = sqliteTable("users", {
+    id: integer("id").primaryKey({autoIncrement: true}),
+    name: text("name").notNull().default(""),
+    email: text("email").notNull().default(""),
+});
+
+
 export const games = sqliteTable("games", {
     id: integer("id").primaryKey({autoIncrement: true}),
     name: text("game_name").notNull().default(""),

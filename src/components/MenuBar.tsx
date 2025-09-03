@@ -1,6 +1,6 @@
 import React from "react";
 import {Menu, MenuProps} from "antd";
-import {HomeOutlined, MoneyCollectOutlined, SettingOutlined} from "@ant-design/icons";
+import {HomeOutlined, SettingOutlined} from "@ant-design/icons";
 import {ModioOutlined} from "./SvgIcon.tsx";
 import {t} from "i18next";
 
@@ -21,9 +21,24 @@ interface MenuBarProps {
 class MenuBar extends React.Component<MenuBarProps, any> {
 
     private items: MenuItem[] = [
-        {key: MenuPage.Home, icon: <HomeOutlined/>, label: t("Home")},
+        {
+            key: MenuPage.Home,
+            icon: <HomeOutlined/>,
+            label: t("Home"),
+            children: [
+                {key: '9', label: 'Option 9'},
+                {key: '10', label: 'Option 10'},
+                {
+                    key: 'sub3',
+                    label: 'Submenu',
+                    children: [
+                        {key: '11', label: 'Option 11'},
+                        {key: '12', label: 'Option 12'},
+                    ],
+                },
+            ],
+        },
         {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io'},
-        //{key: MenuPage.Chat, icon: <MoneyCollectOutlined/>, label: t("Chat")},
         {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")},
     ];
 
