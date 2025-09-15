@@ -3,7 +3,6 @@ import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {emit} from "@tauri-apps/api/event";
-import {ConfigApi} from "@/apis/ConfigApi.ts";
 import {ModioApi} from "@/apis/ModioApi.ts";
 import {ModList, ModListItem} from "./config/ModList.ts";
 import {
@@ -14,7 +13,6 @@ import {
     ProfileTreeType
 } from "./config/ProfileList.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
-import {ConfigV4} from "@/storage/ConfigV4.ts";
 
 
 export class HomeViewModel {

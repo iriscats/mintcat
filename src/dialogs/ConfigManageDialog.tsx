@@ -1,17 +1,24 @@
-import React, {useState, useImperativeHandle, forwardRef, useEffect} from 'react';
+import {useState, useImperativeHandle, forwardRef, useEffect} from 'react';
 import {Button, Checkbox, Flex, List, message, Modal, Space, Tag} from 'antd';
 import {t} from "i18next";
 import {remove} from "@tauri-apps/plugin-fs";
 import {CloseOutlined, FileOutlined, FolderOpenOutlined} from "@ant-design/icons";
 import {ConfigDataType} from "@/storage/DataType.ts";
-import {ConfigApi} from "@/apis/ConfigApi.ts";
 import {openPath} from "@tauri-apps/plugin-opener";
 import {MessageBox} from "@/components/MessageBox.ts";
-import {listen} from "@tauri-apps/api/event";
+import {emit, listen} from "@tauri-apps/api/event";
 
 
 interface ListDataType extends ConfigDataType {
     checked?: boolean;
+}
+
+export class ConfigManageDialogViewModel {
+
+    public static async open() {
+        await emit("config-manage-dialog-open");
+    }
+
 }
 
 
@@ -34,7 +41,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                 setIsModalOpen(false);
                 return;
             }
-            await ConfigApi.importConfig(result);
+            await importConfig(result);
             window.location.reload();
         } else {
             message.error(t("Please select a config"));
@@ -73,10 +80,9 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     }
 
     const getData = async () => {
-        const configs = await ConfigApi.getExistingConfigList();
+        const configs = await getExistingConfigList();
         setDataSource(configs);
     }
-
 
     listen("config-manage-dialog-open", async () => {
         setIsModalOpen(true);

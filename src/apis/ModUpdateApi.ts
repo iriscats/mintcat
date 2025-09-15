@@ -1,7 +1,7 @@
 import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {ModioApi} from "./ModioApi.ts";
-import {ConfigApi} from "./ConfigApi.ts";
+import {Index} from "../storage";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 import {MOD_INVALID_ID, ModListItem, ModSourceType} from "../vm/config/ModList.ts";
 import {emit} from "@tauri-apps/api/event";
@@ -28,7 +28,7 @@ export class ModUpdateApi {
 
         await this.updateModFile(newItem);
 
-        await ConfigApi.saveModListData(viewModel.ModList.toJson());
+        await Index.saveModListData(viewModel.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
     }
 
@@ -42,7 +42,7 @@ export class ModUpdateApi {
         });
         viewModel.ModList.update(mod, newItem);
 
-        await ConfigApi.saveModListData(viewModel.ModList.toJson());
+        await Index.saveModListData(viewModel.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
     }
 
@@ -71,7 +71,7 @@ export class ModUpdateApi {
 
             const viewModel = await HomeViewModel.getInstance();
             viewModel.ModList.update(modItem, modItem);
-            await ConfigApi.saveModListData(viewModel.ModList.toJson());
+            await Index.saveModListData(viewModel.ModList.toJson());
             await emit("mod-treeview-update" + modItem.id, modItem);
         }
         return true;
@@ -88,7 +88,7 @@ export class ModUpdateApi {
                     modItem.lastUpdateDate = mtime;
                     const viewModel = await HomeViewModel.getInstance();
                     viewModel.ModList.update(modItem, modItem, true);
-                    await ConfigApi.saveModListData(viewModel.ModList.toJson());
+                    await Index.saveModListData(viewModel.ModList.toJson());
                     return true;
                 }
             }
@@ -108,7 +108,7 @@ export class ModUpdateApi {
                 await this.checkLocalModCache(item);
             }
         }
-        await ConfigApi.saveModListData(viewModel.ModList.toJson());
+        await Index.saveModListData(viewModel.ModList.toJson());
 
         ModUpdateApi.loading = false;
         await emit("home-page-loading", false);
@@ -164,8 +164,8 @@ export class ModUpdateApi {
         }
 
         viewModel.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
-        await ConfigApi.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile);
-        await ConfigApi.saveModListData(viewModel.ModList.toJson());
+        await Index.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile);
+        await Index.saveModListData(viewModel.ModList.toJson());
         await viewModel.updateUI();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));

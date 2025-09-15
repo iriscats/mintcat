@@ -5,7 +5,7 @@ import {open} from "@tauri-apps/plugin-dialog";
 import i18n from "@/locales/i18n.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
-import {ConfigApi} from "@/apis/ConfigApi.ts";
+import {Index} from "@/storage";
 import {Button, Card, Flex, Form, Input, message, Select} from "antd";
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
@@ -33,7 +33,7 @@ export function MintCatSettings() {
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
 
     const onOpenConfigDirClick = async () => {
-        await openPath(await ConfigApi.getConfigPath());
+        await openPath(await Index.getConfigPath());
     }
 
     const onOpenCacheDirClick = async () => {

@@ -23,7 +23,7 @@ tauri-build = { version = "2", features = [] }
 
 
 [dependencies]
-tauri = { version = "2.8.3", features = ["devtools", "protocol-asset"] }
+tauri = { version = "2.8.4", features = ["devtools", "protocol-asset"] }
 tauri-plugin-fs = "2.2.1"
 tauri-plugin-shell = "2.2.1"
 tauri-plugin-os = "2.2.1"
@@ -35,6 +35,7 @@ tauri-plugin-updater = "2.7.0"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-store = "2"
 tauri-plugin-sentry = "0.4"
+tauri-plugin-task-queue = { git = "https://github.com/iriscats/tauri-plugin-task-queue" }
 
 
 log = "0.4.27"

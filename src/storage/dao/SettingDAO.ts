@@ -4,7 +4,6 @@ type StoreValue = string | number | boolean | object | null;
 
 type StoreSchema = Record<string, StoreValue>;
 
-
 export async function createStore<T extends StoreSchema>(
     defaultValues: T,
     storeName = 'settings.json'
@@ -31,8 +30,7 @@ export async function createStore<T extends StoreSchema>(
     });
 }
 
-
-export const settings = await createStore({
+export const setting = await createStore({
     version: '0.5.0',
     language: 'en',
     gui_theme: 'Light',

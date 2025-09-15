@@ -7,7 +7,6 @@ import {ModUpdateApi} from "./ModUpdateApi.ts";
 import {MessageBox} from "../components/MessageBox.ts";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";
-import {ConfigApi} from "./ConfigApi.ts";
 import {ILock} from "@/utils/ILock.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 
@@ -66,7 +65,7 @@ export class IntegrateApi extends ILock {
                     if (await ModUpdateApi.checkLocalModModify(item)) {
                         editTime = TimeUtils.getCurrentTime();
                         homeViewModel.ActiveProfile.editTime = editTime;
-                        await ConfigApi.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
+                        await Index.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                     }
                     if (!await ModUpdateApi.checkLocalModCache(item)) {
                         message.error(`${t("File Not Found")}: ${item.displayName}: ${item.cachePath}`);
@@ -146,7 +145,7 @@ export class IntegrateApi extends ILock {
             await once<number>('install-success', async (event) => {
                 const homeViewModel = await HomeViewModel.getInstance();
                 homeViewModel.ActiveProfile.installTime = event.payload;
-                await ConfigApi.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
+                await Index.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });

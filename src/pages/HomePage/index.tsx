@@ -25,7 +25,7 @@ import {TreeViewOutlined} from "@/components/SvgIcon.tsx";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
-import {ConfigApi} from "@/apis/ConfigApi.ts";
+import {Index} from "@/storage";
 import {ModSourceType} from "@/vm/config/ModList.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
@@ -103,7 +103,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     await vm.removeMod(modItem.id);
                 }
             }
-            await ConfigApi.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
+            await Index.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
             await this.updateTreeView();
         }
     }
@@ -121,8 +121,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 modItem.enabled = isEnable;
             }
         }
-        await ConfigApi.saveModListData(vm.ModList.toJson());
-        await ConfigApi.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
+        await Index.saveModListData(vm.ModList.toJson());
+        await Index.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
         await this.updateTreeView();
     }
 

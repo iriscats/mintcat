@@ -34,7 +34,7 @@
   },
   "include": [
     "src"
-  ],
+, "tests/storage/dao.test.ts"  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

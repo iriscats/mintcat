@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
@@ -33,7 +37,8 @@
     "react-i18next": "^15.5.1",
     "react-infinite-scroll-component": "^6.1.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.5.1"
+    "react-router-dom": "^7.5.1",
+    "ts-retry": "^6.0.0"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.27.1",
@@ -43,7 +48,10 @@
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.4.1",
     "babel-plugin-react-compiler": "19.1.0-rc.1",
+    "jsdom": "^26.1.0",
+    "sql.js": "^1.13.0",
     "typescript": "^5.2.2",
-    "vite": "6.2.6"
+    "vite": "6.2.6",
+    "vitest": "^3.2.4"
   }
 }

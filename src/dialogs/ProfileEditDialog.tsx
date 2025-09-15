@@ -3,7 +3,7 @@ import {t} from "i18next";
 import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ProfileTree} from "../vm/config/ProfileList.ts";
-import {ConfigApi} from "../apis/ConfigApi.ts";
+import {Index} from "../storage";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 
 interface ProfileEditDialogStates {
@@ -111,7 +111,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleCopy(key: string) {
-        const data = await ConfigApi.loadProfileDetails(key);
+        const data = await Index.loadProfileDetails(key);
         const vm = await HomeViewModel.getInstance();
         await vm.addProfile(key + "_copy", data);
         this.forceUpdate();
