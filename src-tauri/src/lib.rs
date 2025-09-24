@@ -17,7 +17,7 @@ fn open_devtools(app_handle: AppHandle) {
 
 pub fn run() {
     let client = sentry::init((
-        "MINTCAT",
+        None::<&str>,
         sentry::ClientOptions {
             release: sentry::release_name!(),
             auto_session_tracking: true,
@@ -39,7 +39,7 @@ pub fn run() {
                 }
             }
         })
-        .plugin(tauri_plugin_sentry::init(&client))
+        //.plugin(tauri_plugin_sentry::init(&client))
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -50,6 +50,7 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_sql::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             integrator::drg::install_mods,
             integrator::drg::uninstall_mods,

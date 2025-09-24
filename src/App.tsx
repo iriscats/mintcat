@@ -16,6 +16,7 @@ import {AppViewModel} from "@/vm/AppViewModel.ts";
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";
 import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog.tsx";
+import TestPage from "@/pages/TestPage.tsx";
 
 const {
     Header,
@@ -74,8 +75,10 @@ class App extends React.Component<any, any> {
     }
 
     componentDidMount() {
+        console.log('App 组件加载...');
+
         AppViewModel.getInstance().then(() => {
-            this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
+            this.pageConfigs.push({key: MenuPage.Home, component: <TestPage/>});
             this.forceUpdate();
         });
 

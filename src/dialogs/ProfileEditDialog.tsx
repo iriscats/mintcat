@@ -3,7 +3,6 @@ import {t} from "i18next";
 import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ProfileTree} from "../vm/config/ProfileList.ts";
-import {Index} from "../storage";
 import {HomeViewModel} from "../vm/HomeViewModel.ts";
 
 interface ProfileEditDialogStates {

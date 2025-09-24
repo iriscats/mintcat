@@ -2,8 +2,8 @@ import {writeFile, size, exists, mkdir, remove} from "@tauri-apps/plugin-fs";
 import {cacheDir} from '@tauri-apps/api/path';
 import {path} from "@tauri-apps/api";
 import {convertFileSrc} from "@tauri-apps/api/core";
-import {AppViewModel} from "../vm/AppViewModel.ts";
-import {md5} from "./CryptApi.ts";
+import {AppViewModel} from "@/vm/AppViewModel.ts";
+import {md5} from "@/utils/CryptApi.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
 
 export class CacheApi {

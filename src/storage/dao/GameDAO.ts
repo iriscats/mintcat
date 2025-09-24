@@ -1,6 +1,6 @@
-import { getDb } from '../db/ConnectionManager';
-import { games } from '../db/Schema';
+import { games } from '@/storage/db/Schema';
 import { eq, and, desc, asc } from 'drizzle-orm';
+import {getDb} from "@/storage/db/Client.ts";
 
 /**
  * 游戏信息数据访问层
@@ -23,7 +23,7 @@ export class GameDAO {
     /**
      * 获取所有游戏
      */
-    public static async getAllGames(): Promise<GameData[]> {
+    public  async getAllGames(): Promise<GameData[]> {
         try {
             const db = await getDb();
             const result = await db.select().from(games).orderBy(asc(games.id));
@@ -37,7 +37,7 @@ export class GameDAO {
     /**
      * 根据ID获取游戏
      */
-    public static async getGameById(id: number): Promise<GameData | null> {
+    public  async getGameById(id: number): Promise<GameData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(games).where(eq(games.id, id)).limit(1);
@@ -51,7 +51,7 @@ export class GameDAO {
     /**
      * 根据名称获取游戏
      */
-    public static async getGameByName(name: string): Promise<GameData | null> {
+    public  async getGameByName(name: string): Promise<GameData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(games).where(eq(games.name, name)).limit(1);
@@ -65,7 +65,7 @@ export class GameDAO {
     /**
      * 获取活跃游戏
      */
-    public static async getActiveGames(): Promise<GameData[]> {
+    public  async getActiveGames(): Promise<GameData[]> {
         try {
             const db = await getDb();
             const result = await db.select().from(games)
@@ -81,7 +81,7 @@ export class GameDAO {
     /**
      * 创建游戏
      */
-    public static async createGame(gameData: Omit<GameData, 'id' | 'createdAt' | 'updatedAt'>): Promise<GameData | null> {
+    public  async createGame(gameData: Omit<GameData, 'id' | 'createdAt' | 'updatedAt'>): Promise<GameData | null> {
         try {
             const db = await getDb();
             const result = await db.insert(games).values({
@@ -102,7 +102,7 @@ export class GameDAO {
     /**
      * 更新游戏信息
      */
-    public static async updateGame(id: number, gameData: Partial<Omit<GameData, 'id' | 'createdAt' | 'updatedAt'>>): Promise<boolean> {
+    public  async updateGame(id: number, gameData: Partial<Omit<GameData, 'id' | 'createdAt' | 'updatedAt'>>): Promise<boolean> {
         try {
             const db = await getDb();
             const updateData: any = {};
@@ -129,7 +129,7 @@ export class GameDAO {
     /**
      * 删除游戏
      */
-    public static async deleteGame(id: number): Promise<boolean> {
+    public  async deleteGame(id: number): Promise<boolean> {
         try {
             const db = await getDb();
             await db.delete(games).where(eq(games.id, id));
@@ -143,7 +143,7 @@ export class GameDAO {
     /**
      * 设置游戏激活状态
      */
-    public static async setGameActive(id: number, isActive: boolean): Promise<boolean> {
+    public  async setGameActive(id: number, isActive: boolean): Promise<boolean> {
         try {
             return await this.updateGame(id, { isActive });
         } catch (error) {
@@ -155,7 +155,7 @@ export class GameDAO {
     /**
      * 检查游戏名称是否已存在
      */
-    public static async isGameNameExists(name: string, excludeId?: number): Promise<boolean> {
+    public  async isGameNameExists(name: string, excludeId?: number): Promise<boolean> {
         try {
             const db = await getDb();
             let query = db.select().from(games).where(eq(games.name, name));
@@ -175,7 +175,7 @@ export class GameDAO {
     /**
      * 获取游戏统计信息
      */
-    public static async getGameStats(): Promise<{total: number, active: number}> {
+    public  async getGameStats(): Promise<{total: number, active: number}> {
         try {
             const db = await getDb();
             const total = await db.select().from(games);
@@ -194,7 +194,7 @@ export class GameDAO {
     /**
      * 批量更新游戏激活状态
      */
-    public static async batchUpdateActiveStatus(gameIds: number[], isActive: boolean): Promise<boolean> {
+    public  async batchUpdateActiveStatus(gameIds: number[], isActive: boolean): Promise<boolean> {
         try {
             const db = await getDb();
             
@@ -214,7 +214,7 @@ export class GameDAO {
     /**
      * 将数据库记录映射为GameData对象
      */
-    private static mapToGameData(record: any): GameData {
+    private  mapToGameData(record: any): GameData {
         return {
             id: record.id,
             name: record.name,

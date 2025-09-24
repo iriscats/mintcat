@@ -25,7 +25,6 @@ import {TreeViewOutlined} from "@/components/SvgIcon.tsx";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
-import {Index} from "@/storage";
 import {ModSourceType} from "@/vm/config/ModList.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";

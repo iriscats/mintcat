@@ -1,13 +1,13 @@
 import {message} from "antd";
 import {t} from "i18next";
 import {ModFile, ModInfo} from "../vm/modio/ModInfo.ts";
-import {ModListItem} from "../vm/config/ModList.ts";
-import {AppViewModel} from "../vm/AppViewModel.ts";
+import {ModListItem} from "../../vm/config/ModList.ts";
+import {AppViewModel} from "../../vm/AppViewModel.ts";
 import {UserInfo} from "../vm/modio/UserInfo.ts";
 import {EventInfo} from "../vm/modio/EventInfo.ts";
-import {CacheApi} from "./CacheApi.ts";
-import {DownloadApi} from "./DownloadApi.ts";
-import {TimeUtils} from "../utils/TimeUtils.ts";
+import {CacheApi} from "../CacheApi.ts";
+import {DownloadApi} from "../DownloadApi.ts";
+import {TimeUtils} from "../../utils/TimeUtils.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
 
 //const MODIO_API_URL = "https://api.mod.io/v1";

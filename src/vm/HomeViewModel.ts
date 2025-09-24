@@ -3,7 +3,7 @@ import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {emit} from "@tauri-apps/api/event";
-import {ModioApi} from "@/apis/ModioApi.ts";
+import {ModioApi} from "@/apis/modio";
 import {ModList, ModListItem} from "./config/ModList.ts";
 import {
     ProfileList,
@@ -13,6 +13,8 @@ import {
     ProfileTreeType
 } from "./config/ProfileList.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {StorageAPI} from "@/storage";
+import StatusBar from "@/components/StatusBar.tsx";
 
 
 export class HomeViewModel {
@@ -22,6 +24,7 @@ export class HomeViewModel {
     public profileTreeList: ProfileTree[] = [];
     public modList: ModList = new ModList();
 
+
     private updateTreeViewCallback() {
         emit("home-page-update-tree-view").then();
     }
@@ -30,34 +33,15 @@ export class HomeViewModel {
         emit("home-page-update-profile-select").then();
     }
 
-    public get ModList(): ModList {
-        return this.modList;
-    }
-
-    public get ProfileList(): string[] {
-        return this.profileList.Profiles;
-    }
-
-    public get ActiveProfileName(): string {
-        return this.profileList.activeProfile;
-    }
-
-    public get ActiveProfile(): ProfileTree {
-        return this.profileTreeList.find(p => p.name === this.profileList.activeProfile)!;
-    }
-
-    public set ActiveProfile(activeProfile: string) {
-        this.profileList.activeProfile = activeProfile;
-
-        this.updateTreeViewCallback?.call(this);
-        ConfigApi.saveProfileData(this.profileList.toJson()).then();
-    }
 
     private constructor() {
     }
 
     private async addModDependencies(modList: ModList, modId: number, groupId: number): Promise<void> {
-        await emit("status-bar-log", t("Fetch Mod Dependencies"));
+        await StatusBar.log(t("Fetch Mod Dependencies"));
+
+        const mods = await StorageAPI.getMods();
+        const profiles = await StorageAPI.getProfiles();
 
         const depends = await ModioApi.getDependencies(modId);
         for (const depend of depends) {
@@ -66,18 +50,21 @@ export class HomeViewModel {
                 continue;
             }
 
-            const addedModItem = this.ModList.add(modItem);
-            this.ActiveProfile.addMod(addedModItem.id, groupId);
+            const addedModItem = await mods.addMod(modItem);
+            await profiles.addModToProfile(addedModItem);
+
             this.updateTreeViewCallback?.call(this);
             await ModUpdateApi.updateMod(addedModItem);
         }
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<boolean> {
-        await emit("status-bar-log", t("Fetch Mod Info"));
+        await StatusBar.log(t("Fetch Mod Info"));
+
+        const mods = await StorageAPI.getMods();
+        const profiles = await StorageAPI.getProfiles();
 
         const resp = await ModioApi.getModInfoByLink(url);
-        console.log(resp);
         if (resp === undefined) {
             return false;
         }
@@ -89,7 +76,7 @@ export class HomeViewModel {
             return true;
         }
 
-        const addedModItem = this.ModList.add(modItem);
+        const addedModItem = await mods.addMod(modItem);
         this.ActiveProfile.addMod(addedModItem.id, groupId);
         this.updateTreeViewCallback?.call(this);
         await ModUpdateApi.updateMod(addedModItem);
@@ -97,9 +84,6 @@ export class HomeViewModel {
         if (resp.dependencies) {
             await this.addModDependencies(subModList, resp.id, groupId);
         }
-
-        await ConfigApi.saveModListData(this.ModList.toJson());
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
 
         await emit("tree-view-count-label-update");
         return true;
@@ -134,8 +118,6 @@ export class HomeViewModel {
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
         this.updateTreeViewCallback?.call(this);
-        await ConfigApi.saveModListData(this.ModList.toJson());
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
 
         await emit("tree-view-count-label-update");
         return true;
@@ -168,62 +150,11 @@ export class HomeViewModel {
         if (this.ActiveProfile.LocalFolder) {
             this.ActiveProfile.LocalFolder.children = this.sortNode(this.ActiveProfile.LocalFolder, order);
         }
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async removeMod(id: number): Promise<void> {
         this.ActiveProfile.removeMod(id);
         this.updateTreeViewCallback?.call(this);
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
-    }
-
-    public async addProfile(name: string, data: string): Promise<void> {
-        if (this.profileList.Profiles.includes(name)) {
-            message.error(t("Profile Already Exists"));
-            return;
-        }
-
-        const profileTree = ProfileTree.fromJson(data);
-        profileTree.name = name;
-
-        this.profileList.add(name);
-        this.profileTreeList.push(profileTree);
-
-        this.updateSelectCallback?.call(this);
-        await ConfigApi.saveProfileData(this.profileList.toJson());
-        await ConfigApi.saveProfileDetails(name, profileTree);
-    }
-
-    public async removeProfile(name: string): Promise<void> {
-        if (this.profileList.Profiles.length <= 1) {
-            message.error(t("Profile must have at least one profile"));
-            return;
-        }
-        this.profileList.remove(name);
-
-        await ConfigApi.deleteProfileDetails(name);
-        await ConfigApi.saveProfileData(this.profileList.toJson());
-
-        this.updateSelectCallback?.call(this);
-        this.updateTreeViewCallback?.call(this);
-    }
-
-    public async renameProfile(oldName: string, newName: string): Promise<void> {
-        if (this.profileList.Profiles.includes(newName)) {
-            message.error(t("Profile Already Exists"));
-            return;
-        }
-
-        this.profileList.rename(oldName, newName);
-        await ConfigApi.saveProfileData(this.profileList.toJson());
-
-        const profileTree = this.profileTreeList.find(p => p.name === oldName);
-        profileTree.name = newName;
-
-        await ConfigApi.saveProfileDetails(oldName, profileTree);
-        await ConfigApi.renameProfileDetails(oldName, newName);
-
-        this.updateSelectCallback?.call(this);
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
@@ -233,47 +164,28 @@ export class HomeViewModel {
         }
 
         this.updateTreeViewCallback?.call(this);
-        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async setModEnabled(id: number, enable: boolean): Promise<void> {
-        let modItem = this.ModList.get(id);
-        if (modItem) {
-            modItem.enabled = enable;
-        }
-        await ConfigApi.saveModListData(this.ModList.toJson());
-        //this.updateTreeViewCallback?.call(this);
-
-        // update edit time
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.setModEnabled(id, enable);
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
-        let modItem = this.ModList.get(id);
-        if (modItem) {
-            modItem.usedVersion = version;
-        }
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.setModUsedVersion(id, version);
         // this.updateTreeViewCallback?.call(this);
-        await ConfigApi.saveModListData(this.ModList.toJson());
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
         this.ActiveProfile.setGroupName(id, name);
-
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
         this.updateTreeViewCallback?.call(this);
-    }
-
-    public async setProfileData(root: ProfileTreeItem): Promise<void> {
-        this.ActiveProfile.root = root;
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
         this.ActiveProfile.addGroup(groupName, parentGroupId);
 
         this.updateTreeViewCallback?.call(this);
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async removeGroup(groupId: number): Promise<void> {
@@ -285,17 +197,10 @@ export class HomeViewModel {
         this.ActiveProfile.removeGroup(groupId);
 
         this.updateTreeViewCallback?.call(this);
-        await ConfigApi.saveProfileDetails(this.ActiveProfileName, this.ActiveProfile);
     }
 
     public async updateUI() {
         await emit("home-page-update-tree-view");
-    }
-
-    public async loadConfig(config: ConfigV4) {
-        this.profileList = config.profileList;
-        this.profileTreeList = config.profileTreeList;
-        this.modList = config.modList;
     }
 
     public static async getInstance() {

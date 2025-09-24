@@ -1,11 +1,10 @@
 import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
-import {ModioApi} from "./ModioApi.ts";
-import {Index} from "../storage";
-import {HomeViewModel} from "../vm/HomeViewModel.ts";
-import {MOD_INVALID_ID, ModListItem, ModSourceType} from "../vm/config/ModList.ts";
 import {emit} from "@tauri-apps/api/event";
-import {TimeUtils} from "../utils/TimeUtils.ts";
+import {ModioApi} from "@/apis/modio";
+import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {MOD_INVALID_ID, ModListItem, ModSourceType} from "@/vm/config/ModList.ts";
+import {TimeUtils} from "@/utils/TimeUtils.ts";
 
 export class ModUpdateApi {
 

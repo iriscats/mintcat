@@ -58,6 +58,10 @@ class StatusBar extends React.Component<any, StatusBarState> {
         })
     }
 
+    public static async log(message: string) {
+        await emit('status-bar-log', message);
+    }
+
     private registerListeners() {
         try {
             if (this.isHook) {

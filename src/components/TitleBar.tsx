@@ -11,7 +11,7 @@ import {
 import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import {ModioApi} from "../apis/ModioApi.ts";
+import {ModioApi} from "@/apis/modio";
 import {MessageBox} from "./MessageBox.ts";
 import {CacheApi} from "../apis/CacheApi.ts";
 import {AppViewModel} from "../vm/AppViewModel.ts";

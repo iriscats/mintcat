@@ -28,6 +28,10 @@
     "store:allow-get",
     "store:allow-set",
     "store:allow-save",
+    "sql:allow-load",
+    "sql:allow-select",
+    "sql:allow-close",
+    "sql:allow-execute",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [

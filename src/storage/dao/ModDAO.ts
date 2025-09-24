@@ -1,6 +1,6 @@
-import { getDb } from '../db/ConnectionManager';
-import { mods, modVersions, modDownloads, modStatus } from '../db/Schema';
-import { eq, and, desc, asc, like, inArray } from 'drizzle-orm';
+import {mods, modVersions, modDownloads, modStatus} from '@/storage/db/Schema';
+import {eq, and, desc, asc, like, inArray} from 'drizzle-orm';
+import {getDb} from "@/storage/db/Client.ts";
 
 /**
  * 模组数据访问层
@@ -58,17 +58,17 @@ export interface CompleteModData extends ModData {
 }
 
 export class ModDAO {
-    
+
     /**
      * =============================
      * 模组基础信息操作
      * =============================
      */
-    
+
     /**
      * 获取所有模组
      */
-    public static async getAllMods(): Promise<ModData[]> {
+    public async getAllMods(): Promise<ModData[]> {
         try {
             const db = await getDb();
             const result = await db.select().from(mods).orderBy(desc(mods.createdAt));
@@ -78,11 +78,11 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 根据ID获取模组
      */
-    public static async getModById(modId: number): Promise<ModData | null> {
+    public async getModById(modId: number): Promise<ModData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(mods).where(eq(mods.modId, modId)).limit(1);
@@ -92,11 +92,11 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 根据平台ID获取模组
      */
-    public static async getModByPlatformId(platformId: number): Promise<ModData | null> {
+    public async getModByPlatformId(platformId: number): Promise<ModData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(mods).where(eq(mods.platformId, platformId)).limit(1);
@@ -106,11 +106,11 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 根据游戏ID获取模组
      */
-    public static async getModsByGameId(gameId: number): Promise<ModData[]> {
+    public async getModsByGameId(gameId: number): Promise<ModData[]> {
         try {
             const db = await getDb();
             const result = await db.select().from(mods)
@@ -122,44 +122,60 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 搜索模组
      */
-    public static async searchMods(keyword: string, gameId?: number, sourceType?: string, limit: number = 50): Promise<ModData[]> {
+    public async searchMods(keyword: string, gameId?: number, sourceType?: string, limit: number = 50): Promise<ModData[]> {
         try {
             const db = await getDb();
             let query = db.select().from(mods);
-            
+
             const conditions = [
                 like(mods.displayName, `%${keyword}%`),
                 like(mods.nameId, `%${keyword}%`)
             ];
-            
+
             if (gameId) {
                 conditions.push(eq(mods.gameId, gameId));
             }
-            
+
             if (sourceType) {
                 conditions.push(eq(mods.sourceType, sourceType));
             }
-            
+
             const result = await query
                 .where(and(...conditions))
                 .orderBy(desc(mods.createdAt))
                 .limit(limit);
-                
+
             return result.map(this.mapToModData);
         } catch (error) {
             console.error(`搜索模组失败 [关键词: ${keyword}]:`, error);
             throw error;
         }
     }
-    
+
+
+    /**
+     * 添加模组
+     */
+    public async addMod(modData: ModData): Promise<ModData | null> {
+        try {
+            const db = await getDb();
+            const result = await db.insert(mods).values(modData).returning();
+            return result.length > 0 ? this.mapToModData(result[0]) : null;
+        } catch (error) {
+            console.error('添加模组失败:', error);
+            throw error;
+        }
+    }
+
+
     /**
      * 创建模组
      */
-    public static async createMod(modData: Omit<ModData, 'modId' | 'createdAt' | 'updatedAt'>): Promise<ModData | null> {
+    public async createMod(modData: Omit<ModData, 'modId' | 'createdAt' | 'updatedAt'>): Promise<ModData | null> {
         try {
             const db = await getDb();
             const result = await db.insert(mods).values({
@@ -173,22 +189,22 @@ export class ModDAO {
                 approvalStatus: modData.approvalStatus || "Sandbox",
                 dependModId: modData.dependModId || 0,
             }).returning();
-            
+
             return result.length > 0 ? this.mapToModData(result[0]) : null;
         } catch (error) {
             console.error('创建模组失败:', error);
             throw error;
         }
     }
-    
+
     /**
      * 更新模组
      */
-    public static async updateMod(modId: number, modData: Partial<Omit<ModData, 'modId' | 'createdAt' | 'updatedAt'>>): Promise<boolean> {
+    public async updateMod(modId: number, modData: Partial<Omit<ModData, 'modId' | 'createdAt' | 'updatedAt'>>): Promise<boolean> {
         try {
             const db = await getDb();
             const updateData: any = {};
-            
+
             if (modData.platformId !== undefined) updateData.platformId = modData.platformId;
             if (modData.gameId !== undefined) updateData.gameId = modData.gameId;
             if (modData.nameId !== undefined) updateData.nameId = modData.nameId;
@@ -198,47 +214,47 @@ export class ModDAO {
             if (modData.tags !== undefined) updateData.tags = JSON.stringify(modData.tags);
             if (modData.approvalStatus !== undefined) updateData.approvalStatus = modData.approvalStatus;
             if (modData.dependModId !== undefined) updateData.dependModId = modData.dependModId;
-            
+
             updateData.updatedAt = new Date();
-            
+
             await db.update(mods)
                 .set(updateData)
                 .where(eq(mods.modId, modId));
-                
+
             return true;
         } catch (error) {
             console.error(`更新模组失败 [ID: ${modId}]:`, error);
             return false;
         }
     }
-    
+
     /**
      * 删除模组（级联删除相关数据）
      */
-    public static async deleteMod(modId: number): Promise<boolean> {
+    public async deleteMod(modId: number): Promise<boolean> {
         try {
             const db = await getDb();
-            
+
             // 由于外键约束设置了CASCADE，删除模组时会自动删除相关的版本、下载、状态数据
             await db.delete(mods).where(eq(mods.modId, modId));
-            
+
             return true;
         } catch (error) {
             console.error(`删除模组失败 [ID: ${modId}]:`, error);
             return false;
         }
     }
-    
+
     /**
      * =============================
      * 模组版本操作
      * =============================
      */
-    
+
     /**
      * 获取模组版本信息
      */
-    public static async getModVersion(modId: number): Promise<ModVersionData | null> {
+    public async getModVersion(modId: number): Promise<ModVersionData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(modVersions).where(eq(modVersions.modId, modId)).limit(1);
@@ -248,15 +264,15 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 创建或更新模组版本信息
      */
-    public static async upsertModVersion(versionData: ModVersionData): Promise<boolean> {
+    public async upsertModVersion(versionData: ModVersionData): Promise<boolean> {
         try {
             const db = await getDb();
             const existing = await this.getModVersion(versionData.modId);
-            
+
             if (existing) {
                 // 更新
                 await db.update(modVersions)
@@ -274,24 +290,24 @@ export class ModDAO {
                     availableVersions: JSON.stringify(versionData.availableVersions || []),
                 });
             }
-            
+
             return true;
         } catch (error) {
             console.error(`创建或更新模组版本信息失败 [ID: ${versionData.modId}]:`, error);
             return false;
         }
     }
-    
+
     /**
      * =============================
      * 模组下载操作
      * =============================
      */
-    
+
     /**
      * 获取模组下载信息
      */
-    public static async getModDownload(modId: number): Promise<ModDownloadData | null> {
+    public async getModDownload(modId: number): Promise<ModDownloadData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(modDownloads).where(eq(modDownloads.modId, modId)).limit(1);
@@ -301,15 +317,15 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 创建或更新模组下载信息
      */
-    public static async upsertModDownload(downloadData: ModDownloadData): Promise<boolean> {
+    public async upsertModDownload(downloadData: ModDownloadData): Promise<boolean> {
         try {
             const db = await getDb();
             const existing = await this.getModDownload(downloadData.modId);
-            
+
             if (existing) {
                 // 更新
                 const updateData: any = {};
@@ -319,7 +335,7 @@ export class ModDAO {
                 if (downloadData.downloadProgress !== undefined) updateData.downloadProgress = downloadData.downloadProgress;
                 if (downloadData.downloadStatus !== undefined) updateData.downloadStatus = downloadData.downloadStatus;
                 updateData.updatedAt = new Date();
-                
+
                 await db.update(modDownloads)
                     .set(updateData)
                     .where(eq(modDownloads.modId, downloadData.modId));
@@ -334,39 +350,39 @@ export class ModDAO {
                     downloadStatus: downloadData.downloadStatus || "completed",
                 });
             }
-            
+
             return true;
         } catch (error) {
             console.error(`创建或更新模组下载信息失败 [ID: ${downloadData.modId}]:`, error);
             return false;
         }
     }
-    
+
     /**
      * 更新下载进度
      */
-    public static async updateDownloadProgress(modId: number, progress: number, status?: string): Promise<boolean> {
+    public async updateDownloadProgress(modId: number, progress: number, status?: string): Promise<boolean> {
         try {
-            const updateData: Partial<ModDownloadData> = { downloadProgress: progress };
+            const updateData: Partial<ModDownloadData> = {downloadProgress: progress};
             if (status) updateData.downloadStatus = status;
-            
-            return await this.upsertModDownload({ modId, ...updateData });
+
+            return await this.upsertModDownload({modId, ...updateData});
         } catch (error) {
             console.error(`更新下载进度失败 [ID: ${modId}]:`, error);
             return false;
         }
     }
-    
+
     /**
      * =============================
      * 模组状态操作
      * =============================
      */
-    
+
     /**
      * 获取模组状态信息
      */
-    public static async getModStatus(modId: number): Promise<ModStatusData | null> {
+    public async getModStatus(modId: number): Promise<ModStatusData | null> {
         try {
             const db = await getDb();
             const result = await db.select().from(modStatus).where(eq(modStatus.modId, modId)).limit(1);
@@ -376,15 +392,15 @@ export class ModDAO {
             throw error;
         }
     }
-    
+
     /**
      * 创建或更新模组状态信息
      */
-    public static async upsertModStatus(statusData: ModStatusData): Promise<boolean> {
+    public async upsertModStatus(statusData: ModStatusData): Promise<boolean> {
         try {
             const db = await getDb();
             const existing = await this.getModStatus(statusData.modId);
-            
+
             if (existing) {
                 // 更新
                 const updateData: any = {};
@@ -393,7 +409,7 @@ export class ModDAO {
                 if (statusData.isOnlineAvailable !== undefined) updateData.isOnlineAvailable = statusData.isOnlineAvailable;
                 if (statusData.isLocalNotFound !== undefined) updateData.isLocalNotFound = statusData.isLocalNotFound;
                 updateData.updatedAt = new Date();
-                
+
                 await db.update(modStatus)
                     .set(updateData)
                     .where(eq(modStatus.modId, statusData.modId));
@@ -407,34 +423,34 @@ export class ModDAO {
                     isLocalNotFound: statusData.isLocalNotFound ?? false,
                 });
             }
-            
+
             return true;
         } catch (error) {
             console.error(`创建或更新模组状态信息失败 [ID: ${statusData.modId}]:`, error);
             return false;
         }
     }
-    
+
     /**
      * =============================
      * 综合操作
      * =============================
      */
-    
+
     /**
      * 获取完整的模组信息（包含版本、下载、状态）
      */
-    public static async getCompleteModData(modId: number): Promise<CompleteModData | null> {
+    public async getCompleteModData(modId: number): Promise<CompleteModData | null> {
         try {
             const mod = await this.getModById(modId);
             if (!mod) return null;
-            
+
             const [version, download, status] = await Promise.all([
                 this.getModVersion(modId),
                 this.getModDownload(modId),
                 this.getModStatus(modId)
             ]);
-            
+
             return {
                 ...mod,
                 version: version || undefined,
@@ -446,27 +462,27 @@ export class ModDAO {
             return null;
         }
     }
-    
+
     /**
      * 批量获取完整的模组信息
      */
-    public static async getBatchCompleteModData(modIds: number[]): Promise<CompleteModData[]> {
+    public async getBatchCompleteModData(modIds: number[]): Promise<CompleteModData[]> {
         try {
             const results = await Promise.all(
                 modIds.map(modId => this.getCompleteModData(modId))
             );
-            
+
             return results.filter(result => result !== null) as CompleteModData[];
         } catch (error) {
             console.error('批量获取完整模组信息失败:', error);
             return [];
         }
     }
-    
+
     /**
      * 获取模组统计信息
      */
-    public static async getModStats(): Promise<{
+    public async getModStats(): Promise<{
         total: number;
         bySourceType: Record<string, number>;
         byApprovalStatus: Record<string, number>;
@@ -475,17 +491,17 @@ export class ModDAO {
         try {
             const db = await getDb();
             const allMods = await db.select().from(mods);
-            
+
             const bySourceType: Record<string, number> = {};
             const byApprovalStatus: Record<string, number> = {};
             const byGame: Record<number, number> = {};
-            
+
             allMods.forEach(mod => {
                 bySourceType[mod.sourceType] = (bySourceType[mod.sourceType] || 0) + 1;
                 byApprovalStatus[mod.approvalStatus] = (byApprovalStatus[mod.approvalStatus] || 0) + 1;
                 byGame[mod.gameId] = (byGame[mod.gameId] || 0) + 1;
             });
-            
+
             return {
                 total: allMods.length,
                 bySourceType,
@@ -494,17 +510,17 @@ export class ModDAO {
             };
         } catch (error) {
             console.error('获取模组统计信息失败:', error);
-            return { total: 0, bySourceType: {}, byApprovalStatus: {}, byGame: {} };
+            return {total: 0, bySourceType: {}, byApprovalStatus: {}, byGame: {}};
         }
     }
-    
+
     /**
      * =============================
      * 私有映射方法
      * =============================
      */
-    
-    private static mapToModData(record: any): ModData {
+
+    private mapToModData(record: any): ModData {
         return {
             modId: record.modId,
             platformId: record.platformId,
@@ -520,20 +536,20 @@ export class ModDAO {
             updatedAt: record.updatedAt,
         };
     }
-    
-    private static mapToModVersionData(record: any): ModVersionData {
+
+    private mapToModVersionData(record: any): ModVersionData {
         return {
             modId: record.modId,
             currentVersion: record.currentVersion,
-            availableVersions: typeof record.availableVersions === 'string' 
-                ? JSON.parse(record.availableVersions) 
+            availableVersions: typeof record.availableVersions === 'string'
+                ? JSON.parse(record.availableVersions)
                 : record.availableVersions,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
         };
     }
-    
-    private static mapToModDownloadData(record: any): ModDownloadData {
+
+    private mapToModDownloadData(record: any): ModDownloadData {
         return {
             modId: record.modId,
             downloadUrl: record.downloadUrl,
@@ -545,8 +561,8 @@ export class ModDAO {
             updatedAt: record.updatedAt,
         };
     }
-    
-    private static mapToModStatusData(record: any): ModStatusData {
+
+    private mapToModStatusData(record: any): ModStatusData {
         return {
             modId: record.modId,
             lastUpdateDate: record.lastUpdateDate,

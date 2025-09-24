@@ -1,6 +1,6 @@
 import {t} from "i18next";
 import {emit, once} from "@tauri-apps/api/event";
-import {ModioApi} from "@/apis/ModioApi.ts";
+import {ModioApi} from "@/apis/modio";
 import {HomeViewModel} from "@/vm/HomeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";

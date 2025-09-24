@@ -5,8 +5,7 @@ import {DownloadOutlined, HomeOutlined, LikeOutlined, PlusCircleOutlined} from '
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Search from "antd/es/input/Search";
 import {open} from "@tauri-apps/plugin-shell";
-import {ModioApi} from "@/apis/ModioApi.ts";
-import {ModInfo} from "@/vm/modio/ModInfo.ts";
+import {ModioApi} from "@/apis/modio";
 import {TranslateApi} from "@/apis/TranslateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";

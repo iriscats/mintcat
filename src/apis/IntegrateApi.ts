@@ -3,20 +3,25 @@ import {message} from "antd";
 import {emit, once} from "@tauri-apps/api/event";
 import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
-import {ModUpdateApi} from "./ModUpdateApi.ts";
-import {MessageBox} from "../components/MessageBox.ts";
-import {HomeViewModel} from "../vm/HomeViewModel.ts";
-import {AppViewModel} from "../vm/AppViewModel.ts";
+import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {MessageBox} from "@/components/MessageBox.ts";
+import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {AppViewModel} from "@/vm/AppViewModel.ts";
 import {ILock} from "@/utils/ILock.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
+import {StorageAPI} from "@/storage";
 
 
 export class IntegrateApi extends ILock {
 
+
     public static async checkGamePath(drgPakPath: string = undefined): Promise<boolean> {
+        const settings = await StorageAPI.getSettings();
+        settings
+
+
         if (drgPakPath === undefined) {
-            const vm = await AppViewModel.getInstance();
-            drgPakPath = vm.setting.drgPakPath;
+            drgPakPath = storageAPI.settings;
         }
 
         try {

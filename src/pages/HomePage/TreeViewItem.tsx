@@ -6,9 +6,8 @@ import {open} from "@tauri-apps/plugin-shell";
 import {emit, listen} from "@tauri-apps/api/event";
 import {ModListItem, ModSourceType} from "@/vm/config/ModList.ts";
 import {HomeViewModel} from "@/vm/HomeViewModel.ts";
-import {ModioApi} from "@/apis/ModioApi.ts";
+import {ModioApi} from "@/apis/modio";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
-import {ModFile} from "@/vm/modio/ModInfo.ts";
 
 const {useToken} = theme;
 

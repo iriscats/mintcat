@@ -215,14 +215,8 @@ export const profileMods = sqliteTable("profile_mods", {
  */
 export const settings = sqliteTable("settings", {
     id: integer("id").primaryKey({ autoIncrement: true }), // 设置记录ID
-    version: text("version").notNull().default("0.5.0"), // 应用版本
-    guiTheme: text("gui_theme").notNull().default("Light"), // 界面主题: Light, Dark, Pink
-    language: text("language").notNull().default("en"), // 界面语言
-    cachePath: text("cache_path").notNull().default(""), // 缓存路径
-    configPath: text("config_path").notNull().default(""), // 配置路径
-    ue4ssVersion: text("ue4ss_version").notNull().default("UE4SS-Lite"), // UE4SS版本
-    autoCheckUpdates: integer("auto_check_updates", { mode: "boolean" }).notNull().default(true), // 自动检查更新
-    downloadParallelCount: integer("download_parallel_count").notNull().default(3), // 并行下载数量
+    name: text("name").notNull().default(""), // 设置名称
+    value: text("value").notNull().default(""), // 设置值
     createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
     updatedAt: integer("updated_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });

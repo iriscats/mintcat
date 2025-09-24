@@ -1,43 +1,82 @@
-import {load} from '@tauri-apps/plugin-store';
+import {settings} from '@/storage/db/Schema';
+import {eq, and, desc, asc} from 'drizzle-orm';
+import {getDb} from "@/storage/db/Client.ts";
 
-type StoreValue = string | number | boolean | object | null;
 
-type StoreSchema = Record<string, StoreValue>;
+export interface SettingData {
+    id?: number;
+    name: string;
+    value?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
 
-export async function createStore<T extends StoreSchema>(
-    defaultValues: T,
-    storeName = 'settings.json'
-): Promise<{
-    [K in keyof T]: Promise<T[K]> | T[K];
-}> {
-    const store = await load(storeName, {autoSave: true});
 
-    for (const key in defaultValues) {
-        const existing = await store.get(key);
-        if (existing === null || existing === undefined) {
-            await store.set(key, defaultValues[key]);
+export class SettingDAO {
+
+    public async getCachePath(): Promise<string> {
+        return this.getValue('cachePath');
+    }
+
+    public async setCachePath(value: string): Promise<void> {
+        await this.setValue('cachePath', value);
+    }
+
+    public async getConfigPath(): Promise<string> {
+        return this.getValue("configPath");
+    }
+
+    public async setConfigPath(value: string): Promise<void> {
+        await this.setValue("configPath", value);
+    }
+
+    public async getLanguage(): Promise<string> {
+        return this.getValue('language');
+    }
+
+    public async setLanguage(value: string): Promise<void> {
+        await this.setValue('language', value);
+    }
+
+    public async getGuiTheme(): Promise<string> {
+        return this.getValue('guiTheme');
+    }
+
+    public async setGuiTheme(value: string): Promise<void> {
+        await this.setValue('guiTheme', value);
+    }
+
+    public async getValue(name: string): Promise<string> {
+        try {
+            const db = await getDb();
+            const result = await db.select().from(settings).where(eq(settings.name, name)).limit(1);
+            return result.length > 0 ? result[0].value : null;
+        } catch (error) {
+            console.error(`根据名称获取设置失败 [名称: ${name}]:`, error);
+            throw error;
         }
     }
 
-    return new Proxy({} as any, {
-        get(_, prop: string) {
-            return store.get(prop);
-        },
-        set(_, prop: string, value) {
-            store.set(prop, value);
-            return true;
-        },
-    });
+    public async setValue(name: string, value: string): Promise<void> {
+        try {
+            const db = await getDb();
+            await db.insert(settings).values({
+                name,
+                value,
+            }).onConflictDoUpdate({
+                target: settings.name,
+                set: {
+                    value,
+                    updatedAt: new Date(),
+                }
+            });
+        } catch (error) {
+            console.error(`设置值失败 [名称: ${name}]:`, error);
+            throw error;
+        }
+    }
+
+
 }
 
-export const setting = await createStore({
-    version: '0.5.0',
-    language: 'en',
-    gui_theme: 'Light',
-    modio_uid: 0,
-    modio_oauth: "",
-    drg_pak_path: "",
-    cache_path: "",
-    config_path: "",
-    ue4ss: 'UE4SS-Lite',
-});
+
