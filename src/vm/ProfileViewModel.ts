@@ -2,8 +2,13 @@ import {ProfileTree, ProfileTreeItem} from "@/vm/config/ProfileList.ts";
 import {StorageAPI} from "@/storage";
 import {message} from "antd";
 import {t} from "i18next";
+import {emit} from "@tauri-apps/api/event";
 
 export class ProfileViewModel {
+
+    public static updateSelectCallback() {
+        emit("home-page-update-profile-select").then();
+    }
 
     public get ProfileList(): string[] {
         return this.profileList.Profiles;

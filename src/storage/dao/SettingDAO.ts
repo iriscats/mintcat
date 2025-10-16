@@ -49,8 +49,16 @@ export class SettingDAO {
     public async getValue(name: string): Promise<string> {
         try {
             const db = await getDb();
-            const result = await db.select().from(settings).where(eq(settings.name, name)).limit(1);
-            return result.length > 0 ? result[0].value : null;
+            const result: any[] = await db.select()
+                .from(settings)
+                .where(eq(settings.name, name))
+                .limit(1);
+
+            console.log(name, result);
+            if (result.length === 0) {
+                return "";
+            }
+            return result[0].value;
         } catch (error) {
             console.error(`根据名称获取设置失败 [名称: ${name}]:`, error);
             throw error;
@@ -59,6 +67,7 @@ export class SettingDAO {
 
     public async setValue(name: string, value: string): Promise<void> {
         try {
+            console.log(`设置值 [名称: ${name}, 值: ${value}]`);
             const db = await getDb();
             await db.insert(settings).values({
                 name,

@@ -20,19 +20,14 @@ import StatusBar from "@/components/StatusBar.tsx";
 export class HomeViewModel {
 
     private static instance: HomeViewModel;
-    public profileList: ProfileList = new ProfileList();
-    public profileTreeList: ProfileTree[] = [];
-    public modList: ModList = new ModList();
 
-
-    private updateTreeViewCallback() {
+    public static updateTreeView() {
         emit("home-page-update-tree-view").then();
     }
 
-    private updateSelectCallback() {
-        emit("home-page-update-profile-select").then();
+    public static updateTreeViewCountLabel() {
+        emit("tree-view-count-label-update").then();
     }
-
 
     private constructor() {
     }
@@ -53,39 +48,37 @@ export class HomeViewModel {
             const addedModItem = await mods.addMod(modItem);
             await profiles.addModToProfile(addedModItem);
 
-            this.updateTreeViewCallback?.call(this);
+            this.updateTreeView?.call(this);
             await ModUpdateApi.updateMod(addedModItem);
         }
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<boolean> {
         await StatusBar.log(t("Fetch Mod Info"));
+        const modInfoResp = await ModioApi.getModInfoByLink(url);
+        if (modInfoResp === undefined) {
+            return false;
+        }
 
         const mods = await StorageAPI.getMods();
         const profiles = await StorageAPI.getProfiles();
 
-        const resp = await ModioApi.getModInfoByLink(url);
-        if (resp === undefined) {
-            return false;
-        }
-
-        const modItem = new ModListItem(resp);
-        const subModList = this.ActiveProfile.getModList(this.ModList);
-        if (subModList.getByModId(modItem.modId)) {
+        if (await profiles.checkModExits(modInfoResp.name)) {
             message.warning(`${t("Mod Already Exists")} ${modItem.nameId}`);
             return true;
         }
 
         const addedModItem = await mods.addMod(modItem);
-        this.ActiveProfile.addMod(addedModItem.id, groupId);
-        this.updateTreeViewCallback?.call(this);
+        await profiles.addMod(addedModItem, groupId);
         await ModUpdateApi.updateMod(addedModItem);
 
         if (resp.dependencies) {
             await this.addModDependencies(subModList, resp.id, groupId);
         }
 
-        await emit("tree-view-count-label-update");
+        HomeViewModel.updateTreeView();
+        HomeViewModel.updateTreeViewCountLabel();
+
         return true;
     }
 
@@ -117,9 +110,9 @@ export class HomeViewModel {
         }
         this.ActiveProfile.addMod(addedModItem.id, groupId);
 
-        this.updateTreeViewCallback?.call(this);
+        HomeViewModel.updateTreeView();
+        HomeViewModel.updateTreeViewCountLabel();
 
-        await emit("tree-view-count-label-update");
         return true;
     }
 
@@ -154,38 +147,43 @@ export class HomeViewModel {
 
     public async removeMod(id: number): Promise<void> {
         this.ActiveProfile.removeMod(id);
-        this.updateTreeViewCallback?.call(this);
+
+        HomeViewModel.updateTreeView();
+        HomeViewModel.updateTreeViewCountLabel();
+
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
-        let modItem = this.ModList.get(id);
-        if (modItem) {
-            modItem.displayName = name;
-        }
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.setDisplayName(id, name);
 
-        this.updateTreeViewCallback?.call(this);
+        HomeViewModel.updateTreeView();
     }
 
-    public async setModEnabled(id: number, enable: boolean): Promise<void> {
+    public async setModEnabled(modId: number, enable: boolean): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
-        await profiles.setModEnabled(id, enable);
+        await profiles.setModEnabled(modId, enable);
+
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.setModUsedVersion(id, version);
-        // this.updateTreeViewCallback?.call(this);
+
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
-        this.ActiveProfile.setGroupName(id, name);
-        this.updateTreeViewCallback?.call(this);
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.setGroupName(id, name);
+
+        HomeViewModel.updateTreeView();
     }
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
-        this.ActiveProfile.addGroup(groupName, parentGroupId);
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.addGroup(groupName, parentGroupId);
 
-        this.updateTreeViewCallback?.call(this);
+        HomeViewModel.updateTreeView();
     }
 
     public async removeGroup(groupId: number): Promise<void> {
@@ -194,14 +192,13 @@ export class HomeViewModel {
             return;
         }
 
-        this.ActiveProfile.removeGroup(groupId);
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.removeGroup(groupId);
 
-        this.updateTreeViewCallback?.call(this);
+        HomeViewModel.updateTreeView();
+        HomeViewModel.updateTreeViewCountLabel();
     }
 
-    public async updateUI() {
-        await emit("home-page-update-tree-view");
-    }
 
     public static async getInstance() {
         if (HomeViewModel.instance) {

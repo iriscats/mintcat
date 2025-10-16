@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/sqlite-proxy";
+import {drizzle} from "drizzle-orm/sqlite-proxy";
 import Database from "@tauri-apps/plugin-sql";
 
 
@@ -20,18 +20,17 @@ export async function getDb() {
         params: any[],
         method: "run" | "all" | "values" | "get",
     ) => {
+        //console.log(sql, params, method);
+
         if (method === "run") {
             await db.execute(sql, params);
-            return { rows: [] };
+            return {rows: []};
         }
 
         const rows = (await db.select(sql, params)) as any[];
+        //console.log(rows);
 
-        if (method === "values") {
-            return { rows: rows.map((row) => Object.values(row)) };
-        }
-
-        return { rows };
+        return {rows: rows.map((row) => Object.values(row))};
     };
 
     return drizzle(callback);

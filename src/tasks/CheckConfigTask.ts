@@ -6,7 +6,7 @@ import {ConfigDataType} from "@/storage/DataType.ts";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
 import {emit} from "@tauri-apps/api/event";
 import {ITask} from "@/tasks/ITask.ts";
-import {ConfigManageDialogViewModel} from "@/dialogs/ConfigManageDialog.tsx";
+import {ConfigManageDialogViewModel} from "@/dialogs/ConfigManageDialog";
 
 
 class CheckConfigTask implements ITask {

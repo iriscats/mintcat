@@ -33,16 +33,16 @@ export class AppViewModel extends ILock {
         const settings = await StorageAPI.getSettings();
         try {
             const cachePath = await settings.getCachePath();
-            if (cachePath === "" ||
-                !await exists(cachePath)) {
+            console.log(cachePath)
+            if (cachePath === "" || !await exists(cachePath)) {
                 await settings.setCachePath(await appCacheDir());
             }
             const configPath = await settings.getConfigPath();
-            if (configPath === "" ||
-                !await exists(configPath)) {
+            if (configPath === "" || !await exists(configPath)) {
                 await settings.setConfigPath(await appConfigDir());
             }
         } catch (err) {
+            console.warn(err);
             message.error(t("No Permission To Access the Config Folder"));
         }
     }
@@ -55,18 +55,39 @@ export class AppViewModel extends ILock {
 
     public async loadUserLanguages() {
         const settings = await StorageAPI.getSettings();
-        const language = await settings.getLanguage();
-        if (language !== "") {
-            localStorage.setItem('lang', language);
-            await i18n.changeLanguage(language)
+        let language = await settings.getLanguage();
+        if (language === "") {
+            language = await DeviceApi.getLanguage();
         }
+        localStorage.setItem('lang', language);
+        await i18n.changeLanguage(language);
+        await settings.setLanguage(language);
     }
 
     public async loadUserGuiTheme() {
         const settings = await StorageAPI.getSettings();
-        const guiTheme = await settings.getGuiTheme();
-        if (guiTheme !== "") {
-            await emit("theme-change", guiTheme);
+        let guiTheme = await settings.getGuiTheme();
+        if (guiTheme === "") {
+            guiTheme = "Light";
+            await settings.setGuiTheme(guiTheme);
+        }
+        await emit("theme-change", guiTheme);
+    }
+
+    public async loadUserInfo() {
+        const user = await StorageAPI.getUsers();
+        const activeUser = await user.getActiveUser();
+        if (activeUser) {
+            await emit("user-info-load-success", activeUser);
+        }
+    }
+
+    public async loadGameInfo() {
+        const game = await StorageAPI.getGames();
+        const activeGame = await game.getActiveGame();
+        console.log("activeGame", activeGame);
+        if (activeGame) {
+            await emit("game-info-load-success", activeGame);
         }
     }
 
@@ -74,6 +95,8 @@ export class AppViewModel extends ILock {
 
         await this.loadUserLanguages();
         await this.loadUserGuiTheme();
+        await this.loadUserInfo();
+        await this.loadGameInfo();
         await this.checkAppPath();
         await this.checkOauth();
         await IntegrateApi.checkGamePath();

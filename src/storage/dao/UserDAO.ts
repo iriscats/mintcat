@@ -252,9 +252,9 @@ export class UserDAO {
     }
 
     /**
-     * 获取默认用户（ID为1的用户）
+     * 获取当前用户
      */
-    public  async getDefaultUser(): Promise<UserData | null> {
+    public  async getActiveUser(): Promise<UserData | null> {
         try {
             return await this.getUserById(1);
         } catch (error) {

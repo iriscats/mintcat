@@ -1,6 +1,7 @@
 import {profiles, profileFolders, profileMods} from '@/storage/db/Schema';
 import {eq, and, desc, asc, like} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
+import {StorageAPI} from "@/storage";
 
 /**
  * 配置文件数据访问层
@@ -10,12 +11,9 @@ import {getDb} from "@/storage/db/Client.ts";
 export interface ProfileData {
     id?: number;
     name: string;
-    displayName: string;
     gameId: number;
     userId: number;
     isActive?: boolean;
-    description?: string;
-    lastUsedAt?: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -76,6 +74,7 @@ export class ProfileDAO {
         }
     }
 
+
     /**
      * 根据ID获取配置文件
      */
@@ -107,11 +106,45 @@ export class ProfileDAO {
     }
 
     /**
-     * 获取活跃的配置文件
+     * 获取活跃的配置文件（自动获取当前活跃用户和游戏）
      */
-    public async getActiveProfile(userId: number, gameId: number): Promise<ProfileData | null> {
+    public async getActiveProfile(): Promise<ProfileData | null> {
         try {
             const db = await getDb();
+
+            // 获取当前活跃的用户和游戏
+            const games = await StorageAPI.getGames();
+            const users = await StorageAPI.getUsers();
+
+            const activeGame = await games.getActiveGame();
+            const activeUser = await users.getActiveUser();
+
+            if (!activeGame || !activeUser) {
+                console.warn('无法获取活跃的游戏或用户');
+                return null;
+            }
+
+            const result = await db.select().from(profiles)
+                .where(and(
+                    eq(profiles.userId, activeUser.id!),
+                    eq(profiles.gameId, activeGame.id!),
+                    eq(profiles.isActive, true)
+                ))
+                .limit(1);
+            return result.length > 0 ? this.mapToProfileData(result[0]) : null;
+        } catch (error) {
+            console.error('获取活跃配置文件失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 获取活跃的配置文件（指定用户和游戏）
+     */
+    public async getActiveProfileByUserAndGame(userId: number, gameId: number): Promise<ProfileData | null> {
+        try {
+            const db = await getDb();
+
             const result = await db.select().from(profiles)
                 .where(and(
                     eq(profiles.userId, userId),
@@ -134,12 +167,9 @@ export class ProfileDAO {
             const db = await getDb();
             const result = await db.insert(profiles).values({
                 name: profileData.name,
-                displayName: profileData.displayName,
                 gameId: profileData.gameId,
                 userId: profileData.userId,
                 isActive: profileData.isActive ?? false,
-                description: profileData.description || "",
-                lastUsedAt: profileData.lastUsedAt || new Date(),
             }).returning();
 
             const newProfile = result.length > 0 ? this.mapToProfileData(result[0]) : null;
@@ -165,12 +195,9 @@ export class ProfileDAO {
             const updateData: any = {};
 
             if (profileData.name !== undefined) updateData.name = profileData.name;
-            if (profileData.displayName !== undefined) updateData.displayName = profileData.displayName;
             if (profileData.gameId !== undefined) updateData.gameId = profileData.gameId;
             if (profileData.userId !== undefined) updateData.userId = profileData.userId;
             if (profileData.isActive !== undefined) updateData.isActive = profileData.isActive;
-            if (profileData.description !== undefined) updateData.description = profileData.description;
-            if (profileData.lastUsedAt !== undefined) updateData.lastUsedAt = profileData.lastUsedAt;
 
             updateData.updatedAt = new Date();
 
@@ -326,6 +353,12 @@ export class ProfileDAO {
      * =============================
      */
 
+    public async checkModExits(modData) {
+
+
+        return false;
+    }
+
     /**
      * 获取配置文件的所有模组关联
      */
@@ -371,7 +404,7 @@ export class ProfileDAO {
         try {
             const db = await getDb();
             await db.update(profileMods)
-                .set({ isEnabled: enabled })
+                .set({isEnabled: enabled})
                 .where(and(
                     eq(profileMods.profileId, profileId),
                     eq(profileMods.modId, modId)
@@ -559,6 +592,7 @@ export class ProfileDAO {
         }
     }
 
+
     /**
      * =============================
      * 私有映射方法
@@ -569,12 +603,9 @@ export class ProfileDAO {
         return {
             id: record.id,
             name: record.name,
-            displayName: record.displayName,
             gameId: record.gameId,
             userId: record.userId,
             isActive: record.isActive,
-            description: record.description,
-            lastUsedAt: record.lastUsedAt,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
         };

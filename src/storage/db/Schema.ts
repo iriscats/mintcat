@@ -28,7 +28,6 @@ export const games = sqliteTable("games", {
     name: text("name").notNull(), // 游戏名称
     displayName: text("display_name").notNull(), // 游戏显示名称
     installPath: text("install_path").notNull().default(""), // 游戏安装路径
-    version: text("version").notNull().default(""), // 游戏版本
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true), // 是否启用
     createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
     updatedAt: integer("updated_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
@@ -219,4 +218,6 @@ export const settings = sqliteTable("settings", {
     value: text("value").notNull().default(""), // 设置值
     createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
     updatedAt: integer("updated_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-});
+}, (table) => ({
+    nameUnique: uniqueIndex("settings_name_unique").on(table.name),
+}));

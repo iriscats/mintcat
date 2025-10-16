@@ -80,8 +80,8 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     }
 
     const getData = async () => {
-        const configs = await getExistingConfigList();
-        setDataSource(configs);
+        // const configs = await getExistingConfigList();
+        // setDataSource(configs);
     }
 
     listen("config-manage-dialog-open", async () => {

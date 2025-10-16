@@ -1,7 +1,5 @@
 import React, {useEffect} from "react";
 import {StorageAPI} from "@/storage";
-import * as console from "node:console";
-
 
 const TestPage = () => {
 

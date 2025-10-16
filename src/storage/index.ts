@@ -57,8 +57,6 @@ export class StorageAPI {
     }
 
     public static async getInstance(): Promise<StorageAPI> {
-        console.log('获取 StorageAPI 实例...');
-
         if (this.instance) {
             return this.instance;
         }
@@ -68,19 +66,9 @@ export class StorageAPI {
     }
 
     public async initDB() {
-        console.log('初始化数据库...');
-
-        // 首先初始化数据库
         const dbInitialized = await DatabaseInitializer.initializeDatabase();
         if (!dbInitialized) {
             message.error(t("Database initialization failed"));
-            return;
-        }
-
-        // 检查数据库连接
-        const dbConnected = await DatabaseInitializer.checkDatabaseConnection();
-        if (!dbConnected) {
-            message.error(t("Database connection failed"));
             return;
         }
     }

@@ -15,7 +15,7 @@ import {AppViewModel} from "@/vm/AppViewModel.ts";
 
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";
-import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog.tsx";
+import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 import TestPage from "@/pages/TestPage.tsx";
 
 const {

@@ -25,7 +25,6 @@ export class MigrationUtils {
             name: 'drg',
             displayName: 'Deep Rock Galactic',
             installPath: '',
-            version: '',
             isActive: true
         });
 

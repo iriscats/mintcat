@@ -16,12 +16,9 @@ export class IntegrateApi extends ILock {
 
 
     public static async checkGamePath(drgPakPath: string = undefined): Promise<boolean> {
-        const settings = await StorageAPI.getSettings();
-        settings
-
-
+        const gameDAO = await StorageAPI.getGames();
         if (drgPakPath === undefined) {
-            drgPakPath = storageAPI.settings;
+            drgPakPath = (await gameDAO.getActiveGame())?.installPath;
         }
 
         try {
