@@ -125,6 +125,7 @@ fn find_array_property_named<'a>(
     }
     None
 }
+#[allow(dead_code)]
 fn find_struct_property_named<'a>(
     export: &'a mut unreal_asset::exports::normal_export::NormalExport,
     name: &'a str,
@@ -501,6 +502,7 @@ pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
@@ -523,6 +525,7 @@ pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
     let itm_tab_modding = get_import(
         asset,

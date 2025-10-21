@@ -1,9 +1,8 @@
-use std::process::Command;
-use std::fs;
-
+#[allow(dead_code)]
 fn kill_steam() {
     #[cfg(windows)]
     std::thread::spawn(move || {
+        use std::process::Command;
         loop {
             // 添加进程存在性检查
             let output = Command::new("tasklist")
@@ -27,7 +26,7 @@ fn kill_steam() {
 }
 
 #[tauri::command]
-pub fn check_steam_game(exe_name: String) -> bool {
+pub fn check_steam_game(_exe_name: String) -> bool {
     return false;
     #[cfg(windows)]
     {

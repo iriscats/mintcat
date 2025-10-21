@@ -410,6 +410,7 @@ impl PakIntegrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn apply_escape_menu_patch(&mut self) -> Result<(), Box<dyn Error>> {
         let mut asset = self.deferred_assets[ESCAPE_MENU_PATH].parse()?;
         game_pak_patch::patch_modding_tab(&mut asset)?;
@@ -417,6 +418,7 @@ impl PakIntegrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn apply_modding_tab_patch(&mut self) -> Result<(), Box<dyn Error>> {
         let mut asset = self.deferred_assets[MODDING_TAB_PATH].parse()?;
         game_pak_patch::patch_modding_tab_item(&mut asset)?;
@@ -424,6 +426,7 @@ impl PakIntegrator {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn apply_server_list_entry_patch(&mut self) -> Result<(), Box<dyn Error>> {
         let mut asset = self.deferred_assets[SERVER_LIST_ENTRY_PATH].parse()?;
         game_pak_patch::patch_server_list_entry(&mut asset)?;

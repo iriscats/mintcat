@@ -78,6 +78,7 @@ impl DRGInstallation {
             .join("FSD-WindowsNoEditor.pak")
     }
 
+    #[allow(dead_code)]
     pub fn modio_directory(&self) -> Option<PathBuf> {
         #[cfg(target_os = "windows")]
         {
