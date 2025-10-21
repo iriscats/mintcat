@@ -1,58 +1,68 @@
-import { GameDAO } from '@/storage/dao/GameDAO';
-import { ModDAO } from '@/storage/dao/ModDAO';
-import { ProfileDAO } from '@/storage/dao/ProfileDAO';
-import { UserDAO } from '@/storage/dao/UserDAO';
-import { OAuthDAO } from '@/storage/dao/OAuthDAO';
-import { SettingDAO } from '@/storage/dao/SettingDAO';
-import { MigrationUtils } from './MigrationUtils';
-import { ConfigDataType } from '@/storage/DataType';
-import { exists, readTextFile } from '@tauri-apps/plugin-fs';
-import { path } from '@tauri-apps/api';
-import { configDir } from '@tauri-apps/api/path';
+import {GameDAO} from '@/storage/dao/GameDAO';
+import {ModDAO} from '@/storage/dao/ModDAO';
+import {ProfileDAO} from '@/storage/dao/ProfileDAO';
+import {UserDAO} from '@/storage/dao/UserDAO';
+import {OAuthDAO} from '@/storage/dao/OAuthDAO';
+import {SettingDAO} from '@/storage/dao/SettingDAO';
+import {MigrationUtils} from './MigrationUtils';
+import {ConfigDataType} from '@/storage/DataType';
+import {exists, readTextFile, stat} from '@tauri-apps/plugin-fs';
+import {path} from '@tauri-apps/api';
+import {configDir} from '@tauri-apps/api/path';
+
+
 
 /**
- * v0.4.0 配置迁移类
- * 将v0.4.0 JSON配置迁移到SQLite数据库
- * v0.4.0使用与v0.5.0相同的目录结构，但使用JSON文件存储
+ * v0.2.0 配置迁移类
+ * 将v0.2.0 JSON配置迁移到SQLite数据库
+ * v0.2.0使用与v0.5.0相同的目录结构，但使用JSON文件存储
  */
 export class ConfigMigrationV4 {
 
-    private version = '0.4.0';
+    private version = '0.2.0';
     private gameId: number = 0;
     private userId: number = 0;
 
+    // DAO实例
+    private modDAO = new ModDAO();
+    private profileDAO = new ProfileDAO();
+    private settingDAO = new SettingDAO();
+    private oauthDAO = new OAuthDAO();
+    private gameDAO = new GameDAO();
+    private userDAO = new UserDAO();
+
     /**
-     * 检查是否存在v0.4.0配置
+     * 检查是否存在v0.2.0配置
      */
     public async checkConfig(): Promise<ConfigDataType> {
         try {
             const configPath = await path.join(await configDir(), 'com.mint.cat');
-            
+
             if (await exists(configPath)) {
-                const { stat } = await import('@tauri-apps/plugin-fs');
+
                 const dirInfo = await stat(configPath);
-                
-                // 检查必要的配置文件是否存在
+
+                // 检查必要的配置文件是否存在 - 修正为实际文件名
                 const settingsFile = await path.join(configPath, 'settings.json');
-                const modListFile = await path.join(configPath, 'mod_list.json');
-                const profileFile = await path.join(configPath, 'profile_list.json');
-                
+                const modListFile = await path.join(configPath, 'mods.json');
+                const profileFile = await path.join(configPath, 'profile.json');
+
                 const hasSettings = await exists(settingsFile);
                 const hasModList = await exists(modListFile);
                 const hasProfile = await exists(profileFile);
-                
+
                 if (hasSettings || hasModList || hasProfile) {
                     return {
-                        version: this.version,
+                        version: '0.4.0',
                         saveTime: new Date(dirInfo.mtime).toISOString(),
                         path: configPath
                     };
                 }
             }
-            
+
             return undefined;
         } catch (error) {
-            console.error('检查v0.4.0配置失败:', error);
+            console.error('检查v0.2.0配置失败:', error);
             return undefined;
         }
     }
@@ -65,8 +75,30 @@ export class ConfigMigrationV4 {
             console.log(`开始迁移v${this.version}配置...`);
 
             // 创建默认游戏和用户
-            this.gameId = await MigrationUtils.createDefaultGame();
-            this.userId = await MigrationUtils.createDefaultUser();
+            const existingGame = await this.gameDAO.getGameByName('drg');
+            if (existingGame) {
+                this.gameId = existingGame.id!;
+            } else {
+                const game = await this.gameDAO.createGame({
+                    name: 'drg',
+                    displayName: 'Deep Rock Galactic',
+                    installPath: '',
+                    isActive: true
+                });
+                this.gameId = game!.id!;
+            }
+
+            const users = await this.userDAO.getAllUsers();
+            if (users.length > 0) {
+                this.userId = users[0].id!;
+            } else {
+                const user = await this.userDAO.createUser({
+                    username: 'default_user',
+                    email: '',
+                    avatarUrl: ''
+                });
+                this.userId = user!.id!;
+            }
 
             // 迁移设置
             await this.migrateSettings();
@@ -91,29 +123,41 @@ export class ConfigMigrationV4 {
     private async migrateSettings(): Promise<void> {
         try {
             const settingsPath = await path.join(await configDir(), 'com.mint.cat', 'settings.json');
-            
             if (await exists(settingsPath)) {
                 const settingsContent = await readTextFile(settingsPath);
-                const oldSettings = MigrationUtils.safeParseJson(settingsContent, {});
+                const settings = MigrationUtils.safeParseJson(settingsContent, {});
 
-                const settings = MigrationUtils.convertOldSettingsData(oldSettings);
-                await SettingDAO.createSettings(settings);
+                // 逐个设置配置项
+                if (settings.guiTheme !== undefined)
+                    await this.settingDAO.setValue('guiTheme', settings.guiTheme);
+                if (settings.language !== undefined)
+                    await this.settingDAO.setValue('language', settings.language);
+                if (settings.cachePath !== undefined)
+                    await this.settingDAO.setValue('cachePath', settings.cachePath);
+                if (settings.configPath !== undefined)
+                    await this.settingDAO.setValue('configPath', settings.configPath);
+                if (settings.ue4ss !== undefined)
+                    await this.settingDAO.setValue('ue4ssVersion', settings.ue4ss);
 
                 // 迁移OAuth信息
-                if (oldSettings.modioOAuth) {
-                    await OAuthDAO.createOAuth({
+                if (settings.modio_oauth) {
+                    await this.oauthDAO.createOAuth({
                         uid: this.userId,
-                        oauth: oldSettings.modioOAuth,
+                        oauth: settings.modio_oauth,
                         platform: 'mod.io'
                     });
                 }
-            } else {
-                // 创建默认设置
-                await SettingDAO.createSettings(MigrationUtils.convertOldSettingsData({}));
+
+                // 迁移 DRG 安装路径
+                if(settings.drg_pak_path){
+                    await this.gameDAO.updateGame(this.gameId, {
+                        installPath: settings.drg_pak_path
+                    });
+                }
+
             }
         } catch (error) {
             console.error('迁移设置数据失败:', error);
-            await SettingDAO.createSettings(MigrationUtils.convertOldSettingsData({}));
         }
     }
 
@@ -122,11 +166,11 @@ export class ConfigMigrationV4 {
      */
     private async migrateModList(): Promise<void> {
         try {
-            const modListPath = await path.join(await configDir(), 'com.mint.cat', 'mod_list.json');
-            
+            const modListPath = await path.join(await configDir(), 'com.mint.cat', 'mods.json');
+
             if (await exists(modListPath)) {
                 const modListContent = await readTextFile(modListPath);
-                const oldModList = MigrationUtils.safeParseJson(modListContent, { mods: [] });
+                const oldModList = MigrationUtils.safeParseJson(modListContent, {mods: []});
 
                 const mods = oldModList.mods || [];
                 for (const oldMod of mods) {
@@ -143,23 +187,23 @@ export class ConfigMigrationV4 {
      */
     private async migrateSingleMod(oldMod: any): Promise<void> {
         try {
-            // 提取模组数据
-            const platformId = oldMod.platformId || oldMod.id || 0;
-            const nameId = oldMod.nameId || oldMod.name || `mod_${platformId}`;
-            const displayName = oldMod.displayName || oldMod.name || nameId;
+            // 提取模组数据 - 修正字段映射
+            const platformId = oldMod.mod_id || oldMod.id || 0;
+            const nameId = oldMod.name_id || `mod_${platformId}`;
+            const displayName = oldMod.display_name || nameId;
             const url = oldMod.url || '';
-            const sourceType = url.startsWith('http') ? 'Modio' : 'Local';
+            const sourceType = oldMod.source_type || (url.startsWith('http') ? 'Modio' : 'Local');
             const tags = oldMod.tags || [];
-            const approvalStatus = oldMod.approvalStatus || 'Sandbox';
+            const approvalStatus = oldMod.approval || 'Sandbox';
 
             // 检查模组是否已存在
-            const existingMod = await ModDAO.getModByPlatformId(platformId);
+            const existingMod = await this.modDAO.getModById(platformId);
             if (existingMod) {
                 return; // 跳过已存在的模组
             }
 
             // 创建模组
-            const mod = await ModDAO.createMod({
+            const mod = await this.modDAO.createMod({
                 platformId,
                 gameId: this.gameId,
                 nameId,
@@ -168,37 +212,37 @@ export class ConfigMigrationV4 {
                 sourceType,
                 tags,
                 approvalStatus,
-                dependModId: oldMod.dependModId || 0
+                dependModId: 0  // v0.2.0没有依赖关系
             });
 
             if (!mod) return;
 
             const modId = mod.modId!;
 
-            // 设置版本信息
-            await ModDAO.upsertModVersion({
+            // 设置版本信息 - 修正字段名
+            await this.modDAO.upsertModVersion({
                 modId,
-                currentVersion: oldMod.currentVersion || '-',
-                availableVersions: oldMod.availableVersions || []
+                currentVersion: oldMod.file_version || oldMod.used_version || '-',
+                availableVersions: oldMod.versions || []
             });
 
-            // 设置下载信息
-            await ModDAO.upsertModDownload({
+            // 设置下载信息 - 修正字段名
+            await this.modDAO.upsertModDownload({
                 modId,
-                downloadUrl: oldMod.downloadUrl || '',
-                cachePath: oldMod.cachePath || '',
-                fileSize: oldMod.fileSize || 0,
-                downloadProgress: oldMod.downloadProgress || 100,
-                downloadStatus: oldMod.downloadStatus || 'completed'
+                downloadUrl: oldMod.download_url || '',
+                cachePath: oldMod.cache_path || '',
+                fileSize: oldMod.file_size || 0,
+                downloadProgress: oldMod.download_progress || 100,
+                downloadStatus: 'completed'
             });
 
-            // 设置状态信息
-            await ModDAO.upsertModStatus({
+            // 设置状态信息 - 修正字段名
+            await this.modDAO.upsertModStatus({
                 modId,
-                lastUpdateDate: oldMod.lastUpdateDate || 0,
-                onlineUpdateDate: oldMod.onlineUpdateDate || 0,
-                isOnlineAvailable: oldMod.isOnlineAvailable !== false,
-                isLocalNotFound: oldMod.isLocalNotFound || false
+                lastUpdateDate: oldMod.last_update_date || 0,
+                onlineUpdateDate: oldMod.online_update_date || 0,
+                isOnlineAvailable: oldMod.online_available !== false,
+                isLocalNotFound: oldMod.local_no_found || false
             });
 
         } catch (error) {
@@ -213,7 +257,7 @@ export class ConfigMigrationV4 {
         try {
             // 迁移配置文件列表
             await this.migrateProfileList();
-            
+
             // 迁移配置文件详细信息
             await this.migrateProfileDetails();
         } catch (error) {
@@ -227,14 +271,17 @@ export class ConfigMigrationV4 {
      */
     private async migrateProfileList(): Promise<void> {
         try {
-            const profileListPath = await path.join(await configDir(), 'com.mint.cat', 'profile_list.json');
-            
+            const profileListPath = await path.join(await configDir(), 'com.mint.cat', 'profile.json');
+
             if (await exists(profileListPath)) {
                 const profileListContent = await readTextFile(profileListPath);
-                const oldProfileList = MigrationUtils.safeParseJson(profileListContent, { profiles: [], activeProfile: 'default' });
+                const oldProfileList = MigrationUtils.safeParseJson(profileListContent, {
+                    profiles: [],
+                    active_profile: 'default'
+                });
 
                 const profiles = oldProfileList.profiles || [];
-                const activeProfile = oldProfileList.activeProfile || 'default';
+                const activeProfile = oldProfileList.active_profile || 'default';
 
                 for (const profileName of profiles) {
                     await this.createProfileFromName(profileName, profileName === activeProfile);
@@ -254,8 +301,8 @@ export class ConfigMigrationV4 {
     private async migrateProfileDetails(): Promise<void> {
         try {
             // 获取所有配置文件
-            const profiles = await ProfileDAO.getProfilesByUserAndGame(this.userId, this.gameId);
-            
+            const profiles = await this.profileDAO.getProfilesByUserAndGame(this.userId, this.gameId);
+
             for (const profile of profiles) {
                 await this.migrateSingleProfileDetails(profile);
             }
@@ -270,9 +317,9 @@ export class ConfigMigrationV4 {
     private async migrateSingleProfileDetails(profile: any): Promise<void> {
         try {
             const profileDetailPath = await path.join(
-                await configDir(), 
-                'com.mint.cat', 
-                `profile_${profile.name}.json`
+                await configDir(),
+                'com.mint.cat',
+                `profile_${profile.displayName}.json`
             );
 
             if (!await exists(profileDetailPath)) {
@@ -282,61 +329,49 @@ export class ConfigMigrationV4 {
             }
 
             const detailContent = await readTextFile(profileDetailPath);
-            const oldDetail = MigrationUtils.safeParseJson(detailContent, { 
+            const oldDetail = MigrationUtils.safeParseJson(detailContent, {
                 name: profile.name,
-                folders: [], 
-                mods: [],
-                LocalFolder: {},
-                ModioFolder: {}
+                root: { children: [] }
             });
 
-            // 创建文件夹结构
+            // 处理树形结构
             const folderMap = new Map();
-            
-            // 处理标准文件夹
-            for (const oldFolder of oldDetail.folders || []) {
-                const folder = await ProfileDAO.createFolder({
-                    profileId: profile.id!,
-                    name: oldFolder.name || 'Folder',
-                    folderType: oldFolder.folderType || oldFolder.type || 'custom',
-                    sortOrder: oldFolder.sortOrder || 0,
-                    isExpanded: oldFolder.isExpanded !== false,
-                    parentFolderId: oldFolder.parentFolderId || oldFolder.parentId || null
-                });
-                
-                if (folder) {
-                    folderMap.set(oldFolder.id || oldFolder.name, folder.id);
+            let sortOrder = 0;
+
+            // 递归处理文件夹和模组
+            const processTreeNode = async (node: any, parentFolderId: number | null = null): Promise<void> => {
+                if (node.type === 'folder') {
+                    // 创建文件夹
+                    const folder = await this.profileDAO.createFolder({
+                        profileId: profile.id!,
+                        name: node.name || 'Folder',
+                        folderType: this.getFolderTypeFromName(node.name),
+                        sortOrder: sortOrder++,
+                        isExpanded: true,
+                        parentFolderId
+                    });
+
+                    if (folder) {
+                        folderMap.set(node.id, folder.id);
+
+                        // 处理子节点
+                        if (node.children && Array.isArray(node.children)) {
+                            for (const child of node.children) {
+                                await processTreeNode(child, folder.id);
+                            }
+                        }
+                    }
+                } else if (node.type === 'item') {
+                    // 这是模组，添加到当前文件夹
+                    await this.addModToProfileById(node.id, profile.id!, parentFolderId, sortOrder++);
                 }
-            }
+            };
 
-            // 处理特殊文件夹（LocalFolder, ModioFolder）
-            if (oldDetail.LocalFolder) {
-                const localFolder = await ProfileDAO.createFolder({
-                    profileId: profile.id!,
-                    name: 'Local',
-                    folderType: 'local',
-                    sortOrder: 1,
-                    isExpanded: true
-                });
-                folderMap.set('Local', localFolder!.id);
-            }
-
-            if (oldDetail.ModioFolder) {
-                const modioFolder = await ProfileDAO.createFolder({
-                    profileId: profile.id!,
-                    name: 'mod.io',
-                    folderType: 'modio',
-                    sortOrder: 0,
-                    isExpanded: true
-                });
-                folderMap.set('mod.io', modioFolder!.id);
-            }
-
-            // 添加模组到配置文件
-            const mods = oldDetail.mods || [];
-            for (let i = 0; i < mods.length; i++) {
-                const oldMod = mods[i];
-                await this.addModToProfile(oldMod, profile.id!, folderMap, i);
+            // 处理根节点的子节点
+            if (oldDetail.root && oldDetail.root.children && Array.isArray(oldDetail.root.children)) {
+                for (const child of oldDetail.root.children) {
+                    await processTreeNode(child);
+                }
             }
 
         } catch (error) {
@@ -345,81 +380,70 @@ export class ConfigMigrationV4 {
     }
 
     /**
-     * 添加模组到配置文件
+     * 根据文件夹名称确定文件夹类型
      */
-    private async addModToProfile(oldMod: any, profileId: number, folderMap: Map<string, number>, sortOrder: number): Promise<void> {
+    private getFolderTypeFromName(name: string): string {
+        if (name === 'mod.io') return 'modio';
+        if (name === '本地') return 'local';
+        return 'custom';
+    }
+
+    /**
+     * 通过ID添加模组到配置文件
+     */
+    private async addModToProfileById(modId: number, profileId: number, parentFolderId: number | null, sortOrder: number): Promise<void> {
         try {
-            // 查找对应的模组
-            let mod = null;
-            
-            if (oldMod.id) {
-                mod = await ModDAO.getModById(oldMod.id);
-            } else if (oldMod.platformId) {
-                mod = await ModDAO.getModByPlatformId(oldMod.platformId);
-            } else if (oldMod.url) {
-                const allMods = await ModDAO.getAllMods();
-                mod = allMods.find(m => m.url === oldMod.url);
-            }
+            // 通过platform ID查找模组
+            const mod = await this.modDAO.getModById(modId);
 
             if (!mod) {
-                // 如果找不到模组，创建新的
-                const platformId = oldMod.platformId || oldMod.id || 0;
-                const nameId = oldMod.nameId || oldMod.name || `mod_${platformId}`;
-                const displayName = oldMod.displayName || oldMod.name || nameId;
-                const url = oldMod.url || '';
-
-                const modData = MigrationUtils.convertOldModData({
-                    ...oldMod,
-                    platformId,
-                    nameId,
-                    displayName,
-                    url
-                }, this.gameId);
-
-                mod = await ModDAO.createMod(modData);
+                console.warn(`模组ID ${modId} 未找到，跳过`);
+                return;
             }
 
-            if (!mod) return;
+            // 获取模组版本信息
+            const modVersion = await this.modDAO.getModVersion(mod.modId!);
 
-            // 添加到配置文件
-            let parentFolderId = null;
-            
-            // 确定文件夹
-            if (oldMod.folderId) {
-                parentFolderId = folderMap.get(oldMod.folderId);
-            } else if (oldMod.sourceType === 'Local') {
-                parentFolderId = folderMap.get('Local');
-            } else if (oldMod.sourceType === 'Modio') {
-                parentFolderId = folderMap.get('mod.io');
+            // 从原mods.json中查找启用状态
+            const modListPath = await path.join(await configDir(), 'com.mint.cat', 'mods.json');
+            let isEnabled = true; // 默认启用
+
+            if (await exists(modListPath)) {
+                const modListContent = await readTextFile(modListPath);
+                const oldModList = MigrationUtils.safeParseJson(modListContent, {mods: []});
+
+                const originalMod = oldModList.mods?.find((m: any) => (m.id === modId || m.mod_id === modId));
+                if (originalMod) {
+                    isEnabled = originalMod.enabled !== false;
+                }
             }
 
-            await ProfileDAO.addModToProfile({
+            await this.profileDAO.addModToProfile({
                 profileId,
                 modId: mod.modId!,
                 parentFolderId,
                 sortOrder,
-                isEnabled: oldMod.enabled !== false,
-                usedVersion: oldMod.usedVersion || '-'
+                isEnabled,
+                usedVersion: modVersion?.currentVersion || '-'
             });
 
         } catch (error) {
-            console.error('添加模组到配置文件失败:', error);
+            console.error(`添加模组到配置文件失败: ${modId}`, error);
         }
     }
 
+    
     /**
      * 从名称创建配置文件
      */
     private async createProfileFromName(name: string, isActive: boolean): Promise<void> {
         try {
-            await ProfileDAO.createProfile({
+            await this.profileDAO.createProfile({
                 name: name.toLowerCase().replace(/\s+/g, '_'),
-                displayName: name,
+                displayName: name, // 使用原始名称作为显示名称
                 gameId: this.gameId,
                 userId: this.userId,
-                isActive,
-                description: `Migrated from v${this.version}`,
-                lastUsedAt: new Date()
+                isActive
             });
         } catch (error) {
             console.error('创建配置文件失败:', error);
@@ -431,7 +455,7 @@ export class ConfigMigrationV4 {
      */
     private async createDefaultFolders(profileId: number): Promise<void> {
         try {
-            await ProfileDAO.createFolder({
+            await this.profileDAO.createFolder({
                 profileId,
                 name: 'mod.io',
                 folderType: 'modio',
@@ -439,7 +463,7 @@ export class ConfigMigrationV4 {
                 isExpanded: true
             });
 
-            await ProfileDAO.createFolder({
+            await this.profileDAO.createFolder({
                 profileId,
                 name: 'Local',
                 folderType: 'local',
@@ -456,14 +480,12 @@ export class ConfigMigrationV4 {
      */
     private async createDefaultProfile(): Promise<void> {
         try {
-            await ProfileDAO.createProfile({
+            await this.profileDAO.createProfile({
                 name: 'default',
                 displayName: 'Default',
                 gameId: this.gameId,
                 userId: this.userId,
-                isActive: true,
-                description: 'Default profile created during migration',
-                lastUsedAt: new Date()
+                isActive: true
             });
         } catch (error) {
             console.error('创建默认配置文件失败:', error);

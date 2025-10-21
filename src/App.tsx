@@ -78,7 +78,7 @@ class App extends React.Component<any, any> {
         console.log('App 组件加载...');
 
         AppViewModel.getInstance().then(() => {
-            this.pageConfigs.push({key: MenuPage.Home, component: <TestPage/>});
+            this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
             this.forceUpdate();
         });
 

@@ -23,7 +23,7 @@ export class IntegrateApi extends ILock {
 
         try {
             if (!await exists(drgPakPath)) {
-                //TODO: auto found
+                //TODO: auto found or open game path dialog
                 message.error(t("Game Path Not Found"));
                 return false;
             }

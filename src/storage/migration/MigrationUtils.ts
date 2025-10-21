@@ -13,43 +13,6 @@ const { configDir } = await import('@tauri-apps/api/path');
 export class MigrationUtils {
 
     /**
-     * 创建默认游戏记录
-     */
-    public static async createDefaultGame(): Promise<number> {
-        const existingGame = await GameDAO.getGameByName('drg');
-        if (existingGame) {
-            return existingGame.id!;
-        }
-
-        const game = await GameDAO.createGame({
-            name: 'drg',
-            displayName: 'Deep Rock Galactic',
-            installPath: '',
-            isActive: true
-        });
-
-        return game!.id!;
-    }
-
-    /**
-     * 创建默认用户记录
-     */
-    public static async createDefaultUser(): Promise<number> {
-        const users = await UserDAO.getAllUsers();
-        if (users.length > 0) {
-            return users[0].id!;
-        }
-
-        const user = await UserDAO.createUser({
-            username: 'default_user',
-            email: '',
-            avatarUrl: ''
-        });
-
-        return user!.id!;
-    }
-
-    /**
      * 转换旧版JSON模组数据到新格式
      */
     public static convertOldModData(oldMod: any, gameId: number) {
@@ -108,21 +71,6 @@ export class MigrationUtils {
         };
     }
 
-    /**
-     * 转换旧版JSON设置数据到新格式
-     */
-    public static convertOldSettingsData(oldSettings: any) {
-        return {
-            version: oldSettings.version || '0.5.0',
-            guiTheme: oldSettings.guiTheme || oldSettings.gui_theme || 'Light',
-            language: oldSettings.language || 'en',
-            cachePath: oldSettings.cachePath || oldSettings.cache_path || '',
-            configPath: oldSettings.configPath || oldSettings.config_path || '',
-            ue4ssVersion: oldSettings.ue4ssVersion || oldSettings.ue4ss || 'UE4SS-Lite',
-            autoCheckUpdates: oldSettings.autoCheckUpdates !== false,
-            downloadParallelCount: oldSettings.downloadParallelCount || 3
-        };
-    }
 
     /**
      * 转换旧版JSON文件夹结构到新格式

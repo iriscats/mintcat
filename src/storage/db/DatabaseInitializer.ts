@@ -57,15 +57,11 @@ export class DatabaseInitializer {
      */
     public static async setDefaultValues() {
         const db = await getDb();
-        await db.run(sql`INSERT
-        OR IGNORE INTO settings (name, value)
-                          VALUES ('cache_path', ''),
-                                 ('config_path', '')`);
 
         // 插入默认游戏 - 深岩银河
         await db.run(sql`INSERT
         OR IGNORE INTO games (name, display_name, install_path, is_active)
-                          VALUES ('drg', 'Deep Rock Galactic', '', true)`);
+                          VALUES ('drg', 'Deep Rock Galactic', '/Users/bytedance/Project/DRG', true)`);
 
         // 插入默认用户
         await db.run(sql`INSERT

@@ -11,9 +11,12 @@ import {StorageAPI} from "@/storage";
 export interface ProfileData {
     id?: number;
     name: string;
+    displayName?: string;
     gameId: number;
     userId: number;
     isActive?: boolean;
+    description?: string;
+    lastUsedAt?: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -167,6 +170,7 @@ export class ProfileDAO {
             const db = await getDb();
             const result = await db.insert(profiles).values({
                 name: profileData.name,
+                displayName: profileData.name.charAt(0).toUpperCase() + profileData.name.slice(1), // 首字母大写作为显示名称
                 gameId: profileData.gameId,
                 userId: profileData.userId,
                 isActive: profileData.isActive ?? false,
@@ -603,9 +607,12 @@ export class ProfileDAO {
         return {
             id: record.id,
             name: record.name,
+            displayName: record.displayName,
             gameId: record.gameId,
             userId: record.userId,
             isActive: record.isActive,
+            description: record.description,
+            lastUsedAt: record.lastUsedAt,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
         };

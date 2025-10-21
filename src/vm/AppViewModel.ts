@@ -9,6 +9,7 @@ import {ILock} from "@/utils/ILock.ts";
 import {emit} from "@tauri-apps/api/event";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
 import {StorageAPI} from "@/storage";
+import {ConfigMigrationV4} from "@/storage/migration";
 
 export class AppViewModel extends ILock {
 
@@ -100,6 +101,11 @@ export class AppViewModel extends ILock {
         await this.checkAppPath();
         await this.checkOauth();
         await IntegrateApi.checkGamePath();
+
+        const configMigrationV4 = new ConfigMigrationV4();
+        if (await configMigrationV4.checkConfig()) {
+            await configMigrationV4.migrate();
+        }
 
         await emit("title-bar-load-avatar");
         if (await DeviceApi.isFirstRun()) {

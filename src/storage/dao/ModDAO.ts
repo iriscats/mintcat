@@ -94,36 +94,6 @@ export class ModDAO {
     }
 
     /**
-     * 根据平台ID获取模组
-     */
-    public async getModByPlatformId(platformId: number): Promise<ModData | null> {
-        try {
-            const db = await getDb();
-            const result = await db.select().from(mods).where(eq(mods.platformId, platformId)).limit(1);
-            return result.length > 0 ? this.mapToModData(result[0]) : null;
-        } catch (error) {
-            console.error(`根据平台ID获取模组失败 [平台ID: ${platformId}]:`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * 根据游戏ID获取模组
-     */
-    public async getModsByGameId(gameId: number): Promise<ModData[]> {
-        try {
-            const db = await getDb();
-            const result = await db.select().from(mods)
-                .where(eq(mods.gameId, gameId))
-                .orderBy(desc(mods.createdAt));
-            return result.map(this.mapToModData);
-        } catch (error) {
-            console.error(`根据游戏ID获取模组失败 [游戏ID: ${gameId}]:`, error);
-            throw error;
-        }
-    }
-
-    /**
      * 搜索模组
      */
     public async searchMods(keyword: string, gameId?: number, sourceType?: string, limit: number = 50): Promise<ModData[]> {
