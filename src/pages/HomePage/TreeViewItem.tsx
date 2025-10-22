@@ -8,6 +8,7 @@ import {ModListItem, ModSourceType} from "@/vm/config/ModList.ts";
 import {HomeViewModel} from "@/vm/HomeViewModel.ts";
 import {ModioApi} from "@/apis/modio";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {ModFile} from "@/apis/modio/ModInfo.ts";
 
 const {useToken} = theme;
 
@@ -297,7 +298,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
                                 <Tag color="green" title={t("Approved")} style={{float: "right"}}>A</Tag>) :
                             nodeData.approval === "Sandbox" ? (
                                     <Tag color="orange" title={t("Sandbox")} style={{float: "right"}}>S</Tag>) :
-                                (<></>)}
+                                null}
 
                     {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
                         <Tag color="red" style={{float: "right"}}>{nodeData.versions[0]}</Tag>)}

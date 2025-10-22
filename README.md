@@ -63,7 +63,7 @@ Windows:
 C:\Users\Alice\AppData\Local\com.mint.cat\logs
 
 macOS:
-~/Library/Logs/com.mint.cat
+~/Library/Logs/com.mint.cat/mintcat.log
 ```
 
 ## Cache Path

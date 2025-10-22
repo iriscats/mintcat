@@ -94,6 +94,21 @@ export class ModDAO {
     }
 
     /**
+     * 根据URL获取模组
+     */
+    public async getModByUrl(url: string): Promise<ModData | null> {
+        try {
+            if (!url) return null;
+            const db = await getDb();
+            const result = await db.select().from(mods).where(eq(mods.url, url)).limit(1);
+            return result.length > 0 ? this.mapToModData(result[0]) : null;
+        } catch (error) {
+            console.error(`获取模组失败 [URL: ${url}]:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * 搜索模组
      */
     public async searchMods(keyword: string, gameId?: number, sourceType?: string, limit: number = 50): Promise<ModData[]> {

@@ -6,6 +6,15 @@ import {emit} from "@tauri-apps/api/event";
 
 export class ProfileViewModel {
 
+    private static instance: ProfileViewModel;
+
+    // Core data properties
+    private profileList: ProfileList = new ProfileList();
+    private profileTreeList: ProfileTree[] = [];
+
+    // Callback functions
+    public updateTreeViewCallback?: () => void;
+
     public static updateSelectCallback() {
         emit("home-page-update-profile-select").then();
     }
@@ -19,7 +28,14 @@ export class ProfileViewModel {
     }
 
     public get ActiveProfile(): ProfileTree {
-        return this.profileTreeList.find(p => p.name === this.profileList.activeProfile)!;
+        const profile = this.profileTreeList.find(p => p.name === this.profileList.activeProfile);
+        if (!profile) {
+            // Create a new profile if it doesn't exist
+            const newProfile = new ProfileTree(this.profileList.activeProfile);
+            this.profileTreeList.push(newProfile);
+            return newProfile;
+        }
+        return profile;
     }
 
     public set ActiveProfile(activeProfile: string) {
@@ -76,6 +92,13 @@ export class ProfileViewModel {
         this.updateSelectCallback?.call(this);
     }
 
+    public static async getInstance(): Promise<ProfileViewModel> {
+        if (ProfileViewModel.instance) {
+            return ProfileViewModel.instance;
+        }
+        ProfileViewModel.instance = new ProfileViewModel();
+        return ProfileViewModel.instance;
+    }
 
 }
 

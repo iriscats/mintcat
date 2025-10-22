@@ -20,13 +20,32 @@ pnpm tauri dev
 
 ### Build and Release
 ```bash
-pnpm build
-./release.sh  # Publish the application
+pnpm build              # Build frontend assets
+pnpm tauri build        # Build Tauri application for production
+./release.sh            # Publish the application
+```
+
+#### Cross-Platform Builds
+```bash
+pnpm tauri build --target x86_64-pc-windows-gnu    # Windows build
+pnpm tauri build --target x86_64-unknown-linux-gnu  # Linux build
+```
+
+#### Signed Builds (Production)
+```bash
+TAURI_SIGNING_PRIVATE_KEY="/path/to/key" pnpm tauri build
 ```
 
 ### Database Operations
 ```bash
 pnpm gen-sql  # Generate SQLite migrations using Drizzle Kit
+```
+
+### Testing
+```bash
+cargo test             # Run Rust backend tests
+cargo test -- --nocapture  # Run tests with stdout output
+pnpm preview           # Preview built application
 ```
 
 ## Architecture Overview
@@ -61,10 +80,18 @@ pnpm gen-sql  # Generate SQLite migrations using Drizzle Kit
 
 ### Key Patterns
 - **Singleton ViewModels**: Centralized state management with locking mechanism (`ILock`)
+- **Lock Mechanism**: `ILock` abstract class ensures sequential operation execution in ViewModels
 - **Event-driven**: Tauri events for component communication
 - **DAO Pattern**: Data access objects for database operations
 - **Migration System**: Versioned config migrations in `src/storage/migration/`
 - **Task Queue**: Asynchronous task management for downloads, updates, installations
+
+### Task System Architecture
+- **ITask Interface**: Defines asynchronous operations with progress tracking
+- **Task Queue Plugin**: Custom Tauri plugin for managing long-running operations
+- **Progress Reporting**: Real-time progress updates for UI feedback
+- **Error Handling**: Comprehensive error propagation and retry mechanisms
+- **Task Types**: Download, install, update, and game launch operations
 
 ## Key Files to Understand
 
@@ -82,10 +109,51 @@ pnpm gen-sql  # Generate SQLite migrations using Drizzle Kit
 - `src/storage/`: Database layer with DAOs and migrations
 - `src/storage/index.ts`: Main storage API entry point
 
+## Configuration Files
+
+### TypeScript Configuration (`tsconfig.json`)
+- **React Compiler**: Experimental support with decorators
+- **Decorators**: Enabled (`experimentalDecorators: true`, `emitDecoratorMetadata: true`)
+- **Strict Mode**: Disabled (`strict: false`)
+- **Path Aliases**: `@/*` mapped to `src/*`
+- **Target**: ESNext for modern JavaScript features
+
+### Vite Configuration (`vite.config.ts`)
+- **Port**: Fixed at 1420 for Tauri integration
+- **React Compiler**: Enabled with babel-plugin-react-compiler
+- **Target**: ESNext for top-level await support
+- **Build Output**: Optimized for Tauri frontend
+
+### Tauri Configuration (`src-tauri/Cargo.toml`)
+- **Nightly Toolchain**: Required for some dependencies
+- **Cross-compilation**: Windows and Linux targets supported
+- **Custom Plugins**:
+  - `tauri-plugin-task-queue` (from GitHub source)
+  - `tauri-plugin-sentry` for error tracking
+- **Game Integration**: `repak`, `unreal_asset`, `steamlocate`
+
+## Code Quality Tools
+
+**Current Status**: No automated code quality tools are configured
+- No ESLint setup for JavaScript/TypeScript
+- No Prettier formatter
+- No TypeScript testing framework (Jest/Vitest)
+- No Rust formatting tools configured in CI
+
+**Recommended additions**:
+```bash
+pnpm add -D eslint prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin
+pnpm add -D vitest @testing-library/react @testing-library/jest-dom
+```
+
 ## Important Development Notes
 
-- The app uses Tauri 2.0 with extensive plugin ecosystem
-- SQLite database follows 3NF design principles with proper indexing
-- Mod integration supports both local files and mod.io downloads
-- Configuration profiles allow users to manage multiple mod setups
-- Task queue system handles long-running operations asynchronously
+- **React Compiler**: Experimental feature enabled, may cause build warnings
+- **Decorators Pattern**: Used extensively in ViewModels for reactive programming
+- **Cross-compilation**: Requires proper Rust toolchain setup for Windows/Linux builds
+- **SQLite Database**: Follows 3NF design principles with proper indexing
+- **Mod Integration**: Supports both local files and mod.io downloads with Unreal Engine pak processing
+- **Configuration Profiles**: Users can manage multiple mod setups independently
+- **Task Queue System**: Handles long-running operations asynchronously with progress tracking
+- **Error Tracking**: Sentry integration for production error monitoring
+- **Auto-updater**: Configured with GitHub releases for seamless updates

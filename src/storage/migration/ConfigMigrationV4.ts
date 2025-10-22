@@ -196,10 +196,18 @@ export class ConfigMigrationV4 {
             const tags = oldMod.tags || [];
             const approvalStatus = oldMod.approval || 'Sandbox';
 
-            // 检查模组是否已存在
+            // 检查模组是否已存在 - 通过URL和platform ID双重检查
             const existingMod = await this.modDAO.getModById(platformId);
             if (existingMod) {
+                console.log(`模组 ${displayName} (ID: ${platformId}) 已存在，跳过迁移`);
                 return; // 跳过已存在的模组
+            }
+
+            // 检查URL重复
+            const existingModByUrl = await this.modDAO.getModByUrl(url);
+            if (existingModByUrl) {
+                console.log(`模组 ${displayName} URL已存在，跳过迁移`);
+                return; // 跳过URL重复的模组
             }
 
             // 创建模组
@@ -215,7 +223,10 @@ export class ConfigMigrationV4 {
                 dependModId: 0  // v0.2.0没有依赖关系
             });
 
-            if (!mod) return;
+            if (!mod) {
+                console.error(`创建模组失败: ${displayName}`);
+                return;
+            }
 
             const modId = mod.modId!;
 
@@ -246,7 +257,10 @@ export class ConfigMigrationV4 {
             });
 
         } catch (error) {
-            console.error('迁移单个模组失败:', error);
+            console.error('迁移单个模组失败:', {
+                modData: oldMod,
+                error: error.message || error
+            });
         }
     }
 
@@ -438,6 +452,13 @@ export class ConfigMigrationV4 {
      */
     private async createProfileFromName(name: string, isActive: boolean): Promise<void> {
         try {
+            // 检查配置文件是否已存在
+            const existingProfile = await this.profileDAO.getProfileByName(name.toLowerCase().replace(/\s+/g, '_'), this.gameId, this.userId);
+            if (existingProfile) {
+                console.log(`配置文件 ${name} 已存在，跳过创建`);
+                return;
+            }
+
             await this.profileDAO.createProfile({
                 name: name.toLowerCase().replace(/\s+/g, '_'),
                 displayName: name, // 使用原始名称作为显示名称

@@ -27,7 +27,6 @@ export class ModUpdateApi {
 
         await this.updateModFile(newItem);
 
-        await Index.saveModListData(viewModel.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
     }
 
@@ -41,7 +40,6 @@ export class ModUpdateApi {
         });
         viewModel.ModList.update(mod, newItem);
 
-        await Index.saveModListData(viewModel.ModList.toJson());
         await emit("status-bar-log", t("Update Finish"));
     }
 
@@ -70,7 +68,7 @@ export class ModUpdateApi {
 
             const viewModel = await HomeViewModel.getInstance();
             viewModel.ModList.update(modItem, modItem);
-            await Index.saveModListData(viewModel.ModList.toJson());
+
             await emit("mod-treeview-update" + modItem.id, modItem);
         }
         return true;
@@ -87,7 +85,7 @@ export class ModUpdateApi {
                     modItem.lastUpdateDate = mtime;
                     const viewModel = await HomeViewModel.getInstance();
                     viewModel.ModList.update(modItem, modItem, true);
-                    await Index.saveModListData(viewModel.ModList.toJson());
+
                     return true;
                 }
             }
@@ -107,7 +105,6 @@ export class ModUpdateApi {
                 await this.checkLocalModCache(item);
             }
         }
-        await Index.saveModListData(viewModel.ModList.toJson());
 
         ModUpdateApi.loading = false;
         await emit("home-page-loading", false);
@@ -163,8 +160,6 @@ export class ModUpdateApi {
         }
 
         viewModel.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
-        await Index.saveProfileDetails(viewModel.ActiveProfileName, viewModel.ActiveProfile);
-        await Index.saveModListData(viewModel.ModList.toJson());
         await viewModel.updateUI();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));

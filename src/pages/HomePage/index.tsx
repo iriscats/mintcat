@@ -37,6 +37,7 @@ import {emit, listen} from "@tauri-apps/api/event";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
+import {StorageAPI} from "@/storage";
 
 
 interface ModListPageState {
@@ -102,7 +103,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     await vm.removeMod(modItem.id);
                 }
             }
-            await Index.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
             await this.updateTreeView();
         }
     }
@@ -120,8 +120,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 modItem.enabled = isEnable;
             }
         }
-        await Index.saveModListData(vm.ModList.toJson());
-        await Index.saveProfileDetails(vm.ActiveProfileName, vm.ActiveProfile);
         await this.updateTreeView();
     }
 

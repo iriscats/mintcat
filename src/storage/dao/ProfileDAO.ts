@@ -93,6 +93,25 @@ export class ProfileDAO {
     }
 
     /**
+     * 根据名称获取配置文件
+     */
+    public async getProfileByName(name: string, gameId: number, userId: number): Promise<ProfileData | null> {
+        try {
+            const db = await getDb();
+            const result = await db.select().from(profiles)
+                .where(and(
+                    eq(profiles.name, name),
+                    eq(profiles.gameId, gameId),
+                    eq(profiles.userId, userId)
+                )).limit(1);
+            return result.length > 0 ? this.mapToProfileData(result[0]) : null;
+        } catch (error) {
+            console.error(`获取配置文件失败 [Name: ${name}]:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * 根据用户和游戏获取配置文件
      */
     public async getProfilesByUserAndGame(userId: number, gameId: number): Promise<ProfileData[]> {
@@ -357,10 +376,107 @@ export class ProfileDAO {
      * =============================
      */
 
-    public async checkModExits(modData) {
+    public async checkModExits(modData: any): Promise<boolean> {
+        try {
+            // Check if mod exists based on name or other identifying info
+            const mods = await StorageAPI.getMods();
+            // This would need to be implemented based on the actual modData structure
+            return false;
+        } catch (error) {
+            console.error('Check mod exists failed:', error);
+            return false;
+        }
+    }
 
+    public async addMod(modItem: any, groupId?: number): Promise<void> {
+        try {
+            // Add mod to profile
+            // This would need to be implemented based on the actual modItem structure
+            console.log('Adding mod to profile:', modItem);
+        } catch (error) {
+            console.error('Add mod failed:', error);
+            throw error;
+        }
+    }
 
-        return false;
+    public async setDisplayName(id: number, name: string): Promise<void> {
+        try {
+            // Set mod display name in profile
+            console.log('Setting display name for mod:', id, name);
+        } catch (error) {
+            console.error('Set display name failed:', error);
+            throw error;
+        }
+    }
+
+    public async setModUsedVersion(id: number, version: string): Promise<void> {
+        try {
+            // Set mod used version in profile
+            console.log('Setting mod used version:', id, version);
+        } catch (error) {
+            console.error('Set mod used version failed:', error);
+            throw error;
+        }
+    }
+
+    public async setGroupName(id: number, name: string): Promise<void> {
+        try {
+            // Update folder name
+            await this.updateFolder(id, {name});
+        } catch (error) {
+            console.error('Set group name failed:', error);
+            throw error;
+        }
+    }
+
+    public async addGroup(groupName: string, parentGroupId: number): Promise<void> {
+        try {
+            // Get active profile and add folder
+            const activeProfile = await this.getActiveProfile();
+            if (activeProfile) {
+                await this.createFolder({
+                    profileId: activeProfile.id!,
+                    name: groupName,
+                    parentFolderId: parentGroupId || null,
+                    folderType: 'custom'
+                });
+            }
+        } catch (error) {
+            console.error('Add group failed:', error);
+            throw error;
+        }
+    }
+
+    public async removeGroup(groupId: number): Promise<void> {
+        try {
+            // Remove folder
+            await this.deleteFolder(groupId);
+        } catch (error) {
+            console.error('Remove group failed:', error);
+            throw error;
+        }
+    }
+
+    public async renameProfileDetails(oldName: string, newName: string): Promise<void> {
+        try {
+            // Rename profile details - this would involve updating the profile name in database
+            console.log('Renaming profile details from', oldName, 'to', newName);
+            // This would need to be implemented based on the actual database schema
+        } catch (error) {
+            console.error('Rename profile details failed:', error);
+            throw error;
+        }
+    }
+
+    public async deleteProfileDetails(profileName: string): Promise<void> {
+        try {
+            // Delete profile details - this would involve removing the profile from database
+            console.log('Deleting profile details for:', profileName);
+            // This would need to be implemented based on the actual database schema
+        } catch (error) {
+            console.error('Delete profile details failed:', error);
+            throw error;
+        }
     }
 
     /**

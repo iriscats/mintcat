@@ -64,7 +64,7 @@ class App extends React.Component<any, any> {
                 break;
             case MenuPage.Chat: {
                 this.pageConfigs.push({
-                    key: MenuPage.Setting,
+                    key: MenuPage.Chat,
                     component: <ChatPage/>
                 });
             }

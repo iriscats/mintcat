@@ -16,10 +16,46 @@ import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 
-
 export class HomeViewModel {
 
     private static instance: HomeViewModel;
+
+    // Core data properties
+    private profileList: ProfileList = new ProfileList();
+    private profileTreeList: ProfileTree[] = [];
+    private modList: ModList = new ModList();
+
+    // Callback functions
+    public updateTreeView?: () => void;
+
+    // Getters for accessing profile and mod data
+    public get ProfileList(): string[] {
+        return this.profileList.Profiles;
+    }
+
+    public get ActiveProfileName(): string {
+        return this.profileList.activeProfile;
+    }
+
+    public get ActiveProfile(): ProfileTree {
+        const profile = this.profileTreeList.find(p => p.name === this.profileList.activeProfile);
+        if (!profile) {
+            // Create a new profile if it doesn't exist
+            const newProfile = new ProfileTree(this.profileList.activeProfile);
+            this.profileTreeList.push(newProfile);
+            return newProfile;
+        }
+        return profile;
+    }
+
+    public set ActiveProfile(activeProfile: string) {
+        this.profileList.activeProfile = activeProfile;
+        this.updateTreeView?.call(this);
+    }
+
+    public get ModList(): ModList {
+        return this.modList;
+    }
 
     public static updateTreeView() {
         emit("home-page-update-tree-view").then();
@@ -63,17 +99,18 @@ export class HomeViewModel {
         const mods = await StorageAPI.getMods();
         const profiles = await StorageAPI.getProfiles();
 
-        if (await profiles.checkModExits(modInfoResp.name)) {
-            message.warning(`${t("Mod Already Exists")} ${modItem.nameId}`);
+        if (await profiles.checkModExits(modInfoResp)) {
+            message.warning(`${t("Mod Already Exists")} ${modInfoResp.nameId}`);
             return true;
         }
 
+        const modItem = new ModListItem(modInfoResp);
         const addedModItem = await mods.addMod(modItem);
-        await profiles.addMod(addedModItem, groupId);
+        await profiles.addModToProfile(addedModItem);
         await ModUpdateApi.updateMod(addedModItem);
 
-        if (resp.dependencies) {
-            await this.addModDependencies(subModList, resp.id, groupId);
+        if (modInfoResp.dependencies) {
+            await this.addModDependencies(this.modList, modInfoResp.id, groupId);
         }
 
         HomeViewModel.updateTreeView();
@@ -199,12 +236,41 @@ export class HomeViewModel {
         HomeViewModel.updateTreeViewCountLabel();
     }
 
+    public async setProfileData(root: ProfileTreeItem): Promise<void> {
+        try {
+            this.ActiveProfile.root = root;
+            // Save the updated profile tree
+            console.log('Profile data updated');
+        } catch (error) {
+            console.error('Failed to set profile data:', error);
+        }
+    }
+
+
+      public async initializeData(): Promise<void> {
+        try {
+            // Initialize profile list with default data if needed
+            if (this.profileList.Profiles.length === 0) {
+                this.profileList.add("default");
+                this.profileTreeList.push(new ProfileTree("default"));
+            }
+
+            // Ensure the active profile exists in the tree list
+            const activeProfileTree = this.profileTreeList.find(p => p.name === this.profileList.activeProfile);
+            if (!activeProfileTree) {
+                this.profileTreeList.push(new ProfileTree(this.profileList.activeProfile));
+            }
+        } catch (error) {
+            console.error('Failed to initialize HomeViewModel data:', error);
+        }
+    }
 
     public static async getInstance() {
         if (HomeViewModel.instance) {
             return HomeViewModel.instance;
         }
         HomeViewModel.instance = new HomeViewModel();
+        await HomeViewModel.instance.initializeData();
         return HomeViewModel.instance;
     }
 

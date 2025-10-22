@@ -12,9 +12,8 @@ import {AddModDialog} from "@/dialogs/AddModDialog";
 import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
 import i18n from "@/locales/i18n"
 import packageJson from '../package.json';
-
-//import {InitLog} from "./apis/LogApi.ts";
-//InitLog();
+import {InitLog} from "./apis/LogApi.ts";
+InitLog();
 
 
 const Main = () => {
