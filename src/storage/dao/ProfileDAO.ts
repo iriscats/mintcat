@@ -186,6 +186,13 @@ export class ProfileDAO {
      */
     public async createProfile(profileData: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileData | null> {
         try {
+            // 检查配置文件是否已存在
+            const existingProfile = await this.getProfileByName(profileData.name, profileData.gameId, profileData.userId);
+            if (existingProfile) {
+                console.log(`配置文件 ${profileData.name} 已存在，返回现有配置文件`);
+                return existingProfile;
+            }
+
             const db = await getDb();
             const result = await db.insert(profiles).values({
                 name: profileData.name,
@@ -625,15 +632,9 @@ export class ProfileDAO {
             const defaultFolders = [
                 {
                     profileId,
-                    name: 'mod.io',
-                    folderType: 'modio',
-                    sortOrder: 0
-                },
-                {
-                    profileId,
                     name: 'Local',
                     folderType: 'local',
-                    sortOrder: 1
+                    sortOrder: 0
                 }
             ];
 

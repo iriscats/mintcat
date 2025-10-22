@@ -218,7 +218,7 @@ export class ConfigMigrationV4 {
                 sourceType,
                 tags,
                 approvalStatus,
-                dependModId: 0  // v0.2.0没有依赖关系
+                dependModId: 0  // T
             });
 
             if (!mod) {
@@ -274,7 +274,6 @@ export class ConfigMigrationV4 {
             await this.migrateProfileDetails();
         } catch (error) {
             console.error('迁移配置文件失败:', error);
-            await this.createDefaultProfile();
         }
     }
 
@@ -284,7 +283,6 @@ export class ConfigMigrationV4 {
     private async migrateProfileList(): Promise<void> {
         try {
             const profileListPath = await path.join(await configDir(), 'com.mint.cat', 'profile.json');
-
             if (await exists(profileListPath)) {
                 const profileListContent = await readTextFile(profileListPath);
                 const oldProfileList = MigrationUtils.safeParseJson(profileListContent, {
@@ -298,9 +296,6 @@ export class ConfigMigrationV4 {
                 for (const profileName of profiles) {
                     await this.createProfileFromName(profileName, profileName === activeProfile);
                 }
-            } else {
-                // 创建默认配置文件
-                await this.createDefaultProfile();
             }
         } catch (error) {
             console.error('迁移配置文件列表失败:', error);
@@ -333,12 +328,6 @@ export class ConfigMigrationV4 {
                 'com.mint.cat',
                 `profile_${profile.displayName}.json`
             );
-
-            if (!await exists(profileDetailPath)) {
-                // 创建默认文件夹结构
-                await this.createDefaultFolders(profile.id!);
-                return;
-            }
 
             const detailContent = await readTextFile(profileDetailPath);
             const oldDetail = MigrationUtils.safeParseJson(detailContent, {
@@ -501,45 +490,4 @@ export class ConfigMigrationV4 {
         }
     }
 
-    /**
-     * 创建默认文件夹
-     */
-    private async createDefaultFolders(profileId: number): Promise<void> {
-        try {
-            await this.profileDAO.createFolder({
-                profileId,
-                name: 'mod.io',
-                folderType: 'modio',
-                sortOrder: 0,
-                isExpanded: true
-            });
-
-            await this.profileDAO.createFolder({
-                profileId,
-                name: 'Local',
-                folderType: 'local',
-                sortOrder: 1,
-                isExpanded: true
-            });
-        } catch (error) {
-            console.error('创建默认文件夹失败:', error);
-        }
-    }
-
-    /**
-     * 创建默认配置文件
-     */
-    private async createDefaultProfile(): Promise<void> {
-        try {
-            await this.profileDAO.createProfile({
-                name: 'default',
-                displayName: 'Default',
-                gameId: this.gameId,
-                userId: this.userId,
-                isActive: true
-            });
-        } catch (error) {
-            console.error('创建默认配置文件失败:', error);
-        }
-    }
 }

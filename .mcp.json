@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "MCP SQLite Server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-sqlite",
+        "/Users/bytedance/Desktop/test.db"
+      ]
+    }
+  }
+}
