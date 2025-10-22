@@ -109,6 +109,41 @@ export class ModDAO {
     }
 
     /**
+     * 根据平台ID获取模组
+     */
+    public async getModByPlatformId(platformId: number): Promise<ModData | null> {
+        try {
+            if (!platformId) return null;
+            const db = await getDb();
+            const result = await db.select().from(mods).where(eq(mods.platformId, platformId)).limit(1);
+            return result.length > 0 ? this.mapToModData(result[0]) : null;
+        } catch (error) {
+            console.error(`获取模组失败 [Platform ID: ${platformId}]:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * 根据平台ID获取模组（兼容旧版本，支持通过原ID或mod_id查找）
+     */
+    public async getModByLegacyId(legacyId: number): Promise<ModData | null> {
+        try {
+            if (!legacyId) return null;
+            const db = await getDb();
+            // 首先尝试通过platformId查找
+            let result = await db.select().from(mods).where(eq(mods.platformId, legacyId)).limit(1);
+            if (result.length > 0) {
+                return this.mapToModData(result[0]);
+            }
+            // 如果没找到，说明这个legacyId可能对应的是其他数据，返回null
+            return null;
+        } catch (error) {
+            console.error(`获取模组失败 [Legacy ID: ${legacyId}]:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * 搜索模组
      */
     public async searchMods(keyword: string, gameId?: number, sourceType?: string, limit: number = 50): Promise<ModData[]> {

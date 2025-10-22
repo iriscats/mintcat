@@ -10,8 +10,6 @@ import {exists, readTextFile, stat} from '@tauri-apps/plugin-fs';
 import {path} from '@tauri-apps/api';
 import {configDir} from '@tauri-apps/api/path';
 
-
-
 /**
  * v0.2.0 配置迁移类
  * 将v0.2.0 JSON配置迁移到SQLite数据库
@@ -62,7 +60,7 @@ export class ConfigMigrationV4 {
 
             return undefined;
         } catch (error) {
-            console.error('检查v0.2.0配置失败:', error);
+            console.error('检查 v0.2.0 配置失败:', error);
             return undefined;
         }
     }
@@ -197,7 +195,7 @@ export class ConfigMigrationV4 {
             const approvalStatus = oldMod.approval || 'Sandbox';
 
             // 检查模组是否已存在 - 通过URL和platform ID双重检查
-            const existingMod = await this.modDAO.getModById(platformId);
+            const existingMod = await this.modDAO.getModByPlatformId(platformId);
             if (existingMod) {
                 console.log(`模组 ${displayName} (ID: ${platformId}) 已存在，跳过迁移`);
                 return; // 跳过已存在的模组
@@ -403,12 +401,44 @@ export class ConfigMigrationV4 {
     }
 
     /**
+     * 通过原始ID查找对应的mod_id
+     */
+    private async findModIdByOriginalId(originalId: number): Promise<number | null> {
+        try {
+            const modListPath = await path.join(await configDir(), 'com.mint.cat', 'mods.json');
+
+            if (!await exists(modListPath)) {
+                return null;
+            }
+
+            const modListContent = await readTextFile(modListPath);
+            const oldModList = MigrationUtils.safeParseJson(modListContent, {mods: []});
+
+            const mods = oldModList.mods || [];
+            const foundMod = mods.find((m: any) => m.id === originalId);
+
+            return foundMod ? foundMod.mod_id : null;
+        } catch (error) {
+            console.error(`查找原始ID ${originalId} 对应的mod_id失败:`, error);
+            return null;
+        }
+    }
+
+    /**
      * 通过ID添加模组到配置文件
      */
     private async addModToProfileById(modId: number, profileId: number, parentFolderId: number | null, sortOrder: number): Promise<void> {
         try {
-            // 通过platform ID查找模组
-            const mod = await this.modDAO.getModById(modId);
+            // 首先尝试通过platform ID查找模组
+            let mod = await this.modDAO.getModByPlatformId(modId);
+
+            // 如果没找到，尝试通过原始mods.json中的id找到对应的mod_id
+            if (!mod) {
+                const originalModId = await this.findModIdByOriginalId(modId);
+                if (originalModId) {
+                    mod = await this.modDAO.getModByPlatformId(originalModId);
+                }
+            }
 
             if (!mod) {
                 console.warn(`模组ID ${modId} 未找到，跳过`);

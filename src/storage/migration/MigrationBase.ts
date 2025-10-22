@@ -3,6 +3,9 @@ import { ConfigMigrationV2 } from './ConfigMigrationV2';
 import { ConfigMigrationV3 } from './ConfigMigrationV3';
 import { ConfigMigrationV4 } from './ConfigMigrationV4';
 import { ConfigDataType } from '@/storage/DataType';
+import { GameDAO } from '@/storage/dao/GameDAO';
+import { UserDAO } from '@/storage/dao/UserDAO';
+import { ModDAO } from '@/storage/dao/ModDAO';
 
 /**
  * 配置迁移工具类
@@ -12,19 +15,50 @@ import { ConfigDataType } from '@/storage/DataType';
 export class MigrationBase {
     
     /**
+     * 检查数据库是否已有数据
+     */
+    public static async hasExistingData(): Promise<boolean> {
+        try {
+            // 检查是否已有游戏、用户或模组数据
+            const gameDAO = new GameDAO();
+            const userDAO = new UserDAO();
+            const modDAO = new ModDAO();
+
+            const [games, users, mods] = await Promise.all([
+                gameDAO.getAllGames(),
+                userDAO.getAllUsers(),
+                modDAO.getAllMods()
+            ]);
+
+            // 如果任何表有数据，则认为不需要迁移
+            return games.length > 0 || users.length > 0 || mods.length > 0;
+        } catch (error) {
+            console.error('检查现有数据失败:', error);
+            // 出错时默认为有数据，避免意外迁移
+            return true;
+        }
+    }
+
+    /**
      * 检查是否需要迁移配置
      */
     public static async needsMigration(): Promise<boolean> {
         try {
+            // 首先检查是否已有数据，如果有数据则不需要迁移
+            if (await this.hasExistingData()) {
+                console.log('数据库已有数据，跳过迁移');
+                return false;
+            }
+
             // 检查是否已有SQLite配置
             const configV5 = new ConfigV5();
             const sqliteConfig = await configV5.checkConfig();
-            
+
             if (sqliteConfig) {
                 // SQLite配置已存在，不需要迁移
                 return false;
             }
-            
+
             // 检查是否有旧版本的配置需要迁移
             const existingConfigs = await this.getExistingConfigList();
             return existingConfigs.length > 0;

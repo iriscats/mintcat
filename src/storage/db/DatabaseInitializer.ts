@@ -58,7 +58,7 @@ export class DatabaseInitializer {
     public static async setDefaultValues() {
         const db = await getDb();
 
-        // 插入默认游戏 - 深岩银河
+        // 插入默认游戏
         await db.run(sql`INSERT
         OR IGNORE INTO games (name, display_name, install_path, is_active)
                           VALUES ('drg', 'Deep Rock Galactic', '/Users/bytedance/Project/DRG', true)`);
