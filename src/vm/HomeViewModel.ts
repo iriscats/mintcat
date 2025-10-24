@@ -531,7 +531,7 @@ export class HomeViewModel {
         modItem.displayName = completeMod.display_name;
         modItem.url = completeMod.url || "";
         modItem.sourceType = completeMod.source_type as ModSourceType || ModSourceType.Unknown;
-        modItem.tags = completeMod.tags ? JSON.parse(completeMod.tags) : [];
+        modItem.tags = completeMod.tags ? completeMod.tags : [];
         modItem.approval = completeMod.approval_status || "Sandbox";
 
         // Version info

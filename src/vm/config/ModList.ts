@@ -1,5 +1,5 @@
-import {ModInfo} from "../modio/ModInfo.ts";
-import {TimeUtils} from "../../utils/TimeUtils.ts";
+import {ModInfo} from "@/apis/modio/ModInfo.ts";
+import {TimeUtils} from "@/utils/TimeUtils.ts";
 
 export const MOD_INVALID_ID = 999999;
 

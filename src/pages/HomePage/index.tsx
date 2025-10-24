@@ -10,9 +10,7 @@ import {
 import {
     CloseCircleOutlined, CloseOutlined, CopyOutlined,
     EditOutlined, FieldTimeOutlined, LoadingOutlined, PauseCircleOutlined, PlayCircleOutlined,
-    PlusCircleOutlined, PlusOutlined, SaveOutlined,
-    SearchOutlined, SortAscendingOutlined,
-    SortDescendingOutlined, SyncOutlined,
+    PlusCircleOutlined, SaveOutlined, SortAscendingOutlined, SortDescendingOutlined, SyncOutlined,
     UnorderedListOutlined
 } from "@ant-design/icons";
 import * as checkbox from "antd/es/checkbox";
@@ -37,7 +35,6 @@ import {emit, listen} from "@tauri-apps/api/event";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
-import {StorageAPI} from "@/storage";
 
 
 interface ModListPageState {
