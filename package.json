@@ -46,7 +46,8 @@
     "babel-plugin-react-compiler": "19.1.0-rc.1",
     "jsdom": "^26.1.0",
     "typescript": "^5.2.2",
-    "vite": "7.1.5",
-    "drizzle-kit": "^0.31.5"
+    "vite": "7.1.12",
+    "drizzle-kit": "^0.31.5",
+    "tauri-plugin-mcp": "file:../tauri-plugin-mcp"
   }
 }

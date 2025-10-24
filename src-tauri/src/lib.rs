@@ -2,6 +2,7 @@ pub mod capability;
 pub mod integrator;
 
 use tauri::{AppHandle, Manager, WindowEvent};
+use tauri_plugin_mcp;
 use tauri_plugin_sentry::{minidump, sentry};
 
 #[tauri::command]
@@ -47,10 +48,19 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_log::Builder::new().level(log::LevelFilter::Info).build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_mcp::init_with_config(
+            tauri_plugin_mcp::PluginConfig::new("MintCat".parse().unwrap())
+                .start_socket_server(true)
+                .tcp("127.0.0.1".parse().unwrap(), 9999),
+        ))
         .invoke_handler(tauri::generate_handler![
             integrator::drg::install_mods,
             integrator::drg::uninstall_mods,

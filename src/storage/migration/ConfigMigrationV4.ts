@@ -218,7 +218,7 @@ export class ConfigMigrationV4 {
                 sourceType,
                 tags,
                 approvalStatus,
-                dependModId: 0  // T
+                dependModId: 0  // TODO: 处理依赖关系，这里存在一个坑，配置中没有依赖关系
             });
 
             if (!mod) {

@@ -59,3 +59,5 @@ unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "pat
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
 
 steamlocate = "2.0.1"
+
+tauri-plugin-mcp = { path = "../../tauri-plugin-mcp" }

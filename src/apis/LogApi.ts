@@ -61,16 +61,16 @@ function setupGlobalErrorHandlers() {
 
     // 重写 window.onerror 以获得更多错误信息
     const originalOnError = window.onerror;
-    window.onerror = (message, source, lineno, colno, error) => {
+    window.onerror = (message: string | Event, source?: string, lineno?: number, colno?: number, err?: Error) => {
         const errorMessage = `Window Error: ${message} at ${source}:${lineno}:${colno}`;
-        console.error('[Window Error]', errorMessage, error);
+        console.error('[Window Error]', errorMessage, err);
         error(errorMessage).catch(e => {
             console.error('Failed to log window error:', e);
         });
 
         // 调用原始的错误处理器（如果存在）
         if (originalOnError) {
-            return originalOnError(message, source, lineno, colno, error);
+            return originalOnError(message, source, lineno, colno, err);
         }
         return false;
     };
