@@ -1,5 +1,5 @@
 import {mods, modVersions, modDownloads, modStatus} from '@/storage/db/Schema';
-import {eq, and, desc, asc, like, inArray} from 'drizzle-orm';
+import {eq, desc} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
 
 /**
@@ -58,6 +58,27 @@ export interface CompleteModData extends ModData {
 }
 
 export class ModDAO {
+
+    /**
+     * =============================
+     * 辅助方法
+     * =============================
+     */
+
+    /**
+     * 解析标签数据
+     */
+    private parseTags(tags: any): string[] {
+        if (Array.isArray(tags)) return tags;
+        if (typeof tags === 'string') {
+            try {
+                return JSON.parse(tags);
+            } catch {
+                return [];
+            }
+        }
+        return [];
+    }
 
     /**
      * =============================
@@ -124,60 +145,6 @@ export class ModDAO {
     }
 
     /**
-     * 根据平台ID获取模组（兼容旧版本，支持通过原ID或mod_id查找）
-     */
-    public async getModByLegacyId(legacyId: number): Promise<ModData | null> {
-        try {
-            if (!legacyId) return null;
-            const db = await getDb();
-            // 首先尝试通过platformId查找
-            let result = await db.select().from(mods).where(eq(mods.platformId, legacyId)).limit(1);
-            if (result.length > 0) {
-                return this.mapToModData(result[0]);
-            }
-            // 如果没找到，说明这个legacyId可能对应的是其他数据，返回null
-            return null;
-        } catch (error) {
-            console.error(`获取模组失败 [Legacy ID: ${legacyId}]:`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * 搜索模组
-     */
-    public async searchMods(keyword: string, gameId?: number, sourceType?: string, limit: number = 50): Promise<ModData[]> {
-        try {
-            const db = await getDb();
-            let query = db.select().from(mods);
-
-            const conditions = [
-                like(mods.displayName, `%${keyword}%`),
-                like(mods.nameId, `%${keyword}%`)
-            ];
-
-            if (gameId) {
-                conditions.push(eq(mods.gameId, gameId));
-            }
-
-            if (sourceType) {
-                conditions.push(eq(mods.sourceType, sourceType));
-            }
-
-            const result = await query
-                .where(and(...conditions))
-                .orderBy(desc(mods.createdAt))
-                .limit(limit);
-
-            return result.map(this.mapToModData);
-        } catch (error) {
-            console.error(`搜索模组失败 [关键词: ${keyword}]:`, error);
-            throw error;
-        }
-    }
-
-
-    /**
      * 添加模组
      */
     public async addMod(modData: ModData): Promise<ModData | null> {
@@ -205,7 +172,7 @@ export class ModDAO {
                 displayName: modData.displayName,
                 url: modData.url || "",
                 sourceType: modData.sourceType || "Unknown",
-                tags: JSON.stringify(modData.tags || []),
+                tags: modData.tags || [],
                 approvalStatus: modData.approvalStatus || "Sandbox",
                 dependModId: modData.dependModId || 0,
             }).returning();
@@ -231,7 +198,7 @@ export class ModDAO {
             if (modData.displayName !== undefined) updateData.displayName = modData.displayName;
             if (modData.url !== undefined) updateData.url = modData.url;
             if (modData.sourceType !== undefined) updateData.sourceType = modData.sourceType;
-            if (modData.tags !== undefined) updateData.tags = JSON.stringify(modData.tags);
+            if (modData.tags !== undefined) updateData.tags = modData.tags;
             if (modData.approvalStatus !== undefined) updateData.approvalStatus = modData.approvalStatus;
             if (modData.dependModId !== undefined) updateData.dependModId = modData.dependModId;
 
@@ -298,7 +265,7 @@ export class ModDAO {
                 await db.update(modVersions)
                     .set({
                         currentVersion: versionData.currentVersion || "-",
-                        availableVersions: JSON.stringify(versionData.availableVersions || []),
+                        availableVersions: versionData.availableVersions || [],
                         updatedAt: new Date(),
                     })
                     .where(eq(modVersions.modId, versionData.modId));
@@ -307,7 +274,7 @@ export class ModDAO {
                 await db.insert(modVersions).values({
                     modId: versionData.modId,
                     currentVersion: versionData.currentVersion || "-",
-                    availableVersions: JSON.stringify(versionData.availableVersions || []),
+                    availableVersions: versionData.availableVersions || [],
                 });
             }
 
@@ -541,20 +508,45 @@ export class ModDAO {
      */
 
     private mapToModData(record: any): ModData {
-        return {
-            modId: record.modId,
-            platformId: record.platformId,
-            gameId: record.gameId,
-            nameId: record.nameId,
-            displayName: record.displayName,
-            url: record.url,
-            sourceType: record.sourceType,
-            tags: typeof record.tags === 'string' ? JSON.parse(record.tags) : record.tags,
-            approvalStatus: record.approvalStatus,
-            dependModId: record.dependModId,
-            createdAt: record.createdAt,
-            updatedAt: record.updatedAt,
-        };
+        try {
+            console.log('Mapping record:', record);
+
+            const modData: ModData = {
+                modId: record.modId,
+                platformId: record.platformId,
+                gameId: record.gameId,
+                nameId: record.nameId,
+                displayName: record.displayName,
+                url: record.url,
+                sourceType: record.sourceType,
+                approvalStatus: record.approvalStatus,
+                dependModId: record.dependModId,
+            };
+
+            // Handle tags field - might be string or already parsed
+            try {
+                modData.tags = typeof record.tags === 'string' ? JSON.parse(record.tags) : record.tags || [];
+            } catch (e) {
+                console.warn('Failed to parse tags for mod:', record.modId, e);
+                modData.tags = [];
+            }
+
+            // Handle timestamp fields
+            try {
+                modData.createdAt = record.createdAt ? new Date(record.createdAt * 1000) : new Date();
+                modData.updatedAt = record.updatedAt ? new Date(record.updatedAt * 1000) : new Date();
+            } catch (e) {
+                console.warn('Failed to parse timestamps for mod:', record.modId, e);
+                modData.createdAt = new Date();
+                modData.updatedAt = new Date();
+            }
+
+            console.log('Successfully mapped modData:', modData);
+            return modData;
+        } catch (error) {
+            console.error('Error mapping record to ModData:', error, record);
+            throw error;
+        }
     }
 
     private mapToModVersionData(record: any): ModVersionData {
