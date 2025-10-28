@@ -321,8 +321,6 @@ export class HomeViewModel {
     public async setProfileData(root: ProfileTreeItem): Promise<void> {
         try {
             this.ActiveProfile.root = root;
-            // Save the updated profile tree
-            console.log('Profile data updated');
         } catch (error) {
             console.error('Failed to set profile data:', error);
         }
@@ -331,8 +329,15 @@ export class HomeViewModel {
 
       public async initializeData(): Promise<void> {
         try {
-            // Load mods from database into memory
+            // Load mods from database into memory - CRITICAL: This must be done first
             await this.loadModsFromDatabase();
+
+            if (this.modList.Mods.length === 0) {
+                console.warn('No mods loaded. Tree view will be empty.');
+            }
+
+            // Load profile data from database - this depends on mods being loaded first
+            await this.loadProfilesFromDatabase();
 
             // Initialize profile list with default data if needed
             if (this.profileList.Profiles.length === 0) {
@@ -346,11 +351,30 @@ export class HomeViewModel {
                 this.profileTreeList.push(new ProfileTree(this.profileList.activeProfile));
             }
 
-            // Load profile data from database
-            await this.loadProfilesFromDatabase();
+            // Update UI components
+            HomeViewModel.updateTreeView();
+            HomeViewModel.updateTreeViewCountLabel();
+
+            // Notify frontend components that profile data is ready
+            emit("home-page-update-profile-select").then();
 
         } catch (error) {
-            console.error('Failed to initialize HomeViewModel data:', error);
+            console.error('HomeViewModel initialization failed:', error);
+
+            // Attempt to recover with minimal setup
+            try {
+                // Ensure we have at least one profile
+                if (this.profileList.Profiles.length === 0) {
+                    this.profileList.add("default");
+                    this.profileTreeList.push(new ProfileTree("default"));
+                }
+
+                HomeViewModel.updateTreeView();
+                HomeViewModel.updateTreeViewCountLabel();
+
+            } catch (recoveryError) {
+                console.error('Recovery failed:', recoveryError);
+            }
         }
     }
 
@@ -359,31 +383,38 @@ export class HomeViewModel {
      */
     private async loadModsFromDatabase(): Promise<void> {
         try {
-            console.log('Starting to load mods from database...');
-            const mods = await StorageAPI.getMods();
-            const allMods = await mods.getAllMods();
+            const modsApi = await StorageAPI.getMods();
+            const allMods = await modsApi.getAllMods();
 
-            console.log(`Loading ${allMods.length} mods from database`);
+            if (allMods.length === 0) {
+                console.warn('No mods found in database. This might indicate a database issue.');
+                return;
+            }
 
             // Get complete mod data including versions, downloads, and status
             const completeMods = await Promise.all(
                 allMods.map(async (modData) => {
-                    console.log('Processing mod:', modData);
-                    const completeMod = await mods.getCompleteModData(modData.modId!);
-                    return this.convertCompleteModDataToModListItem(completeMod);
+                    try {
+                        const completeMod = await modsApi.getCompleteModData(modData.modId!);
+                        return this.convertCompleteModDataToModListItem(completeMod);
+                    } catch (modError) {
+                        console.error(`Error processing mod ${modData.displayName}:`, modError);
+                        return null;
+                    }
                 })
             );
 
+            let loadedCount = 0;
             for (const modItem of completeMods) {
                 if (modItem) {
                     this.modList.add(modItem);
+                    loadedCount++;
                 }
             }
 
-            console.log(`Successfully loaded ${this.modList.Mods.length} mods into memory`);
+            console.log(`Loaded ${loadedCount} mods into memory`);
         } catch (error) {
             console.error('Failed to load mods from database:', error);
-            console.error('Error details:', JSON.stringify(error, null, 2));
         }
     }
 
@@ -394,8 +425,6 @@ export class HomeViewModel {
         try {
             const profiles = await StorageAPI.getProfiles();
             const profileDataList = await profiles.getAllProfiles();
-
-            console.log(`Loading ${profileDataList.length} profiles from database`);
 
             for (const profileData of profileDataList) {
                 this.profileList.add(profileData.name);
@@ -416,7 +445,7 @@ export class HomeViewModel {
                 this.profileTreeList.push(profileTree);
             }
 
-            console.log(`Successfully loaded ${this.profileTreeList.length} profile trees`);
+            console.log(`Loaded ${this.profileTreeList.length} profile trees`);
         } catch (error) {
             console.error('Failed to load profiles from database:', error);
         }
@@ -438,19 +467,28 @@ export class HomeViewModel {
                 profileTree.root.children = [];
 
                 // Build folder structure and add mods
+                // Collect all mods including those in folders
+                const allMods: any[] = [...treeData.mods];
                 for (const folder of treeData.folders) {
-                    await this.addFolderToTree(profileTree, folder, treeData.mods);
+                    if (folder.mods && folder.mods.length > 0) {
+                        allMods.push(...folder.mods);
+                    }
+                }
+
+                for (const folder of treeData.folders) {
+                    await this.addFolderToTree(profileTree, folder, allMods);
                 }
 
                 // Also handle root mods (mods without parent folder)
-                for (const modData of treeData.mods) {
-                    if (!modData.parentFolderId) {
-                        const modItem = this.modList.getByModId(modData.modId);
-                        if (modItem) {
-                            modItem.enabled = modData.isEnabled;
-                            modItem.usedVersion = modData.usedVersion || "";
-                            profileTree.addMod(modItem.id, 0); // Add to root
-                        }
+                const rootMods = treeData.mods.filter(mod => !mod.parentFolderId);
+                for (const modData of rootMods) {
+                    const modItem = this.modList.get(modData.modId);
+                    if (modItem) {
+                        modItem.enabled = modData.isEnabled;
+                        modItem.usedVersion = modData.usedVersion || "";
+                        profileTree.addMod(modItem.id, 0); // Add to root
+                    } else {
+                        console.warn(`Root mod not found for mod_id ${modData.modId}`);
                     }
                 }
             }
@@ -481,13 +519,17 @@ export class HomeViewModel {
         }
 
         // Add mods that belong to this folder
-        const folderMods = allMods.filter(mod => mod.parentFolderId === folderData.id);
+        // Check if folderData has mods property (from buildFolderTree)
+        const folderMods = folderData.mods || allMods.filter(mod => mod.parentFolderId === folderData.id);
+
         for (const modData of folderMods) {
-            const modItem = this.modList.getByModId(modData.modId);
+            const modItem = this.modList.get(modData.modId);
             if (modItem) {
                 modItem.enabled = modData.isEnabled;
                 modItem.usedVersion = modData.usedVersion || "";
                 folderNode.add(modItem.id, ProfileTreeType.ITEM);
+            } else {
+                console.warn(`Mod not found for mod_id ${modData.modId} in folder ${folderData.name}`);
             }
         }
 
@@ -518,6 +560,33 @@ export class HomeViewModel {
     }
 
     /**
+     * Find a folder node by name in the profile tree
+     * @param isLocalFolder - If true, treats "Local" and "本地" as the same folder
+     */
+    private findFolderNodeByRoot(root: ProfileTreeItem, folderName: string, isLocalFolder: boolean = false): ProfileTreeItem | null {
+        if (root.type === ProfileTreeType.FOLDER) {
+            // Check exact match first
+            if (root.name === folderName) {
+                return root;
+            }
+            
+            // If we're looking for a local folder, check if this is either "Local" or "本地"
+            if (isLocalFolder && (root.name === 'Local' || root.name === '本地')) {
+                return root;
+            }
+        }
+
+        for (const child of root.children) {
+            const found = this.findFolderNodeByRoot(child, folderName, isLocalFolder);
+            if (found) {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Convert CompleteModData to ModListItem
      */
     private convertCompleteModDataToModListItem(completeMod: any): ModListItem | null {
@@ -526,13 +595,13 @@ export class HomeViewModel {
         const modItem = new ModListItem();
 
         // Basic mod info
-        modItem.modId = completeMod.mod_id || completeMod.platform_id;
-        modItem.nameId = completeMod.name_id;
-        modItem.displayName = completeMod.display_name;
+        modItem.modId = completeMod.platformId || 0;
+        modItem.nameId = completeMod.nameId;
+        modItem.displayName = completeMod.displayName;
         modItem.url = completeMod.url || "";
-        modItem.sourceType = completeMod.source_type as ModSourceType || ModSourceType.Unknown;
+        modItem.sourceType = completeMod.sourceType as ModSourceType || ModSourceType.Unknown;
         modItem.tags = completeMod.tags ? completeMod.tags : [];
-        modItem.approval = completeMod.approval_status || "Sandbox";
+        modItem.approval = completeMod.approvalStatus || "Sandbox";
 
         // Version info
         if (completeMod.version) {
@@ -557,8 +626,8 @@ export class HomeViewModel {
             modItem.localNoFound = completeMod.status.isLocalNotFound === true;
         }
 
-        // Generate a unique ID for this mod item
-        modItem.id = this.modList.Mods.length + 1;
+        // Use database modId as the item ID to ensure proper mapping
+        modItem.id = completeMod.modId;
 
         return modItem;
     }

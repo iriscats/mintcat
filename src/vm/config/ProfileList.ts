@@ -73,28 +73,21 @@ export class ProfileTree {
     public groupNameMap: Map<number, string> = new Map<number, string>();
 
     public get ModioFolder(): ProfileTreeItem | undefined {
-        const index = this.root.children
-            .findIndex(p => p.id === ProfileTreeGroupType.MODIO);
-        if (index >= 0) {
-            return this.root.children[index];
-        }
+        // Find folder by name instead of hardcoded ID
+        return this.root.children.find(p => p.type === ProfileTreeType.FOLDER && p.name === "mod.io");
     }
 
     public get LocalFolder(): ProfileTreeItem | undefined {
-        const index = this.root.children
-            .findIndex(p => p.id === ProfileTreeGroupType.LOCAL);
-        if (index >= 0) {
-            return this.root.children[index];
-        }
+        // Find folder by type and name
+        return this.root.children.find(p => p.type === ProfileTreeType.FOLDER && (p.name === "Local" || p.name === "本地"));
     }
 
     public constructor(name: string) {
         this.name = name;
         this.lastUpdate = 0;
-        this.root.add(ProfileTreeGroupType.MODIO, ProfileTreeType.FOLDER, "mod.io");
-        this.root.add(ProfileTreeGroupType.LOCAL, ProfileTreeType.FOLDER, t("Local"));
-        // this.groupNameMap.set(ProfileTreeGroupType.MODIO, "mod.io");
-        // this.groupNameMap.set(ProfileTreeGroupType.LOCAL, t("Local"));
+        // Don't create hardcoded folders anymore
+        // Folders will be created dynamically from database data
+        console.log(`ProfileTree created for: ${name}`);
     }
 
     private makeId() {

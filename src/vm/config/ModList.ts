@@ -139,7 +139,6 @@ export class ModList {
             return foundItem;
         }
 
-        modItem.id = this.makeId();
         this.mods.push(modItem);
         return modItem;
     }
