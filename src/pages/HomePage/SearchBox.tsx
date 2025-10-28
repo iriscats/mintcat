@@ -23,7 +23,6 @@ export const SearchBox = () => {
     const [searchOptions, setSearchOptions] = React.useState<SelectProps['options']>(defaultFilterOptions);
 
     const onSearch = async (newValue: string) => {
-        const vm = await HomeViewModel.getInstance();
         TreeViewConverter.filterList = [newValue];
 
         let searchOptions: SelectProps['options'] = [];
@@ -36,14 +35,14 @@ export const SearchBox = () => {
 
         setSearchOptions(searchOptions);
 
-        await vm.updateUI();
+        HomeViewModel.updateTreeView();
     }
 
     const onSearchSelectChange = async (value: any) => {
         TreeViewConverter.filterList = value;
         setSearchValue(value);
-        const vm = await HomeViewModel.getInstance();
-        await vm.updateUI();
+
+        HomeViewModel.updateTreeView();
     }
 
     const onBlur = async () => {
