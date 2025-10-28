@@ -13,6 +13,8 @@ import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
 import i18n from "@/locales/i18n"
 import packageJson from '../package.json';
 import {InitLog} from "./apis/LogApi.ts";
+import {setupPluginListeners} from "tauri-plugin-mcp";
+
 InitLog();
 
 
@@ -37,6 +39,9 @@ const Main = () => {
         }
 
         renderTheme();
+
+        // Initialize Tauri MCP plugin listeners
+        setupPluginListeners().catch(console.error);
     }, []);
 
     return (
