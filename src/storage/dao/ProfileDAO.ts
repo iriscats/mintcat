@@ -629,6 +629,17 @@ export class ProfileDAO {
      */
     private async createDefaultFolders(profileId: number): Promise<void> {
         try {
+            // 检查是否已经存在本地类型的文件夹（避免重复创建）
+            const existingFolders = await this.getProfileFolders(profileId);
+            const hasLocalFolder = existingFolders.some(folder =>
+                folder.name === 'Local' || folder.name === '本地'
+            );
+
+            if (hasLocalFolder) {
+                console.log(`配置文件 ${profileId} 已存在本地文件夹，跳过创建默认文件夹`);
+                return;
+            }
+
             const defaultFolders = [
                 {
                     profileId,
