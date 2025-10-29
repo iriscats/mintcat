@@ -1,12 +1,15 @@
 import {drizzle} from "drizzle-orm/sqlite-proxy";
 import Database from "@tauri-apps/plugin-sql";
+import {path} from "@tauri-apps/api";
+import {configDir} from "@tauri-apps/api/path";
 
 
 let dbInstance: Awaited<ReturnType<typeof Database.load>>;
 
 export async function initDb() {
     if (!dbInstance) {
-        dbInstance = await Database.load("sqlite:/Users/bytedance/Desktop/test.db");
+        const configPath = await path.join(await configDir(), 'com.mint.cat', 'mintcat.sqlite');
+        dbInstance = await Database.load(`sqlite:${configPath}`);
     }
     return dbInstance;
 }
