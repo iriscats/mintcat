@@ -2,9 +2,9 @@ import {writeFile, size, exists, mkdir, remove} from "@tauri-apps/plugin-fs";
 import {cacheDir} from '@tauri-apps/api/path';
 import {path} from "@tauri-apps/api";
 import {convertFileSrc} from "@tauri-apps/api/core";
-import {AppViewModel} from "@/vm/AppViewModel.ts";
 import {md5} from "@/utils/CryptApi.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
+import {StorageAPI} from "@/storage";
 
 export class CacheApi {
 
@@ -12,8 +12,13 @@ export class CacheApi {
     }
 
     public static async getCacheDir(): Promise<string> {
-        const vm = await AppViewModel.getInstance();
-        return vm.setting.cachePath;
+        // TODO: mkdir move to init
+        const settingDAO = await StorageAPI.getSettings();
+        const cachePath = await settingDAO.getCachePath();
+        if (!await exists(cachePath)) {
+            await mkdir(cachePath)
+        }
+        return cachePath;
     }
 
     private static sanitizeFileName(name: string): string {

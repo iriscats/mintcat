@@ -12,6 +12,7 @@ import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {BasePage} from "../IBasePage.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {openWindow} from "@/dialogs/AddModDialog/open.ts";
+import {ModInfo} from "@/apis/modio/ModInfo.ts";
 
 
 const IconText = ({icon, text}: { icon: React.FC; text: string }) => (
