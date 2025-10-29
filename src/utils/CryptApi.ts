@@ -66,6 +66,6 @@ export function md5(input: string) {
         d = (d + dd) | 0;
     }
 
-    return [a, b, c, d].map(x => x.toString(16).padStart(8, '0')).join('');
+    return [a, b, c, d].map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
 }
 
