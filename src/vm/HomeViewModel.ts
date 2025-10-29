@@ -106,7 +106,7 @@ export class HomeViewModel {
         const profiles = await StorageAPI.getProfiles();
 
         if (await profiles.checkModExits(modInfoResp)) {
-            message.warning(`${t("Mod Already Exists")} ${modInfoResp.nameId}`);
+            message.warning(`${t("Mod Already Exists")} ${modInfoResp.name}`);
             return true;
         }
 

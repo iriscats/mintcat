@@ -1,6 +1,6 @@
-import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "../config/ProfileList.ts";
 import {TreeProps} from "antd";
-import {ModList, ModListItem} from "../config/ModList.ts";
+import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/vm/config/ProfileList.ts";
+import {ModList, ModListItem} from "@/vm/config/ModList.ts";
 
 
 export class TreeViewConverter {

@@ -509,7 +509,7 @@ export class ModDAO {
 
     private mapToModData(record: any): ModData {
         try {
-            console.log('Mapping record:', record);
+            //console.log('Mapping record:', record);
 
             const modData: ModData = {
                 modId: record.modId,
@@ -541,7 +541,7 @@ export class ModDAO {
                 modData.updatedAt = new Date();
             }
 
-            console.log('Successfully mapped modData:', modData);
+            //console.log('Successfully mapped modData:', modData);
             return modData;
         } catch (error) {
             console.error('Error mapping record to ModData:', error, record);

@@ -1,6 +1,7 @@
 import {oauths} from '@/storage/db/Schema';
 import {eq, and, desc, asc} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
+import {StorageAPI} from "@/storage";
 
 /**
  * OAuth信息数据访问层
@@ -228,14 +229,22 @@ export class OAuthDAO {
     }
 
     /**
-     * 获取mod.io平台的OAuth记录
+     * 获取当前活跃用户的 mod.io 平台 OAuth 记录
      */
     public async getModioOAuth(): Promise<OAuthData | null> {
         try {
-            const result = await this.getOAuthsByPlatform('mod.io');
-            return result.length > 0 ? result[0] : null;
+            const userDAO = await StorageAPI.getUsers();
+            const activeUserData = await userDAO.getActiveUser();
+
+            const db = await getDb();
+            const result = await db.select()
+                .from(oauths)
+                .where(and(eq(oauths.platform, 'mod.io'), eq(oauths.uid, activeUserData.id)))
+                .limit(1);
+
+            return this.mapToOAuthData(result[0]);
         } catch (error) {
-            console.error('获取mod.io OAuth记录失败:', error);
+            console.error('获取当前活跃用户的mod.io OAuth记录失败:', error);
             return null;
         }
     }

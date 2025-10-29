@@ -1,14 +1,14 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {ModFile, ModInfo} from "../vm/modio/ModInfo.ts";
-import {ModListItem} from "../../vm/config/ModList.ts";
-import {AppViewModel} from "../../vm/AppViewModel.ts";
-import {UserInfo} from "../vm/modio/UserInfo.ts";
-import {EventInfo} from "../vm/modio/EventInfo.ts";
-import {CacheApi} from "../CacheApi.ts";
-import {DownloadApi} from "../DownloadApi.ts";
-import {TimeUtils} from "../../utils/TimeUtils.ts";
+import {ModListItem} from "@/vm/config/ModList.ts";
+import {UserInfo} from "@/apis/modio/UserInfo.ts";
+import {EventInfo} from "@/apis/modio/EventInfo.ts";
+import {CacheApi} from "@/apis/CacheApi.ts";
+import {DownloadApi} from "@/apis/DownloadApi.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
+import {ModFile, ModInfo} from "@/apis/modio/ModInfo.ts";
+import {TimeUtils} from "@/utils/TimeUtils.ts";
+import {StorageAPI} from "@/storage";
 
 //const MODIO_API_URL = "https://api.mod.io/v1";
 const MODIO_GAME_ID = 2475;
@@ -16,18 +16,18 @@ const MODIO_UID = "13595141";
 
 export class ModioApi {
 
-    static IS_PROXY = false;
-
     private static async getHost() {
-        const vm = await AppViewModel.getInstance();
-        const modioUid = vm.setting?.modioUid ?? MODIO_UID;
+        const oAuthDAO = await StorageAPI.getOAuths();
+        const oAuthData = await oAuthDAO.getModioOAuth();
+        const modioUid = oAuthData?.uid ?? MODIO_UID;
         return `https://u-${modioUid}.modapi.io/v1`;
     }
 
     private static async getHeaders() {
-        const vm = await AppViewModel.getInstance();
+        const oAuthDAO = await StorageAPI.getOAuths();
+        const oAuthData = await oAuthDAO.getModioOAuth();
         return {
-            Authorization: `Bearer ${vm.setting?.modioOAuth}`,
+            Authorization: `Bearer ${oAuthData?.oauth ?? ""}`,
         }
     }
 
@@ -108,16 +108,6 @@ export class ModioApi {
         } catch (e) {
             message.error(`${t("Fetch Mod Info Error")}: ${e}`);
             throw e;
-        }
-    }
-
-    public static async getModInfoById(modId: string): Promise<ModInfo> {
-        try {
-            const path = `/games/${MODIO_GAME_ID}/mods/${modId}`;
-            const data = await ModioApi.getRequest(path);
-            return data as ModInfo;
-        } catch (e) {
-            message.error(`${t("Fetch Mod Info Error")}: ${e}`);
         }
     }
 
