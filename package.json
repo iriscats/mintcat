@@ -47,7 +47,6 @@
     "jsdom": "^26.1.0",
     "typescript": "^5.2.2",
     "vite": "7.1.12",
-    "drizzle-kit": "^0.31.5",
-    "tauri-plugin-mcp": "file:../tauri-plugin-mcp"
+    "drizzle-kit": "^0.31.5"
   }
 }
