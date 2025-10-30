@@ -41,7 +41,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                 setIsModalOpen(false);
                 return;
             }
-            await importConfig(result);
+            //await importConfig(result);
             window.location.reload();
         } else {
             message.error(t("Please select a config"));

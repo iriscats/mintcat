@@ -12,7 +12,6 @@ export class CacheApi {
     }
 
     public static async getCacheDir(): Promise<string> {
-        // TODO: mkdir move to init
         const settingDAO = await StorageAPI.getSettings();
         const cachePath = await settingDAO.getCachePath();
         if (!await exists(cachePath)) {
@@ -28,9 +27,6 @@ export class CacheApi {
 
     public static async getModCachePath(modName: string, version: string) {
         const appCachePath = await this.getCacheDir();
-        if (!await exists(appCachePath)) {
-            await mkdir(appCachePath)
-        }
         const newNodName = CacheApi.sanitizeFileName(`${modName}-${version}.zip`);
         return await path.join(appCachePath, newNodName);
     }

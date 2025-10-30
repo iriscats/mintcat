@@ -23,7 +23,7 @@ export async function getDb() {
         params: any[],
         method: "run" | "all" | "values" | "get",
     ) => {
-        //console.log(sql, params, method);
+        //console.trace(sql, params, method);
 
         if (method === "run") {
             await db.execute(sql, params);
@@ -31,7 +31,7 @@ export async function getDb() {
         }
 
         const rows = (await db.select(sql, params)) as any[];
-        //console.log(rows);
+        //console.trace(rows);
 
         return {rows: rows.map((row) => Object.values(row))};
     };

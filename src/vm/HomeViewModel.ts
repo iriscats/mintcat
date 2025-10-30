@@ -560,33 +560,6 @@ export class HomeViewModel {
     }
 
     /**
-     * Find a folder node by name in the profile tree
-     * @param isLocalFolder - If true, treats "Local" and "本地" as the same folder
-     */
-    private findFolderNodeByRoot(root: ProfileTreeItem, folderName: string, isLocalFolder: boolean = false): ProfileTreeItem | null {
-        if (root.type === ProfileTreeType.FOLDER) {
-            // Check exact match first
-            if (root.name === folderName) {
-                return root;
-            }
-            
-            // If we're looking for a local folder, check if this is either "Local" or "本地"
-            if (isLocalFolder && (root.name === 'Local' || root.name === '本地')) {
-                return root;
-            }
-        }
-
-        for (const child of root.children) {
-            const found = this.findFolderNodeByRoot(child, folderName, isLocalFolder);
-            if (found) {
-                return found;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Convert CompleteModData to ModListItem
      */
     private convertCompleteModDataToModListItem(completeMod: any): ModListItem | null {

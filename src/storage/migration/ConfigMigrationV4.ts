@@ -10,14 +10,9 @@ import {exists, readTextFile, stat} from '@tauri-apps/plugin-fs';
 import {path} from '@tauri-apps/api';
 import {configDir} from '@tauri-apps/api/path';
 
-/**
- * v0.2.0 配置迁移类
- * 将v0.2.0 JSON配置迁移到SQLite数据库
- * v0.2.0使用与v0.5.0相同的目录结构，但使用JSON文件存储
- */
 export class ConfigMigrationV4 {
 
-    private version = '0.2.0';
+    private version = '0.4.0';
     private gameId: number = 0;
     private userId: number = 0;
 
@@ -37,7 +32,6 @@ export class ConfigMigrationV4 {
             const configPath = await path.join(await configDir(), 'com.mint.cat');
 
             if (await exists(configPath)) {
-
                 const dirInfo = await stat(configPath);
 
                 // 检查必要的配置文件是否存在 - 修正为实际文件名
@@ -147,7 +141,7 @@ export class ConfigMigrationV4 {
                 }
 
                 // 迁移 DRG 安装路径
-                if(settings.drg_pak_path){
+                if (settings.drg_pak_path) {
                     await this.gameDAO.updateGame(this.gameId, {
                         installPath: settings.drg_pak_path
                     });
@@ -332,7 +326,7 @@ export class ConfigMigrationV4 {
             const detailContent = await readTextFile(profileDetailPath);
             const oldDetail = MigrationUtils.safeParseJson(detailContent, {
                 name: profile.name,
-                root: { children: [] }
+                root: {children: []}
             });
 
             // 处理树形结构
@@ -384,8 +378,10 @@ export class ConfigMigrationV4 {
      * 根据文件夹名称确定文件夹类型
      */
     private getFolderTypeFromName(name: string): string {
-        if (name === 'mod.io') return 'modio';
-        if (name === '本地') return 'local';
+        if (name === 'mod.io')
+            return 'modio';
+        if (name === '本地')
+            return 'local';
         return 'custom';
     }
 
@@ -465,7 +461,7 @@ export class ConfigMigrationV4 {
         }
     }
 
-    
+
     /**
      * 从名称创建配置文件
      */

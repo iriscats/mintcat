@@ -16,7 +16,9 @@ import {AppViewModel} from "@/vm/AppViewModel.ts";
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";
 import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
-import TestPage from "@/pages/TestPage.tsx";
+
+import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
+import {LoginDialog} from "@/dialogs/LoginDialog";
 
 const {
     Header,
@@ -102,6 +104,8 @@ class App extends React.Component<any, any> {
             <Layout className={"app"}>
                 <UpdateDialog/>
                 <ConfigManageDialog/>
+                <SelectGameDialog/>
+                <LoginDialog/>
                 <Header className={"app-header"}>
                     <TitleBar/>
                 </Header>
