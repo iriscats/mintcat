@@ -1,6 +1,5 @@
 import {getDb} from './Client';
 import {sql} from 'drizzle-orm';
-import * as schema from './Schema';
 import {ALL_SQL_CONTENT} from "@/storage/db/SQL.ts";
 
 export class DatabaseInitializer {
@@ -61,12 +60,29 @@ export class DatabaseInitializer {
         // 插入默认游戏
         await db.run(sql`INSERT
         OR IGNORE INTO games (name, display_name, install_path, is_active)
-                          VALUES ('drg', 'Deep Rock Galactic', '/Users/bytedance/Project/DRG', true)`);
+                          VALUES ('drg', 'Deep Rock Galactic', '', true)`);
 
         // 插入默认用户
         await db.run(sql`INSERT
         OR IGNORE INTO users (username, email, avatar_url)
                           VALUES ('default_user', '', '')`);
+
+        // 插入默认 profile
+        await db.run(sql`INSERT
+        OR IGNORE INTO profiles (name, display_name, game_id, user_id, is_active, description)
+                          VALUES ('default', 'Default Profile', 1, 1, true, 'Default mod configuration profile')`);
+
+        // 插入 Modio 文件夹
+        await db.run(sql`INSERT
+        OR IGNORE INTO profile_folders (profile_id, name, folder_type, sort_order, is_expanded)
+                              VALUES (1,'mod.io','modio', 1, true)`);
+
+        // 插入 Local 文件夹
+        await db.run(sql`INSERT
+        OR IGNORE INTO profile_folders (profile_id, name, folder_type, sort_order, is_expanded)
+                              VALUES (1,'Local','local', 2, true)`);
+
+        console.log('默认 profile_folders 插入完成');
     }
 
     /**
@@ -74,7 +90,6 @@ export class DatabaseInitializer {
      */
     private static async createTables() {
         const db = await getDb();
-        const tables = Object.values(schema);
 
         const queries = ALL_SQL_CONTENT
             .split('--> statement-breakpoint')
