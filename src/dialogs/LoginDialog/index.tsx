@@ -3,6 +3,7 @@ import {t} from "i18next";
 import {Button, Flex, Form, Input, Modal, Tabs, message} from 'antd';
 import {UserOutlined, LockOutlined, MailOutlined} from '@ant-design/icons';
 import {listen} from "@tauri-apps/api/event";
+import {login, register, sendVerificationCode, verifyCode, resetPassword} from "@/apis/mintcat";
 const {TabPane} = Tabs;
 
 
@@ -39,11 +40,18 @@ export const LoginDialog = () => {
     const handleLogin = async (values: LoginForm) => {
         try {
             setLoading(true);
-            // TODO: 实现登录逻辑
-            console.log('Login credentials:', values);
-            message.success(t("Login successful"));
-            setIsModalOpen(false);
-            loginForm.resetFields();
+            const response = await login({
+                email: values.email,
+                password: values.password
+            });
+
+            if (response.success) {
+                message.success(t("Login successful"));
+                setIsModalOpen(false);
+                loginForm.resetFields();
+            } else {
+                message.error(response.message);
+            }
         } catch (error) {
             console.error('Login failed:', error);
             message.error(t("Login failed"));
@@ -55,15 +63,19 @@ export const LoginDialog = () => {
     const handleRegister = async (values: RegisterForm) => {
         try {
             setLoading(true);
-            // TODO: 实现注册逻辑
-            console.log('Register credentials:', {
+            const response = await register({
                 username: values.username,
                 email: values.email,
                 password: values.password
             });
-            message.success(t("Registration successful"));
-            setIsModalOpen(false);
-            registerForm.resetFields();
+
+            if (response.success) {
+                message.success(t("Registration successful. Please check your email to verify your account."));
+                setIsModalOpen(false);
+                registerForm.resetFields();
+            } else {
+                message.error(response.message);
+            }
         } catch (error) {
             console.error('Registration failed:', error);
             message.error(t("Registration failed"));
@@ -81,24 +93,28 @@ export const LoginDialog = () => {
                 return;
             }
 
-            // TODO: 实现发送验证码逻辑
-            console.log('Send verification code to:', email);
-            message.success(t("Verification code sent! Please check your email."));
-            setVerificationCodeSent(true);
+            const response = await sendVerificationCode({email});
 
-            // 开始倒计时
-            let remaining = 60;
-            setCountdown(remaining);
-            const timer = setInterval(() => {
-                remaining--;
+            if (response.success) {
+                message.success(t("Verification code sent! Please check your email."));
+                setVerificationCodeSent(true);
+
+                // 开始倒计时
+                let remaining = 60;
                 setCountdown(remaining);
-                if (remaining <= 0) {
-                    clearInterval(timer);
-                }
-            }, 1000);
+                const timer = setInterval(() => {
+                    remaining--;
+                    setCountdown(remaining);
+                    if (remaining <= 0) {
+                        clearInterval(timer);
+                    }
+                }, 1000);
 
-            // 存储定时器以便清理
-            (window as any).__verificationTimer = timer;
+                // 存储定时器以便清理
+                (window as any).__verificationTimer = timer;
+            } else {
+                message.error(response.message);
+            }
         } catch (error) {
             console.error('Failed to send verification code:', error);
             message.error(t("Failed to send verification code. Please try again."));
@@ -118,10 +134,14 @@ export const LoginDialog = () => {
                 return;
             }
 
-            // TODO: 实现验证码验证逻辑
-            console.log('Verify code:', code, 'for email:', email);
-            message.success(t("Email verified successfully!"));
-            setEmailVerified(true);
+            const response = await verifyCode({email, code});
+
+            if (response.success) {
+                message.success(t("Email verified successfully!"));
+                setEmailVerified(true);
+            } else {
+                message.error(response.message);
+            }
         } catch (error) {
             console.error('Failed to verify code:', error);
             message.error(t("Invalid verification code. Please try again."));
@@ -134,11 +154,19 @@ export const LoginDialog = () => {
         try {
             setLoading(true);
 
-            // TODO: 实现密码重置逻辑
-            console.log('Reset password for email:', values.email);
-            message.success(t("Password reset successfully!"));
-            setIsModalOpen(false);
-            resetForgotPasswordForm();
+            const response = await resetPassword({
+                email: values.email,
+                code: values.verificationCode,
+                newPassword: values.newPassword
+            });
+
+            if (response.success) {
+                message.success(t("Password reset successfully!"));
+                setIsModalOpen(false);
+                resetForgotPasswordForm();
+            } else {
+                message.error(response.message);
+            }
         } catch (error) {
             console.error('Failed to reset password:', error);
             message.error(t("Failed to reset password. Please try again."));

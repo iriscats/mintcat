@@ -6,7 +6,6 @@ import {exists} from "@tauri-apps/plugin-fs";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {HomeViewModel} from "@/vm/HomeViewModel.ts";
-import {AppViewModel} from "@/vm/AppViewModel.ts";
 import {ILock} from "@/utils/ILock.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
@@ -41,8 +40,8 @@ export class IntegrateApi extends ILock {
         try {
             await emit("status-bar-log", t("Start installation"));
 
-            const appViewModel = await AppViewModel.getInstance();
             const homeViewModel = await HomeViewModel.getInstance();
+            const settings = await StorageAPI.getSettings();
 
             if (!await IntegrateApi.checkGamePath()) {
                 return false;
@@ -67,7 +66,6 @@ export class IntegrateApi extends ILock {
                     if (await ModUpdateApi.checkLocalModModify(item)) {
                         editTime = TimeUtils.getCurrentTime();
                         homeViewModel.ActiveProfile.editTime = editTime;
-                        await Index.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                     }
                     if (!await ModUpdateApi.checkLocalModCache(item)) {
                         message.error(`${t("File Not Found")}: ${item.displayName}: ${item.cachePath}`);
@@ -79,8 +77,12 @@ export class IntegrateApi extends ILock {
             if (installTime < editTime) {
                 installTime = editTime;
             }
+
+            const drgPakPath = await settings.getValue('drgPakPath');
+            const ue4ss = await settings.getValue('ue4ss');
+
             const installType = await IntegrateApi.checkInstalled(
-                appViewModel.setting.drgPakPath,
+                drgPakPath,
                 installTime
             );
 
@@ -103,10 +105,10 @@ export class IntegrateApi extends ILock {
                     return true;
             }
 
-            if (appViewModel.setting.ue4ss === "UE4SS-Lite") {
-                await IntegrateApi.uninstall(appViewModel.setting.drgPakPath);
+            if (ue4ss === "UE4SS-Lite") {
+                await IntegrateApi.uninstall(drgPakPath);
             } else {
-                await IntegrateApi.uninstall(appViewModel.setting.drgPakPath, false);
+                await IntegrateApi.uninstall(drgPakPath, false);
             }
 
             const installModList = [];
@@ -121,18 +123,19 @@ export class IntegrateApi extends ILock {
                 }
             }
 
-            return await IntegrateApi.install(appViewModel.setting.drgPakPath, JSON.stringify(installModList));
+            return await IntegrateApi.install(drgPakPath, JSON.stringify(installModList));
         } finally {
             release();
         }
     }
 
     public static async uninstallMods() {
-        const appViewModel = await AppViewModel.getInstance();
+        const settings = await StorageAPI.getSettings();
         if (!await IntegrateApi.checkGamePath()) {
             return false;
         }
-        if (await IntegrateApi.uninstall(appViewModel.setting.drgPakPath)) {
+        const drgPakPath = await settings.getValue('drgPakPath');
+        if (await IntegrateApi.uninstall(drgPakPath)) {
             message.success(t("Uninstall Success"));
         }
     }
@@ -147,7 +150,6 @@ export class IntegrateApi extends ILock {
             await once<number>('install-success', async (event) => {
                 const homeViewModel = await HomeViewModel.getInstance();
                 homeViewModel.ActiveProfile.installTime = event.payload;
-                await Index.saveProfileDetails(homeViewModel.ActiveProfileName, homeViewModel.ActiveProfile, true);
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });

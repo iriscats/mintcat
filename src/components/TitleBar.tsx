@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Badge, Button, Flex, Image, List, Popover} from "antd";
+import {Avatar, Badge, Button, Flex, Image} from "antd";
 import {t} from "i18next";
 import {
     BellOutlined,
@@ -11,28 +11,17 @@ import {
 import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import {ModioApi} from "@/apis/modio";
-import {MessageBox} from "./MessageBox.ts";
-import {CacheApi} from "../apis/CacheApi.ts";
-import {AppViewModel} from "../vm/AppViewModel.ts";
-import {emit, once} from "@tauri-apps/api/event";
+import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 
 
-interface TitleBarState {
-    profileUrl?: string,
-    username?: string,
-    modioId: number
-}
+class TitleBar extends React.Component<any, any> {
 
-class TitleBar extends React.Component<any, TitleBarState> {
+    private readonly userSettingDialogRef: React.RefObject<UserSettingDialog>;
 
     public constructor(props: any) {
         super(props);
 
-        this.state = {
-            username: "",
-            modioId: 0,
-        }
+        this.userSettingDialogRef = React.createRef();
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
     }
@@ -46,36 +35,8 @@ class TitleBar extends React.Component<any, TitleBarState> {
             await IntegrateApi.launchGame();
     }
 
-    private async loadAvatar() {
-        const vm = await AppViewModel.getInstance();
-        if (!await vm.checkOauth()) {
-            return;
-        }
-
-        const userInfo = await ModioApi.getUserInfo();
-        if (userInfo) {
-            const url = await CacheApi.cacheImage(userInfo.avatar.thumb_50x50);
-            vm.setting.modioUid = userInfo.id;
-            this.setState({
-                profileUrl: url,
-                username: userInfo.username,
-                modioId: userInfo.id
-            })
-        }
-    }
-
-    private async onThemeClick(value: string) {
-        const vm = await AppViewModel.getInstance();
-        vm.setting.guiTheme = value;
-        localStorage.setItem('theme', value);
-        await vm.saveSettings();
-        await emit("theme-change", value);
-    }
-
     componentDidMount(): void {
-        once("title-bar-load-avatar", () => {
-            this.loadAvatar().then();
-        }).then();
+        // Avatar loading is now handled by UserSettingDialog
     }
 
     render() {
@@ -127,36 +88,10 @@ class TitleBar extends React.Component<any, TitleBarState> {
                         </Badge>
                     </span>
                     <span>
-                    <Popover
-                        placement="bottom"
-                        title={""}
-                        content={
-                            <List grid={{gutter: 16, column: 3}}
-                                  dataSource={[
-                                      {key: 'Light', title: t('Light'), color: "#F5F8FF"},
-                                      {key: 'Dark', title: t('Dark'), color: "black"},
-                                      {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
-                                  ]}
-                                  renderItem={(item) => (
-                                      <List.Item>
-                                          <Button className={"app-title-bar-skin-button"}
-                                                  title={item.title}
-                                                  style={{backgroundColor: item.color}}
-                                                  onClick={async () => {
-                                                      await this.onThemeClick(item.key)
-                                                  }}
-                                          >
-                                          </Button>
-                                      </List.Item>
-                                  )}
-                            >
-                            </List>
-                        }
-                    >
                        <Button type={"text"}
                                icon={<SkinOutlined/>}
+                               disabled
                        />
-                    </Popover>
                     </span>
                     <span>
                         <Button type={"text"}
@@ -166,21 +101,12 @@ class TitleBar extends React.Component<any, TitleBarState> {
                     </span>
                     <Avatar className={"app-header-avatar"}
                             icon={<UserOutlined/>}
-                            src={
-                                this.state.profileUrl &&
-                                <img src={this.state.profileUrl} alt="avatar"/>
-                            }
-                            onClick={async () => {
-                                await MessageBox.confirm({
-                                    title: t("User Info"),
-                                    content: <>
-                                        <div>ID: {this.state.modioId}</div>
-                                        <div>{t("Username")}: {this.state.username}</div>
-                                    </>
-                                })
+                            onClick={() => {
+                                this.userSettingDialogRef.current?.show();
                             }}
                     />
                 </Flex>
+                <UserSettingDialog ref={this.userSettingDialogRef}/>
             </Flex>
         );
     }

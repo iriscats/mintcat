@@ -3,7 +3,7 @@ import {t} from "i18next";
 import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ProfileTree} from "../vm/config/ProfileList.ts";
-import {HomeViewModel} from "../vm/HomeViewModel.ts";
+import {ProfileViewModel} from "../vm/ProfileViewModel.ts";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
@@ -39,7 +39,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         this.handleProfileInputChange = this.handleProfileInputChange.bind(this);
     }
 
-    public setCallback(callback) {
+    public setCallback(callback: InputCallback) {
         this.callback = callback;
         return this;
     }
@@ -78,8 +78,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         if (!await this.checkInput(this.state.newProfileName)) {
             return false;
         }
-
-        const vm = await HomeViewModel.getInstance();
+        const vm = await ProfileViewModel.getInstance();
         await vm.addProfile(
             this.state.newProfileName,
             new ProfileTree(this.state.newProfileName).toJson());
@@ -91,7 +90,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleDelete(key: string) {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await ProfileViewModel.getInstance();
         await vm.removeProfile(key);
         this.forceUpdate();
     }
@@ -101,7 +100,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
             return false;
         }
 
-        const vm = await HomeViewModel.getInstance();
+        const vm = await ProfileViewModel.getInstance();
         await vm.renameProfile(key, newName);
         this.setState({
             editingKey: null,
@@ -110,18 +109,18 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleCopy(key: string) {
-        const data = await Index.loadProfileDetails(key);
-        const vm = await HomeViewModel.getInstance();
-        await vm.addProfile(key + "_copy", data);
+        const vm = await ProfileViewModel.getInstance();
+        const profileData = vm.ActiveProfile.toJson();
+        await vm.addProfile(key + "_copy", profileData);
         this.forceUpdate();
     }
 
-    private handleProfileInputChange(e) {
+    private handleProfileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
         this.setState({newProfileName: e.target.value})
     }
 
     private async fetchData() {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await ProfileViewModel.getInstance();
         this.setState({
             profileList: vm.ProfileList
         })

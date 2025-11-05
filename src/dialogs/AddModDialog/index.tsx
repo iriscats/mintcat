@@ -7,6 +7,7 @@ import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
 import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
+import {StorageAPI} from "@/storage";
 
 export enum AddModType {
     MODIO = "mod.io",
@@ -104,24 +105,42 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     componentDidMount() {
         this.hookWindowResized();
 
-        const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
-        const initData = JSON.parse(initDataStr);
-        this.setState({
-            addModType: initData.addModType,
-            groupId: initData.groupId,
-            groupOptions: initData.groupOptions,
-            text: initData.text
-        });
+        const fetchData = async () => {
+            const profileDAO = await StorageAPI.getProfiles();
+            const profileData = await profileDAO.getActiveProfile();
+            const profileFolderList = await profileDAO.getProfileFolders(profileData.id);
 
-        listen<any>("add-mod-dialog-init-data", async (event) => {
-            console.log("AddModDialog init event", event);
             this.setState({
-                addModType: event.payload.addModType,
-                groupId: event.payload.groupId,
-                groupOptions: event.payload.groupOptions,
-                text: event.payload.text
+                groupId: profileFolderList[0].id,
+                groupOptions: profileFolderList.map((item)=>{
+                    return {
+                        label: item.name,
+                        value: item.id,
+                    }
+                }),
             });
-        }).then();
+        };
+
+        fetchData().then();
+
+        // const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
+        // const initData = JSON.parse(initDataStr);
+        // this.setState({
+        //     addModType: initData.addModType,
+        //     groupId: initData.groupId,
+        //     groupOptions: initData.groupOptions,
+        //     text: initData.text
+        // });
+        //
+        // listen<any>("add-mod-dialog-init-data", async (event) => {
+        //     console.log("AddModDialog init event", event);
+        //     this.setState({
+        //         addModType: event.payload.addModType,
+        //         groupId: event.payload.groupId,
+        //         groupOptions: event.payload.groupOptions,
+        //         text: event.payload.text
+        //     });
+        // }).then();
     }
 
     render() {

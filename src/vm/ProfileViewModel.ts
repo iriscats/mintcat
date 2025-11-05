@@ -1,9 +1,7 @@
-import {ProfileTree, ProfileTreeItem} from "@/vm/config/ProfileList.ts";
+import {ProfileTree, ProfileTreeItem, ProfileList} from "@/vm/config/ProfileList.ts";
 import {StorageAPI} from "@/storage";
 import {message} from "antd";
 import {t} from "i18next";
-
-import {emit} from "@tauri-apps/api/event";
 
 export class ProfileViewModel {
 
@@ -15,10 +13,7 @@ export class ProfileViewModel {
 
     // Callback functions
     public updateTreeViewCallback?: () => void;
-
-    public static updateSelectCallback() {
-        emit("home-page-update-profile-select").then();
-    }
+    public updateSelectCallback?: () => void;
 
     public get ProfileList(): string[] {
         return this.profileList.Profiles;
@@ -71,7 +66,8 @@ export class ProfileViewModel {
         }
         this.profileList.remove(name);
 
-        await StorageAPI.deleteProfileDetails(name);
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.deleteProfileDetails(name);
 
         this.updateSelectCallback?.call(this);
         this.updateTreeViewCallback?.call(this);
@@ -88,7 +84,8 @@ export class ProfileViewModel {
         const profileTree = this.profileTreeList.find(p => p.name === oldName);
         profileTree.name = newName;
 
-        await StorageAPI.renameProfileDetails(oldName, newName);
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.renameProfileDetails(oldName, newName);
 
         this.updateSelectCallback?.call(this);
     }

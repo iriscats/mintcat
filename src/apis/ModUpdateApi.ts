@@ -22,7 +22,8 @@ export class ModUpdateApi {
 
         let newItem = new ModListItem(resp);
         newItem = viewModel.ModList.update(mod, newItem);
-        await viewModel.updateUI();
+
+        HomeViewModel.updateTreeView();
         await emit("status-bar-log", `${t("Update Mod")} [${newItem.displayName}]`);
 
         await this.updateModFile(newItem);
@@ -160,7 +161,7 @@ export class ModUpdateApi {
         }
 
         viewModel.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
-        await viewModel.updateUI();
+        HomeViewModel.updateTreeView();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));
     }

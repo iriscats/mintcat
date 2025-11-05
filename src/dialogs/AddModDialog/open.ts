@@ -15,17 +15,9 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
 
     const vm = await HomeViewModel.getInstance();
 
-    const groupOptions = Array.from(vm.ActiveProfile?.groupNameMap)
-        .map(([key, value]) => ({
-            label: value,
-            value: key,
-        }));
-
     const setInitData = () => {
         localStorage.setItem('add-mod-dialog-init-data', JSON.stringify({
             text: text,
-            groupId: groupId,
-            groupOptions: groupOptions,
             addModType: addModType,
         }));
     };
@@ -33,8 +25,6 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     const sendInitData = async () => {
         await emit("add-mod-dialog-init-data", {
             text: text,
-            groupId: groupId,
-            groupOptions: groupOptions,
             addModType: addModType,
         });
     }
@@ -87,7 +77,8 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         }
 
         await emit("status-bar-log", t("Add Complete"));
-        await vm.updateUI();
+        HomeViewModel.updateTreeView();
+
         await windowInstance.close();
         windowInstance = null;
     });

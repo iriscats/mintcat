@@ -1,11 +1,12 @@
-import React, {useEffect, useState} from "react";
 import {open} from "@tauri-apps/plugin-dialog";
+import {path} from "@tauri-apps/api";
+import {listen} from "@tauri-apps/api/event";
+import {DragDropEvent, getCurrentWindow} from "@tauri-apps/api/window";
+import React, {useEffect, useState} from "react";
 import {Button, Flex, Form, List} from "antd";
 import {t} from "i18next";
 import {CloseOutlined, FilePptOutlined, FileZipOutlined, InboxOutlined} from "@ant-design/icons";
-import {DragDropEvent, getCurrentWindow} from "@tauri-apps/api/window";
-import {path} from "@tauri-apps/api";
-import {listen} from "@tauri-apps/api/event";
+
 
 interface FileItem {
     name: string;

@@ -5,11 +5,11 @@ import {open} from "@tauri-apps/plugin-dialog";
 import i18n from "@/locales/i18n.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
+import {StorageAPI} from "@/storage";
 import {Button, Card, Flex, Form, Input, message, Select} from "antd";
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
-import {AppViewModel} from "@/vm/AppViewModel.ts";
 import {emit, listen} from "@tauri-apps/api/event";
 
 
@@ -32,7 +32,8 @@ export function MintCatSettings() {
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
 
     const onOpenConfigDirClick = async () => {
-        await openPath(await Index.getConfigPath());
+        const settings = await StorageAPI.getSettings();
+        await openPath(await settings.getConfigPath());
     }
 
     const onOpenCacheDirClick = async () => {
@@ -45,28 +46,25 @@ export function MintCatSettings() {
         });
         if (result) {
             setCacheDirectory(result);
-            const vm = await AppViewModel.getInstance();
-            vm.setting.cachePath = result;
-            await vm.saveSettings();
+            const settings = await StorageAPI.getSettings();
+            await settings.setCachePath(result);
         }
     }
 
     const onLanguageChange = async (value: string) => {
         setLanguage(value);
         await i18n.changeLanguage(value);
-        const vm = await AppViewModel.getInstance();
-        vm.setting.language = value;
-        await vm.saveSettings();
+        const settings = await StorageAPI.getSettings();
+        await settings.setLanguage(value);
         window.location.reload();
     }
 
     const onThemeChange = async (value: string) => {
         setTheme(value);
-        const vm = await AppViewModel.getInstance();
-        vm.setting.guiTheme = value;
+        const settings = await StorageAPI.getSettings();
+        await settings.setGuiTheme(value);
         localStorage.setItem('theme', value);
         await emit("theme-change", value);
-        await vm.saveSettings();
     }
 
     const onDevToolsClick = async () => {
@@ -89,11 +87,11 @@ export function MintCatSettings() {
 
     React.useEffect(() => {
         const fetchData = async () => {
-            const vm = await AppViewModel.getInstance();
-            setLanguage(vm.setting.language);
-            setTheme(vm.setting.guiTheme);
-            setConfigDirectory(vm.setting.configPath);
-            setCacheDirectory(vm.setting.cachePath);
+            const settings = await StorageAPI.getSettings();
+            setLanguage(await settings.getLanguage());
+            setTheme(await settings.getGuiTheme());
+            setConfigDirectory(await settings.getConfigPath());
+            setCacheDirectory(await settings.getCachePath());
         }
         fetchData().then();
     }, []);
