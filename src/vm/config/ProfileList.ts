@@ -58,8 +58,8 @@ export enum ProfileTreeType {
 
 export enum ProfileTreeGroupType {
     ROOT = 0,
-    MODIO = 90000,
-    LOCAL = 90001
+    MODIO = 1,
+    LOCAL = 2
 }
 
 

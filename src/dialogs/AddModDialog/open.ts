@@ -18,6 +18,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     const setInitData = () => {
         localStorage.setItem('add-mod-dialog-init-data', JSON.stringify({
             text: text,
+            groupId:groupId,
             addModType: addModType,
         }));
     };
@@ -25,6 +26,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     const sendInitData = async () => {
         await emit("add-mod-dialog-init-data", {
             text: text,
+            groupId:groupId,
             addModType: addModType,
         });
     }
