@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Badge, Button, Flex, Image} from "antd";
+import {Avatar, Badge, Button, Dropdown, Flex, Image, List, Popover} from "antd";
 import {t} from "i18next";
 import {
     BellOutlined,
@@ -12,7 +12,12 @@ import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
+import {emit} from "@tauri-apps/api/event";
+import {StorageAPI} from "@/storage";
 
+const items = [
+
+];
 
 class TitleBar extends React.Component<any, any> {
 
@@ -33,6 +38,13 @@ class TitleBar extends React.Component<any, any> {
     private async onLaunchGameClick() {
         if (await IntegrateApi.installMods())
             await IntegrateApi.launchGame();
+    }
+
+    private async onThemeClick(value: string) {
+        const storage = await StorageAPI.getSettings();
+        await storage.setGuiTheme(value);
+        localStorage.setItem('theme', value);
+        await emit("theme-change", value);
     }
 
     componentDidMount(): void {
@@ -67,17 +79,24 @@ class TitleBar extends React.Component<any, any> {
                     </span>
                 </Flex>
                 <Flex gap="small" justify={"flex-end"} wrap>
-                    <Button
-                        type="primary"
-                        onClick={this.onLaunchGameClick}
-                        className={"ant-header-start-button"}>
+                    <span>
+                    <Dropdown.Button menu={{
+                        items, onClick: () => {
+                        }
+                    }}
+                                     type="primary"
+                                     onClick={this.onLaunchGameClick}
+                                     className={"ant-header-start-button"}
+                    >
                         <PlayCircleOutlined/>
                         <span>
                             <b>
-                                {t("Launch Game")}
+                                深岩银河
+                                {/*{t("Launch Game")}*/}
                             </b>
                         </span>
-                    </Button>
+                    </Dropdown.Button>
+                    </span>
                     <span>
                         <Badge size={"small"}
                                count={0}
@@ -88,10 +107,36 @@ class TitleBar extends React.Component<any, any> {
                         </Badge>
                     </span>
                     <span>
+                    <Popover
+                        placement="bottom"
+                        title={""}
+                        content={
+                            <List grid={{gutter: 16, column: 3}}
+                                  dataSource={[
+                                      {key: 'Light', title: t('Light'), color: "#F5F8FF"},
+                                      {key: 'Dark', title: t('Dark'), color: "black"},
+                                      {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
+                                  ]}
+                                  renderItem={(item) => (
+                                      <List.Item>
+                                          <Button className={"app-title-bar-skin-button"}
+                                                  title={item.title}
+                                                  style={{backgroundColor: item.color}}
+                                                  onClick={async () => {
+                                                      await this.onThemeClick(item.key)
+                                                  }}
+                                          >
+                                          </Button>
+                                      </List.Item>
+                                  )}
+                            >
+                            </List>
+                        }
+                    >
                        <Button type={"text"}
                                icon={<SkinOutlined/>}
-                               disabled
                        />
+                    </Popover>
                     </span>
                     <span>
                         <Button type={"text"}
