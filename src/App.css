@@ -83,20 +83,20 @@ body::before {
     position: relative;
 }
 
-.app-header .ant-btn-primary:not([disabled]):not(.ant-btn-dangerous)::before {
-    content: '';
-    background: linear-gradient(135deg, #6253e1, #04befe);
-    position: absolute;
-    inset: -1px;
-    opacity: 1;
-    -webkit-transition: all 0.3s;
-    transition: all 0.3s;
-    border-radius: inherit;
-}
+/*.app-header .ant-btn-primary:not([disabled]):not(.ant-btn-dangerous)::before {*/
+/*    content: '';*/
+/*    background: linear-gradient(135deg, #6253e1, #04befe);*/
+/*    position: absolute;*/
+/*    inset: -1px;*/
+/*    opacity: 1;*/
+/*    -webkit-transition: all 0.3s;*/
+/*    transition: all 0.3s;*/
+/*    border-radius: inherit;*/
+/*}*/
 
-.ant-btn-primary:not([disabled]):not(.ant-btn-dangerous):hover::before {
-    opacity: 0;
-}
+/*.ant-btn-primary:not([disabled]):not(.ant-btn-dangerous):hover::before {*/
+/*    opacity: 0;*/
+/*}*/
 
 .ant-layout-footer {
     margin: 0 !important;

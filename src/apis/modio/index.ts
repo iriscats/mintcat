@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {ModListItem} from "@/vm/config/ModList.ts";
+import {ModListItem} from "@/storage/db/Schema.ts";
 import {UserInfo} from "@/apis/modio/UserInfo.ts";
 import {EventInfo} from "@/apis/modio/EventInfo.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";

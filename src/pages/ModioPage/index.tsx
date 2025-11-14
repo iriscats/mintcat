@@ -8,7 +8,7 @@ import {open} from "@tauri-apps/plugin-shell";
 import {ModioApi} from "@/apis/modio";
 import {TranslateApi} from "@/apis/TranslateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
-import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {BasePage} from "../IBasePage.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {openWindow} from "@/dialogs/AddModDialog/open.ts";
