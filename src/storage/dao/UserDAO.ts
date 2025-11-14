@@ -24,7 +24,7 @@ export class UserDAO {
     public  async getAllUsers(): Promise<UserData[]> {
         try {
             const db = await getDb();
-            const result = await db.select().from(users).orderBy(asc(users.id));
+            const result = await db.select().from(users).orderBy(users.id);
             return result.map(this.mapToUserData);
         } catch (error) {
             console.error('获取所有用户失败:', error);
@@ -87,7 +87,7 @@ export class UserDAO {
                         like(users.email, `%${keyword}%`)
                     )
                 )
-                .orderBy(asc(users.username))
+                .orderBy(users.username)
                 .limit(limit);
             return result.map(this.mapToUserData);
         } catch (error) {
@@ -160,11 +160,9 @@ export class UserDAO {
     public  async isUsernameExists(username: string, excludeId?: number): Promise<boolean> {
         try {
             const db = await getDb();
-            let query = db.select().from(users).where(eq(users.username, username));
-
-            if (excludeId) {
-                query = query.where(and(eq(users.username, username), eq(users.id, excludeId)));
-            }
+            const query = excludeId
+                ? db.select().from(users).where(and(eq(users.username, username), eq(users.id, excludeId)))
+                : db.select().from(users).where(eq(users.username, username));
 
             const result = await query.limit(1);
             return result.length > 0;
@@ -180,11 +178,9 @@ export class UserDAO {
     public  async isEmailExists(email: string, excludeId?: number): Promise<boolean> {
         try {
             const db = await getDb();
-            let query = db.select().from(users).where(eq(users.email, email));
-
-            if (excludeId) {
-                query = query.where(and(eq(users.email, email), eq(users.id, excludeId)));
-            }
+            const query = excludeId
+                ? db.select().from(users).where(and(eq(users.email, email), eq(users.id, excludeId)))
+                : db.select().from(users).where(eq(users.email, email));
 
             const result = await query.limit(1);
             return result.length > 0;

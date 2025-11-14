@@ -306,7 +306,7 @@ export class ProfileDAO {
             const db = await getDb();
             const result = await db.select().from(profileFolders)
                 .where(eq(profileFolders.profileId, profileId))
-                .orderBy(asc(profileFolders.sortOrder));
+                .orderBy(profileFolders.sortOrder);
             return result.map(this.mapToProfileFolderData);
         } catch (error) {
             console.error(`获取配置文件文件夹失败 [配置ID: ${profileId}]:`, error);
@@ -327,7 +327,7 @@ export class ProfileDAO {
                 folderType: folderData.folderType || "custom",
                 sortOrder: folderData.sortOrder || 0,
                 isExpanded: folderData.isExpanded ?? true,
-            }).returning();
+            }).returning() as any;
 
             return result.length > 0 ? this.mapToProfileFolderData(result[0]) : null;
         } catch (error) {
@@ -364,15 +364,40 @@ export class ProfileDAO {
     }
 
     /**
-     * 删除文件夹
+     * 删除文件夹（包括子文件夹和相关的模组）
      */
     public async deleteFolder(id: number): Promise<boolean> {
+        console.log(`[ProfileDAO] deleteFolder called for id=${id}`);
         try {
             const db = await getDb();
-            await db.delete(profileFolders).where(eq(profileFolders.id, id));
+
+            // First, recursively delete all child folders
+            console.log(`[ProfileDAO] Looking for child folders of id=${id}`);
+            const childFolderRecords = await db.select().from(profileFolders)
+                .where(eq(profileFolders.parentFolderId, id));
+
+            const childFolders = childFolderRecords.map(this.mapToProfileFolderData);
+            console.log(`[ProfileDAO] Found ${childFolders.length} child folders for id=${id}:`, childFolders.map(f => ({ id: f.id, name: f.name })));
+
+            for (const childFolder of childFolders) {
+                console.log(`[ProfileDAO] Recursively deleting child folder id=${childFolder.id}`);
+                await this.deleteFolder(childFolder.id!);
+            }
+
+            // Delete all mods in this folder
+            console.log(`[ProfileDAO] Deleting mods in folder id=${id}`);
+            const deleteModsResult = await db.delete(profileMods)
+                .where(eq(profileMods.parentFolderId, id));
+            console.log(`[ProfileDAO] Deleted mods in folder id=${id}`);
+
+            // Finally, delete the folder itself
+            console.log(`[ProfileDAO] Deleting folder id=${id}`);
+            const deleteFolderResult = await db.delete(profileFolders).where(eq(profileFolders.id, id));
+            console.log(`[ProfileDAO] Deleted folder id=${id}`);
+
             return true;
         } catch (error) {
-            console.error(`删除文件夹失败 [ID: ${id}]:`, error);
+            console.error(`[ProfileDAO] 删除文件夹失败 [ID: ${id}]:`, error);
             return false;
         }
     }
@@ -455,11 +480,14 @@ export class ProfileDAO {
     }
 
     public async removeGroup(groupId: number): Promise<void> {
+        console.log(`[ProfileDAO] removeGroup called with groupId=${groupId}`);
         try {
+            console.log(`[ProfileDAO] Calling deleteFolder for groupId=${groupId}`);
             // Remove folder
-            await this.deleteFolder(groupId);
+            const result = await this.deleteFolder(groupId);
+            console.log(`[ProfileDAO] deleteFolder completed, result=${result}`);
         } catch (error) {
-            console.error('Remove group failed:', error);
+            console.error(`[ProfileDAO] Remove group failed for groupId=${groupId}:`, error);
             throw error;
         }
     }
@@ -494,7 +522,7 @@ export class ProfileDAO {
             const db = await getDb();
             const result = await db.select().from(profileMods)
                 .where(eq(profileMods.profileId, profileId))
-                .orderBy(asc(profileMods.sortOrder));
+                .orderBy(profileMods.sortOrder);
             return result.map(this.mapToProfileModData);
         } catch (error) {
             console.error(`获取配置文件模组关联失败 [配置ID: ${profileId}]:`, error);

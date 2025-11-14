@@ -4,13 +4,47 @@ import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, theme, T
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emit, listen} from "@tauri-apps/api/event";
-import {ModListItem, ModSourceType} from "@/vm/config/ModList.ts";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
+import {HomeViewModel} from "./HomeViewModel.ts";
 import {ModioApi} from "@/apis/modio";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {ModFile} from "@/apis/modio/ModInfo.ts";
+import {StorageAPI} from "@/storage";
 
 const {useToken} = theme;
+
+/**
+ * Helper method to get a mod from database by ID
+ */
+async function getModById(modId: number): Promise<ModListItem | null> {
+    const modsApi = await StorageAPI.getMods();
+    const modData = await modsApi.getModById(modId);
+    if (!modData) return null;
+
+    return {
+        id: modData.modId!,
+        modId: modData.platformId,
+        url: modData.url || "",
+        nameId: modData.nameId,
+        displayName: modData.displayName,
+        required: false,
+        enabled: true,
+        fileVersion: "-",
+        tags: modData.tags || [],
+        usedVersion: "",
+        versions: [],
+        approval: modData.approvalStatus || "Sandbox",
+        sourceType: modData.sourceType as ModSourceType || ModSourceType.Unknown,
+        downloadUrl: "",
+        cachePath: "",
+        downloadProgress: 100,
+        fileSize: 0,
+        lastUpdateDate: 0,
+        onlineUpdateDate: 0,
+        onlineAvailable: true,
+        localNoFound: false
+    };
+}
 
 
 function ModTreeViewFolder({nodeData, onMenuClick}) {
@@ -95,7 +129,8 @@ function ModTreeViewVersionSelect({nodeData}) {
         const viewModel = await HomeViewModel.getInstance();
         await viewModel.setModUsedVersion(nodeData.key, fileInfo.version);
 
-        const modItem = viewModel.ModList.get(nodeData.key);
+        const modItem = await getModById(nodeData.key);
+        if (!modItem) return;
         modItem.downloadUrl = fileInfo.download.binary_url;
         modItem.downloadProgress = 0;
         modItem.fileSize = fileInfo.filesize;

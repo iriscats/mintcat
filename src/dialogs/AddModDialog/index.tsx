@@ -5,7 +5,7 @@ import {emit, listen} from "@tauri-apps/api/event";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
 import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
-import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {StorageAPI} from "@/storage";
 

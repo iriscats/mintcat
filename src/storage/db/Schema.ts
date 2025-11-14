@@ -221,3 +221,327 @@ export const settings = sqliteTable("settings", {
 }, (table) => ({
     nameUnique: uniqueIndex("settings_name_unique").on(table.name),
 }));
+
+// ====================================
+// 类型定义
+// ====================================
+
+/**
+ * 模组列表项类型
+ * 用于在UI中表示单个模组的信息
+ * 直接从数据库读取，无需缓存
+ */
+export enum ModSourceType {
+    Local = "Local",
+    Modio = "Modio",
+    Unknown = "Unknown"
+}
+
+export const MOD_INVALID_ID = 999999;
+
+/**
+ * ModListItem 表示数据库中一个模组的完整视图
+ * 包含从多个表中联接的数据
+ */
+export type ModListItem = {
+    id: number; // modId from mods table
+    modId: number; // platformId from mods table
+    url: string;
+    nameId: string;
+    displayName: string;
+    required: boolean;
+    enabled: boolean;
+    fileVersion: string;
+    tags: string[];
+    usedVersion: string;
+    versions: string[];
+    approval: string;
+    sourceType: ModSourceType;
+    downloadUrl: string;
+    cachePath: string;
+    downloadProgress: number;
+    fileSize: number;
+    lastUpdateDate: number;
+    onlineUpdateDate: number;
+    onlineAvailable: boolean;
+    localNoFound: boolean;
+};
+
+// ====================================
+// Profile and Tree Structure Types
+// ====================================
+
+/**
+ * 树节点类型枚举
+ */
+export enum ProfileTreeType {
+    FOLDER = "folder",
+    ITEM = "item"
+}
+
+/**
+ * 预定义文件夹类型枚举
+ */
+export enum ProfileTreeGroupType {
+    ROOT = 0,
+    MODIO = 1,
+    LOCAL = 2
+}
+
+/**
+ * 配置树节点
+ * 表示树中的一个 item（可以是 mod 或文件夹）
+ */
+export class ProfileTreeItem {
+    public id: number = 0;
+    public type: ProfileTreeType = ProfileTreeType.ITEM;
+    public name: string = "";
+    public children: ProfileTreeItem[] = [];
+
+    public constructor(id: number, type: ProfileTreeType, name: string = "") {
+        this.id = id;
+        this.type = type;
+        this.name = name;
+    }
+
+    /**
+     * 添加子节点
+     */
+    public add(id: number, type: ProfileTreeType, name: string = ""): void {
+        this.children.unshift(new ProfileTreeItem(id, type, name));
+    }
+
+    /**
+     * 移除指定 ID 的节点（递归）
+     */
+    public remove(id: number): void {
+        this.children = this.children.filter(m => m.id !== id);
+        for (const child of this.children) {
+            child.remove(id);
+        }
+    }
+}
+
+/**
+ * 配置树结构
+ * 用于表示配置文件中的 mods 和文件夹层级关系
+ */
+export class ProfileTree {
+    public name: string = "";
+    public lastUpdate: number = 0;
+    public installTime: number = 0;
+    public editTime: number = 0;
+    public root: ProfileTreeItem = new ProfileTreeItem(ProfileTreeGroupType.ROOT, ProfileTreeType.FOLDER, "root");
+
+    /**
+     * Mod.io 文件夹访问器
+     * 通过文件夹名称查找，而不是硬编码 ID
+     */
+    public get ModioFolder(): ProfileTreeItem | undefined {
+        return this.root.children.find(p =>
+            p.type === ProfileTreeType.FOLDER &&
+            (p.name === "Mod.io" || p.name === "mod.io")
+        );
+    }
+
+    /**
+     * Local 文件夹访问器
+     * 通过文件夹名称查找，而不是硬编码 ID
+     */
+    public get LocalFolder(): ProfileTreeItem | undefined {
+        return this.root.children.find(p =>
+            p.type === ProfileTreeType.FOLDER &&
+            (p.name === "Local" || p.name === "本地")
+        );
+    }
+
+    public constructor(name: string) {
+        this.name = name;
+        this.lastUpdate = 0;
+    }
+
+    /**
+     * 生成随机 ID（基于 UUID）
+     * 确保生成唯一且有效的数字 ID
+     */
+    private makeId(): number {
+        const uuid = crypto.randomUUID();
+        const hex = uuid.replace(/-/g, '');
+        // 只取字符数字部分，避免字母导致的转换问题
+        const numericPart = hex.replace(/[a-f]/g, '');
+        const bigNum = BigInt('0x' + numericPart.substring(0, 16));
+        return Number(bigNum % BigInt(2147483647)); // 使用 32 位整数范围
+    }
+
+    /**
+     * 查找指定 ID 的节点
+     */
+    private findNode(items: ProfileTreeItem[], targetId: number): ProfileTreeItem | undefined {
+        if (targetId === 0) {
+            return undefined;
+        }
+        for (const item of items) {
+            if (item.id === targetId) {
+                return item;
+            }
+            const found = this.findNode(item.children, targetId);
+            if (found) {
+                return found;
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * 查找指定 ID 的节点及其父节点
+     */
+    private findNodeWithParent(items: ProfileTreeItem[], targetId: number, parent?: ProfileTreeItem): { parent?: ProfileTreeItem, node?: ProfileTreeItem } {
+        if (targetId === 0) {
+            return { parent, node: undefined };
+        }
+
+        for (const item of items) {
+            console.log(`[ProfileTree] Checking item: id=${item.id}, name=${item.name}, targetId=${targetId}`);
+            if (item.id === targetId) {
+                console.log(`[ProfileTree] Found match! parentId=${parent?.id}, parentName=${parent?.name}, nodeId=${item.id}, nodeName=${item.name}`);
+                return { parent, node: item };
+            }
+            const found = this.findNodeWithParent(item.children, targetId, item);
+            if (found.node) {
+                return found;
+            }
+        }
+        console.log(`[ProfileTree] No match found for targetId=${targetId} in ${items.length} items`);
+        return { parent: undefined, node: undefined };
+    }
+
+    /**
+     * 添加 mod 到指定文件夹
+     */
+    public addMod(id: number, parentId: number = 0): void {
+        const parent = this.findNode(this.root.children, parentId);
+        if (parent) {
+            parent.add(id, ProfileTreeType.ITEM);
+        } else {
+            this.root.add(id, ProfileTreeType.ITEM);
+        }
+    }
+
+    /**
+     * 移除 mod
+     */
+    public removeMod(id: number): void {
+        this.root.remove(id);
+    }
+
+    /**
+     * 设置文件夹名称
+     */
+    public setGroupName(id: number, name: string): void {
+        const parent = this.findNode(this.root.children, id);
+        if (parent) {
+            parent.name = name;
+        }
+    }
+
+    /**
+     * 获取文件夹名称
+     */
+    public getGroupName(id: number): string | undefined {
+        const node = this.findNode(this.root.children, id);
+        return node?.name;
+    }
+
+    /**
+     * 添加新文件夹
+     */
+    public addGroup(name: string, parentId: number = 0): void {
+        const parent = this.findNode(this.root.children, parentId);
+        const newId = this.makeId();
+
+        if (parent) {
+            parent.children.push(new ProfileTreeItem(newId, ProfileTreeType.FOLDER, name));
+        } else {
+            // 默认添加到根目录
+            this.root.add(newId, ProfileTreeType.FOLDER, name);
+        }
+    }
+
+    /**
+     * 移除文件夹
+     */
+    public removeGroup(id: number): ProfileTreeItem | undefined {
+        console.log(`[ProfileTree] removeGroup called for profile="${this.name}", id=${id}`);
+        console.log(`[ProfileTree] Current root children:`, this.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+
+        // 找到要删除的节点和其父节点
+        // 传递root作为初始parent来处理根节点子项的情况
+        const { parent, node } = this.findNodeWithParent(this.root.children, id, this.root);
+
+        console.log(`[ProfileTree] findNodeWithParent result:`, {
+            parentId: parent?.id,
+            parentName: parent?.name,
+            nodeId: node?.id,
+            nodeName: node?.name
+        });
+
+        if (parent && node) {
+            console.log(`[ProfileTree] Removing node from parent's children. Parent had ${parent.children.length} children`);
+            // 从父节点的children中移除该节点
+            parent.children = parent.children.filter(child => child.id !== id);
+            console.log(`[ProfileTree] Parent now has ${parent.children.length} children`);
+            console.log(`[ProfileTree] Removed node successfully:`, { id: node.id, name: node.name });
+            return node;
+        } else {
+            console.log(`[ProfileTree] Failed to find node or parent for id=${id}`);
+        }
+        return undefined;
+    }
+
+    /**
+     * 获取当前配置树中所有 mods 的列表
+     * @param modDataList 数据库中的所有 mods 数据
+     * @returns 过滤后的 mod 列表
+     */
+    public getModList(modDataList: any[]): ModListItem[] {
+        const modList: ModListItem[] = [];
+        const traverse = (node: ProfileTreeItem) => {
+            if (node.type === ProfileTreeType.ITEM) {
+                const modData = modDataList.find(m => m.modId === node.id);
+                if (modData) {
+                    // Convert ModData to ModListItem
+                    const modItem: ModListItem = {
+                        id: modData.modId,
+                        modId: modData.platformId,
+                        url: modData.url || "",
+                        nameId: modData.nameId,
+                        displayName: modData.displayName,
+                        required: false,
+                        enabled: true,
+                        fileVersion: "-",
+                        tags: modData.tags || [],
+                        usedVersion: "",
+                        versions: [],
+                        approval: modData.approvalStatus || "Sandbox",
+                        sourceType: modData.sourceType as any || "Unknown",
+                        downloadUrl: "",
+                        cachePath: "",
+                        downloadProgress: 100,
+                        fileSize: 0,
+                        lastUpdateDate: 0,
+                        onlineUpdateDate: 0,
+                        onlineAvailable: true,
+                        localNoFound: false
+                    };
+                    modList.push(modItem);
+                }
+            } else {
+                for (const child of node.children) {
+                    traverse(child);
+                }
+            }
+        };
+        traverse(this.root);
+        return modList;
+    }
+}

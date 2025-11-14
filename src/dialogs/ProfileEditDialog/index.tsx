@@ -2,8 +2,7 @@ import React from "react";
 import {t} from "i18next";
 import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
-import {ProfileTree} from "../vm/config/ProfileList.ts";
-import {ProfileViewModel} from "../vm/ProfileViewModel.ts";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
@@ -15,7 +14,7 @@ interface ProfileEditDialogStates {
 
 type InputCallback = (name: string) => void;
 
-class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
+class Index extends React.Component<any, ProfileEditDialogStates> {
 
     private callback: InputCallback;
 
@@ -79,9 +78,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
             return false;
         }
         const vm = await ProfileViewModel.getInstance();
-        await vm.addProfile(
-            this.state.newProfileName,
-            new ProfileTree(this.state.newProfileName).toJson());
+        await vm.addProfile(this.state.newProfileName);
 
         this.forceUpdate();
         this.setState({
@@ -109,10 +106,8 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleCopy(key: string) {
-        const vm = await ProfileViewModel.getInstance();
-        const profileData = vm.ActiveProfile.toJson();
-        await vm.addProfile(key + "_copy", profileData);
-        this.forceUpdate();
+        // TODO: Implement profile copying using HomeViewModel
+        message.info(t("Feature not implemented"));
     }
 
     private handleProfileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -121,8 +116,9 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     private async fetchData() {
         const vm = await ProfileViewModel.getInstance();
+        const profileList = await vm.getProfileList();
         this.setState({
-            profileList: vm.ProfileList
+            profileList: profileList
         })
     }
 
@@ -212,5 +208,5 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 }
 
 
-export default ProfileEditDialog;
+export default Index;
 

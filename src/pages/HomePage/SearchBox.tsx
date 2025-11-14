@@ -1,8 +1,8 @@
 import React from "react";
 import {Select, SelectProps} from "antd";
 import {SearchOutlined} from "@ant-design/icons";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
-import {TreeViewConverter} from "@/vm/converter/TreeViewConverter.ts";
+import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
+import {TreeViewConverter} from "@/pages/HomePage/TreeViewConverter.ts";
 
 const defaultFilterOptions: SelectProps['options'] = [
     {value: 'Verified', label: 'Verified'},
@@ -35,14 +35,14 @@ export const SearchBox = () => {
 
         setSearchOptions(searchOptions);
 
-        HomeViewModel.updateTreeView();
+        TreeViewModel.updateTreeView();
     }
 
     const onSearchSelectChange = async (value: any) => {
         TreeViewConverter.filterList = value;
         setSearchValue(value);
 
-        HomeViewModel.updateTreeView();
+        TreeViewModel.updateTreeView();
     }
 
     const onBlur = async () => {

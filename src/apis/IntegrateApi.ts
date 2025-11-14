@@ -5,13 +5,45 @@ import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {MessageBox} from "@/components/MessageBox.ts";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {ILock} from "@/utils/ILock.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
+import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
 
 
 export class IntegrateApi extends ILock {
+
+    /**
+     * Helper method to get all mods from database as ModListItem array
+     */
+    private async getAllModsAsList(): Promise<ModListItem[]> {
+        const modsApi = await StorageAPI.getMods();
+        const allMods = await modsApi.getAllMods();
+        return allMods.map(mod => ({
+            id: mod.modId!,
+            modId: mod.platformId,
+            url: mod.url || "",
+            nameId: mod.nameId,
+            displayName: mod.displayName,
+            required: false,
+            enabled: true,
+            fileVersion: "-",
+            tags: mod.tags || [],
+            usedVersion: "",
+            versions: [],
+            approval: mod.approvalStatus || "Sandbox",
+            sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
+            downloadUrl: "",
+            cachePath: "",
+            downloadProgress: 100,
+            fileSize: 0,
+            lastUpdateDate: 0,
+            onlineUpdateDate: 0,
+            onlineAvailable: true,
+            localNoFound: false
+        }));
+    }
 
 
     public static async checkGamePath(drgPakPath: string = undefined): Promise<boolean> {
@@ -40,7 +72,7 @@ export class IntegrateApi extends ILock {
         try {
             await emit("status-bar-log", t("Start installation"));
 
-            const homeViewModel = await HomeViewModel.getInstance();
+            const treeViewModel = await TreeViewModel.getInstance();
             const settings = await StorageAPI.getSettings();
 
             if (!await IntegrateApi.checkGamePath()) {
@@ -52,10 +84,12 @@ export class IntegrateApi extends ILock {
                 return false;
             }
 
-            let editTime = homeViewModel.ActiveProfile.editTime;
-            let installTime = homeViewModel.ActiveProfile.installTime;
-            const subModList = homeViewModel.ActiveProfile.getModList(homeViewModel.ModList);
-            for (const item of subModList.Mods) {
+            let editTime = treeViewModel.ActiveProfile.editTime;
+            let installTime = treeViewModel.ActiveProfile.installTime;
+            const api = new IntegrateApi();
+            const modList = await api.getAllModsAsList();
+            const subModList = treeViewModel.ActiveProfile.getModList(modList);
+            for (const item of subModList) {
                 if (item.enabled) {
                     await ModUpdateApi.checkOnlineModUpdate(item);
                     if (item.cachePath === "") {
@@ -65,7 +99,7 @@ export class IntegrateApi extends ILock {
 
                     if (await ModUpdateApi.checkLocalModModify(item)) {
                         editTime = TimeUtils.getCurrentTime();
-                        homeViewModel.ActiveProfile.editTime = editTime;
+                        treeViewModel.ActiveProfile.editTime = editTime;
                     }
                     if (!await ModUpdateApi.checkLocalModCache(item)) {
                         message.error(`${t("File Not Found")}: ${item.displayName}: ${item.cachePath}`);
@@ -112,7 +146,7 @@ export class IntegrateApi extends ILock {
             }
 
             const installModList = [];
-            for (const item of subModList.Mods) {
+            for (const item of subModList) {
                 const modName = item.nameId === "" ? item.displayName : item.nameId;
                 if (item.enabled) {
                     installModList.push({
@@ -148,8 +182,8 @@ export class IntegrateApi extends ILock {
             });
 
             await once<number>('install-success', async (event) => {
-                const homeViewModel = await HomeViewModel.getInstance();
-                homeViewModel.ActiveProfile.installTime = event.payload;
+                const treeViewModel = await TreeViewModel.getInstance();
+                treeViewModel.ActiveProfile.installTime = event.payload;
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });

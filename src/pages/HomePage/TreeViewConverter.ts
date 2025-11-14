@@ -1,6 +1,6 @@
 import {TreeProps} from "antd";
-import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/vm/config/ProfileList.ts";
-import {ModList, ModListItem} from "@/vm/config/ModList.ts";
+import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
+import {ModListItem} from "@/storage/db/Schema.ts";
 
 
 export class TreeViewConverter {
@@ -9,9 +9,9 @@ export class TreeViewConverter {
 
     public treeData?: TreeProps['treeData'] = []
     public expandedKeys?: TreeProps['expandedKeys'] = [];
-    private modList?: ModList;
+    private modList?: ModListItem[];
 
-    public constructor(modList: ModList) {
+    public constructor(modList: ModListItem[]) {
         this.modList = modList;
     }
 
@@ -40,14 +40,14 @@ export class TreeViewConverter {
     private buildTreeNode(parent: any, root: ProfileTreeItem) {
         for (const item of root.children) {
             if (item.type === ProfileTreeType.ITEM) {
-                const modItem = this.modList.get(item.id);
+                const modItem = this.modList?.find(m => m.id === item.id);
                 if (modItem === undefined) {
                     continue;
                 }
                 const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
                 if (TreeViewConverter.filter(modItem)) {
                     parent.children.push({
-                        key: modItem.id,
+                        key: `mod-${item.id}`, // 添加前缀确保唯一性
                         modId: modItem.modId,
                         isLeaf: true,
                         title: title,
@@ -68,13 +68,16 @@ export class TreeViewConverter {
                     });
                 }
             } else if (item.type === ProfileTreeType.FOLDER) {
-                this.expandedKeys.push(item.id);
+                this.expandedKeys.push(`folder-${item.id}`);
+                const folderKey = `folder-${item.id}`;
+                console.log(`[TreeViewConverter] Creating folder node: id=${item.id}, name=${item.name}, key=${folderKey}`);
                 const node = {
-                    key: item.id,
+                    key: folderKey, // 添加前缀确保唯一性
                     title: item.name,
                     isLeaf: false,
                     children: [],
                 }
+                console.log(`[TreeViewConverter] Folder node created:`, node);
                 parent.children.push(node);
                 this.buildTreeNode(node, item);
             }
@@ -85,11 +88,22 @@ export class TreeViewConverter {
         if (parent === undefined) {
             return;
         }
+        console.log(`[TreeViewConverter] buildProfileTree processing:`, { parentKey: parent.key, childrenCount: parent.children?.length || 0 });
+
         for (const item of parent.children) {
+            // 提取原始 ID（去除前缀）
+            const id = typeof item.key === 'string'
+                ? parseInt(item.key.split('-')[1])
+                : item.key;
+
+            console.log(`[TreeViewConverter] Processing item:`, { key: item.key, title: item.title, isLeaf: item.isLeaf, extractedId: id });
+
             if (item.isLeaf === true) {
-                root.children.push(new ProfileTreeItem(item.key, ProfileTreeType.ITEM));
+                console.log(`[TreeViewConverter] Adding ITEM: id=${id}, title=${item.title}`);
+                root.children.push(new ProfileTreeItem(id, ProfileTreeType.ITEM));
             } else {
-                const folder = new ProfileTreeItem(item.key, ProfileTreeType.FOLDER, item.title);
+                console.log(`[TreeViewConverter] Adding FOLDER: id=${id}, title=${item.title}`);
+                const folder = new ProfileTreeItem(id, ProfileTreeType.FOLDER, item.title);
                 root.children.push(folder);
                 this.buildProfileTree(item, folder);
             }
@@ -104,17 +118,24 @@ export class TreeViewConverter {
         }
         this.buildTreeNode(root, tree.root);
         this.treeData = root.children;
+        console.log(`[TreeViewConverter] convertTo completed. treeData:`, this.treeData);
+        console.log(`[TreeViewConverter] First item key type: ${typeof this.treeData?.[0]?.key}, value: ${this.treeData?.[0]?.key}`);
         return this.treeData;
     }
 
     public convertFrom(treeData: any) {
+        console.log(`[TreeViewConverter] convertFrom called with ${treeData?.length || 0} items`);
+        console.log(`[TreeViewConverter] Input treeData:`, treeData);
         const rootTreeData = {
             key: "root",
             isLeaf: false,
             children: treeData,
         }
         const rootProfile = new ProfileTreeItem(0, ProfileTreeType.FOLDER, "root");
+        console.log(`[TreeViewConverter] Building profile tree...`);
         this.buildProfileTree(rootTreeData, rootProfile);
+        console.log(`[TreeViewConverter] Converted profile tree root has ${rootProfile.children.length} children`);
+        console.log(`[TreeViewConverter] Converted children:`, rootProfile.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
         return rootProfile;
     }
 

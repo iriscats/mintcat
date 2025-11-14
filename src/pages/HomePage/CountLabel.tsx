@@ -1,6 +1,7 @@
 import React from "react";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {TreeViewModel} from "./TreeViewModel.ts";
 import {listen} from "@tauri-apps/api/event";
+import {StorageAPI} from "@/storage";
 
 export const CountLabel = () => {
     const [enableCount, setEnableCount] = React.useState(0);
@@ -8,13 +9,15 @@ export const CountLabel = () => {
 
     React.useEffect(() => {
         const fetchData = async () => {
-            const vm = await HomeViewModel.getInstance();
+            const vm = await TreeViewModel.getInstance();
             if (!vm.ActiveProfile)
                 return;
 
-            const subModList = vm.ActiveProfile.getModList(vm.ModList);
-            setEnableCount(subModList.Mods.filter(mod => mod.enabled).length);
-            setTotalCount(subModList.Mods.length);
+            const modsApi = await StorageAPI.getMods();
+            const allMods = await modsApi.getAllMods();
+            const subModList = vm.ActiveProfile.getModList(allMods);
+            setEnableCount(subModList.filter(mod => mod.enabled).length);
+            setTotalCount(subModList.length);
         };
 
         listen("tree-view-count-label-update", async () => {

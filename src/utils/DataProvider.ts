@@ -10,7 +10,7 @@ export async function createStore<T extends StoreSchema>(
 ): Promise<{
     [K in keyof T]: Promise<T[K]> | T[K];
 }> {
-    const store = await load(storeName, {autoSave: true});
+    const store = await load(storeName, {autoSave: true, defaults: defaultValues});
 
     for (const key in defaultValues) {
         const existing = await store.get(key);

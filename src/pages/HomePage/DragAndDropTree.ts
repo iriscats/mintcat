@@ -7,6 +7,16 @@ export function dragAndDrop(nodeInfo: any, treeData: TreeDataNode[]) {
     const dropPos = nodeInfo.node.pos.split('-');
     const dropPosition = nodeInfo.dropPosition - Number(dropPos[dropPos.length - 1]); // the drop position relative to the drop node, inside 0, top -1, bottom 1
 
+    // Prevent dragging of default folders (Local and Mod.io)
+    // Default folders have IDs: Mod.io=1, Local=2
+    if (typeof dragKey === 'string' && dragKey.startsWith('folder-')) {
+        const folderId = parseInt(dragKey.split('-')[1]);
+        if (folderId === 1 || folderId === 2) {
+            console.log(`[DragAndDrop] Blocking drag of default folder: ${dragKey} (ID=${folderId})`);
+            return treeData;
+        }
+    }
+
     const loop = (
         data: TreeDataNode[],
         key: React.Key,

@@ -11,7 +11,7 @@ import {HomePage} from "@/pages/HomePage";
 import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
 import ChatPage from "@/pages/ChatPage.tsx";
-import {AppViewModel} from "@/vm/AppViewModel.ts";
+import {AppViewModel} from "./AppViewModel.ts";
 
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";

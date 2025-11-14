@@ -1,10 +1,11 @@
 import {t} from "i18next";
 import {emit, once} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/modio";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
+import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
+import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
-import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModDialogResult, AddModType} from "@/dialogs/AddModDialog/index.tsx";
 
 let windowInstance: WebviewWindow;
@@ -79,7 +80,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         }
 
         await emit("status-bar-log", t("Add Complete"));
-        HomeViewModel.updateTreeView();
+        TreeViewModel.updateTreeView();
 
         await windowInstance.close();
         windowInstance = null;

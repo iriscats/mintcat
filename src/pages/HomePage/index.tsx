@@ -16,25 +16,27 @@ import {
 import * as checkbox from "antd/es/checkbox";
 
 import {openWindow} from "@/dialogs/AddModDialog/open";
-import ProfileEditDialog from "@/dialogs/ProfileEditDialog.tsx";
+import ProfileEditDialog from "@/dialogs/ProfileEditDialog/index.tsx";
 import {InputDialog} from "@/dialogs/InputDialog.tsx";
-import {TreeViewConverter} from "@/vm/converter/TreeViewConverter.ts";
+import {TreeViewConverter} from "./TreeViewConverter.ts";
 import {TreeViewOutlined} from "@/components/SvgIcon.tsx";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
-import {ModSourceType} from "@/vm/config/ModList.ts";
+import {ModSourceType} from "@/storage/db/Schema.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
-import {HomeViewModel} from "@/vm/HomeViewModel.ts";
-import {dragAndDrop} from "./DragAndDropTree.ts";
-import {TreeViewItem} from "./TreeViewItem.tsx";
+import {HomeViewModel} from "./HomeViewModel.ts";
+import {TreeViewModel} from "./TreeViewModel.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
 import {emit, listen} from "@tauri-apps/api/event";
-import {ProfileTreeGroupType} from "@/vm/config/ProfileList.ts";
+import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
+import {StorageAPI} from "@/storage";
+import {ModListItem} from "@/storage/db/Schema.ts";
+import {TreeView} from "./TreeView.tsx";
 
 
 interface ModListPageState {
@@ -72,6 +74,72 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     }
 
+    /**
+     * Helper method to get a mod from database by ID
+     */
+    private async getModById(modId: number) {
+        const modsApi = await StorageAPI.getMods();
+        const modData = await modsApi.getModById(modId);
+        if (!modData) return null;
+
+        // Convert to ModListItem
+        return {
+            id: modData.modId!,
+            modId: modData.platformId,
+            url: modData.url || "",
+            nameId: modData.nameId,
+            displayName: modData.displayName,
+            required: false,
+            enabled: true,
+            fileVersion: "-",
+            tags: modData.tags || [],
+            usedVersion: "",
+            versions: [],
+            approval: modData.approvalStatus || "Sandbox",
+            sourceType: modData.sourceType as ModSourceType || ModSourceType.Unknown,
+            downloadUrl: "",
+            cachePath: "",
+            downloadProgress: 100,
+            fileSize: 0,
+            lastUpdateDate: 0,
+            onlineUpdateDate: 0,
+            onlineAvailable: true,
+            localNoFound: false
+        };
+    }
+
+    /**
+     * Helper method to get all mods from database as ModListItem array
+     */
+    private async getAllModsAsList(): Promise<ModListItem[]> {
+        const modsApi = await StorageAPI.getMods();
+        const allMods = await modsApi.getAllMods();
+
+        return allMods.map(mod => ({
+            id: mod.modId!,
+            modId: mod.platformId,
+            url: mod.url || "",
+            nameId: mod.nameId,
+            displayName: mod.displayName,
+            required: false,
+            enabled: true,
+            fileVersion: "-",
+            tags: mod.tags || [],
+            usedVersion: "",
+            versions: [],
+            approval: mod.approvalStatus || "Sandbox",
+            sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
+            downloadUrl: "",
+            cachePath: "",
+            downloadProgress: 100,
+            fileSize: 0,
+            lastUpdateDate: 0,
+            onlineUpdateDate: 0,
+            onlineAvailable: true,
+            localNoFound: false
+        }));
+    }
+
     // Multi Operations
     @autoBind
     private onMultiCheckboxChange(e: checkbox.CheckboxChangeEvent) {
@@ -95,7 +163,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         if (confirm) {
             for (const key of this.state.selectedKeys) {
-                const modItem = vm.ModList.get(key);
+                const modItem = await this.getModById(key);
                 if (modItem) {
                     await vm.removeMod(modItem.id);
                 }
@@ -112,20 +180,17 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
 
         for (const key of this.state.selectedKeys) {
-            const modItem = vm.ModList.get(key);
-            if (modItem) {
-                modItem.enabled = isEnable;
-            }
+            await vm.setModEnabled(key, isEnable);
         }
         await this.updateTreeView();
     }
 
     @autoBind
     private async onMultiUpdateClick() {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await TreeViewModel.getInstance();
 
         for (const key of this.state.selectedKeys) {
-            const modItem = vm.ModList.get(key);
+            const modItem = await this.getModById(key);
             if (modItem) {
                 await ModUpdateApi.updateMod(modItem)
             }
@@ -135,11 +200,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
     // Menu Bar Operations
     @autoBind
     private async onMenuBarCopyListClick() {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await TreeViewModel.getInstance();
+        const modsApi = await StorageAPI.getMods();
+        const allMods = await modsApi.getAllMods();
 
-        const subModList = vm.ActiveProfile.getModList(vm.ModList);
+        const subModList = vm.ActiveProfile.getModList(allMods);
         let list = "";
-        for (const mod of subModList.Mods) {
+        for (const mod of subModList) {
             if (TreeViewConverter.filter(mod) && mod.sourceType === ModSourceType.Modio) {
                 list += mod.url + "\n";
             }
@@ -169,7 +236,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarSortClick(order: string) {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await TreeViewModel.getInstance();
         await vm.sortMods(order);
         await this.updateTreeView();
     }
@@ -183,33 +250,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     @autoBind
-    private async onDrop(info: any) {
-        this.setState({
-            virtual: false,
-        })
-        this.setState({
-            virtual: true,
-        })
-
-        const vm = await HomeViewModel.getInstance();
-        let treeData: TreeDataNode[];
-        const converter = new TreeViewConverter(vm.ModList);
-        if (TreeViewConverter.filterList.length > 0) {
-            const filterList = TreeViewConverter.filterList;
-            TreeViewConverter.filterList = [];
-            treeData = converter.convertTo(vm.ActiveProfile);
-            TreeViewConverter.filterList = filterList;
-        } else {
-            treeData = this.state.treeData;
-        }
-        const dragTreeData = dragAndDrop(info, treeData);
-        await vm.setProfileData(converter.convertFrom(dragTreeData)).then();
-        await this.updateTreeView();
-    }
-
-    @autoBind
     private async onSelectChange(value: string) {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await TreeViewModel.getInstance();
 
         vm.ActiveProfile = value;
         this.setState({
@@ -244,7 +286,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async updateProfileSelect() {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await TreeViewModel.getInstance();
 
         let options: SelectProps['options'] = [];
         for (const profileKey of vm.ProfileList) {
@@ -261,24 +303,79 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async updateTreeView() {
-        const vm = await HomeViewModel.getInstance();
-        const converter = new TreeViewConverter(vm.ModList);
-        converter.convertTo(vm.ActiveProfile);
+        console.log(`[HomePage] updateTreeView() called`);
+        const vm = await TreeViewModel.getInstance();
+        const modsApi = await StorageAPI.getMods();
+        const allMods = await modsApi.getAllMods();
+
+        console.log(`[HomePage] Got ${allMods.length} mods from database`);
+
+        // Convert mods to ModListItem array
+        const modList: ModListItem[] = allMods.map(mod => ({
+            id: mod.modId!,
+            modId: mod.platformId,
+            url: mod.url || "",
+            nameId: mod.nameId,
+            displayName: mod.displayName,
+            required: false,
+            enabled: true,
+            fileVersion: "-",
+            tags: mod.tags || [],
+            usedVersion: "",
+            versions: [],
+            approval: mod.approvalStatus || "Sandbox",
+            sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
+            downloadUrl: "",
+            cachePath: "",
+            downloadProgress: 100,
+            fileSize: 0,
+            lastUpdateDate: 0,
+            onlineUpdateDate: 0,
+            onlineAvailable: true,
+            localNoFound: false
+        }));
+
+        console.log(`[HomePage] Converting profile tree, active profile: ${vm.ActiveProfileName}`);
+        console.log(`[HomePage] ActiveProfile root children:`, vm.ActiveProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+
+        const converter = new TreeViewConverter(modList);
+        const treeData = converter.convertTo(vm.ActiveProfile);
+
+        console.log(`[HomePage] Converted treeData:`, treeData);
 
         this.setState({
             treeData: converter.treeData,
+        }, () => {
+            console.log(`[HomePage] treeData state updated, count=${converter.treeData?.length || 0}`);
         });
 
         if (this.state.expandedKeys.length === 0) {
             this.setState({
                 expandedKeys: converter.expandedKeys,
             });
+            console.log(`[HomePage] Set expandedKeys:`, converter.expandedKeys);
         }
+
+        console.log(`[HomePage] updateTreeView() completed`);
     }
 
     @autoBind
-    private async onMenuClick(key: string, id: number) {
+    private async onMenuClick(key: string, nodeKey: string) {
         const vm = await HomeViewModel.getInstance();
+
+        // Helper function to extract numeric ID from nodeKey (e.g., "folder-3" -> 3)
+        const extractId = (key: string): number => {
+            if (typeof key === 'string' && key.includes('-')) {
+                const parts = key.split('-');
+                return parseInt(parts[1], 10);
+            }
+            return parseInt(key as any, 10);
+        };
+
+        // Extract ID for tree nodes
+        const id = extractId(nodeKey);
+        console.log(`[HomePage] Menu click: key=${key}, nodeKey=${nodeKey}, extractedId=${id}`);
+
         switch (key) {
             case "add_new_group": {
                 this.inputDialogRef.current?.setCallback(
@@ -299,19 +396,25 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     }).show();
                 break;
             case "delete_group":
-                await vm.removeGroup(id);
+                console.log(`[HomePage] Starting delete group operation for id=${id}`);
+                try {
+                    await vm.removeGroup(id);
+                    console.log(`[HomePage] Delete group completed for id=${id}`);
+                } catch (error) {
+                    console.error(`[HomePage] Delete group failed for id=${id}:`, error);
+                }
                 break;
             case "rename_group":
-                const groupName = vm.ActiveProfile.groupNameMap.get(id);
+                const groupName = await vm.getGroupName(id);
                 this.inputDialogRef.current?.setCallback(
                     t("Rename Group"),
-                    groupName,
+                    groupName || "",
                     async (text) => {
                         await vm.setGroupName(id, text);
                     }).show();
                 break;
             case "update": {
-                const mod = vm.ModList.get(id);
+                const mod = await this.getModById(id);
                 if (mod) {
                     await ModUpdateApi.updateMod(mod);
                 }
@@ -332,7 +435,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
             }
                 break;
             case "rename":
-                const modName = vm.ModList.get(id)?.displayName;
+                const mod = await this.getModById(id);
+                const modName = mod?.displayName;
                 this.inputDialogRef.current.setCallback(
                     "Rename Mod",
                     modName,
@@ -345,7 +449,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 break;
             case "copy_link":
                 try {
-                    const mod = vm.ModList.get(id);
+                    const mod = await this.getModById(id);
                     if (mod?.url) {
                         ClipboardApi.setLastClipboardText(mod.url);
                         await navigator.clipboard.writeText(mod.url);
@@ -360,7 +464,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 break;
             case "export": {
                 try {
-                    const mod = vm.ModList.get(id);
+                    const mod = await this.getModById(id);
                     const path = await save({
                         filters: [{
                             name: mod.displayName,
@@ -377,11 +481,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
             default:
                 break;
         }
-    }
-
-    @autoBind
-    private onCustomTitleRender(nodeData: any) {
-        return TreeViewItem(nodeData, this.onMenuClick);
     }
 
     componentDidMount(): void {
@@ -512,28 +611,20 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         <div style={{
                             height: window.innerHeight - 145,
                         }}>
-                            <Tree className="ant-tree-content"
-                                  draggable
-                                  blockNode
-                                  virtual={this.state.virtual}
-                                  height={window.innerHeight - 155}
-                                  checkable={this.state.isMultiSelect}
-                                  expandedKeys={this.state.expandedKeys}
-                                  selectedKeys={this.state.selectedKeys}
-                                  treeData={this.state.treeData}
-                                  onCheck={this.onTreeNodeSelect}
-                                  onSelect={this.onTreeNodeSelect}
-                                  onRightClick={this.onTreeRightClick}
-                                  onExpand={this.onTreeNodeExpand}
-                                  onDrop={this.onDrop}
-                                  onDragStart={() => {
-                                      setTimeout(() => {
-                                          this.setState({
-                                              virtual: false,
-                                          })
-                                      }, 1000);
-                                  }}
-                                  titleRender={this.onCustomTitleRender}
+                            <TreeView
+                                treeData={this.state.treeData}
+                                isMultiSelect={this.state.isMultiSelect}
+                                expandedKeys={this.state.expandedKeys}
+                                selectedKeys={this.state.selectedKeys}
+                                virtual={this.state.virtual}
+                                onMenuClick={this.onMenuClick}
+                                onUpdateTreeView={this.updateTreeView}
+                                onTreeNodeSelect={this.onTreeNodeSelect}
+                                onTreeNodeExpand={this.onTreeNodeExpand}
+                                onTreeRightClick={this.onTreeRightClick}
+                                onVirtualStateChange={(virtual) => {
+                                    this.setState({ virtual });
+                                }}
                             />
                         </div>
                         <Flex style={{

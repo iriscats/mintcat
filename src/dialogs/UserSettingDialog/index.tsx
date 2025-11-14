@@ -5,7 +5,7 @@ import {UserOutlined} from "@ant-design/icons";
 import {open as openShell} from "@tauri-apps/plugin-shell";
 import {ModioApi} from "@/apis/modio";
 import {CacheApi} from "@/apis/CacheApi";
-import {AppViewModel} from "@/vm/AppViewModel";
+import {AppViewModel} from "@/AppViewModel";
 import {StorageAPI} from "@/storage";
 
 interface UserSettingDialogStates {
