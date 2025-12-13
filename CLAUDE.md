@@ -43,8 +43,15 @@ pnpm gen-sql  # Generate SQLite migrations using Drizzle Kit
 
 ### Testing
 ```bash
-cargo test             # Run Rust backend tests
-cargo test -- --nocapture  # Run tests with stdout output
+# Frontend TypeScript type checking
+npx tsc --noEmit       # Check types without emitting files
+
+# Rust backend testing (run from src-tauri directory)
+cd src-tauri && cargo test              # Run all Rust tests
+cd src-tauri && cargo test -- --nocapture  # Run tests with stdout output
+cd src-tauri && cargo test test_name    # Run specific test by name
+
+# Build verification
 pnpm preview           # Preview built application
 ```
 
@@ -80,7 +87,6 @@ pnpm preview           # Preview built application
 
 ### Key Patterns
 - **Singleton ViewModels**: Centralized state management with locking mechanism (`ILock`)
-- **Lock Mechanism**: `ILock` abstract class ensures sequential operation execution in ViewModels
 - **Event-driven**: Tauri events for component communication
 - **DAO Pattern**: Data access objects for database operations
 - **Migration System**: Versioned config migrations in `src/storage/migration/`
@@ -150,6 +156,7 @@ pnpm add -D vitest @testing-library/react @testing-library/jest-dom
 
 - **React Compiler**: Experimental feature enabled, may cause build warnings
 - **Decorators Pattern**: Used extensively in ViewModels for reactive programming
+- **Lock Mechanism**: `ILock` abstract class (src/utils/ILock.ts) ensures sequential operation execution in ViewModels
 - **Cross-compilation**: Requires proper Rust toolchain setup for Windows/Linux builds
 - **SQLite Database**: Follows 3NF design principles with proper indexing
 - **Mod Integration**: Supports both local files and mod.io downloads with Unreal Engine pak processing
