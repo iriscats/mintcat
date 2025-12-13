@@ -662,23 +662,36 @@ export class ProfileDAO {
             const hasLocalFolder = existingFolders.some(folder =>
                 folder.name === 'Local' || folder.name === '本地'
             );
+            const hasModioFolder = existingFolders.some(folder =>
+                folder.name === 'mod.io' || folder.name === 'Mod.io'
+            );
 
-            if (hasLocalFolder) {
-                console.log(`配置文件 ${profileId} 已存在本地文件夹，跳过创建默认文件夹`);
+            if (hasLocalFolder && hasModioFolder) {
+                console.log(`配置文件 ${profileId} 已存在默认文件夹，跳过创建默认文件夹`);
                 return;
             }
 
             const defaultFolders = [
                 {
                     profileId,
+                    name: 'mod.io',
+                    folderType: 'modio',
+                    sortOrder: 0
+                },
+                {
+                    profileId,
                     name: 'Local',
                     folderType: 'local',
-                    sortOrder: 0
+                    sortOrder: 1
                 }
             ];
 
             for (const folder of defaultFolders) {
-                await this.createFolder(folder);
+                // 只创建不存在的文件夹
+                const exists = existingFolders.some(f => f.name === folder.name);
+                if (!exists) {
+                    await this.createFolder(folder);
+                }
             }
         } catch (error) {
             console.error(`创建默认文件夹结构失败 [配置ID: ${profileId}]:`, error);

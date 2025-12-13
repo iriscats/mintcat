@@ -121,36 +121,52 @@ export class TreeViewModel {
     }
 
     public async setProfileData(root: ProfileTreeItem): Promise<void> {
-        console.log(`[TreeViewModel] setProfileData called for profile: ${this.activeProfileName}`);
+        console.log(`\n========== [TreeViewModel] setProfileData 开始 ==========`);
+        console.log(`[TreeViewModel] 目标 profile: ${this.activeProfileName}`);
+        console.log(`[TreeViewModel] 传入的 ProfileTreeItem:`, {
+            childrenCount: root.children.length,
+            children: root.children.map(c => ({
+                id: c.id,
+                name: c.name,
+                type: c.type,
+                childrenCount: c.children?.length || 0
+            }))
+        });
+
         try {
             // Update in-memory structure first
             const profile = this.profileTreeList.find(p => p.name === this.activeProfileName);
             if (profile) {
-                console.log(`[TreeViewModel] Updating memory structure for profile: ${this.activeProfileName}`);
-                console.log(`[TreeViewModel] Before update - root children count: ${profile.root.children.length}`);
+                console.log(`[TreeViewModel] ✅ 找到内存中的 profile，准备更新`);
+                console.log(`[TreeViewModel] 更新前 - root.children count: ${profile.root.children.length}`);
+                console.log(`[TreeViewModel] 更新前 - root.children:`, profile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+
                 profile.root = root;
-                console.log(`[TreeViewModel] After update - root children count: ${profile.root.children.length}`);
+
+                console.log(`[TreeViewModel] 更新后 - root.children count: ${profile.root.children.length}`);
+                console.log(`[TreeViewModel] 更新后 - root.children:`, profile.root.children.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    type: c.type,
+                    childrenCount: c.children?.length || 0
+                })));
             } else {
-                console.log(`[TreeViewModel] Profile not found: ${this.activeProfileName}`);
+                console.log(`[TreeViewModel] ❌ 未找到 profile: ${this.activeProfileName}`);
             }
 
             // Save to database
-            console.log(`[TreeViewModel] Saving profile tree to database...`);
+            console.log(`[TreeViewModel] 开始保存 profile tree 到数据库...`);
             try {
                 await this.saveProfileTreeToDatabase(root);
-                console.log(`[TreeViewModel] Profile tree saved to database successfully`);
-
-                // CRITICAL FIX: Reload from database to ensure in-memory state matches database state
-                // This synchronizes database-generated IDs with in-memory structure
-                console.log(`[TreeViewModel] Reloading profile tree from database to synchronize IDs...`);
-                await this.loadProfilesFromDatabase();
-                console.log(`[TreeViewModel] Profile tree reloaded from database successfully`);
+                console.log(`[TreeViewModel] ✅ Profile tree 成功保存到数据库`);
             } catch (saveError) {
-                console.error(`[TreeViewModel] Failed to save profile tree to database:`, saveError);
+                console.error(`[TreeViewModel] ❌ 保存 profile tree 到数据库失败:`, saveError);
                 throw saveError;
             }
+            console.log(`========== [TreeViewModel] setProfileData 完成 ==========\n`);
         } catch (error) {
-            console.error('[TreeViewModel] Failed to set profile data:', error);
+            console.error('[TreeViewModel] ❌ setProfileData 失败:', error);
+            console.log(`========== [TreeViewModel] setProfileData 失败 ==========\n`);
             throw error;
         }
     }
@@ -160,25 +176,35 @@ export class TreeViewModel {
      * (not recursively - that will be handled by saveProfileTreeItems)
      */
     private collectNonDefaultItems(root: ProfileTreeItem, defaultFolders: any[]): ProfileTreeItem[] {
+        console.log(`\n========== [TreeViewModel] collectNonDefaultItems 开始 ==========`);
+        console.log(`[TreeViewModel] 传入的 root.children 数量: ${root.children.length}`);
+        console.log(`[TreeViewModel] 默认 folders 列表:`, defaultFolders.map(f => ({ id: f.id, name: f.name, type: f.folderType })));
+
         const result: ProfileTreeItem[] = [];
 
         for (const item of root.children) {
             if (item.type === ProfileTreeType.FOLDER) {
                 // Check if this is a default folder (Mod.io or Local)
                 const isDefaultFolder = defaultFolders.some(f => f.name === item.name);
-                console.log(`[TreeViewModel] Checking top-level folder: ${item.name}, id=${item.id}, isDefault=${isDefaultFolder}`);
+                console.log(`[TreeViewModel] 检查顶级 folder: ${item.name}, id=${item.id}, isDefault=${isDefaultFolder}`);
 
                 // For default folders, we skip them here because they're handled separately
                 // but we still need to save their children as nested custom folders/items
                 if (!isDefaultFolder) {
-                    console.log(`[TreeViewModel] Adding top-level non-default folder to save list: ${item.name}, id=${item.id}`);
+                    console.log(`[TreeViewModel] ✅ 添加顶级非默认 folder 到保存列表: ${item.name}, id=${item.id}`);
                     result.push(item);
+                } else {
+                    console.log(`[TreeViewModel] ⏭️ 跳过默认 folder，将单独处理: ${item.name}`);
                 }
             } else if (item.type === ProfileTreeType.ITEM) {
-                console.log(`[TreeViewModel] Adding top-level item to save list: id=${item.id}`);
+                console.log(`[TreeViewModel] ✅ 添加顶级 item 到保存列表: id=${item.id}, childrenCount=${item.children?.length || 0}`);
                 result.push(item);
             }
         }
+
+        console.log(`[TreeViewModel] 返回的 result 数量: ${result.length}`);
+        console.log(`[TreeViewModel] result 列表:`, result.map(i => ({ id: i.id, name: i.name, type: i.type })));
+        console.log(`========== [TreeViewModel] collectNonDefaultItems 完成 ==========\n`);
 
         return result;
     }
@@ -187,81 +213,111 @@ export class TreeViewModel {
      * Save ProfileTree to database
      */
     private async saveProfileTreeToDatabase(root: ProfileTreeItem): Promise<void> {
-        console.log(`[TreeViewModel] saveProfileTreeToDatabase called, root has ${root.children.length} children`);
+        console.log(`\n========== [TreeViewModel] saveProfileTreeToDatabase 开始 ==========`);
+        console.log(`[TreeViewModel] 传入的 root 有 ${root.children.length} 个子项`);
+        console.log(`[TreeViewModel] root children:`, root.children.map(c => ({
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            childrenCount: c.children?.length || 0
+        })));
+
         const profileDAO = await StorageAPI.getProfiles();
         const activeProfile = await profileDAO.getActiveProfile();
 
         if (!activeProfile) {
-            console.error('[TreeViewModel] No active profile found');
+            console.error('[TreeViewModel] ❌ 未找到活跃的 profile');
             return;
         }
 
-        console.log(`[TreeViewModel] Active profile: ${activeProfile.name}, id=${activeProfile.id}`);
+        console.log(`[TreeViewModel] 活跃的 profile: ${activeProfile.name}, id=${activeProfile.id}`);
 
         try {
             // Get all folders and mods for this profile
-            console.log(`[TreeViewModel] Getting existing folders and mods...`);
+            console.log(`[TreeViewModel] 获取现有的 folders 和 mods...`);
             const folders = await profileDAO.getProfileFolders(activeProfile.id!);
             const mods = await profileDAO.getProfileMods(activeProfile.id!);
-            console.log(`[TreeViewModel] Found ${folders.length} folders and ${mods.length} mods`);
+            console.log(`[TreeViewModel] 找到 ${folders.length} 个 folders 和 ${mods.length} 个 mods`);
+            console.log(`[TreeViewModel] 现有 folders:`, folders.map(f => ({ id: f.id, name: f.name, type: f.folderType })));
+            console.log(`[TreeViewModel] 现有 mods:`, mods.map(m => ({ modId: m.modId, parentFolderId: m.parentFolderId })));
 
             // Get the default folders (Mod.io and Local) to preserve them
             const defaultFolders = folders.filter(f =>
                 f.folderType === 'modio' || f.folderType === 'local'
             );
-            console.log(`[TreeViewModel] Default folders:`, defaultFolders.map(f => ({ id: f.id, name: f.name, type: f.folderType })));
+            console.log(`[TreeViewModel] 默认 folders (Mod.io 和 Local):`, defaultFolders.map(f => ({
+                id: f.id,
+                name: f.name,
+                type: f.folderType
+            })));
 
             // Delete all existing mods from profile
-            console.log(`[TreeViewModel] Deleting existing mods...`);
+            console.log(`[TreeViewModel] 开始删除现有的 ${mods.length} 个 mods...`);
             for (const mod of mods) {
+                console.log(`[TreeViewModel] 删除 mod: modId=${mod.modId}`);
                 await profileDAO.removeModFromProfile(activeProfile.id!, mod.modId);
             }
-            console.log(`[TreeViewModel] Deleted ${mods.length} mods`);
+            console.log(`[TreeViewModel] ✅ 已删除 ${mods.length} 个 mods`);
 
             // Delete only custom folders, keep default folders
             // We need to delete folders in reverse order (children before parents) to avoid foreign key constraints
             const customFolders = folders.filter(f => f.folderType === 'custom');
             customFolders.sort((a, b) => (b.id! - a.id!)); // Sort by ID descending to delete children before parents
 
-            console.log(`[TreeViewModel] Deleting ${customFolders.length} custom folders...`);
+            console.log(`[TreeViewModel] 开始删除 ${customFolders.length} 个自定义 folders...`);
             for (const folder of customFolders) {
-                console.log(`[TreeViewModel] Deleting custom folder: ${folder.name} (id=${folder.id})`);
+                console.log(`[TreeViewModel] 删除自定义 folder: ${folder.name} (id=${folder.id})`);
                 await profileDAO.deleteFolder(folder.id!);
             }
-            console.log(`[TreeViewModel] Deleted all custom folders`);
+            console.log(`[TreeViewModel] ✅ 已删除所有自定义 folders`);
 
             // Save the tree structure for non-default folders/items
             // Recursively collect all non-default folders and items
             const itemsToSave = this.collectNonDefaultItems(root, defaultFolders);
-            console.log(`[TreeViewModel] Items to save (non-default, including nested): ${itemsToSave.length}`, itemsToSave.map(i => ({ id: i.id, name: i.name, type: i.type })));
+            console.log(`[TreeViewModel] 需要保存的非默认 items (包括嵌套): ${itemsToSave.length} 个`, itemsToSave.map(i => ({
+                id: i.id,
+                name: i.name,
+                type: i.type
+            })));
 
             await this.saveProfileTreeItems(itemsToSave, profileDAO, activeProfile.id!, null, 0);
 
             // Handle default folders separately
-            console.log(`[TreeViewModel] Handling default folders...`);
+            console.log(`[TreeViewModel] 开始处理默认 folders...`);
             for (const defaultFolder of defaultFolders) {
-                console.log(`[TreeViewModel] Processing default folder: ${defaultFolder.name} (id=${defaultFolder.id})`);
+                console.log(`\n[TreeViewModel] 处理默认 folder: ${defaultFolder.name} (id=${defaultFolder.id})`);
                 const correspondingItem = root.children.find(item =>
                     item.type === ProfileTreeType.FOLDER && item.name === defaultFolder.name
                 );
 
+                console.log(`[TreeViewModel] 查找对应的 tree item:`, correspondingItem ? {
+                    found: true,
+                    item: {
+                        id: correspondingItem.id,
+                        name: correspondingItem.name,
+                        childrenCount: correspondingItem.children?.length || 0
+                    }
+                } : { found: false });
+
                 if (correspondingItem) {
-                    console.log(`[TreeViewModel] Found corresponding item in tree, saving...`);
+                    console.log(`[TreeViewModel] 在 tree 中找到对应的 item，开始保存...`);
                     await this.saveDefaultFolderItems(
                         correspondingItem,
                         profileDAO,
                         activeProfile.id!,
                         defaultFolder.id!
                     );
-                    console.log(`[TreeViewModel] Default folder saved successfully`);
+                    console.log(`[TreeViewModel] ✅ 默认 folder 保存成功`);
                 } else {
-                    console.log(`[TreeViewModel] No corresponding item found in tree for ${defaultFolder.name}`);
+                    console.log(`[TreeViewModel] ⚠️ 在 tree 中未找到对应的 item: ${defaultFolder.name}`);
                 }
             }
 
-            console.log('[TreeViewModel] Profile tree saved to database successfully');
+            console.log(`[TreeViewModel] ✅ Profile tree 成功保存到数据库`);
+            console.log(`========== [TreeViewModel] saveProfileTreeToDatabase 完成 ==========\n`);
         } catch (error) {
-            console.error('[TreeViewModel] Failed to save profile tree to database:', error);
+            console.error('[TreeViewModel] ❌ 保存 profile tree 到数据库失败:', error);
+            console.log(`========== [TreeViewModel] saveProfileTreeToDatabase 失败 ==========\n`);
             throw error;
         }
     }
@@ -331,9 +387,21 @@ export class TreeViewModel {
         profileId: number,
         defaultFolderId: number
     ): Promise<void> {
+        console.log(`\n========== [TreeViewModel] saveDefaultFolderItems 开始 ==========`);
+        console.log(`[TreeViewModel] 处理默认 folder，item:`, {
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            childrenCount: item.children.length
+        });
+        console.log(`[TreeViewModel] 参数: profileId=${profileId}, defaultFolderId=${defaultFolderId}`);
+
         // Save mods in this default folder
         const mods = item.children.filter(child => child.type === ProfileTreeType.ITEM);
+        console.log(`[TreeViewModel] 在默认文件夹中找到 ${mods.length} 个 mods:`, mods.map(m => ({ id: m.id, name: m.name })));
+
         for (let i = 0; i < mods.length; i++) {
+            console.log(`[TreeViewModel] 添加 mod 到默认文件夹 [${i + 1}/${mods.length}]: modId=${mods[i].id}, name=${mods[i].name}, parentFolderId=${defaultFolderId}, sortOrder=${i}`);
             await profileDAO.addModToProfile({
                 profileId,
                 modId: mods[i].id,
@@ -343,6 +411,7 @@ export class TreeViewModel {
                 usedVersion: ""
             });
         }
+        console.log(`[TreeViewModel] ✅ 成功添加 ${mods.length} 个 mods 到默认文件夹`);
 
         // Save custom subfolders in this default folder
         const customFolders = item.children.filter(child =>

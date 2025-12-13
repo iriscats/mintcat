@@ -1,5 +1,4 @@
 import {t} from "i18next";
-import {message} from "antd";
 import i18n from "@/locales/i18n";
 import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
@@ -26,7 +25,7 @@ export class AppViewModel extends ILock {
         if (modioOAuth?.oauth !== "") {
             this.appStartAutoCheckModUpdate();
         } else {
-            message.error(t("mod.io OAuth No Found"));
+            await emit("app-error", t("mod.io OAuth No Found"));
         }
     }
 
@@ -44,7 +43,7 @@ export class AppViewModel extends ILock {
             }
         } catch (err) {
             console.warn(err);
-            message.error(t("No Permission To Access the Config Folder"));
+            await emit("app-error", t("No Permission To Access the Config Folder"));
         }
     }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import {Layout} from 'antd';
+import {useAppError} from '@/hooks/useAppError';
 
 import TitleBar from "@/components/TitleBar.tsx";
 import StatusBar from "@/components/StatusBar.tsx";
@@ -19,6 +20,7 @@ import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 
 import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
 import {LoginDialog} from "@/dialogs/LoginDialog";
+import {useKeyboardListener} from "@/hooks/useKeyboardListener.tsx";
 
 const {
     Header,
@@ -28,44 +30,37 @@ const {
 } = Layout;
 
 
-class App extends React.Component<any, any> {
+const AppContent = () => {
 
-    state = {
-        currentPage: MenuPage.Home,
-    }
 
-    private pageConfigs = [];
+    const [currentPage, setCurrentPage] = React.useState<MenuPage>(MenuPage.Home);
+    const [isAppViewModelReady, setIsAppViewModelReady] = React.useState(false);
+    const pageConfigs = React.useRef<any[]>([]);
 
-    public constructor(props: any) {
-        super(props);
+    const clickMenu = React.useCallback(async (key: string) => {
+        setCurrentPage(key as MenuPage);
 
-        this.clickMenu = this.clickMenu.bind(this);
-    }
-
-    private async clickMenu(key: string): Promise<void> {
-        this.setState({currentPage: key});
-
-        if (this.pageConfigs.find(({key: pageKey}) => pageKey === key)) {
+        if (pageConfigs.current.find(({key: pageKey}) => pageKey === key)) {
             return;
         }
 
         switch (key) {
             case MenuPage.Modio: {
-                this.pageConfigs.push({
+                pageConfigs.current.push({
                     key: MenuPage.Modio,
                     component: <ModioPage/>
                 });
             }
                 break;
             case MenuPage.Setting: {
-                this.pageConfigs.push({
+                pageConfigs.current.push({
                     key: MenuPage.Setting,
                     component: <SettingPage/>
                 });
             }
                 break;
             case MenuPage.Chat: {
-                this.pageConfigs.push({
+                pageConfigs.current.push({
                     key: MenuPage.Chat,
                     component: <ChatPage/>
                 });
@@ -74,67 +69,68 @@ class App extends React.Component<any, any> {
             default:
                 break;
         }
-    }
+    }, []);
 
-    componentDidMount() {
-        console.log('App 组件加载...');
-
-        AppViewModel.getInstance().then(() => {
-            this.pageConfigs.push({key: MenuPage.Home, component: <HomePage/>});
-            this.forceUpdate();
-        });
-
-        initClipboardWatcher();
-        window.addEventListener('keydown', this.handleKeyDown);
-    }
-
-    componentWillUnmount() {
-        window.removeEventListener('keydown', this.handleKeyDown);
-    }
-
-    private handleKeyDown = (event: KeyboardEvent) => {
+    useAppError();
+    useKeyboardListener((event) => {
         if (event.ctrlKey && event.key === 'f') {
             event.preventDefault();
         }
-    };
+    });
+
+    React.useEffect(() => {
+        console.log('App 组件加载...');
+
+        AppViewModel.getInstance().then(() => {
+            pageConfigs.current.push({key: MenuPage.Home, component: <HomePage/>});
+            setIsAppViewModelReady(true);
+        });
+
+        initClipboardWatcher();
+
+    }, []);
 
 
-    render() {
-        return (
-            <Layout className={"app"}>
-                <UpdateDialog/>
-                <ConfigManageDialog/>
-                <SelectGameDialog/>
-                <LoginDialog/>
-                <Header className={"app-header"}>
-                    <TitleBar/>
-                </Header>
-                <Layout>
-                    <Sider width="50px">
-                        <MenuBar onClick={this.clickMenu}/>
-                    </Sider>
-                    <Content>
-                        {
-                            this.pageConfigs.length === 0 && <EmptyPage/>
-                        }
-                        {
-                            this.pageConfigs.map(({key, component}) => (
-                                <div key={key} style={{
-                                    display: this.state.currentPage === key ? 'block' : 'none',
-                                    height: '100%'
-                                }}>
-                                    {component}
-                                </div>
-                            ))
-                        }
-                    </Content>
-                </Layout>
-                <Footer style={{height: "30px"}}>
-                    <StatusBar/>
-                </Footer>
+    return (
+        <Layout className={"app"}>
+            <UpdateDialog/>
+            <ConfigManageDialog/>
+            <SelectGameDialog/>
+            <LoginDialog/>
+            <Header className={"app-header"}>
+                <TitleBar/>
+            </Header>
+            <Layout>
+                <Sider width="50px">
+                    <MenuBar onClick={clickMenu}/>
+                </Sider>
+                <Content>
+                    {
+                        !isAppViewModelReady && <EmptyPage/>
+                    }
+                    {
+                        isAppViewModelReady && pageConfigs.current.map(({key, component}) => (
+                            <div key={key} style={{
+                                display: currentPage === key ? 'block' : 'none',
+                                height: '100%'
+                            }}>
+                                {component}
+                            </div>
+                        ))
+                    }
+                </Content>
             </Layout>
-        );
-    }
+            <Footer style={{height: "30px"}}>
+                <StatusBar/>
+            </Footer>
+        </Layout>
+    );
+};
+
+function App() {
+    return (
+        <AppContent/>
+    );
 }
 
 
