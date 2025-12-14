@@ -4,15 +4,23 @@ import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {exists} from "@tauri-apps/plugin-fs";
-import {ILock} from "@/utils/ILock.ts";
 import {emit} from "@tauri-apps/api/event";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
 import {StorageAPI} from "@/storage";
-import {MigrationBase} from "@/storage/migration";
+import {BaseViewModel} from "@/core/BaseViewModel";
 
-export class AppViewModel extends ILock {
+/**
+ * AppViewModel manages application-level state and business logic
+ * Handles user settings, language, theme, OAuth, and game info
+ */
+export class AppViewModel extends BaseViewModel {
 
     private static instance: AppViewModel;
+
+    /**
+     * Shared lock instance for thread-safe singleton initialization
+     */
+    private static lockInstance = new class extends BaseViewModel {}();
 
     private constructor() {
         super();
@@ -91,8 +99,12 @@ export class AppViewModel extends ILock {
         }
     }
 
-    private async initAppViewModel() {
-
+    /**
+     * Initialize AppViewModel
+     * Loads user settings, checks paths, and initializes UI state
+     * Note: Data migration is handled by AppInitializer before this runs
+     */
+    protected async initialize(): Promise<void> {
         await this.loadUserLanguages();
         await this.loadUserGuiTheme();
         await this.loadUserInfo();
@@ -101,27 +113,40 @@ export class AppViewModel extends ILock {
         await this.checkOauth();
         await IntegrateApi.checkGamePath();
 
-        // 使用统一的迁移逻辑
-        await MigrationBase.autoMigrate();
-
         await emit("title-bar-load-avatar");
         if (await DeviceApi.isFirstRun()) {
             await emit("config-manage-dialog-open");
         }
+
+        this.initialized = true;
     }
 
+    /**
+     * @deprecated Use getInstance() which calls initialize() automatically
+     * Kept for backward compatibility during migration
+     */
+    public async initAppViewModel(): Promise<void> {
+        await this.initialize();
+    }
+
+    /**
+     * Get singleton instance of AppViewModel
+     * Thread-safe with initialization lock
+     *
+     * @returns AppViewModel instance
+     */
     public static async getInstance(): Promise<AppViewModel> {
-        const release = await this.acquireLock();
-        if (!AppViewModel.instance) {
-            const appViewModel = new AppViewModel();
-            try {
-                await appViewModel.initAppViewModel();
-            } finally {
+        const release = await this.lockInstance.acquireLock();
+        try {
+            if (!AppViewModel.instance) {
+                const appViewModel = new AppViewModel();
+                await appViewModel.initialize();
                 AppViewModel.instance = appViewModel;
             }
+            return AppViewModel.instance;
+        } finally {
+            release();
         }
-        release();
-        return AppViewModel.instance;
     }
 
 }

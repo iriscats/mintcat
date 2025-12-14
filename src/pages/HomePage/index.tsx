@@ -37,6 +37,8 @@ import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
 import {StorageAPI} from "@/storage";
 import {ModListItem} from "@/storage/db/Schema.ts";
 import {TreeView} from "./TreeView.tsx";
+import {AppInitializer} from "@/core/AppInitializer";
+import {DIContainer} from "@/utils/DIContainer";
 
 
 interface ModListPageState {
@@ -483,9 +485,23 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
     }
 
-    componentDidMount(): void {
+    async componentDidMount(): Promise<void> {
+        // Wait for core to be ready
+        if (!AppInitializer.isCoreReady()) {
+            console.warn('[HomePage] Core not ready, waiting...');
+            await AppInitializer.initializeCore();
+        }
+
+        // Pre-initialize UI ViewModels (optional but recommended for better UX)
+        console.log('[HomePage] Initializing UI ViewModels...');
+        await DIContainer.get<TreeViewModel>('TreeViewModel');
+        await DIContainer.get<HomeViewModel>('HomeViewModel');
+        console.log('[HomePage] UI ViewModels initialized');
+
+        // Setup window resize hook
         this.hookWindowResized();
 
+        // Setup event listeners
         listen<boolean>("home-page-loading", async (event) => {
             this.setState({
                 loading: event.payload,
@@ -500,12 +516,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await this.updateProfileSelect();
         }).then();
 
-
+        // Initial UI update
         this.updateProfileSelect().then();
         this.updateTreeView().then();
 
+        // Check for mod updates
         ModUpdateApi.checkModList().then();
-
     }
 
     render() {

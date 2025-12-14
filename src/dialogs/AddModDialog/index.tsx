@@ -8,6 +8,8 @@ import {BasePage} from "@/pages/IBasePage.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {StorageAPI} from "@/storage";
+import {AppInitializer} from "@/core/AppInitializer";
+import {registerViewModels} from "@/core/DIRegistration";
 
 export enum AddModType {
     MODIO = "mod.io",
@@ -102,32 +104,39 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         });
     }
 
-    componentDidMount() {
+    async componentDidMount(): Promise<void> {
+        // Ensure core is initialized (multi-window support)
+        // Register ViewModels if not already registered
+        registerViewModels();
+
+        if (!AppInitializer.isCoreReady()) {
+            console.log('[AddModDialog] Core not ready, initializing...');
+            await AppInitializer.initializeCore();
+        }
+
         this.hookWindowResized();
 
-        const fetchData = async () => {
-            const profileDAO = await StorageAPI.getProfiles();
-            const profileData = await profileDAO.getActiveProfile();
-            const profileFolderList = await profileDAO.getProfileFolders(profileData.id);
+        // Load dialog data
+        const profileDAO = await StorageAPI.getProfiles();
+        const profileData = await profileDAO.getActiveProfile();
+        const profileFolderList = await profileDAO.getProfileFolders(profileData.id);
 
-            const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
-            const initData = JSON.parse(initDataStr);
+        const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
+        const initData = JSON.parse(initDataStr);
 
-            this.setState({
-                addModType: initData.addModType,
-                groupId: initData.groupId, //profileFolderList[0].id,
-                text: initData.text,
-                groupOptions: profileFolderList.map((item) => {
-                    return {
-                        label: item.name,
-                        value: item.id,
-                    }
-                }),
-            });
-        };
+        this.setState({
+            addModType: initData.addModType,
+            groupId: initData.groupId,
+            text: initData.text,
+            groupOptions: profileFolderList.map((item) => {
+                return {
+                    label: item.name,
+                    value: item.id,
+                }
+            }),
+        });
 
-        fetchData().then();
-
+        // Listen for dialog data updates (when window is reused)
         listen<any>("add-mod-dialog-init-data", async (event) => {
             console.log("AddModDialog init event", event);
             this.setState({
@@ -135,7 +144,6 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                 groupId: event.payload.groupId,
                 text: event.payload.text
             });
-
         }).then();
     }
 

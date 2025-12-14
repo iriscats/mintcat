@@ -1,8 +1,13 @@
 import {emit} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
 import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
+import {BaseViewModel} from "@/core/BaseViewModel";
 
-export class TreeViewModel {
+/**
+ * TreeViewModel manages profile tree data and UI state
+ * Handles profile loading, tree structure management, and UI updates
+ */
+export class TreeViewModel extends BaseViewModel {
 
     private static instance: TreeViewModel;
 
@@ -64,6 +69,7 @@ export class TreeViewModel {
     }
 
     private constructor() {
+        super();
     }
 
     private async sortNode(modItem: ProfileTreeItem, order: string): Promise<ProfileTreeItem[]> {
@@ -440,7 +446,13 @@ export class TreeViewModel {
         }
     }
 
-    public async initializeData(): Promise<void> {
+    /**
+     * Initialize TreeViewModel
+     * Loads profile data from database and sets up initial state
+     *
+     * @throws Error if initialization fails critically
+     */
+    protected async initialize(): Promise<void> {
         try {
             // Load profile data from database
             await this.loadProfilesFromDatabase();
@@ -464,6 +476,9 @@ export class TreeViewModel {
             // Notify frontend components that profile data is ready
             emit("home-page-update-profile-select").then();
 
+            // Mark as initialized
+            this.initialized = true;
+
         } catch (error) {
             console.error('TreeViewModel initialization failed:', error);
 
@@ -478,10 +493,22 @@ export class TreeViewModel {
                 TreeViewModel.updateTreeView();
                 TreeViewModel.updateTreeViewCountLabel();
 
+                // Mark as initialized even with error (graceful degradation)
+                this.initialized = true;
+
             } catch (recoveryError) {
                 console.error('Recovery failed:', recoveryError);
+                throw recoveryError;
             }
         }
+    }
+
+    /**
+     * @deprecated Use getInstance() which calls initialize() automatically
+     * Kept for backward compatibility during migration
+     */
+    public async initializeData(): Promise<void> {
+        await this.initialize();
     }
 
     /**
@@ -655,13 +682,33 @@ export class TreeViewModel {
         return null;
     }
 
-    public static async getInstance() {
-        if (TreeViewModel.instance) {
+    /**
+     * Shared lock instance for thread-safe singleton initialization
+     */
+    private static lockInstance = new class extends BaseViewModel {}();
+
+    /**
+     * Get singleton instance of TreeViewModel
+     * Thread-safe with initialization lock
+     *
+     * @returns TreeViewModel instance
+     *
+     * @example
+     * ```typescript
+     * const treeViewModel = await TreeViewModel.getInstance();
+     * ```
+     */
+    public static async getInstance(): Promise<TreeViewModel> {
+        const release = await this.lockInstance.acquireLock();
+        try {
+            if (!TreeViewModel.instance) {
+                TreeViewModel.instance = new TreeViewModel();
+                await TreeViewModel.instance.initialize();
+            }
             return TreeViewModel.instance;
+        } finally {
+            release();
         }
-        TreeViewModel.instance = new TreeViewModel();
-        await TreeViewModel.instance.initializeData();
-        return TreeViewModel.instance;
     }
 
 }

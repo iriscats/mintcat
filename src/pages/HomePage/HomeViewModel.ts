@@ -14,12 +14,18 @@ import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {emit} from "@tauri-apps/api/event";
+import {BaseViewModel} from "@/core/BaseViewModel";
 
-export class HomeViewModel {
+/**
+ * HomeViewModel handles mod operations and business logic
+ * Manages mod adding, removing, updating, and dependency resolution
+ */
+export class HomeViewModel extends BaseViewModel {
 
     private static instance: HomeViewModel;
 
     private constructor() {
+        super();
     }
 
     public static updateProfileSelect() {
@@ -433,12 +439,41 @@ export class HomeViewModel {
         }
     }
 
-    public static async getInstance() {
-        if (HomeViewModel.instance) {
+    /**
+     * Shared lock instance for thread-safe singleton initialization
+     */
+    private static lockInstance = new class extends BaseViewModel {}();
+
+    /**
+     * Get singleton instance of HomeViewModel
+     * Thread-safe with initialization lock
+     *
+     * @returns HomeViewModel instance
+     *
+     * @example
+     * ```typescript
+     * const homeViewModel = await HomeViewModel.getInstance();
+     * ```
+     */
+    public static async getInstance(): Promise<HomeViewModel> {
+        const release = await this.lockInstance.acquireLock();
+        try {
+            if (!HomeViewModel.instance) {
+                HomeViewModel.instance = new HomeViewModel();
+                await HomeViewModel.instance.initialize();
+            }
             return HomeViewModel.instance;
+        } finally {
+            release();
         }
-        HomeViewModel.instance = new HomeViewModel();
-        return HomeViewModel.instance;
+    }
+
+    /**
+     * Initialize HomeViewModel
+     * No specific initialization needed for now
+     */
+    protected async initialize(): Promise<void> {
+        this.initialized = true;
     }
 
 }

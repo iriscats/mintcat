@@ -15,6 +15,12 @@ import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
 export class IntegrateApi extends ILock {
 
     /**
+     * Shared instance for lock mechanism in static methods
+     * Ensures only one installation operation runs at a time
+     */
+    private static lockInstance = new IntegrateApi();
+
+    /**
      * Helper method to get all mods from database as ModListItem array
      */
     private async getAllModsAsList(): Promise<ModListItem[]> {
@@ -67,7 +73,7 @@ export class IntegrateApi extends ILock {
     }
 
     public static async installMods() {
-        const release = await this.acquireLock();
+        const release = await this.lockInstance.acquireLock();
 
         try {
             await emit("status-bar-log", t("Start installation"));

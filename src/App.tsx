@@ -12,7 +12,8 @@ import {HomePage} from "@/pages/HomePage";
 import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
 import ChatPage from "@/pages/ChatPage.tsx";
-import {AppViewModel} from "./AppViewModel.ts";
+import {AppInitializer} from "@/core/AppInitializer";
+import {registerViewModels} from "@/core/DIRegistration";
 
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";
@@ -21,6 +22,7 @@ import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
 import {LoginDialog} from "@/dialogs/LoginDialog";
 import {useKeyboardListener} from "@/hooks/useKeyboardListener.tsx";
+import {emit} from "@tauri-apps/api/event";
 
 const {
     Header,
@@ -81,10 +83,21 @@ const AppContent = () => {
     React.useEffect(() => {
         console.log('App 组件加载...');
 
-        AppViewModel.getInstance().then(() => {
-            pageConfigs.current.push({key: MenuPage.Home, component: <HomePage/>});
-            setIsAppViewModelReady(true);
-        });
+        // Register all ViewModels to DI container
+        registerViewModels();
+
+        // Initialize core (database + AppViewModel)
+        AppInitializer.initializeCore()
+            .then(() => {
+                console.log('[App] Core initialization complete');
+                pageConfigs.current.push({key: MenuPage.Home, component: <HomePage/>});
+                setIsAppViewModelReady(true);
+            })
+            .catch((error) => {
+                console.error('[App] Core initialization failed:', error);
+                // Show error UI
+                emit('app-error', error.message || 'Application initialization failed').catch(console.error);
+            });
 
         initClipboardWatcher();
 
