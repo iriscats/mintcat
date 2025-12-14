@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Badge, Button, Dropdown, Flex, Image, List, Popover} from "antd";
+import {Avatar, Badge, Button, Dropdown, Flex, Image, List, Popover, message} from "antd";
 import {t} from "i18next";
 import {
     BellOutlined,
@@ -14,6 +14,7 @@ import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {emit} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
+import {TaskManager} from "@/tasks/TaskManager.ts";
 
 const items = [
 
@@ -36,8 +37,42 @@ class TitleBar extends React.Component<any, any> {
     }
 
     private async onLaunchGameClick() {
-        if (await IntegrateApi.installMods())
-            await IntegrateApi.launchGame();
+        try {
+            // Submit installation task
+            const taskId = await IntegrateApi.installMods();
+
+            // Setup progress listener
+            const taskManager = TaskManager.getInstance();
+            const unlisten = await taskManager.onTaskUpdated((task) => {
+                if (task.id === taskId) {
+                    // Update status bar with progress
+                    emit("status-bar-percent", task.progress).catch(console.error);
+
+                    if (task.status === 'processing') {
+                        console.log(`[TitleBar] Installation progress: ${task.progress}%`);
+                    }
+                }
+            });
+
+            // Wait for task to complete
+            const result = await taskManager.waitForTask(taskId, 120000); // 2 min timeout
+
+            // Cleanup listener
+            unlisten();
+
+            if (result.status === 'completed') {
+                // Installation succeeded, launch game
+                await emit("status-bar-percent", 0);
+                await IntegrateApi.launchGame();
+            } else if (result.status === 'failed') {
+                await emit("status-bar-percent", 0);
+                message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('[TitleBar] Installation failed:', error);
+            await emit("status-bar-percent", 0);
+            message.error(t("Installation Failed"));
+        }
     }
 
     private async onThemeClick(value: string) {

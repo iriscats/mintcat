@@ -39,6 +39,7 @@ import {ModListItem} from "@/storage/db/Schema.ts";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {DIContainer} from "@/utils/DIContainer";
+import {TaskManager} from "@/tasks/TaskManager.ts";
 
 
 interface ModListPageState {
@@ -226,7 +227,41 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarSaveChangesClick() {
-        await IntegrateApi.installMods();
+        try {
+            // Submit installation task
+            const taskId = await IntegrateApi.installMods();
+
+            // Setup progress listener
+            const taskManager = TaskManager.getInstance();
+            const unlisten = await taskManager.onTaskUpdated((task) => {
+                if (task.id === taskId) {
+                    // Update status bar with progress
+                    emit("status-bar-percent", task.progress).catch(console.error);
+
+                    if (task.status === 'processing') {
+                        console.log(`[HomePage] Installation progress: ${task.progress}%`);
+                    }
+                }
+            });
+
+            // Wait for task to complete
+            const result = await taskManager.waitForTask(taskId, 120000); // 2 min timeout
+
+            // Cleanup listener
+            unlisten();
+
+            if (result.status === 'completed') {
+                await emit("status-bar-percent", 0);
+                message.success(t("Installation Finish"));
+            } else if (result.status === 'failed') {
+                await emit("status-bar-percent", 0);
+                message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('[HomePage] Installation failed:', error);
+            await emit("status-bar-percent", 0);
+            message.error(t("Installation Failed"));
+        }
     }
 
     @autoBind

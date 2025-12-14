@@ -10,6 +10,8 @@ import {ILock} from "@/utils/ILock.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
 import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
+import {TaskManager} from "@/tasks/TaskManager.ts";
+import {TaskPriority} from "@/apis/TaskQueueAPI.ts";
 
 
 export class IntegrateApi extends ILock {
@@ -72,101 +74,29 @@ export class IntegrateApi extends ILock {
         return true;
     }
 
-    public static async installMods() {
-        const release = await this.lockInstance.acquireLock();
+    /**
+     * Install mods to game using async task system
+     * @returns Task ID for tracking progress
+     *
+     * @example
+     * ```typescript
+     * const taskId = await IntegrateApi.installMods();
+     * // UI can listen to task progress via TaskManager.onTaskUpdated()
+     * ```
+     */
+    public static async installMods(): Promise<string> {
+        console.log('[IntegrateApi] Submitting mod installation task');
 
-        try {
-            await emit("status-bar-log", t("Start installation"));
+        // Submit install task to TaskManager
+        const taskManager = TaskManager.getInstance();
+        const taskId = await taskManager.submitFrontendTask(
+            'mod_install',
+            {}, // ModInstallTask will get active profile automatically
+            TaskPriority.High
+        );
 
-            const treeViewModel = await TreeViewModel.getInstance();
-            const settings = await StorageAPI.getSettings();
-
-            if (!await IntegrateApi.checkGamePath()) {
-                return false;
-            }
-
-            if (await IntegrateApi.checkSteamGame()) {
-                await emit("status-bar-log", `${t("Installation Failed")}: ${t("Game Not Closed")}`);
-                return false;
-            }
-
-            let editTime = treeViewModel.ActiveProfile.editTime;
-            let installTime = treeViewModel.ActiveProfile.installTime;
-            const api = new IntegrateApi();
-            const modList = await api.getAllModsAsList();
-            const subModList = treeViewModel.ActiveProfile.getModList(modList);
-            for (const item of subModList) {
-                if (item.enabled) {
-                    await ModUpdateApi.checkOnlineModUpdate(item);
-                    if (item.cachePath === "") {
-                        message.error(`${t("File Not Found")}: ${item.url}`);
-                        return false;
-                    }
-
-                    if (await ModUpdateApi.checkLocalModModify(item)) {
-                        editTime = TimeUtils.getCurrentTime();
-                        treeViewModel.ActiveProfile.editTime = editTime;
-                    }
-                    if (!await ModUpdateApi.checkLocalModCache(item)) {
-                        message.error(`${t("File Not Found")}: ${item.displayName}: ${item.cachePath}`);
-                        return false;
-                    }
-                }
-            }
-
-            if (installTime < editTime) {
-                installTime = editTime;
-            }
-
-            const drgPakPath = await settings.getValue('drgPakPath');
-            const ue4ss = await settings.getValue('ue4ss');
-
-            const installType = await IntegrateApi.checkInstalled(
-                drgPakPath,
-                installTime
-            );
-
-            switch (installType) {
-                case "old_version_mint_installed": {
-                    const result = await MessageBox.confirm({
-                        title: t("Installation Warning"),
-                        content: t("Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?"),
-                    });
-                    if (!result) {
-                        message.warning(t("User Cancels Installation"));
-                        return false;
-                    }
-                }
-                    break;
-                case "mintcat_installed": {
-                    await emit("status-bar-log", t("Installation Finish"));
-                    message.success(t("Installation Finish"));
-                }
-                    return true;
-            }
-
-            if (ue4ss === "UE4SS-Lite") {
-                await IntegrateApi.uninstall(drgPakPath);
-            } else {
-                await IntegrateApi.uninstall(drgPakPath, false);
-            }
-
-            const installModList = [];
-            for (const item of subModList) {
-                const modName = item.nameId === "" ? item.displayName : item.nameId;
-                if (item.enabled) {
-                    installModList.push({
-                        name: modName,
-                        modio_id: item.modId,
-                        pak_path: item.cachePath,
-                    });
-                }
-            }
-
-            return await IntegrateApi.install(drgPakPath, JSON.stringify(installModList));
-        } finally {
-            release();
-        }
+        console.log(`[IntegrateApi] Install task submitted: ${taskId}`);
+        return taskId;
     }
 
     public static async uninstallMods() {
@@ -180,7 +110,7 @@ export class IntegrateApi extends ILock {
         }
     }
 
-    private static async install(gamePath: string, modListJson: string) {
+    public static async install(gamePath: string, modListJson: string) {
         return new Promise<boolean>(async (resolve, reject) => {
             await invoke('install_mods', {
                 gamePath: gamePath,
@@ -201,7 +131,7 @@ export class IntegrateApi extends ILock {
         });
     }
 
-    private static async uninstall(gamePath: string, isDeleteUe4ss: boolean = true) {
+    public static async uninstall(gamePath: string, isDeleteUe4ss: boolean = true) {
         return await invoke('uninstall_mods', {
             gamePath: gamePath,
             isDeleteUe4ss: isDeleteUe4ss,
