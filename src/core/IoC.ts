@@ -5,7 +5,7 @@
 type Factory<T> = () => Promise<T>;
 type InitHook<T> = (instance: T) => Promise<void>;
 
-export class DIContainer {
+export class IoC {
     private static instances = new Map<string, any>();
     private static factories = new Map<string, Factory<any>>();
     private static initHooks = new Map<string, InitHook<any>>();

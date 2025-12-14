@@ -1,4 +1,4 @@
-import { DIContainer } from '@/utils/DIContainer';
+import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { MigrationBase } from '@/storage/migration';
@@ -73,7 +73,7 @@ export class AppInitializer {
             // Phase 3: Core ViewModel
             this.currentPhase = InitPhase.CoreViewModel;
             console.log('[AppInitializer] Initializing AppViewModel...');
-            await DIContainer.get<AppViewModel>('AppViewModel');
+            await IoC.get<AppViewModel>('AppViewModel');
 
             // Complete
             this.currentPhase = InitPhase.Complete;

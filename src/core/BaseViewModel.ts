@@ -1,4 +1,4 @@
-import { ILock } from '@/utils/ILock';
+import { ILock } from '@/core/ILock.ts';
 
 /**
  * Base class for all ViewModels

@@ -1,4 +1,4 @@
-import { DIContainer } from '@/utils/DIContainer';
+import { IoC } from '@/core/IoC.ts';
 import { AppViewModel } from '@/AppViewModel';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
 import { HomeViewModel } from '@/pages/HomePage/HomeViewModel';
@@ -20,19 +20,19 @@ import { HomeViewModel } from '@/pages/HomePage/HomeViewModel';
  */
 export function registerViewModels(): void {
     // Core ViewModel - shared across windows
-    DIContainer.register(
+    IoC.register(
         'AppViewModel',
         async () => await AppViewModel.getInstance()
     );
 
     // UI ViewModels - per-window instances
     // Note: These are registered but not initialized until accessed
-    DIContainer.register(
+    IoC.register(
         'TreeViewModel',
         async () => await TreeViewModel.getInstance()
     );
 
-    DIContainer.register(
+    IoC.register(
         'HomeViewModel',
         async () => await HomeViewModel.getInstance()
     );

@@ -13,7 +13,7 @@ import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
 import ChatPage from "@/pages/ChatPage.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
-import {registerViewModels} from "@/core/DIRegistration";
+import {registerViewModels} from "@/core/IoCRegistration.ts";
 
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";

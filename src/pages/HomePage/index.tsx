@@ -5,7 +5,7 @@ import {copyFile} from "@tauri-apps/plugin-fs";
 import {
     Button, Checkbox, Divider,
     Flex, MenuProps, message, Select,
-    SelectProps, Space, Spin, Tooltip, Tree, TreeDataNode, TreeProps, Typography,
+    SelectProps, Space, Spin, Tooltip, TreeProps, Typography,
 } from 'antd';
 import {
     CloseCircleOutlined, CloseOutlined, CopyOutlined,
@@ -38,7 +38,7 @@ import {StorageAPI} from "@/storage";
 import {ModListItem} from "@/storage/db/Schema.ts";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
-import {DIContainer} from "@/utils/DIContainer";
+import {IoC} from "@/core/IoC.ts";
 import {TaskManager} from "@/tasks/TaskManager.ts";
 
 
@@ -529,8 +529,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // Pre-initialize UI ViewModels (optional but recommended for better UX)
         console.log('[HomePage] Initializing UI ViewModels...');
-        await DIContainer.get<TreeViewModel>('TreeViewModel');
-        await DIContainer.get<HomeViewModel>('HomeViewModel');
+        await IoC.get<TreeViewModel>('TreeViewModel');
+        await IoC.get<HomeViewModel>('HomeViewModel');
         console.log('[HomePage] UI ViewModels initialized');
 
         // Setup window resize hook

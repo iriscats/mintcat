@@ -9,7 +9,7 @@ import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {StorageAPI} from "@/storage";
 import {AppInitializer} from "@/core/AppInitializer";
-import {registerViewModels} from "@/core/DIRegistration";
+import {registerViewModels} from "@/core/IoCRegistration.ts";
 
 export enum AddModType {
     MODIO = "mod.io",
