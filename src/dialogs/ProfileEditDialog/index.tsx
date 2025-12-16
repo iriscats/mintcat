@@ -14,7 +14,7 @@ interface ProfileEditDialogStates {
 
 type InputCallback = (name: string) => void;
 
-class Index extends React.Component<any, ProfileEditDialogStates> {
+class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     private callback: InputCallback;
 
@@ -80,7 +80,7 @@ class Index extends React.Component<any, ProfileEditDialogStates> {
         const vm = await ProfileViewModel.getInstance();
         await vm.addProfile(this.state.newProfileName);
 
-        this.forceUpdate();
+        await this.fetchData();
         this.setState({
             newProfileName: ""
         });
@@ -89,7 +89,7 @@ class Index extends React.Component<any, ProfileEditDialogStates> {
     private async handleDelete(key: string) {
         const vm = await ProfileViewModel.getInstance();
         await vm.removeProfile(key);
-        this.forceUpdate();
+        await this.fetchData();
     }
 
     private async handleRename(key: string, newName: string) {
@@ -99,6 +99,7 @@ class Index extends React.Component<any, ProfileEditDialogStates> {
 
         const vm = await ProfileViewModel.getInstance();
         await vm.renameProfile(key, newName);
+        await this.fetchData();
         this.setState({
             editingKey: null,
             editingValue: ""
@@ -208,5 +209,5 @@ class Index extends React.Component<any, ProfileEditDialogStates> {
 }
 
 
-export default Index;
+export default ProfileEditDialog;
 

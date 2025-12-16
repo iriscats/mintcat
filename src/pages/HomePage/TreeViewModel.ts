@@ -14,10 +14,7 @@ export class TreeViewModel extends BaseViewModel {
     private static instance: TreeViewModel;
     private profileViewModel?: ProfileViewModel;
 
-    // Profile data access moved to ProfileViewModel
-
-    // ActiveProfile setter removed; use ProfileViewModel.setActiveProfile instead
-
+    
     public static updateTreeView() {
         console.log(`[TreeViewModel] updateTreeView() called - emitting event`);
         emit("home-page-update-tree-view").then(() => {
@@ -72,27 +69,31 @@ export class TreeViewModel extends BaseViewModel {
     }
 
     public async sortMods(order: string): Promise<void> {
-        const active = this.profileViewModel?.ActiveProfile;
-        if (active?.ModioFolder) {
+        if (!this.profileViewModel) return;
+
+        const active = await this.profileViewModel.getActiveProfileTree();
+        if (active.ModioFolder) {
             active.ModioFolder.children = await this.sortNode(active.ModioFolder, order);
         }
-        if (active?.LocalFolder) {
+        if (active.LocalFolder) {
             active.LocalFolder.children = await this.sortNode(active.LocalFolder, order);
         }
+
+        await this.profileViewModel.saveProfileTreeToDatabase(active.root);
+        TreeViewModel.updateTreeView();
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.setGroupName(id, name);
 
-        // Also update in-memory structure for immediate UI update
-        this.profileViewModel?.ActiveProfile.setGroupName(id, name);
-
         TreeViewModel.updateTreeView();
     }
 
     public async getGroupName(id: number): Promise<string | undefined> {
-        return this.profileViewModel?.ActiveProfile.getGroupName(id);
+        if (!this.profileViewModel) return undefined;
+        const active = await this.profileViewModel.getActiveProfileTree();
+        return active.getGroupName(id);
     }
 
     public async setProfileData(root: ProfileTreeItem): Promise<void> {
@@ -111,9 +112,6 @@ export class TreeViewModel extends BaseViewModel {
             if (!this.profileViewModel) {
                 throw new Error("ProfileViewModel not initialized");
             }
-
-            // Update in-memory structure first
-            this.profileViewModel.updateProfileData(root);
 
             // Save to database
             console.log(`[TreeViewModel] 委托 ProfileViewModel 保存 profile tree 到数据库...`);

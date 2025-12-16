@@ -70,7 +70,8 @@ export class ModInstallTask implements ITask {
         // Get mod list
         const api = new IntegrateApi();
         const modList = await (api as any).getAllModsAsList();
-        const subModList = profileVM.ActiveProfile.getModList(modList);
+        const activeProfile = await profileVM.getActiveProfileTree();
+        const subModList = activeProfile.getModList(modList);
         const enabledMods = subModList.filter(m => m.enabled);
 
         if (enabledMods.length === 0) {
@@ -80,7 +81,7 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 3: Check mod updates and validate files (20% - 60% progress)
-        let editTime = profileVM.ActiveProfile.editTime;
+        let editTime = await profileVM.getActiveProfileEditTime();
         const totalMods = enabledMods.length;
         for (let i = 0; i < totalMods; i++) {
             if (context.checkCancelled()) {
@@ -98,7 +99,7 @@ export class ModInstallTask implements ITask {
             // Check if mod was modified
             if (await ModUpdateApi.checkLocalModModify(item)) {
                 editTime = TimeUtils.getCurrentTime();
-                profileVM.ActiveProfile.editTime = editTime;
+                await profileVM.setActiveProfileEditTime(editTime);
             }
 
             // Validate mod cache
@@ -112,7 +113,7 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 4: Check installation status (70% progress)
-        let installTime = profileVM.ActiveProfile.installTime;
+        let installTime = await profileVM.getActiveProfileInstallTime();
         if (installTime < editTime) {
             installTime = editTime;
         }

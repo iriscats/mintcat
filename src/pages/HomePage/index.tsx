@@ -204,12 +204,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
     // Menu Bar Operations
     @autoBind
     private async onMenuBarCopyListClick() {
-        const vm = await TreeViewModel.getInstance();
+        await TreeViewModel.getInstance();
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
 
         const profileVM = await ProfileViewModel.getInstance();
-        const subModList = profileVM.ActiveProfile.getModList(allMods);
+        const activeProfile = await profileVM.getActiveProfileTree();
+        const subModList = activeProfile.getModList(allMods);
         let list = "";
         for (const mod of subModList) {
             if (TreeViewConverter.filter(mod) && mod.sourceType === ModSourceType.Modio) {
@@ -290,10 +291,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onSelectChange(value: string) {
-        const vm = await TreeViewModel.getInstance();
+        await TreeViewModel.getInstance();
         const profileVM = await ProfileViewModel.getInstance();
 
-        profileVM.setActiveProfile(value);
+        await profileVM.setActiveProfile(value);
         TreeViewModel.updateTreeView();
         this.setState({
             defaultProfile: value as string,
@@ -327,29 +328,31 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async updateProfileSelect() {
-        const vm = await TreeViewModel.getInstance();
+        await TreeViewModel.getInstance();
         const profileVM = await ProfileViewModel.getInstance();
 
-        let options: SelectProps['options'] = [];
-        for (const profileKey of profileVM.ProfileList) {
-            options.push({
-                value: profileKey,
-                label: profileKey,
-            });
-        }
+        const profileList = await profileVM.getProfileList();
+        const activeProfileName = await profileVM.getActiveProfileName();
+
+        const options: SelectProps['options'] = profileList.map(profileKey => ({
+            value: profileKey,
+            label: profileKey,
+        }));
         this.setState({
             profileOptions: options,
-            defaultProfile: profileVM.ActiveProfileName,
+            defaultProfile: activeProfileName,
         })
     }
 
     @autoBind
     private async updateTreeView() {
         console.log(`[HomePage] updateTreeView() called`);
-        const vm = await TreeViewModel.getInstance();
+        await TreeViewModel.getInstance();
         const profileVM = await ProfileViewModel.getInstance();
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
+        const activeProfile = await profileVM.getActiveProfileTree();
+        const activeProfileName = await profileVM.getActiveProfileName();
 
         console.log(`[HomePage] Got ${allMods.length} mods from database`);
 
@@ -378,11 +381,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
             localNoFound: false
         }));
 
-        console.log(`[HomePage] Converting profile tree, active profile: ${profileVM.ActiveProfileName}`);
-        console.log(`[HomePage] ActiveProfile root children:`, profileVM.ActiveProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+        console.log(`[HomePage] Converting profile tree, active profile: ${activeProfileName}`);
+        console.log(`[HomePage] ActiveProfile root children:`, activeProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
 
         const converter = new TreeViewConverter(modList);
-        const treeData = converter.convertTo(profileVM.ActiveProfile);
+        const treeData = converter.convertTo(activeProfile);
 
         console.log(`[HomePage] Converted treeData:`, treeData);
 

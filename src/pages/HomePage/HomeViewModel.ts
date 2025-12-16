@@ -61,10 +61,6 @@ export class HomeViewModel extends BaseViewModel {
                 continue;
             }
 
-            // Also add to in-memory structure for immediate UI update
-            const treeViewModel = await TreeViewModel.getInstance();
-            const profileVM = await ProfileViewModel.getInstance();
-            profileVM.ActiveProfile.addMod(addedModItem.id, groupId);
             TreeViewModel.updateTreeView();
 
             await ModUpdateApi.updateMod(addedModItem);
@@ -98,11 +94,6 @@ export class HomeViewModel extends BaseViewModel {
             message.error(t("Failed to add mod to database"));
             return false;
         }
-
-        // Add to in-memory structure for immediate UI update
-        const treeViewModel = await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
-        profileVM.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ModUpdateApi.updateMod(addedModItem);
 
@@ -152,8 +143,7 @@ export class HomeViewModel extends BaseViewModel {
         const modsApi = await StorageAPI.getMods();
         const existingMod = await modsApi.getModByUrl(modPath);
         if (existingMod) {
-            console.log(`[addModFromPath] Mod already exists: ${modPath}`);
-            message.error(t("Mod Already Exists"));
+            message.error(`${t("Mod Already Exists")}: ${modPath}`);
             return false;
         }
 
@@ -172,11 +162,6 @@ export class HomeViewModel extends BaseViewModel {
 
         console.log(`[addModFromPath] Successfully added mod to database:`, addedModItem);
 
-        // Add to in-memory structure for immediate UI update
-        const treeViewModel = await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
-        profileVM.ActiveProfile.addMod(addedModItem.id, groupId);
-
         TreeViewModel.updateTreeView();
         TreeViewModel.updateTreeViewCountLabel();
 
@@ -184,9 +169,15 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     public async removeMod(id: number): Promise<void> {
-        const treeViewModel = await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
-        profileVM.ActiveProfile.removeMod(id);
+        const profiles = await StorageAPI.getProfiles();
+        let activeProfile = await profiles.getActiveProfile();
+
+        if (!activeProfile) {
+            const profileVM = await ProfileViewModel.getInstance();
+            activeProfile = await profileVM.getActiveProfileData();
+        }
+
+        await profiles.removeModFromProfile(activeProfile.id!, id);
 
         TreeViewModel.updateTreeView();
         TreeViewModel.updateTreeViewCountLabel();
@@ -202,20 +193,20 @@ export class HomeViewModel extends BaseViewModel {
 
     public async setModEnabled(modId: number, enable: boolean): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
-        const activeProfile = await profiles.getActiveProfile();
+        let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
-            console.error("No active profile found");
-            return;
+            const profileVM = await ProfileViewModel.getInstance();
+            activeProfile = await profileVM.getActiveProfileData();
         }
         await profiles.setModEnabled(activeProfile.id!, modId, enable);
     }
 
     public async setModUsedVersion(id: number, version: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
-        const activeProfile = await profiles.getActiveProfile();
+        let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
-            console.error("No active profile found");
-            return;
+            const profileVM = await ProfileViewModel.getInstance();
+            activeProfile = await profileVM.getActiveProfileData();
         }
 
         // Update the used version in the profile_mods table
@@ -362,7 +353,7 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     /**
-     * Helper function to add a mod to both database and in-memory structure
+     * Helper function to add a mod to database and profile mapping
      */
     private async addModToDatabaseAndProfile(modItem: ModListItem, groupId: number): Promise<ModListItem | null> {
         const mods = await StorageAPI.getMods();
@@ -378,10 +369,10 @@ export class HomeViewModel extends BaseViewModel {
         }
 
         // Get active profile
-        const activeProfile = await profiles.getActiveProfile();
+        let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
-            console.error("No active profile found");
-            return null;
+            const profileVM = await ProfileViewModel.getInstance();
+            activeProfile = await profileVM.getActiveProfileData();
         }
 
         // Add mod to profile database with proper parameters
@@ -408,11 +399,6 @@ export class HomeViewModel extends BaseViewModel {
         const profiles = await StorageAPI.getProfiles();
         await profiles.addGroup(groupName, parentGroupId);
 
-        // Also update in-memory structure for immediate UI update
-        const treeViewModel = await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
-        profileVM.ActiveProfile.addGroup(groupName, parentGroupId);
-
         TreeViewModel.updateTreeView();
     }
 
@@ -430,13 +416,6 @@ export class HomeViewModel extends BaseViewModel {
             const profiles = await StorageAPI.getProfiles();
             await profiles.removeGroup(groupId);
             console.log(`[HomeViewModel] Removed group from database, groupId=${groupId}`);
-
-            // Also update in-memory structure for immediate UI update
-            console.log(`[HomeViewModel] Removing group from memory structure, groupId=${groupId}`);
-            const treeViewModel = await TreeViewModel.getInstance();
-            const profileVM = await ProfileViewModel.getInstance();
-            profileVM.ActiveProfile.removeGroup(groupId);
-            console.log(`[HomeViewModel] Removed group from memory structure, groupId=${groupId}`);
 
             console.log(`[HomeViewModel] Triggering UI update`);
             TreeViewModel.updateTreeView();

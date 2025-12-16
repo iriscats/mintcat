@@ -4,7 +4,13 @@ import {StorageAPI} from "@/storage";
 import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
+import type {ProfileData, ProfileDAO} from "@/storage/dao/ProfileDAO.ts";
 
+type ProfileRuntimeState = {
+    lastUpdate?: number;
+    editTime?: number;
+    installTime?: number;
+};
 
 /**
  * ProfileViewModel manages profile-level operations and persistence
@@ -14,52 +20,9 @@ import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 export class ProfileViewModel {
 
     private static instance: ProfileViewModel;
+    private runtimeState = new Map<number, ProfileRuntimeState>();
 
-    // Profile data - single source of truth
-    private profileTreeList: ProfileTree[] = [];
-    private activeProfileName: string = "default";
-
-    // Getters for accessing profile data
-    public get ProfileList(): string[] {
-        return this.profileTreeList.map(p => p.name);
-    }
-
-    public get ActiveProfileName(): string {
-        return this.activeProfileName;
-    }
-
-    public get ActiveProfile(): ProfileTree {
-        // Find all profiles with the matching name
-        const profiles = this.profileTreeList.filter(p => p.name === this.activeProfileName);
-        if (profiles.length === 0) {
-            // Create a new profile if it doesn't exist
-            const newProfile = new ProfileTree(this.activeProfileName);
-            this.profileTreeList.push(newProfile);
-            return newProfile;
-        }
-
-        // Return the profile with the most children (most recent/complete one)
-        return profiles.reduce((prev, curr) =>
-            curr.root.children.length > prev.root.children.length ? curr : prev
-        );
-    }
-
-    public setActiveProfile(profileName: string): void {
-        this.activeProfileName = profileName;
-    }
-
-    /**
-     * Update profile data in memory
-     * This updates the in-memory structure immediately for UI responsiveness
-     */
-    public updateProfileData(root: ProfileTreeItem): void {
-        const profile = this.profileTreeList.find(p => p.name === this.activeProfileName);
-        if (profile) {
-            console.log(`[ProfileViewModel] ✅ 找到内存中的 profile，准备更新: ${this.activeProfileName}`);
-            profile.root = root;
-        } else {
-            console.log(`[ProfileViewModel] ❌ 未找到 profile: ${this.activeProfileName}`);
-        }
+    private constructor() {
     }
 
     public static async getInstance(): Promise<ProfileViewModel> {
@@ -71,18 +34,162 @@ export class ProfileViewModel {
     }
 
     // ====================================
-    // Profile CRUD Operations
+    // DB-backed profile accessors
     // ====================================
+
+    private async ensureActiveProfile(profileDAO?: ProfileDAO): Promise<ProfileData> {
+        const dao = profileDAO ?? await StorageAPI.getProfiles();
+        let profileList = await dao.getAllProfiles();
+
+        if (profileList.length === 0) {
+            const created = await this.createDefaultProfile(dao);
+            if (created) {
+                profileList = [created];
+            }
+        }
+
+        let activeProfile = profileList.find(p => p.isActive);
+        if (!activeProfile && profileList.length > 0) {
+            const first = profileList[0];
+            await dao.updateProfile(first.id!, {isActive: true});
+            activeProfile = {...first, isActive: true};
+        }
+
+        if (!activeProfile) {
+            throw new Error("[ProfileViewModel] No profile available");
+        }
+
+        return activeProfile;
+    }
+
+    private async createDefaultProfile(profileDAO: ProfileDAO): Promise<ProfileData | null> {
+        const defaultProfile = await profileDAO.createProfile({
+            name: "default",
+            displayName: "default",
+            gameId: 1,
+            userId: 1,
+            isActive: true
+        });
+
+        if (defaultProfile?.id) {
+            await this.createDefaultFolders(defaultProfile.id);
+        }
+
+        return defaultProfile;
+    }
+
+    private applyRuntimeState(tree: ProfileTree, profileId: number): void {
+        const state = this.runtimeState.get(profileId);
+        if (!state) return;
+
+        if (state.lastUpdate !== undefined) {
+            tree.lastUpdate = state.lastUpdate;
+        }
+        if (state.editTime !== undefined) {
+            tree.editTime = state.editTime;
+        }
+        if (state.installTime !== undefined) {
+            tree.installTime = state.installTime;
+        }
+    }
+
+    private updateRuntimeState(profileId: number, patch: Partial<ProfileRuntimeState>): void {
+        const current = this.runtimeState.get(profileId) || {};
+        this.runtimeState.set(profileId, {...current, ...patch});
+    }
 
     public async getProfileList(): Promise<string[]> {
         const profiles = await StorageAPI.getProfiles();
         const profileData = await profiles.getAllProfiles();
+
+        if (profileData.length === 0) {
+            const created = await this.createDefaultProfile(profiles);
+            return created ? [created.name] : [];
+        }
+
         return profileData.map(p => p.name);
     }
+
+    public async getActiveProfileName(): Promise<string> {
+        const activeProfile = await this.ensureActiveProfile();
+        return activeProfile.name;
+    }
+
+    public async getActiveProfileTree(): Promise<ProfileTree> {
+        const activeProfile = await this.ensureActiveProfile();
+        const profileTree = await this.buildProfileTreeFromDatabase(activeProfile);
+        this.applyRuntimeState(profileTree, activeProfile.id!);
+        return profileTree;
+    }
+
+    public async getActiveProfileData(): Promise<ProfileData> {
+        return this.ensureActiveProfile();
+    }
+
+    public async setActiveProfile(profileName: string): Promise<void> {
+        const profiles = await StorageAPI.getProfiles();
+        const profileData = await profiles.getAllProfiles();
+
+        if (profileData.length === 0) {
+            await this.createDefaultProfile(profiles);
+            return;
+        }
+
+        const targetProfile = profileData.find(p => p.name === profileName);
+        if (!targetProfile) {
+            console.warn(`[ProfileViewModel] Unable to set active profile, not found: ${profileName}`);
+            return;
+        }
+
+        for (const profile of profileData) {
+            const isTarget = profile.id === targetProfile.id;
+            if (profile.isActive !== isTarget) {
+                await profiles.updateProfile(profile.id!, {isActive: isTarget});
+            }
+        }
+    }
+
+    public async getActiveProfileLastUpdate(): Promise<number> {
+        const activeProfile = await this.ensureActiveProfile();
+        const state = this.runtimeState.get(activeProfile.id!);
+        return state?.lastUpdate ?? 0;
+    }
+
+    public async setActiveProfileLastUpdate(timestamp: number): Promise<void> {
+        const activeProfile = await this.ensureActiveProfile();
+        this.updateRuntimeState(activeProfile.id!, {lastUpdate: timestamp});
+    }
+
+    public async getActiveProfileEditTime(): Promise<number> {
+        const activeProfile = await this.ensureActiveProfile();
+        const state = this.runtimeState.get(activeProfile.id!);
+        return state?.editTime ?? 0;
+    }
+
+    public async setActiveProfileEditTime(timestamp: number): Promise<void> {
+        const activeProfile = await this.ensureActiveProfile();
+        this.updateRuntimeState(activeProfile.id!, {editTime: timestamp});
+    }
+
+    public async getActiveProfileInstallTime(): Promise<number> {
+        const activeProfile = await this.ensureActiveProfile();
+        const state = this.runtimeState.get(activeProfile.id!);
+        return state?.installTime ?? 0;
+    }
+
+    public async setActiveProfileInstallTime(timestamp: number): Promise<void> {
+        const activeProfile = await this.ensureActiveProfile();
+        this.updateRuntimeState(activeProfile.id!, {installTime: timestamp});
+    }
+
+    // ====================================
+    // Profile CRUD Operations
+    // ====================================
 
     public async addProfile(name: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         const profileData = await profiles.getAllProfiles();
+        const isFirstProfile = profileData.length === 0;
 
         if (profileData.some(p => p.name === name)) {
             message.error(t("Profile Already Exists"));
@@ -94,7 +201,7 @@ export class ProfileViewModel {
             displayName: name,
             gameId: 1,
             userId: 1,
-            isActive: false
+            isActive: isFirstProfile
         });
 
         // Create default folders for the new profile (business logic)
@@ -119,6 +226,8 @@ export class ProfileViewModel {
         if (profile) {
             await profiles.deleteProfile(profile.id!);
         }
+
+        await this.ensureActiveProfile(profiles);
 
         HomeViewModel.updateProfileSelect();
         TreeViewModel.updateTreeView();
@@ -159,12 +268,7 @@ export class ProfileViewModel {
         })));
 
         const profileDAO = await StorageAPI.getProfiles();
-        const activeProfile = await profileDAO.getActiveProfile();
-
-        if (!activeProfile) {
-            console.error('[ProfileViewModel] ❌ 未找到活跃的 profile');
-            return;
-        }
+        const activeProfile = await this.ensureActiveProfile(profileDAO);
 
         console.log(`[ProfileViewModel] 活跃的 profile: ${activeProfile.name}, id=${activeProfile.id}`);
 
@@ -416,53 +520,21 @@ export class ProfileViewModel {
 
     /**
      * Load profiles from database and build the profile tree structure
-     * Updates internal profileTreeList and activeProfileName
+     * Ensures an active profile exists in database
      */
     public async loadProfilesFromDatabase(): Promise<void> {
         try {
             const profiles = await StorageAPI.getProfiles();
-            const profileDataList = await profiles.getAllProfiles();
-
-            // Find active profile
-            const activeProfileData = profileDataList.find(p => p.isActive);
-            if (activeProfileData) {
-                this.activeProfileName = activeProfileData.name;
-            } else if (profileDataList.length > 0) {
-                this.activeProfileName = profileDataList[0].name;
-            }
-
-            // Build profile tree structures
-            this.profileTreeList = [];
-            for (const profileData of profileDataList) {
-                const profileTree = await this.buildProfileTreeFromDatabase(profileData);
-                this.profileTreeList.push(profileTree);
-            }
-
-            // Initialize with default profile if empty
-            if (this.profileTreeList.length === 0) {
-                this.profileTreeList.push(new ProfileTree("default"));
-                this.activeProfileName = "default";
-            }
-
-            // Ensure the active profile exists in the tree list
-            const activeProfileTree = this.profileTreeList.find(p => p.name === this.activeProfileName);
-            if (!activeProfileTree) {
-                this.profileTreeList.push(new ProfileTree(this.activeProfileName));
-            }
+            await this.ensureActiveProfile(profiles);
         } catch (error) {
             console.error('[ProfileViewModel] Failed to load profiles from database:', error);
-            // Initialize with default on error
-            if (this.profileTreeList.length === 0) {
-                this.profileTreeList.push(new ProfileTree("default"));
-                this.activeProfileName = "default";
-            }
         }
     }
 
     /**
      * Build a profile tree structure from database data
      */
-    private async buildProfileTreeFromDatabase(profileData: any): Promise<ProfileTree> {
+    private async buildProfileTreeFromDatabase(profileData: ProfileData): Promise<ProfileTree> {
         console.log(`[ProfileViewModel] buildProfileTreeFromDatabase called for profile: ${profileData.name}, id=${profileData.id}`);
         const profiles = await StorageAPI.getProfiles();
         const profileTree = new ProfileTree(profileData.name);
@@ -526,6 +598,10 @@ export class ProfileViewModel {
 
         } catch (error) {
             console.error(`[ProfileViewModel] Failed to build profile tree for ${profileData.name}:`, error);
+        }
+
+        if (profileData.id) {
+            this.applyRuntimeState(profileTree, profileData.id);
         }
 
         return profileTree;

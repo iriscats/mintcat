@@ -8,6 +8,7 @@ import {TreeViewConverter} from "./TreeViewConverter";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {TreeViewItem} from "./TreeViewItem";
 import {dragAndDrop} from "./DragAndDropTree";
+import { IoC } from "@/core/IoC";
 
 
 export interface TreeViewProps {
@@ -38,8 +39,9 @@ export class TreeView extends React.Component<TreeViewProps, any> {
             dropToGap: info.dropToGap
         });
 
-        const vm = await TreeViewModel.getInstance();
+        await TreeViewModel.getInstance();
         const profileVM = await ProfileViewModel.getInstance();
+        const activeProfile = await profileVM.getActiveProfileTree();
         let treeData: any[];
         const modList = await this.getAllModsAsList();
         const converter = new TreeViewConverter(modList);
@@ -49,7 +51,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
         if (TreeViewConverter.filterList.length > 0) {
             const filterList = TreeViewConverter.filterList;
             TreeViewConverter.filterList = [];
-            treeData = converter.convertTo(profileVM.ActiveProfile);
+            treeData = converter.convertTo(activeProfile);
             TreeViewConverter.filterList = filterList;
         } else {
             treeData = this.props.treeData || [];
@@ -83,7 +85,8 @@ export class TreeView extends React.Component<TreeViewProps, any> {
             }
 
             console.log(`[TreeView] 开始保存到数据库...`);
-            await vm.setProfileData(profileTreeItem);
+            const profileVM = await IoC.get<ProfileViewModel>("ProfileViewModel");
+            await profileVM.saveProfileTreeToDatabase(profileTreeItem);
             console.log(`[TreeView] ✅ Profile data set successfully`);
 
             if (this.props.onUpdateTreeView) {

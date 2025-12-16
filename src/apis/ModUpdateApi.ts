@@ -173,12 +173,8 @@ export class ModUpdateApi {
         }
 
         const profileVM = await ProfileViewModel.getInstance();
-        let updateTime = 0;
-        if (!profileVM.ActiveProfile.lastUpdate) {
-            updateTime = TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30; // 最近 1 一个月的更新
-        } else {
-            updateTime = profileVM.ActiveProfile.lastUpdate;
-        }
+        const lastUpdate = await profileVM.getActiveProfileLastUpdate();
+        const updateTime = lastUpdate || (TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30); // 最近 1 一个月的更新
 
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
@@ -221,7 +217,7 @@ export class ModUpdateApi {
             }
         }
 
-        profileVM.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
+        await profileVM.setActiveProfileLastUpdate(TimeUtils.getCurrentTime());
         TreeViewModel.updateTreeView();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));

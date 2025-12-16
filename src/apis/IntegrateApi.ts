@@ -117,7 +117,7 @@ export class IntegrateApi extends ILock {
 
             await once<number>('install-success', async (event) => {
                 const profileVM = await ProfileViewModel.getInstance();
-                profileVM.ActiveProfile.installTime = event.payload;
+                await profileVM.setActiveProfileInstallTime(event.payload);
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });
@@ -162,4 +162,3 @@ export class IntegrateApi extends ILock {
     }
 
 }
-
