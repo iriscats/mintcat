@@ -2,6 +2,7 @@ import {t} from "i18next";
 import {emit, once} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/modio";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
@@ -14,7 +15,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                                  groupId: number = ProfileTreeGroupType.LOCAL,
                                  text: string = ""): Promise<void> {
 
-    const vm = await HomeViewModel.getInstance();
+    const vm = await IoC.get(HomeViewModel);
 
     const setInitData = () => {
         localStorage.setItem('add-mod-dialog-init-data', JSON.stringify({
@@ -111,5 +112,4 @@ async function onClipboardChange(text: string) {
 export function initClipboardWatcher() {
     ClipboardApi.setClipboardWatcher(onClipboardChange).then();
 }
-
 

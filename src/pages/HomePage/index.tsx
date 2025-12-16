@@ -154,7 +154,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMultiDeleteClick() {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await IoC.get(HomeViewModel);
 
         const confirm = await MessageBox.confirm({
             title: t("Delete Mods"),
@@ -178,7 +178,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMultiEnableClick(isEnable: boolean) {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await IoC.get(HomeViewModel);
         if (this.state.selectedKeys.length === 0) {
             return;
         }
@@ -191,7 +191,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMultiUpdateClick() {
-        const vm = await TreeViewModel.getInstance();
+        const vm = await IoC.get(TreeViewModel);
 
         for (const key of this.state.selectedKeys) {
             const modItem = await this.getModById(key);
@@ -204,11 +204,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
     // Menu Bar Operations
     @autoBind
     private async onMenuBarCopyListClick() {
-        await TreeViewModel.getInstance();
+        await IoC.get(TreeViewModel);
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
 
-        const profileVM = await ProfileViewModel.getInstance();
+        const profileVM = await IoC.get(ProfileViewModel);
         const activeProfile = await profileVM.getActiveProfileTree();
         const subModList = activeProfile.getModList(allMods);
         let list = "";
@@ -276,7 +276,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarSortClick(order: string) {
-        const vm = await TreeViewModel.getInstance();
+        const vm = await IoC.get(TreeViewModel);
         await vm.sortMods(order);
         await this.updateTreeView();
     }
@@ -291,8 +291,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onSelectChange(value: string) {
-        await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
+        await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
 
         await profileVM.setActiveProfile(value);
         TreeViewModel.updateTreeView();
@@ -328,8 +328,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async updateProfileSelect() {
-        await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
+        await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
 
         const profileList = await profileVM.getProfileList();
         const activeProfileName = await profileVM.getActiveProfileName();
@@ -347,8 +347,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async updateTreeView() {
         console.log(`[HomePage] updateTreeView() called`);
-        await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
+        await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
         const activeProfile = await profileVM.getActiveProfileTree();
@@ -407,7 +407,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuClick(key: string, nodeKey: string) {
-        const vm = await HomeViewModel.getInstance();
+        const vm = await IoC.get(HomeViewModel);
 
         // Helper function to extract numeric ID from nodeKey (e.g., "folder-3" -> 3)
         const extractId = (key: string): number => {

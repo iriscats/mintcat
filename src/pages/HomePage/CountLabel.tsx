@@ -1,5 +1,6 @@
 import React from "react";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 import {listen} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
 
@@ -9,7 +10,7 @@ export const CountLabel = () => {
 
     React.useEffect(() => {
         const fetchData = async () => {
-            const profileVM = await ProfileViewModel.getInstance();
+            const profileVM = await IoC.get(ProfileViewModel);
             const activeProfile = await profileVM.getActiveProfileTree();
 
             const modsApi = await StorageAPI.getMods();

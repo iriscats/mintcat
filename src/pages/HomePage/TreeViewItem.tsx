@@ -6,6 +6,7 @@ import {open} from "@tauri-apps/plugin-shell";
 import {emit, listen} from "@tauri-apps/api/event";
 import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 import {ModioApi} from "@/apis/modio";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {ModFile} from "@/apis/modio/ModInfo.ts";
@@ -81,7 +82,7 @@ function ModTreeViewSwitch({nodeData}) {
 
     const onSwitchChange = async (checked: boolean) => {
         nodeData.enabled = checked;
-        const viewModel = await HomeViewModel.getInstance();
+        const viewModel = await IoC.get(HomeViewModel);
         await viewModel.setModEnabled(nodeData.key, checked);
 
         await emit("tree-view-count-label-update");
@@ -126,7 +127,7 @@ function ModTreeViewVersionSelect({nodeData}) {
         nodeData.usedVersion = fileInfo.version;
         await emit("status-bar-log", `${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
 
-        const viewModel = await HomeViewModel.getInstance();
+        const viewModel = await IoC.get(HomeViewModel);
         await viewModel.setModUsedVersion(nodeData.key, fileInfo.version);
 
         const modItem = await getModById(nodeData.key);

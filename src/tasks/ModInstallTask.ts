@@ -1,6 +1,7 @@
 import { ITask, TaskContext } from './ITask';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
 import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
+import { IoC } from '@/core/IoC.ts';
 import { ModUpdateApi } from '@/apis/ModUpdateApi';
 import { IntegrateApi } from '@/apis/IntegrateApi';
 import { ModListItem } from '@/storage/db/Schema';
@@ -51,8 +52,8 @@ export class ModInstallTask implements ITask {
         await emit("status-bar-log", t("Start installation"));
 
         // Get tree view model and settings
-        const treeViewModel = await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
+        const treeViewModel = await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
         const settings = await StorageAPI.getSettings();
 
         // Step 1: Check game path (10% progress)

@@ -14,6 +14,7 @@ import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 import {emit} from "@tauri-apps/api/event";
 import {BaseViewModel} from "@/core/BaseViewModel";
 
@@ -173,7 +174,7 @@ export class HomeViewModel extends BaseViewModel {
         let activeProfile = await profiles.getActiveProfile();
 
         if (!activeProfile) {
-            const profileVM = await ProfileViewModel.getInstance();
+            const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
         }
 
@@ -195,7 +196,7 @@ export class HomeViewModel extends BaseViewModel {
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
-            const profileVM = await ProfileViewModel.getInstance();
+            const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
         }
         await profiles.setModEnabled(activeProfile.id!, modId, enable);
@@ -205,7 +206,7 @@ export class HomeViewModel extends BaseViewModel {
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
-            const profileVM = await ProfileViewModel.getInstance();
+            const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
         }
 
@@ -371,7 +372,7 @@ export class HomeViewModel extends BaseViewModel {
         // Get active profile
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
-            const profileVM = await ProfileViewModel.getInstance();
+            const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
         }
 

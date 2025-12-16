@@ -5,6 +5,7 @@ import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 import {ILock} from "@/core/ILock.ts";
 import {StorageAPI} from "@/storage";
 import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
@@ -116,7 +117,7 @@ export class IntegrateApi extends ILock {
             });
 
             await once<number>('install-success', async (event) => {
-                const profileVM = await ProfileViewModel.getInstance();
+                const profileVM = await IoC.get(ProfileViewModel);
                 await profileVM.setActiveProfileInstallTime(event.payload);
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);

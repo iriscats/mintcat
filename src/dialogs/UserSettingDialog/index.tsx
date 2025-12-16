@@ -6,6 +6,7 @@ import {open as openShell} from "@tauri-apps/plugin-shell";
 import {ModioApi} from "@/apis/modio";
 import {CacheApi} from "@/apis/CacheApi";
 import {AppViewModel} from "@/AppViewModel";
+import { IoC } from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
 
 interface UserSettingDialogStates {
@@ -44,7 +45,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
     private async loadUserInfo() {
         try {
-            const vm = await AppViewModel.getInstance();
+            const vm = await IoC.get(AppViewModel);
             // 检查OAuth是否有效
             await vm.checkOauth();
 

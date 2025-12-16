@@ -3,6 +3,7 @@ import {t} from "i18next";
 import {Button, Card, Flex, Input, List, message, Modal} from "antd";
 import {CheckOutlined, CopyOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined} from "@ant-design/icons";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 
 interface ProfileEditDialogStates {
     isModalOpen?: boolean;
@@ -77,7 +78,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
         if (!await this.checkInput(this.state.newProfileName)) {
             return false;
         }
-        const vm = await ProfileViewModel.getInstance();
+        const vm = await IoC.get(ProfileViewModel);
         await vm.addProfile(this.state.newProfileName);
 
         await this.fetchData();
@@ -87,7 +88,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleDelete(key: string) {
-        const vm = await ProfileViewModel.getInstance();
+        const vm = await IoC.get(ProfileViewModel);
         await vm.removeProfile(key);
         await this.fetchData();
     }
@@ -97,7 +98,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
             return false;
         }
 
-        const vm = await ProfileViewModel.getInstance();
+        const vm = await IoC.get(ProfileViewModel);
         await vm.renameProfile(key, newName);
         await this.fetchData();
         this.setState({
@@ -116,7 +117,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async fetchData() {
-        const vm = await ProfileViewModel.getInstance();
+        const vm = await IoC.get(ProfileViewModel);
         const profileList = await vm.getProfileList();
         this.setState({
             profileList: profileList
@@ -210,4 +211,3 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
 
 export default ProfileEditDialog;
-

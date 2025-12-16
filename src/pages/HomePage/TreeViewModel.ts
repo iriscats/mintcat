@@ -3,6 +3,7 @@ import {StorageAPI} from "@/storage";
 import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 
 /**
  * TreeViewModel manages profile tree UI state and interactions
@@ -136,7 +137,7 @@ export class TreeViewModel extends BaseViewModel {
     protected async initialize(): Promise<void> {
         try {
             // Get ProfileViewModel instance and load data
-            this.profileViewModel = await ProfileViewModel.getInstance();
+            this.profileViewModel = await IoC.get(ProfileViewModel);
             await this.profileViewModel.loadProfilesFromDatabase();
 
             // Update UI components

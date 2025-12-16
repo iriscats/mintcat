@@ -4,6 +4,7 @@ import {emit} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/modio";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { IoC } from "@/core/IoC.ts";
 import {MOD_INVALID_ID, ModSourceType, ModListItem} from "@/storage/db/Schema.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
@@ -127,7 +128,7 @@ export class ModUpdateApi {
         await emit("home-page-loading", true);
         ModUpdateApi.loading = true;
 
-        const viewModel = await TreeViewModel.getInstance();
+        const viewModel = await IoC.get(TreeViewModel);
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
 
@@ -172,7 +173,7 @@ export class ModUpdateApi {
             return;
         }
 
-        const profileVM = await ProfileViewModel.getInstance();
+        const profileVM = await IoC.get(ProfileViewModel);
         const lastUpdate = await profileVM.getActiveProfileLastUpdate();
         const updateTime = lastUpdate || (TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30); // 最近 1 一个月的更新
 

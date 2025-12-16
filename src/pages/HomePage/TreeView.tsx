@@ -39,8 +39,8 @@ export class TreeView extends React.Component<TreeViewProps, any> {
             dropToGap: info.dropToGap
         });
 
-        await TreeViewModel.getInstance();
-        const profileVM = await ProfileViewModel.getInstance();
+        await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
         const activeProfile = await profileVM.getActiveProfileTree();
         let treeData: any[];
         const modList = await this.getAllModsAsList();
