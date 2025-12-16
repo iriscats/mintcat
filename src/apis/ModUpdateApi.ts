@@ -3,6 +3,7 @@ import {exists, stat} from "@tauri-apps/plugin-fs";
 import {emit} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/modio";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {MOD_INVALID_ID, ModSourceType, ModListItem} from "@/storage/db/Schema.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
@@ -171,12 +172,12 @@ export class ModUpdateApi {
             return;
         }
 
-        const viewModel = await TreeViewModel.getInstance();
+        const profileVM = await ProfileViewModel.getInstance();
         let updateTime = 0;
-        if (!viewModel.ActiveProfile.lastUpdate) {
+        if (!profileVM.ActiveProfile.lastUpdate) {
             updateTime = TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30; // 最近 1 一个月的更新
         } else {
-            updateTime = viewModel.ActiveProfile.lastUpdate;
+            updateTime = profileVM.ActiveProfile.lastUpdate;
         }
 
         const modsApi = await StorageAPI.getMods();
@@ -220,7 +221,7 @@ export class ModUpdateApi {
             }
         }
 
-        viewModel.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
+        profileVM.ActiveProfile.lastUpdate = TimeUtils.getCurrentTime();
         TreeViewModel.updateTreeView();
 
         await emit("status-bar-log", t("Mod Update Check Finish"));

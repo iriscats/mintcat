@@ -1,5 +1,6 @@
 import { ITask, TaskContext } from './ITask';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
+import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
 import { ModUpdateApi } from '@/apis/ModUpdateApi';
 import { IntegrateApi } from '@/apis/IntegrateApi';
 import { ModListItem } from '@/storage/db/Schema';
@@ -51,6 +52,7 @@ export class ModInstallTask implements ITask {
 
         // Get tree view model and settings
         const treeViewModel = await TreeViewModel.getInstance();
+        const profileVM = await ProfileViewModel.getInstance();
         const settings = await StorageAPI.getSettings();
 
         // Step 1: Check game path (10% progress)
@@ -68,7 +70,7 @@ export class ModInstallTask implements ITask {
         // Get mod list
         const api = new IntegrateApi();
         const modList = await (api as any).getAllModsAsList();
-        const subModList = treeViewModel.ActiveProfile.getModList(modList);
+        const subModList = profileVM.ActiveProfile.getModList(modList);
         const enabledMods = subModList.filter(m => m.enabled);
 
         if (enabledMods.length === 0) {
@@ -78,7 +80,7 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 3: Check mod updates and validate files (20% - 60% progress)
-        let editTime = treeViewModel.ActiveProfile.editTime;
+        let editTime = profileVM.ActiveProfile.editTime;
         const totalMods = enabledMods.length;
         for (let i = 0; i < totalMods; i++) {
             if (context.checkCancelled()) {
@@ -96,7 +98,7 @@ export class ModInstallTask implements ITask {
             // Check if mod was modified
             if (await ModUpdateApi.checkLocalModModify(item)) {
                 editTime = TimeUtils.getCurrentTime();
-                treeViewModel.ActiveProfile.editTime = editTime;
+                profileVM.ActiveProfile.editTime = editTime;
             }
 
             // Validate mod cache
@@ -110,7 +112,7 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 4: Check installation status (70% progress)
-        let installTime = treeViewModel.ActiveProfile.installTime;
+        let installTime = profileVM.ActiveProfile.installTime;
         if (installTime < editTime) {
             installTime = editTime;
         }

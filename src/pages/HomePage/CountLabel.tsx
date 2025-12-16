@@ -1,5 +1,6 @@
 import React from "react";
 import {TreeViewModel} from "./TreeViewModel.ts";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {listen} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
 
@@ -10,12 +11,13 @@ export const CountLabel = () => {
     React.useEffect(() => {
         const fetchData = async () => {
             const vm = await TreeViewModel.getInstance();
-            if (!vm.ActiveProfile)
+            const profileVM = await ProfileViewModel.getInstance();
+            if (!profileVM.ActiveProfile)
                 return;
 
             const modsApi = await StorageAPI.getMods();
             const allMods = await modsApi.getAllMods();
-            const subModList = vm.ActiveProfile.getModList(allMods);
+            const subModList = profileVM.ActiveProfile.getModList(allMods);
             setEnableCount(subModList.filter(mod => mod.enabled).length);
             setTotalCount(subModList.length);
         };

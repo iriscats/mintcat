@@ -4,6 +4,7 @@ import {emit, once} from "@tauri-apps/api/event";
 import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {ILock} from "@/core/ILock.ts";
 import {StorageAPI} from "@/storage";
 import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
@@ -115,8 +116,8 @@ export class IntegrateApi extends ILock {
             });
 
             await once<number>('install-success', async (event) => {
-                const treeViewModel = await TreeViewModel.getInstance();
-                treeViewModel.ActiveProfile.installTime = event.payload;
+                const profileVM = await ProfileViewModel.getInstance();
+                profileVM.ActiveProfile.installTime = event.payload;
                 await emit("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });
@@ -161,5 +162,4 @@ export class IntegrateApi extends ILock {
     }
 
 }
-
 

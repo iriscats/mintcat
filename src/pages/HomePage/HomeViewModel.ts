@@ -13,6 +13,7 @@ import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {emit} from "@tauri-apps/api/event";
 import {BaseViewModel} from "@/core/BaseViewModel";
 
@@ -62,8 +63,9 @@ export class HomeViewModel extends BaseViewModel {
 
             // Also add to in-memory structure for immediate UI update
             const treeViewModel = await TreeViewModel.getInstance();
-            treeViewModel.ActiveProfile.addMod(addedModItem.id, groupId);
-            treeViewModel.updateTreeView?.call(treeViewModel);
+            const profileVM = await ProfileViewModel.getInstance();
+            profileVM.ActiveProfile.addMod(addedModItem.id, groupId);
+            TreeViewModel.updateTreeView();
 
             await ModUpdateApi.updateMod(addedModItem);
         }
@@ -76,9 +78,10 @@ export class HomeViewModel extends BaseViewModel {
             return false;
         }
 
-        const profiles = await StorageAPI.getProfiles();
-
-        if (await profiles.checkModExits(modInfoResp)) {
+        // Check if mod already exists by querying mods directly
+        const modsApi = await StorageAPI.getMods();
+        const existingMod = await modsApi.getModById(modInfoResp.id);
+        if (existingMod) {
             message.warning(`${t("Mod Already Exists")} ${modInfoResp.name}`);
             return true;
         }
@@ -98,7 +101,8 @@ export class HomeViewModel extends BaseViewModel {
 
         // Add to in-memory structure for immediate UI update
         const treeViewModel = await TreeViewModel.getInstance();
-        treeViewModel.ActiveProfile.addMod(addedModItem.id, groupId);
+        const profileVM = await ProfileViewModel.getInstance();
+        profileVM.ActiveProfile.addMod(addedModItem.id, groupId);
 
         await ModUpdateApi.updateMod(addedModItem);
 
@@ -170,7 +174,8 @@ export class HomeViewModel extends BaseViewModel {
 
         // Add to in-memory structure for immediate UI update
         const treeViewModel = await TreeViewModel.getInstance();
-        treeViewModel.ActiveProfile.addMod(addedModItem.id, groupId);
+        const profileVM = await ProfileViewModel.getInstance();
+        profileVM.ActiveProfile.addMod(addedModItem.id, groupId);
 
         TreeViewModel.updateTreeView();
         TreeViewModel.updateTreeViewCountLabel();
@@ -180,15 +185,17 @@ export class HomeViewModel extends BaseViewModel {
 
     public async removeMod(id: number): Promise<void> {
         const treeViewModel = await TreeViewModel.getInstance();
-        treeViewModel.ActiveProfile.removeMod(id);
+        const profileVM = await ProfileViewModel.getInstance();
+        profileVM.ActiveProfile.removeMod(id);
 
         TreeViewModel.updateTreeView();
         TreeViewModel.updateTreeViewCountLabel();
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
-        const profiles = await StorageAPI.getProfiles();
-        await profiles.setDisplayName(id, name);
+        // Set mod display name - this should update the mod's display name in the mods table
+        const modsApi = await StorageAPI.getMods();
+        await modsApi.updateMod(id, { displayName: name });
 
         TreeViewModel.updateTreeView();
     }
@@ -403,7 +410,8 @@ export class HomeViewModel extends BaseViewModel {
 
         // Also update in-memory structure for immediate UI update
         const treeViewModel = await TreeViewModel.getInstance();
-        treeViewModel.ActiveProfile.addGroup(groupName, parentGroupId);
+        const profileVM = await ProfileViewModel.getInstance();
+        profileVM.ActiveProfile.addGroup(groupName, parentGroupId);
 
         TreeViewModel.updateTreeView();
     }
@@ -426,7 +434,8 @@ export class HomeViewModel extends BaseViewModel {
             // Also update in-memory structure for immediate UI update
             console.log(`[HomeViewModel] Removing group from memory structure, groupId=${groupId}`);
             const treeViewModel = await TreeViewModel.getInstance();
-            treeViewModel.ActiveProfile.removeGroup(groupId);
+            const profileVM = await ProfileViewModel.getInstance();
+            profileVM.ActiveProfile.removeGroup(groupId);
             console.log(`[HomeViewModel] Removed group from memory structure, groupId=${groupId}`);
 
             console.log(`[HomeViewModel] Triggering UI update`);

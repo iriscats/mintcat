@@ -73,13 +73,6 @@ export class StorageAPI {
         }
     }
 
-    public async renameProfileDetails(oldName: string, newName: string): Promise<void> {
-        await this.profiles.renameProfileDetails(oldName, newName);
-    }
-
-    public async deleteProfileDetails(profileName: string): Promise<void> {
-        await this.profiles.deleteProfileDetails(profileName);
-    }
 
 }
 

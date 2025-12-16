@@ -28,6 +28,7 @@ import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import {TreeViewModel} from "./TreeViewModel.ts";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
 import {emit, listen} from "@tauri-apps/api/event";
@@ -207,7 +208,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
 
-        const subModList = vm.ActiveProfile.getModList(allMods);
+        const profileVM = await ProfileViewModel.getInstance();
+        const subModList = profileVM.ActiveProfile.getModList(allMods);
         let list = "";
         for (const mod of subModList) {
             if (TreeViewConverter.filter(mod) && mod.sourceType === ModSourceType.Modio) {
@@ -289,8 +291,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onSelectChange(value: string) {
         const vm = await TreeViewModel.getInstance();
+        const profileVM = await ProfileViewModel.getInstance();
 
-        vm.ActiveProfile = value;
+        profileVM.setActiveProfile(value);
+        TreeViewModel.updateTreeView();
         this.setState({
             defaultProfile: value as string,
         })
@@ -324,9 +328,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async updateProfileSelect() {
         const vm = await TreeViewModel.getInstance();
+        const profileVM = await ProfileViewModel.getInstance();
 
         let options: SelectProps['options'] = [];
-        for (const profileKey of vm.ProfileList) {
+        for (const profileKey of profileVM.ProfileList) {
             options.push({
                 value: profileKey,
                 label: profileKey,
@@ -334,7 +339,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
         this.setState({
             profileOptions: options,
-            defaultProfile: vm.ActiveProfileName,
+            defaultProfile: profileVM.ActiveProfileName,
         })
     }
 
@@ -342,6 +347,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private async updateTreeView() {
         console.log(`[HomePage] updateTreeView() called`);
         const vm = await TreeViewModel.getInstance();
+        const profileVM = await ProfileViewModel.getInstance();
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
 
@@ -372,11 +378,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
             localNoFound: false
         }));
 
-        console.log(`[HomePage] Converting profile tree, active profile: ${vm.ActiveProfileName}`);
-        console.log(`[HomePage] ActiveProfile root children:`, vm.ActiveProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+        console.log(`[HomePage] Converting profile tree, active profile: ${profileVM.ActiveProfileName}`);
+        console.log(`[HomePage] ActiveProfile root children:`, profileVM.ActiveProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
 
         const converter = new TreeViewConverter(modList);
-        const treeData = converter.convertTo(vm.ActiveProfile);
+        const treeData = converter.convertTo(profileVM.ActiveProfile);
 
         console.log(`[HomePage] Converted treeData:`, treeData);
 
@@ -719,4 +725,3 @@ export class HomePage extends BasePage<any, ModListPageState> {
         )
     }
 }
-

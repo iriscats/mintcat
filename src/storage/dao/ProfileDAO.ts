@@ -183,6 +183,7 @@ export class ProfileDAO {
 
     /**
      * 创建配置文件
+     * Note: Creating default folders is now handled by ProfileViewModel
      */
     public async createProfile(profileData: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileData | null> {
         try {
@@ -204,10 +205,8 @@ export class ProfileDAO {
 
             const newProfile = result.length > 0 ? this.mapToProfileData(result[0]) : null;
 
-            // 创建默认文件夹结构
-            if (newProfile) {
-                await this.createDefaultFolders(newProfile.id!);
-            }
+            // Note: Default folder creation is now the responsibility of the caller (ProfileViewModel)
+            // This keeps the DAO layer focused on data access only
 
             return newProfile;
         } catch (error) {
@@ -408,49 +407,6 @@ export class ProfileDAO {
      * =============================
      */
 
-    public async checkModExits(modData: any): Promise<boolean> {
-        try {
-            // Check if mod exists based on name or other identifying info
-            const mods = await StorageAPI.getMods();
-            // This would need to be implemented based on the actual modData structure
-            return false;
-        } catch (error) {
-            console.error('Check mod exists failed:', error);
-            return false;
-        }
-    }
-
-    public async addMod(modItem: any, groupId?: number): Promise<void> {
-        try {
-            // Add mod to profile
-            // This would need to be implemented based on the actual modItem structure
-            console.log('Adding mod to profile:', modItem);
-        } catch (error) {
-            console.error('Add mod failed:', error);
-            throw error;
-        }
-    }
-
-    public async setDisplayName(id: number, name: string): Promise<void> {
-        try {
-            // Set mod display name in profile
-            console.log('Setting display name for mod:', id, name);
-        } catch (error) {
-            console.error('Set display name failed:', error);
-            throw error;
-        }
-    }
-
-    public async setModUsedVersion(id: number, version: string): Promise<void> {
-        try {
-            // Set mod used version in profile
-            console.log('Setting mod used version:', id, version);
-        } catch (error) {
-            console.error('Set mod used version failed:', error);
-            throw error;
-        }
-    }
-
     public async setGroupName(id: number, name: string): Promise<void> {
         try {
             // Update folder name
@@ -488,28 +444,6 @@ export class ProfileDAO {
             console.log(`[ProfileDAO] deleteFolder completed, result=${result}`);
         } catch (error) {
             console.error(`[ProfileDAO] Remove group failed for groupId=${groupId}:`, error);
-            throw error;
-        }
-    }
-
-    public async renameProfileDetails(oldName: string, newName: string): Promise<void> {
-        try {
-            // Rename profile details - this would involve updating the profile name in database
-            console.log('Renaming profile details from', oldName, 'to', newName);
-            // This would need to be implemented based on the actual database schema
-        } catch (error) {
-            console.error('Rename profile details failed:', error);
-            throw error;
-        }
-    }
-
-    public async deleteProfileDetails(profileName: string): Promise<void> {
-        try {
-            // Delete profile details - this would involve removing the profile from database
-            console.log('Deleting profile details for:', profileName);
-            // This would need to be implemented based on the actual database schema
-        } catch (error) {
-            console.error('Delete profile details failed:', error);
             throw error;
         }
     }
@@ -623,7 +557,8 @@ export class ProfileDAO {
      */
 
     /**
-     * 获取配置文件的完整树结构
+     * 获取配置文件的完整树数据（原始数据，不构建树结构）
+     * Tree building logic moved to ProfileViewModel
      */
     public async getProfileTree(profileId: number): Promise<ProfileTreeData | null> {
         try {
@@ -635,10 +570,9 @@ export class ProfileDAO {
                 this.getProfileMods(profileId)
             ]);
 
-            // 构建文件夹树结构
+            // Return raw data - tree building is now done in ProfileViewModel
+            // Use the buildFolderTree helper to organize folders hierarchically
             const folderTree = this.buildFolderTree(folders, mods);
-
-            // 获取根级别的模组（没有父文件夹的模组）
             const rootMods = mods.filter(mod => !mod.parentFolderId);
 
             return {
@@ -653,53 +587,8 @@ export class ProfileDAO {
     }
 
     /**
-     * 创建默认文件夹结构
-     */
-    private async createDefaultFolders(profileId: number): Promise<void> {
-        try {
-            // 检查是否已经存在本地类型的文件夹（避免重复创建）
-            const existingFolders = await this.getProfileFolders(profileId);
-            const hasLocalFolder = existingFolders.some(folder =>
-                folder.name === 'Local' || folder.name === '本地'
-            );
-            const hasModioFolder = existingFolders.some(folder =>
-                folder.name === 'mod.io' || folder.name === 'Mod.io'
-            );
-
-            if (hasLocalFolder && hasModioFolder) {
-                console.log(`配置文件 ${profileId} 已存在默认文件夹，跳过创建默认文件夹`);
-                return;
-            }
-
-            const defaultFolders = [
-                {
-                    profileId,
-                    name: 'mod.io',
-                    folderType: 'modio',
-                    sortOrder: 0
-                },
-                {
-                    profileId,
-                    name: 'Local',
-                    folderType: 'local',
-                    sortOrder: 1
-                }
-            ];
-
-            for (const folder of defaultFolders) {
-                // 只创建不存在的文件夹
-                const exists = existingFolders.some(f => f.name === folder.name);
-                if (!exists) {
-                    await this.createFolder(folder);
-                }
-            }
-        } catch (error) {
-            console.error(`创建默认文件夹结构失败 [配置ID: ${profileId}]:`, error);
-        }
-    }
-
-    /**
      * 构建文件夹树结构
+     * Helper method to organize flat folder data into hierarchical structure
      */
     private buildFolderTree(folders: ProfileFolderData[], mods: ProfileModData[]): ProfileFolderTreeData[] {
         const folderMap = new Map<number, ProfileFolderTreeData>();
@@ -732,37 +621,6 @@ export class ProfileDAO {
         });
 
         return rootFolders.sort((a, b) => a.sortOrder! - b.sortOrder!);
-    }
-
-    /**
-     * 获取配置文件统计信息
-     */
-    public async getProfileStats(): Promise<{
-        total: number;
-        byUser: Record<number, number>;
-        byGame: Record<number, number>;
-    }> {
-        try {
-            const db = await getDb();
-            const allProfiles = await db.select().from(profiles);
-
-            const byUser: Record<number, number> = {};
-            const byGame: Record<number, number> = {};
-
-            allProfiles.forEach(profile => {
-                byUser[profile.userId] = (byUser[profile.userId] || 0) + 1;
-                byGame[profile.gameId] = (byGame[profile.gameId] || 0) + 1;
-            });
-
-            return {
-                total: allProfiles.length,
-                byUser,
-                byGame
-            };
-        } catch (error) {
-            console.error('获取配置文件统计信息失败:', error);
-            return {total: 0, byUser: {}, byGame: {}};
-        }
     }
 
 

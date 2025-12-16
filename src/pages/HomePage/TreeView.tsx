@@ -5,6 +5,7 @@ import {StorageAPI} from "@/storage";
 import {autoBind} from "@/utils/ReactUtils";
 import {TreeViewModel} from "./TreeViewModel";
 import {TreeViewConverter} from "./TreeViewConverter";
+import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {TreeViewItem} from "./TreeViewItem";
 import {dragAndDrop} from "./DragAndDropTree";
 
@@ -38,6 +39,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
         });
 
         const vm = await TreeViewModel.getInstance();
+        const profileVM = await ProfileViewModel.getInstance();
         let treeData: any[];
         const modList = await this.getAllModsAsList();
         const converter = new TreeViewConverter(modList);
@@ -47,7 +49,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
         if (TreeViewConverter.filterList.length > 0) {
             const filterList = TreeViewConverter.filterList;
             TreeViewConverter.filterList = [];
-            treeData = converter.convertTo(vm.ActiveProfile);
+            treeData = converter.convertTo(profileVM.ActiveProfile);
             TreeViewConverter.filterList = filterList;
         } else {
             treeData = this.props.treeData || [];
