@@ -4,33 +4,34 @@
  */
 type Factory<T> = () => Promise<T>;
 type InitHook<T> = (instance: T) => Promise<void>;
+type Token<T> = Function & { prototype: T };
 
 export class IoC {
-    private static instances = new Map<string, any>();
-    private static factories = new Map<string, Factory<any>>();
-    private static initHooks = new Map<string, InitHook<any>>();
-    private static initializing = new Map<string, Promise<any>>();
+    private static instances = new Map<Token<any>, any>();
+    private static factories = new Map<Token<any>, Factory<any>>();
+    private static initHooks = new Map<Token<any>, InitHook<any>>();
+    private static initializing = new Map<Token<any>, Promise<any>>();
 
     /**
      * Register a singleton factory
      *
-     * @param key - Unique identifier for the singleton
+     * @param token - Class type to use as identifier
      * @param factory - Factory function to create the instance
      * @param initHook - Optional initialization hook to run after creation
      *
      * @example
      * ```typescript
-     * DIContainer.register(
-     *     'AppViewModel',
-     *     async () => new AppViewModel(),
+     * IoC.register(
+     *     AppViewModel,
+     *     async () => await AppViewModel.getInstance(),
      *     async (vm) => await vm.initialize()
      * );
      * ```
      */
-    static register<T>(key: string, factory: Factory<T>, initHook?: InitHook<T>): void {
-        this.factories.set(key, factory);
+    static register<T>(token: Token<T>, factory: Factory<T>, initHook?: InitHook<T>): void {
+        this.factories.set(token, factory);
         if (initHook) {
-            this.initHooks.set(key, initHook);
+            this.initHooks.set(token, initHook);
         }
     }
 
@@ -38,47 +39,48 @@ export class IoC {
      * Get or create singleton instance
      * Thread-safe with automatic initialization
      *
-     * @param key - Identifier of the singleton to retrieve
+     * @param token - Class type to retrieve
      * @returns Promise resolving to the singleton instance
-     * @throws Error if no factory is registered for the key
+     * @throws Error if no factory is registered for the token
      *
      * @example
      * ```typescript
-     * const appViewModel = await DIContainer.get<AppViewModel>('AppViewModel');
+     * // Type is automatically inferred as AppViewModel
+     * const appViewModel = await IoC.get(AppViewModel);
      * ```
      */
-    static async get<T>(key: string): Promise<T> {
+    static async get<T>(token: Token<T>): Promise<T> {
         // Return existing instance
-        if (this.instances.has(key)) {
-            return this.instances.get(key);
+        if (this.instances.has(token)) {
+            return this.instances.get(token);
         }
 
         // Wait if already initializing
-        if (this.initializing.has(key)) {
-            return this.initializing.get(key);
+        if (this.initializing.has(token)) {
+            return this.initializing.get(token);
         }
 
         // Start initialization
-        const factory = this.factories.get(key);
+        const factory = this.factories.get(token);
         if (!factory) {
-            throw new Error(`No factory registered for: ${key}`);
+            throw new Error(`No factory registered for: ${token.name}`);
         }
 
         const initPromise = (async () => {
             try {
                 const instance = await factory();
-                const initHook = this.initHooks.get(key);
+                const initHook = this.initHooks.get(token);
                 if (initHook) {
                     await initHook(instance);
                 }
-                this.instances.set(key, instance);
+                this.instances.set(token, instance);
                 return instance;
             } finally {
-                this.initializing.delete(key);
+                this.initializing.delete(token);
             }
         })();
 
-        this.initializing.set(key, initPromise);
+        this.initializing.set(token, initPromise);
         return initPromise;
     }
 
@@ -88,7 +90,7 @@ export class IoC {
      * @example
      * ```typescript
      * // Clean up when window closes
-     * DIContainer.clear();
+     * IoC.clear();
      * ```
      */
     static clear(): void {
@@ -99,17 +101,17 @@ export class IoC {
     /**
      * Check if instance is ready
      *
-     * @param key - Identifier of the singleton to check
+     * @param token - Class type to check
      * @returns True if instance exists and is initialized
      *
      * @example
      * ```typescript
-     * if (DIContainer.isReady('AppViewModel')) {
+     * if (IoC.isReady(AppViewModel)) {
      *     // AppViewModel is initialized
      * }
      * ```
      */
-    static isReady(key: string): boolean {
-        return this.instances.has(key);
+    static isReady<T>(token: Token<T>): boolean {
+        return this.instances.has(token);
     }
 }

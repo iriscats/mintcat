@@ -73,7 +73,7 @@ export class AppInitializer {
             // Phase 3: Core ViewModel
             this.currentPhase = InitPhase.CoreViewModel;
             console.log('[AppInitializer] Initializing AppViewModel...');
-            await IoC.get<AppViewModel>('AppViewModel');
+            await IoC.get(AppViewModel);
 
             // Complete
             this.currentPhase = InitPhase.Complete;

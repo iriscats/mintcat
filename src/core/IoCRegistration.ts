@@ -2,6 +2,7 @@ import { IoC } from '@/core/IoC.ts';
 import { AppViewModel } from '@/AppViewModel';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
 import { HomeViewModel } from '@/pages/HomePage/HomeViewModel';
+import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
 
 /**
  * Register all ViewModels to DI container
@@ -21,19 +22,24 @@ import { HomeViewModel } from '@/pages/HomePage/HomeViewModel';
 export function registerViewModels(): void {
     // Core ViewModel - shared across windows
     IoC.register(
-        'AppViewModel',
+        AppViewModel,
         async () => await AppViewModel.getInstance()
     );
 
     // UI ViewModels - per-window instances
     // Note: These are registered but not initialized until accessed
     IoC.register(
-        'TreeViewModel',
+        TreeViewModel,
         async () => await TreeViewModel.getInstance()
     );
 
     IoC.register(
-        'HomeViewModel',
+        HomeViewModel,
         async () => await HomeViewModel.getInstance()
+    );
+
+    IoC.register(
+        ProfileViewModel,
+        async () => await ProfileViewModel.getInstance()
     );
 }

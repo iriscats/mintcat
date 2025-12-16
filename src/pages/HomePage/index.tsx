@@ -538,8 +538,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // Pre-initialize UI ViewModels (optional but recommended for better UX)
         console.log('[HomePage] Initializing UI ViewModels...');
-        await IoC.get<TreeViewModel>('TreeViewModel');
-        await IoC.get<HomeViewModel>('HomeViewModel');
+        await IoC.get(TreeViewModel);
+        await IoC.get(HomeViewModel);
         console.log('[HomePage] UI ViewModels initialized');
 
         // Setup window resize hook

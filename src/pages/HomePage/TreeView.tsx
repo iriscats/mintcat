@@ -85,7 +85,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
             }
 
             console.log(`[TreeView] 开始保存到数据库...`);
-            const profileVM = await IoC.get<ProfileViewModel>("ProfileViewModel");
+            const profileVM = await IoC.get(ProfileViewModel);
             await profileVM.saveProfileTreeToDatabase(profileTreeItem);
             console.log(`[TreeView] ✅ Profile data set successfully`);
 
