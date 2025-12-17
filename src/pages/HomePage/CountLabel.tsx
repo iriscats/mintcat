@@ -15,7 +15,11 @@ export const CountLabel = () => {
 
             const modsApi = await StorageAPI.getMods();
             const allMods = await modsApi.getAllMods();
-            const subModList = activeProfile.getModList(allMods);
+
+            // Use ProfileTreeService to get mod list
+            const treeService = (profileVM as any).profileService.getTreeService();
+            const subModList = treeService.getModList(activeProfile, allMods);
+
             setEnableCount(subModList.filter(mod => mod.enabled).length);
             setTotalCount(subModList.length);
         };

@@ -1,21 +1,20 @@
 import {emit} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
-import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 
 /**
  * TreeViewModel manages profile tree UI state and interactions
- * Delegates data persistence and storage to ProfileViewModel
- * Handles tree structure UI updates and user interactions
+ * Delegates data persistence and operations to ProfileViewModel and Services
+ * Simplified version after refactoring
  */
 export class TreeViewModel extends BaseViewModel {
 
     private static instance: TreeViewModel;
     private profileViewModel?: ProfileViewModel;
 
-    
+
     public static updateTreeView() {
         console.log(`[TreeViewModel] updateTreeView() called - emitting event`);
         emit("home-page-update-tree-view").then(() => {
@@ -38,70 +37,55 @@ export class TreeViewModel extends BaseViewModel {
         super();
     }
 
-    private async sortNode(modItem: ProfileTreeItem, order: string): Promise<ProfileTreeItem[]> {
-        const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
-
-        return modItem.children.sort((a, b) => {
-            if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.ITEM) {
-                const modAData = allMods.find(m => m.modId === a.id);
-                const modBData = allMods.find(m => m.modId === b.id);
-
-                // If mods not found, keep original order
-                if (!modAData || !modBData) return 0;
-
-                if (order === "asc") {
-                    return modAData.displayName.localeCompare(modBData.displayName);
-                } else if (order === "desc") {
-                    return modAData.displayName.localeCompare(modBData.displayName) * -1;
-                } else if (order === "time") {
-                    const modAStatus = modAData.modId ? modsApi.getModStatus(modAData.modId) : null;
-                    const modBStatus = modBData.modId ? modsApi.getModStatus(modBData.modId) : null;
-                    // Simple time comparison - in real implementation, you'd get the actual status
-                    return 0;
-                }
-            } else if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.FOLDER) {
-                return -1;
-            } else if (a.type === ProfileTreeType.FOLDER && b.type === ProfileTreeType.ITEM) {
-                return 1;
-            }
-            return 0;
-        })
-    }
-
+    /**
+     * 排序 mods
+     * Delegated to ProfileTreeService
+     */
     public async sortMods(order: string): Promise<void> {
         if (!this.profileViewModel) return;
 
-        const active = await this.profileViewModel.getActiveProfileTree();
-        if (active.ModioFolder) {
-            active.ModioFolder.children = await this.sortNode(active.ModioFolder, order);
-        }
-        if (active.LocalFolder) {
-            active.LocalFolder.children = await this.sortNode(active.LocalFolder, order);
-        }
+        const activeTree = await this.profileViewModel.getActiveProfileTree();
+        const treeService = (this.profileViewModel as any).profileService.getTreeService();
 
-        await this.profileViewModel.saveProfileTreeToDatabase(active.root);
+        await treeService.sortTreeNodes(activeTree, order);
+        await this.profileViewModel.saveProfileTreeToDatabase(activeTree.root);
+
         TreeViewModel.updateTreeView();
     }
 
+    /**
+     * 设置文件夹名称
+     * Delegated to ProfileDAO
+     */
     public async setGroupName(id: number, name: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
-        await profiles.setGroupName(id, name);
+        await profiles.updateFolder(id, { name });
 
         TreeViewModel.updateTreeView();
     }
 
+    /**
+     * 获取文件夹名称
+     * Delegated to ProfileTreeService
+     */
     public async getGroupName(id: number): Promise<string | undefined> {
         if (!this.profileViewModel) return undefined;
-        const active = await this.profileViewModel.getActiveProfileTree();
-        return active.getGroupName(id);
+
+        const activeTree = await this.profileViewModel.getActiveProfileTree();
+        const treeService = (this.profileViewModel as any).profileService.getTreeService();
+
+        return treeService.getGroupName(activeTree, id);
     }
 
-    public async setProfileData(root: ProfileTreeItem): Promise<void> {
+    /**
+     * 设置 profile 数据
+     * Delegated to ProfileViewModel
+     */
+    public async setProfileData(root: any): Promise<void> {
         console.log(`\n========== [TreeViewModel] setProfileData 开始 ==========`);
         console.log(`[TreeViewModel] 传入的 ProfileTreeItem:`, {
             childrenCount: root.children.length,
-            children: root.children.map(c => ({
+            children: root.children.map((c: any) => ({
                 id: c.id,
                 name: c.name,
                 type: c.type,

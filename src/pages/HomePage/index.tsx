@@ -210,7 +210,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         const profileVM = await IoC.get(ProfileViewModel);
         const activeProfile = await profileVM.getActiveProfileTree();
-        const subModList = activeProfile.getModList(allMods);
+
+        // Use ProfileTreeService to get mod list
+        const treeService = (profileVM as any).profileService.getTreeService();
+        const subModList = treeService.getModList(activeProfile, allMods);
+
         let list = "";
         for (const mod of subModList) {
             if (TreeViewConverter.filter(mod) && mod.sourceType === ModSourceType.Modio) {

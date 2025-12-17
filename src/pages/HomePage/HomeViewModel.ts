@@ -398,7 +398,16 @@ export class HomeViewModel extends BaseViewModel {
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
-        await profiles.addGroup(groupName, parentGroupId);
+        const activeProfile = await profiles.getActiveProfile();
+
+        if (activeProfile) {
+            await profiles.createFolder({
+                profileId: activeProfile.id!,
+                name: groupName,
+                parentFolderId: parentGroupId || null,
+                folderType: 'custom'
+            });
+        }
 
         TreeViewModel.updateTreeView();
     }
@@ -415,7 +424,7 @@ export class HomeViewModel extends BaseViewModel {
         try {
             console.log(`[HomeViewModel] Starting to remove group from database, groupId=${groupId}`);
             const profiles = await StorageAPI.getProfiles();
-            await profiles.removeGroup(groupId);
+            await profiles.deleteFolder(groupId);
             console.log(`[HomeViewModel] Removed group from database, groupId=${groupId}`);
 
             console.log(`[HomeViewModel] Triggering UI update`);

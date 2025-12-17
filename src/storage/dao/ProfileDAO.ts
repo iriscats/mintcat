@@ -407,47 +407,6 @@ export class ProfileDAO {
      * =============================
      */
 
-    public async setGroupName(id: number, name: string): Promise<void> {
-        try {
-            // Update folder name
-            await this.updateFolder(id, {name});
-        } catch (error) {
-            console.error('Set group name failed:', error);
-            throw error;
-        }
-    }
-
-    public async addGroup(groupName: string, parentGroupId: number): Promise<void> {
-        try {
-            // Get active profile and add folder
-            const activeProfile = await this.getActiveProfile();
-            if (activeProfile) {
-                await this.createFolder({
-                    profileId: activeProfile.id!,
-                    name: groupName,
-                    parentFolderId: parentGroupId || null,
-                    folderType: 'custom'
-                });
-            }
-        } catch (error) {
-            console.error('Add group failed:', error);
-            throw error;
-        }
-    }
-
-    public async removeGroup(groupId: number): Promise<void> {
-        console.log(`[ProfileDAO] removeGroup called with groupId=${groupId}`);
-        try {
-            console.log(`[ProfileDAO] Calling deleteFolder for groupId=${groupId}`);
-            // Remove folder
-            const result = await this.deleteFolder(groupId);
-            console.log(`[ProfileDAO] deleteFolder completed, result=${result}`);
-        } catch (error) {
-            console.error(`[ProfileDAO] Remove group failed for groupId=${groupId}:`, error);
-            throw error;
-        }
-    }
-
     /**
      * 获取配置文件的所有模组关联
      */

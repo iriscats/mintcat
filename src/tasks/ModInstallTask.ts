@@ -72,7 +72,10 @@ export class ModInstallTask implements ITask {
         const api = new IntegrateApi();
         const modList = await (api as any).getAllModsAsList();
         const activeProfile = await profileVM.getActiveProfileTree();
-        const subModList = activeProfile.getModList(modList);
+
+        // Use ProfileTreeService to get mod list
+        const treeService = (profileVM as any).profileService.getTreeService();
+        const subModList = treeService.getModList(activeProfile, modList);
         const enabledMods = subModList.filter(m => m.enabled);
 
         if (enabledMods.length === 0) {
