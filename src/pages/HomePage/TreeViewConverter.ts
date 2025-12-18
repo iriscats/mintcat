@@ -1,6 +1,6 @@
 import {TreeProps} from "antd";
 import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
-import {ModListItem} from "@/storage/db/Schema.ts";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 /**
  * TreeViewConverter
@@ -18,9 +18,9 @@ export class TreeViewConverter {
 
     public treeData?: TreeProps['treeData'] = []
     public expandedKeys?: TreeProps['expandedKeys'] = [];
-    private modList?: ModListItem[];
+    private modList?: CompleteModData[];
 
-    public constructor(modList: ModListItem[]) {
+    public constructor(modList: CompleteModData[]) {
         this.modList = modList;
     }
 
@@ -31,7 +31,7 @@ export class TreeViewConverter {
     /**
      * 根据当前过滤器列表过滤 mod
      */
-    public static filter(modItem: ModListItem): boolean {
+    public static filter(modItem: CompleteModData): boolean {
         if (TreeViewConverter.filterList.length === 0) {
             return true;
         }
@@ -43,7 +43,7 @@ export class TreeViewConverter {
             if (modItem.displayName?.toLocaleLowerCase().indexOf(filter.toLocaleLowerCase()) > -1) {
                 return true;
             }
-            if (modItem.approval === filter) {
+            if (modItem.approvalStatus === filter) {
                 return true;
             }
             if (modItem.tags?.indexOf(filter) > -1) {
@@ -88,7 +88,7 @@ export class TreeViewConverter {
      * 构建 Mod 节点
      */
     private buildModNode(parent: any, item: ProfileTreeItem): void {
-        const modItem = this.modList?.find(m => m.id === item.id);
+        const modItem = this.modList?.find(m => m.modId === item.id);
         if (!modItem) {
             console.warn(`[TreeViewConverter] Mod item not found for id=${item.id}`);
             return;
@@ -103,23 +103,23 @@ export class TreeViewConverter {
 
         parent.children.push({
             key,
-            modId: modItem.modId,
+            modId: modItem.platformId,
             isLeaf: true,
             title,
-            url: modItem.url,
-            tags: modItem.tags,
-            required: modItem.required,
-            enabled: modItem.enabled,
+            url: modItem.url || "",
+            tags: modItem.tags || [],
+            required: modItem.tags?.includes('RequiredByAll') || false,
+            enabled: true,  // Profile context - will be loaded separately
             sourceType: modItem.sourceType,
-            approval: modItem.approval,
-            versions: modItem.versions,
-            fileVersion: modItem.fileVersion,
-            usedVersion: modItem.usedVersion,
-            downloadProgress: modItem.downloadProgress,
-            lastUpdateDate: modItem.lastUpdateDate,
-            onlineUpdateDate: modItem.onlineUpdateDate,
-            onlineAvailable: modItem.onlineAvailable,
-            localNoFound: modItem.localNoFound,
+            approval: modItem.approvalStatus,
+            versions: modItem.version?.availableVersions || [],
+            fileVersion: modItem.version?.currentVersion || "-",
+            usedVersion: "",  // Profile context - will be loaded separately
+            downloadProgress: modItem.download?.downloadProgress || 100,
+            lastUpdateDate: modItem.status?.lastUpdateDate || 0,
+            onlineUpdateDate: modItem.status?.onlineUpdateDate || 0,
+            onlineAvailable: modItem.status?.isOnlineAvailable ?? true,
+            localNoFound: modItem.status?.isLocalNotFound ?? false,
         });
     }
 

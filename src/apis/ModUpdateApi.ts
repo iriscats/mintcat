@@ -5,24 +5,30 @@ import {ModioApi} from "@/apis/modio";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
-import {MOD_INVALID_ID, ModSourceType, ModListItem} from "@/storage/db/Schema.ts";
+import {ModSourceType} from "@/models/mod/types";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 export class ModUpdateApi {
 
     private static loading = false;
 
-    public static async updateMod(mod: ModListItem) {
-        const resp = await ModioApi.getModInfoByLink(mod.url);
+    public static async updateMod(mod: CompleteModData) {
+        const resp = await ModioApi.getModInfoByLink(mod.url || "");
         if (!resp) {
-            mod.onlineAvailable = false;
-            await emit("mod-treeview-update" + mod.id, mod);
+            // Update status to mark as unavailable
+            const modsApi = await StorageAPI.getMods();
+            await modsApi.upsertModStatus({
+                modId: mod.modId!,
+                isOnlineAvailable: false
+            });
+            await emit("mod-treeview-update" + mod.modId, { modId: mod.modId, downloadProgress: mod.download?.downloadProgress || 0 });
             return;
         }
 
         // Update mod in database
-        await this.updateModInDatabase(mod.id, resp);
+        await this.updateModInDatabase(mod.modId!, resp);
 
         TreeViewModel.updateTreeView();
         await emit("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
@@ -64,59 +70,77 @@ export class ModUpdateApi {
         });
     }
 
-    public static async updateModFile(mod: ModListItem) {
+    public static async updateModFile(mod: CompleteModData) {
         const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
             await emit("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
-            mod.downloadProgress = (loaded / total) * 100;
-            await emit("mod-treeview-update" + mod.id, mod);
+            const downloadProgress = (loaded / total) * 100;
+            await emit("mod-treeview-update" + mod.modId, { modId: mod.modId, downloadProgress });
         });
 
         // Update download progress in database
         const modsApi = await StorageAPI.getMods();
-        await modsApi.updateDownloadProgress(mod.id, mod.downloadProgress);
+        await modsApi.updateDownloadProgress(mod.modId!, 100);
 
         await emit("status-bar-log", t("Update Finish"));
     }
 
-    public static async checkOnlineModUpdate(modItem: ModListItem) {
-        if (modItem.sourceType === ModSourceType.Modio &&
-            //modItem.onlineAvailable === true &&
-            modItem.enabled === true
-        ) {
-            if (!await exists(modItem.cachePath) ||
-                modItem.onlineUpdateDate > modItem.lastUpdateDate ||
-                modItem.downloadProgress != 100
+    public static async checkOnlineModUpdate(modItem: CompleteModData, isEnabled: boolean) {
+        if (modItem.sourceType === ModSourceType.Modio && isEnabled) {
+            const cachePath = modItem.download?.cachePath || "";
+            const onlineUpdateDate = modItem.status?.onlineUpdateDate || 0;
+            const lastUpdateDate = modItem.status?.lastUpdateDate || 0;
+            const downloadProgress = modItem.download?.downloadProgress || 0;
+
+            if (!await exists(cachePath) ||
+                onlineUpdateDate > lastUpdateDate ||
+                downloadProgress != 100
             ) {
                 await ModUpdateApi.updateMod(modItem);
             }
         }
     }
 
-    public static async checkLocalModCache(modItem: ModListItem) {
+    public static async checkLocalModCache(modItem: CompleteModData) {
         if (modItem.sourceType === ModSourceType.Local) {
-            if (!await exists(modItem.cachePath)) {
-                modItem.localNoFound = true;
-                await emit("mod-treeview-update" + modItem.id, modItem);
+            const cachePath = modItem.download?.cachePath || "";
+            const modsApi = await StorageAPI.getMods();
+
+            if (!await exists(cachePath)) {
+                await modsApi.upsertModStatus({
+                    modId: modItem.modId!,
+                    isLocalNotFound: true
+                });
+                await emit("mod-treeview-update" + modItem.modId, { modId: modItem.modId });
                 return false;
             } else {
-                modItem.localNoFound = false;
+                await modsApi.upsertModStatus({
+                    modId: modItem.modId!,
+                    isLocalNotFound: false
+                });
             }
 
-            await emit("mod-treeview-update" + modItem.id, modItem);
+            await emit("mod-treeview-update" + modItem.modId, { modId: modItem.modId });
         }
         return true;
     }
 
-    public static async checkLocalModModify(modItem: ModListItem) {
-        if (modItem.sourceType === ModSourceType.Local && modItem.enabled === true) {
-            if (await exists(modItem.cachePath)) {
-                const fileInfo = await stat(modItem.cachePath);
+    public static async checkLocalModModify(modItem: CompleteModData, isEnabled: boolean) {
+        if (modItem.sourceType === ModSourceType.Local && isEnabled) {
+            const cachePath = modItem.download?.cachePath || "";
+            if (await exists(cachePath)) {
+                const fileInfo = await stat(cachePath);
                 const mtime = TimeUtils.getTimeSecond(fileInfo.mtime.getTime());
-                if (mtime === modItem.lastUpdateDate) {
+                const lastUpdateDate = modItem.status?.lastUpdateDate || 0;
+
+                if (mtime === lastUpdateDate) {
                     return false;
                 } else {
-                    modItem.lastUpdateDate = mtime;
-                    await emit("mod-treeview-update" + modItem.id, modItem);
+                    const modsApi = await StorageAPI.getMods();
+                    await modsApi.upsertModStatus({
+                        modId: modItem.modId!,
+                        lastUpdateDate: mtime
+                    });
+                    await emit("mod-treeview-update" + modItem.modId, { modId: modItem.modId });
                     return true;
                 }
             }
@@ -133,33 +157,11 @@ export class ModUpdateApi {
         const allMods = await modsApi.getAllMods();
 
         for (const mod of allMods) {
-            // We would need to check if mod is enabled in profile
-            // For now, just check cache for local mods
-            const modItem: ModListItem = {
-                id: mod.modId!,
-                modId: mod.platformId,
-                url: mod.url || "",
-                nameId: mod.nameId,
-                displayName: mod.displayName,
-                required: false,
-                enabled: true,
-                fileVersion: "-",
-                tags: mod.tags || [],
-                usedVersion: "",
-                versions: [],
-                approval: mod.approvalStatus || "Sandbox",
-                sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
-                downloadUrl: "",
-                cachePath: "",
-                downloadProgress: 100,
-                fileSize: 0,
-                lastUpdateDate: 0,
-                onlineUpdateDate: 0,
-                onlineAvailable: true,
-                localNoFound: false
-            };
-
-            await this.checkLocalModCache(modItem);
+            // Get complete mod data
+            const completeModData = await modsApi.getCompleteModData(mod.modId!);
+            if (completeModData) {
+                await this.checkLocalModCache(completeModData);
+            }
         }
 
         ModUpdateApi.loading = false;
@@ -181,7 +183,7 @@ export class ModUpdateApi {
         const allMods = await modsApi.getAllMods();
         const modIdList = [];
         for (const mod of allMods) {
-            if (mod.sourceType === ModSourceType.Modio || mod.platformId !== MOD_INVALID_ID) {
+            if (mod.sourceType === ModSourceType.Modio) {
                 modIdList.push(mod.platformId);
             }
         }

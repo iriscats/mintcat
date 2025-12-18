@@ -4,7 +4,7 @@ import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
 import { IoC } from '@/core/IoC.ts';
 import { ModUpdateApi } from '@/apis/ModUpdateApi';
 import { IntegrateApi } from '@/apis/IntegrateApi';
-import { ModListItem } from '@/storage/db/Schema';
+import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { MessageBox } from '@/components/MessageBox';
@@ -24,7 +24,7 @@ export interface ModInstallTaskParams {
      * Optional list of specific mods to install
      * If not provided, installs all enabled mods from active profile
      */
-    mods?: ModListItem[];
+    mods?: CompleteModData[];
 }
 
 /**
@@ -69,19 +69,28 @@ export class ModInstallTask implements ITask {
         await context.updateProgress(20);
 
         // Get mod list
-        const api = new IntegrateApi();
-        const modList = await (api as any).getAllModsAsList();
-        const activeProfile = await profileVM.getActiveProfileTree();
+        const profilesDAO = await StorageAPI.getProfiles();
+        const activeProfileData = await profileVM.getActiveProfileData();
+        const activeProfileTree = await profileVM.getActiveProfileTree();
 
-        // Use ProfileTreeService to get mod list
-        const treeService = (profileVM as any).profileService.getTreeService();
-        const subModList = treeService.getModList(activeProfile, modList);
-        const enabledMods = subModList.filter(m => m.enabled);
+        // Get profile mods (with enabled status)
+        const profileMods = await profilesDAO.getProfileMods(activeProfileData.id!);
+        const enabledProfileMods = profileMods.filter(pm => pm.isEnabled);
 
-        if (enabledMods.length === 0) {
+        if (enabledProfileMods.length === 0) {
             await emit("status-bar-log", t("No mods to install"));
             await context.updateProgress(100);
             return;
+        }
+
+        // Get complete mod data for enabled mods
+        const modsDAO = await StorageAPI.getMods();
+        const enabledMods: CompleteModData[] = [];
+        for (const pm of enabledProfileMods) {
+            const modData = await modsDAO.getCompleteModData(pm.modId);
+            if (modData) {
+                enabledMods.push(modData);
+            }
         }
 
         // Step 3: Check mod updates and validate files (20% - 60% progress)
@@ -94,21 +103,22 @@ export class ModInstallTask implements ITask {
 
             const item = enabledMods[i];
 
-            // Check for online updates
-            await ModUpdateApi.checkOnlineModUpdate(item);
-            if (item.cachePath === "") {
+            // Check for online updates (mod is enabled since we filtered above)
+            await ModUpdateApi.checkOnlineModUpdate(item, true);
+            const cachePath = item.download?.cachePath || "";
+            if (cachePath === "") {
                 throw new Error(`${t("File Not Found")}: ${item.url}`);
             }
 
             // Check if mod was modified
-            if (await ModUpdateApi.checkLocalModModify(item)) {
+            if (await ModUpdateApi.checkLocalModModify(item, true)) {
                 editTime = TimeUtils.getCurrentTime();
                 await profileVM.setActiveProfileEditTime(editTime);
             }
 
             // Validate mod cache
             if (!await ModUpdateApi.checkLocalModCache(item)) {
-                throw new Error(`${t("File Not Found")}: ${item.displayName}: ${item.cachePath}`);
+                throw new Error(`${t("File Not Found")}: ${item.displayName}: ${cachePath}`);
             }
 
             // Update progress
@@ -157,8 +167,8 @@ export class ModInstallTask implements ITask {
             const modName = item.nameId === "" ? item.displayName : item.nameId;
             installModList.push({
                 name: modName,
-                modio_id: item.modId,
-                pak_path: item.cachePath,
+                modio_id: item.platformId,
+                pak_path: item.download?.cachePath || "",
             });
         }
 

@@ -36,7 +36,7 @@ import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
 import {StorageAPI} from "@/storage";
-import {ModListItem} from "@/storage/db/Schema.ts";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
@@ -81,67 +81,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
     /**
      * Helper method to get a mod from database by ID
      */
-    private async getModById(modId: number) {
+    private async getModById(modId: number): Promise<CompleteModData | null> {
         const modsApi = await StorageAPI.getMods();
-        const modData = await modsApi.getModById(modId);
-        if (!modData) return null;
-
-        // Convert to ModListItem
-        return {
-            id: modData.modId!,
-            modId: modData.platformId,
-            url: modData.url || "",
-            nameId: modData.nameId,
-            displayName: modData.displayName,
-            required: false,
-            enabled: true,
-            fileVersion: "-",
-            tags: modData.tags || [],
-            usedVersion: "",
-            versions: [],
-            approval: modData.approvalStatus || "Sandbox",
-            sourceType: modData.sourceType as ModSourceType || ModSourceType.Unknown,
-            downloadUrl: "",
-            cachePath: "",
-            downloadProgress: 100,
-            fileSize: 0,
-            lastUpdateDate: 0,
-            onlineUpdateDate: 0,
-            onlineAvailable: true,
-            localNoFound: false
-        };
+        return await modsApi.getCompleteModData(modId);
     }
 
     /**
-     * Helper method to get all mods from database as ModListItem array
+     * Helper method to get all mods from database as CompleteModData array
      */
-    private async getAllModsAsList(): Promise<ModListItem[]> {
+    private async getAllModsAsList(): Promise<CompleteModData[]> {
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
-
-        return allMods.map(mod => ({
-            id: mod.modId!,
-            modId: mod.platformId,
-            url: mod.url || "",
-            nameId: mod.nameId,
-            displayName: mod.displayName,
-            required: false,
-            enabled: true,
-            fileVersion: "-",
-            tags: mod.tags || [],
-            usedVersion: "",
-            versions: [],
-            approval: mod.approvalStatus || "Sandbox",
-            sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
-            downloadUrl: "",
-            cachePath: "",
-            downloadProgress: 100,
-            fileSize: 0,
-            lastUpdateDate: 0,
-            onlineUpdateDate: 0,
-            onlineAvailable: true,
-            localNoFound: false
-        }));
+        const modIds = allMods.map(m => m.modId!);
+        return await modsApi.getBatchCompleteModData(modIds);
     }
 
     // Multi Operations
@@ -169,7 +121,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             for (const key of this.state.selectedKeys) {
                 const modItem = await this.getModById(key);
                 if (modItem) {
-                    await vm.removeMod(modItem.id);
+                    await vm.removeMod(modItem.modId!);
                 }
             }
             await this.updateTreeView();
@@ -359,36 +311,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const activeProfileName = await profileVM.getActiveProfileName();
 
         console.log(`[HomePage] Got ${allMods.length} mods from database`);
-
-        // Convert mods to ModListItem array
-        const modList: ModListItem[] = allMods.map(mod => ({
-            id: mod.modId!,
-            modId: mod.platformId,
-            url: mod.url || "",
-            nameId: mod.nameId,
-            displayName: mod.displayName,
-            required: false,
-            enabled: true,
-            fileVersion: "-",
-            tags: mod.tags || [],
-            usedVersion: "",
-            versions: [],
-            approval: mod.approvalStatus || "Sandbox",
-            sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
-            downloadUrl: "",
-            cachePath: "",
-            downloadProgress: 100,
-            fileSize: 0,
-            lastUpdateDate: 0,
-            onlineUpdateDate: 0,
-            onlineAvailable: true,
-            localNoFound: false
-        }));
-
         console.log(`[HomePage] Converting profile tree, active profile: ${activeProfileName}`);
         console.log(`[HomePage] ActiveProfile root children:`, activeProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
 
-        const converter = new TreeViewConverter(modList);
+        // TreeViewConverter now accepts CompleteModData[] directly
+        const converter = new TreeViewConverter(allMods);
         const treeData = converter.convertTo(activeProfile);
 
         console.log(`[HomePage] Converted treeData:`, treeData);
@@ -505,8 +432,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         await navigator.clipboard.writeText(mod.url);
                         message.success(t("Copied To Clipboard") + `: ${mod.url} `);
                     } else {
-                        await navigator.clipboard.writeText(mod.cachePath);
-                        message.success(t("Copied To Clipboard") + `: ${mod.cachePath} `);
+                        const cachePath = mod?.download?.cachePath || "";
+                        await navigator.clipboard.writeText(cachePath);
+                        message.success(t("Copied To Clipboard") + `: ${cachePath} `);
                     }
                 } catch (err) {
                     message.error(t("Copy Failed"));
@@ -515,13 +443,22 @@ export class HomePage extends BasePage<any, ModListPageState> {
             case "export": {
                 try {
                     const mod = await this.getModById(id);
+                    if (!mod) {
+                        message.error(t("Mod Not Found"));
+                        break;
+                    }
+                    const cachePath = mod.download?.cachePath || "";
+                    if (!cachePath) {
+                        message.error(t("File Not Found"));
+                        break;
+                    }
                     const path = await save({
                         filters: [{
                             name: mod.displayName,
                             extensions: ['zip', 'pak'],
                         }]
                     });
-                    await copyFile(mod.cachePath, path);
+                    await copyFile(cachePath, path);
                     message.success(t("Export Success"));
                 } catch (e) {
                     message.error(t("Export Failed"));

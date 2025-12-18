@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {ModListItem} from "@/storage/db/Schema.ts";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {UserInfo} from "@/apis/modio/UserInfo.ts";
 import {EventInfo} from "@/apis/modio/EventInfo.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
@@ -163,26 +163,30 @@ export class ModioApi {
         }
     }
 
-    public static async downloadModFile(modInfo: ModListItem,
+    public static async downloadModFile(modInfo: CompleteModData,
                                         onProgress?: (loaded: number, total: number) => void) {
+        const fileName = modInfo.nameId;
+        const version = modInfo.version?.currentVersion || "-";
+        const fileSize = modInfo.download?.fileSize || 0;
+        const downloadUrl = modInfo.download?.downloadUrl || "";
 
-        if (await CacheApi.checkCacheFile(modInfo.nameId, modInfo.usedVersion, modInfo.fileSize)) {
-            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId, modInfo.usedVersion);
-            onProgress(modInfo.fileSize, modInfo.fileSize);
-            return modInfo;
+        if (await CacheApi.checkCacheFile(fileName, version, fileSize)) {
+            const cachePath = await CacheApi.getModCachePath(fileName, version);
+            onProgress?.(fileSize, fileSize);
+            return { ...modInfo, download: { ...modInfo.download!, cachePath, downloadProgress: 100 } };
         }
 
-        if (modInfo.fileSize < 100 * 1024 * 1024) {
-            const data = await DownloadApi.downloadFile(modInfo.downloadUrl, onProgress);
-            modInfo.cachePath = await CacheApi.saveCacheFile(modInfo.nameId, modInfo.usedVersion, data);
+        let cachePath: string;
+        if (fileSize < 100 * 1024 * 1024) {
+            const data = await DownloadApi.downloadFile(downloadUrl, onProgress);
+            cachePath = await CacheApi.saveCacheFile(fileName, version, data);
         } else {
-            modInfo.cachePath = await CacheApi.getModCachePath(modInfo.nameId, modInfo.usedVersion);
-            await DownloadApi.downloadLargeFile(modInfo.downloadUrl, modInfo.cachePath, onProgress);
+            cachePath = await CacheApi.getModCachePath(fileName, version);
+            await DownloadApi.downloadLargeFile(downloadUrl, cachePath, onProgress);
         }
 
-        modInfo.downloadProgress = 100;
-        onProgress(modInfo.fileSize, modInfo.fileSize);
-        return modInfo;
+        onProgress?.(fileSize, fileSize);
+        return { ...modInfo, download: { ...modInfo.download!, cachePath, downloadProgress: 100 } };
     }
 
 }

@@ -227,9 +227,8 @@ export const settings = sqliteTable("settings", {
 // These types have been moved to separate files
 // ====================================
 
-// Types moved to @/storage/db/types
-export type { ModListItem } from './types';
-export { ModSourceType } from './types';
+// Mod types moved to @/models/mod/types
+export { ModSourceType, ModApprovalStatus, DownloadStatus } from '@/models/mod/types';
 
 // Constants moved to @/constants/mod
 export { MOD_INVALID_ID } from '@/constants/mod';

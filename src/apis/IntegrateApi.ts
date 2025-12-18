@@ -8,9 +8,11 @@ import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts"
 import { IoC } from "@/core/IoC.ts";
 import {ILock} from "@/core/ILock.ts";
 import {StorageAPI} from "@/storage";
-import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
+import {ModSourceType} from "@/models/mod/types";
 import {TaskManager} from "@/tasks/TaskManager.ts";
 import {TaskPriority} from "@/apis/TaskQueueAPI.ts";
+import {ModService} from "@/services/ModService.ts";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 
 export class IntegrateApi extends ILock {
@@ -22,34 +24,10 @@ export class IntegrateApi extends ILock {
     private static lockInstance = new IntegrateApi();
 
     /**
-     * Helper method to get all mods from database as ModListItem array
+     * Helper method to get all mods from database as CompleteModData array
      */
-    private async getAllModsAsList(): Promise<ModListItem[]> {
-        const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
-        return allMods.map(mod => ({
-            id: mod.modId!,
-            modId: mod.platformId,
-            url: mod.url || "",
-            nameId: mod.nameId,
-            displayName: mod.displayName,
-            required: false,
-            enabled: true,
-            fileVersion: "-",
-            tags: mod.tags || [],
-            usedVersion: "",
-            versions: [],
-            approval: mod.approvalStatus || "Sandbox",
-            sourceType: mod.sourceType as ModSourceType || ModSourceType.Unknown,
-            downloadUrl: "",
-            cachePath: "",
-            downloadProgress: 100,
-            fileSize: 0,
-            lastUpdateDate: 0,
-            onlineUpdateDate: 0,
-            onlineAvailable: true,
-            localNoFound: false
-        }));
+    private async getAllModsAsList(): Promise<CompleteModData[]> {
+        return await ModService.getAllMods();
     }
 
 

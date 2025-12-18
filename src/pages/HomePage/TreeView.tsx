@@ -1,6 +1,6 @@
 import React from "react";
 import {Tree, TreeProps} from 'antd';
-import {ModListItem} from "@/storage/db/Schema";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {StorageAPI} from "@/storage";
 import {autoBind} from "@/utils/ReactUtils";
 import {TreeViewModel} from "./TreeViewModel";
@@ -150,35 +150,13 @@ export class TreeView extends React.Component<TreeViewProps, any> {
     }
 
     /**
-     * Helper method to get all mods from database as ModListItem array
+     * Helper method to get all mods from database as CompleteModData array
      */
-    private async getAllModsAsList(): Promise<ModListItem[]> {
+    private async getAllModsAsList(): Promise<CompleteModData[]> {
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
-
-        return allMods.map(mod => ({
-            id: mod.modId!,
-            modId: mod.platformId,
-            url: mod.url || "",
-            nameId: mod.nameId,
-            displayName: mod.displayName,
-            required: false,
-            enabled: true,
-            fileVersion: "-",
-            tags: mod.tags || [],
-            usedVersion: "",
-            versions: [],
-            approval: mod.approvalStatus || "Sandbox",
-            sourceType: mod.sourceType as any,
-            downloadUrl: "",
-            cachePath: "",
-            downloadProgress: 100,
-            fileSize: 0,
-            lastUpdateDate: 0,
-            onlineUpdateDate: 0,
-            onlineAvailable: true,
-            localNoFound: false
-        }));
+        const modIds = allMods.map(m => m.modId!);
+        return await modsApi.getBatchCompleteModData(modIds);
     }
 
     render() {

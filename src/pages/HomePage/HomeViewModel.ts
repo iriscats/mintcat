@@ -3,12 +3,7 @@ import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {ModioApi} from "@/apis/modio";
-import {
-    ModSourceType,
-    MOD_INVALID_ID,
-    ModListItem,
-    ProfileTreeGroupType
-} from "@/storage/db/Schema.ts";
+import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
@@ -17,6 +12,9 @@ import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts"
 import { IoC } from "@/core/IoC.ts";
 import {emit} from "@tauri-apps/api/event";
 import {BaseViewModel} from "@/core/BaseViewModel";
+import {ModService} from "@/services/ModService.ts";
+import {ModMapper} from "@/mappers/ModMapper.ts";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 /**
  * HomeViewModel handles mod operations and business logic
@@ -46,25 +44,32 @@ export class HomeViewModel extends BaseViewModel {
         const modsApi = await StorageAPI.getMods();
         const currentMods = await modsApi.getAllMods();
 
-        for (const depend of depends) {
-            const modItem = this.createModListItemFromModInfo(depend);
-            if (!modItem) continue;
+        // Get active profile
+        const profiles = await StorageAPI.getProfiles();
+        let activeProfile = await profiles.getActiveProfile();
+        if (!activeProfile) {
+            const profileVM = await IoC.get(ProfileViewModel);
+            activeProfile = await profileVM.getActiveProfileData();
+        }
 
+        for (const depend of depends) {
             // Check if mod already exists
             const existingMod = currentMods.find(m => m.platformId === depend.id);
             if (existingMod) {
                 continue;
             }
 
-            // Add mod to database and profile
-            const addedModItem = await this.addModToDatabaseAndProfile(modItem, groupId);
-            if (!addedModItem) {
+            // Add mod using ModService
+            try {
+                const addedMod = await ModService.addModFromModio(depend, activeProfile.id!, groupId);
+
+                TreeViewModel.updateTreeView();
+
+                await ModUpdateApi.updateMod(addedMod);
+            } catch (error) {
+                console.error('Failed to add dependency:', error);
                 continue;
             }
-
-            TreeViewModel.updateTreeView();
-
-            await ModUpdateApi.updateMod(addedModItem);
         }
     }
 
@@ -77,62 +82,42 @@ export class HomeViewModel extends BaseViewModel {
 
         // Check if mod already exists by querying mods directly
         const modsApi = await StorageAPI.getMods();
-        const existingMod = await modsApi.getModById(modInfoResp.id);
+        const existingMod = await modsApi.getModByPlatformId(modInfoResp.id);
         if (existingMod) {
             message.warning(`${t("Mod Already Exists")} ${modInfoResp.name}`);
             return true;
         }
 
-        const modItem = this.createModListItemFromModInfo(modInfoResp);
-        if (!modItem) {
-            message.error(t("Failed to create mod item"));
-            return false;
+        // Get active profile
+        const profiles = await StorageAPI.getProfiles();
+        let activeProfile = await profiles.getActiveProfile();
+        if (!activeProfile) {
+            const profileVM = await IoC.get(ProfileViewModel);
+            activeProfile = await profileVM.getActiveProfileData();
         }
 
-        // Use helper function to add mod to database and profile
-        const addedModItem = await this.addModToDatabaseAndProfile(modItem, groupId);
-        if (!addedModItem) {
+        // Add mod using ModService
+        try {
+            const addedMod = await ModService.addModFromModio(modInfoResp, activeProfile.id!, groupId);
+
+            await ModUpdateApi.updateMod(addedMod);
+
+            if (modInfoResp.dependencies) {
+                await this.addModDependencies(modInfoResp.id, groupId);
+            }
+
+            TreeViewModel.updateTreeView();
+            TreeViewModel.updateTreeViewCountLabel();
+
+            return true;
+        } catch (error) {
+            console.error('Failed to add mod from URL:', error);
             message.error(t("Failed to add mod to database"));
             return false;
         }
-
-        await ModUpdateApi.updateMod(addedModItem);
-
-        if (modInfoResp.dependencies) {
-            await this.addModDependencies(modInfoResp.id, groupId);
-        }
-
-        TreeViewModel.updateTreeView();
-        TreeViewModel.updateTreeViewCountLabel();
-
-        return true;
     }
 
     public async addModFromPath(modPath: string, groupId: number): Promise<boolean> {
-        let modListItem: ModListItem = {
-            id: MOD_INVALID_ID,
-            modId: MOD_INVALID_ID,
-            url: modPath,
-            nameId: "",
-            displayName: await path.basename(modPath),
-            required: false,
-            enabled: true,
-            fileVersion: "-",
-            tags: [],
-            usedVersion: "",
-            versions: [],
-            approval: "Sandbox",
-            sourceType: ModSourceType.Local,
-            downloadUrl: "",
-            cachePath: modPath,
-            downloadProgress: 100,
-            fileSize: 0,
-            lastUpdateDate: 0,
-            onlineUpdateDate: 0,
-            onlineAvailable: true,
-            localNoFound: false
-        };
-
         console.log(`[addModFromPath] Adding local mod: ${modPath}, groupId: ${groupId}`);
 
         if (!await exists(modPath)) {
@@ -148,25 +133,37 @@ export class HomeViewModel extends BaseViewModel {
             return false;
         }
 
-        const fileInfo = await stat(modPath);
-        modListItem.lastUpdateDate = fileInfo.mtime.getTime();
+        // Get active profile
+        const profiles = await StorageAPI.getProfiles();
+        let activeProfile = await profiles.getActiveProfile();
+        if (!activeProfile) {
+            const profileVM = await IoC.get(ProfileViewModel);
+            activeProfile = await profileVM.getActiveProfileData();
+        }
 
-        console.log(`[addModFromPath] Created modListItem:`, modListItem);
+        // Add mod using ModService
+        try {
+            const fileName = await path.basename(modPath);
+            const addedMod = await ModService.addModFromPath(modPath, fileName, activeProfile.id!, groupId);
 
-        // FIX: Save mod to database just like addModFromUrl does
-        const addedModItem = await this.addModToDatabaseAndProfile(modListItem, groupId);
-        if (!addedModItem) {
-            console.error(`[addModFromPath] Failed to add mod to database: ${modPath}`);
+            // Update last update date based on file modification time
+            const fileInfo = await stat(modPath);
+            if (addedMod.status) {
+                addedMod.status.lastUpdateDate = fileInfo.mtime.getTime();
+                await modsApi.upsertModStatus(addedMod.status);
+            }
+
+            console.log(`[addModFromPath] Successfully added mod to database:`, addedMod);
+
+            TreeViewModel.updateTreeView();
+            TreeViewModel.updateTreeViewCountLabel();
+
+            return true;
+        } catch (error) {
+            console.error(`[addModFromPath] Failed to add mod to database: ${modPath}`, error);
             message.error(t("Failed to add mod to database"));
             return false;
         }
-
-        console.log(`[addModFromPath] Successfully added mod to database:`, addedModItem);
-
-        TreeViewModel.updateTreeView();
-        TreeViewModel.updateTreeViewCountLabel();
-
-        return true;
     }
 
     public async removeMod(id: number): Promise<void> {
@@ -222,178 +219,6 @@ export class HomeViewModel extends BaseViewModel {
     public async getGroupName(id: number): Promise<string | undefined> {
         const treeViewModel = await TreeViewModel.getInstance();
         return treeViewModel.getGroupName(id);
-    }
-
-    /**
-     * Create ModListItem from mod.io ModInfo
-     */
-    private createModListItemFromModInfo(modInfo: any): ModListItem | null {
-        if (!modInfo) return null;
-
-        const modItem: ModListItem = {
-            id: MOD_INVALID_ID,
-            modId: modInfo.id,
-            url: modInfo.profile_url || "",
-            nameId: modInfo.name_id || "",
-            displayName: modInfo.name || "",
-            required: false,
-            enabled: true,
-            fileVersion: modInfo.modfile?.version || modInfo.modfile?.filename || "-",
-            usedVersion: modInfo.modfile?.version || modInfo.modfile?.filename || "-",
-            tags: modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : [],
-            versions: [],
-            approval: "Sandbox",
-            sourceType: ModSourceType.Modio,
-            downloadUrl: modInfo.modfile?.download?.binary_url || "",
-            cachePath: "",
-            downloadProgress: 0,
-            fileSize: modInfo.modfile?.filesize || 0,
-            lastUpdateDate: Date.now(),
-            onlineUpdateDate: Date.now(),
-            onlineAvailable: true,
-            localNoFound: false
-        };
-
-        // Process tags to extract versions, approval, and required status
-        this.convertModVersion(modItem);
-        this.convertModApprovalType(modItem);
-        this.convertModRequired(modItem);
-
-        return modItem;
-    }
-
-    /**
-     * Extract version information from tags
-     */
-    private convertModVersion(modItem: ModListItem) {
-        const tags = [];
-        for (let tag of modItem.tags) {
-            if (tag.startsWith("1.")) {
-                modItem.versions.push(tag);
-            } else {
-                tags.push(tag);
-            }
-        }
-        modItem.versions.reverse();
-        modItem.tags = tags;
-    }
-
-    /**
-     * Extract approval status from tags
-     */
-    private convertModApprovalType(modItem: ModListItem) {
-        const tags = [];
-        for (const tag of modItem.tags) {
-            if (tag === "Verified" || tag === "Auto-Verified") {
-                modItem.approval = "Verified";
-            } else if (tag === "Approved") {
-                modItem.approval = "Approved";
-            } else if (tag === "Sandbox") {
-                modItem.approval = "Sandbox";
-            } else {
-                tags.push(tag);
-            }
-        }
-        modItem.tags = tags;
-    }
-
-    /**
-     * Extract required status from tags
-     */
-    private convertModRequired(modItem: ModListItem) {
-        const tags = [];
-        for (let tag of modItem.tags) {
-            if (tag === "RequiredByAll") {
-                modItem.required = true;
-            } else if (tag === "Optional") {
-                modItem.required = false;
-            } else {
-                tags.push(tag);
-            }
-        }
-        modItem.tags = tags;
-    }
-
-    /**
-     * Helper function to convert ModListItem to ModData for database storage
-     */
-    private modItemToModData(modItem: ModListItem): any {
-        // For local mods, generate a unique platformId based on file path
-        // This ensures each local mod has a unique platformId to avoid UNIQUE constraint failures
-        const platformId = modItem.sourceType === ModSourceType.Local
-            ? this.generateLocalModId(modItem.url)  // Generate unique ID for local mods
-            : modItem.modId;  // Use actual mod.io ID for Modio mods
-
-        return {
-            platformId: platformId,
-            gameId: 1, // DRG game ID in our database (not mod.io's game ID)
-            nameId: modItem.nameId,
-            displayName: modItem.displayName,
-            url: modItem.url,
-            sourceType: modItem.sourceType,
-            tags: modItem.tags || [],
-            approvalStatus: modItem.approval || "Sandbox"
-        };
-    }
-
-    /**
-     * Generate a unique platform ID for local mods based on file path
-     * Uses a simple hash of the file path to ensure consistency and uniqueness
-     */
-    private generateLocalModId(filePath: string): number {
-        // Simple hash function to convert file path to a positive integer
-        let hash = 0;
-        for (let i = 0; i < filePath.length; i++) {
-            const char = filePath.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
-        }
-        // Ensure the result is positive and within a safe range for local mods
-        // Use a range that's unlikely to conflict with mod.io IDs (which are typically small positive numbers)
-        return Math.abs(hash) + 1000000; // Offset by 1,000,000 to avoid mod.io ID range
-    }
-
-    /**
-     * Helper function to add a mod to database and profile mapping
-     */
-    private async addModToDatabaseAndProfile(modItem: ModListItem, groupId: number): Promise<ModListItem | null> {
-        const mods = await StorageAPI.getMods();
-        const profiles = await StorageAPI.getProfiles();
-
-        // Convert to ModData for database storage
-        const modData = this.modItemToModData(modItem);
-
-        // Add mod to database
-        const addedModData = await mods.addMod(modData);
-        if (!addedModData) {
-            return null;
-        }
-
-        // Get active profile
-        let activeProfile = await profiles.getActiveProfile();
-        if (!activeProfile) {
-            const profileVM = await IoC.get(ProfileViewModel);
-            activeProfile = await profileVM.getActiveProfileData();
-        }
-
-        // Add mod to profile database with proper parameters
-        await profiles.addModToProfile({
-            profileId: activeProfile.id!,
-            modId: addedModData.modId!,
-            parentFolderId: groupId,
-            sortOrder: 0,
-            isEnabled: true,
-            usedVersion: modItem.usedVersion || ""
-        });
-
-        // Create ModListItem for UI operations with proper database ID
-        const resultModItem: ModListItem = {
-            ...modItem,
-            id: addedModData.modId!,
-            modId: addedModData.modId!
-        };
-
-        return resultModItem;
     }
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {

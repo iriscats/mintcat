@@ -4,47 +4,23 @@ import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, theme, T
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emit, listen} from "@tauri-apps/api/event";
-import {ModListItem, ModSourceType} from "@/storage/db/Schema.ts";
+import {ModSourceType} from "@/storage/db/Schema.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {ModioApi} from "@/apis/modio";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {ModFile} from "@/apis/modio/ModInfo.ts";
 import {StorageAPI} from "@/storage";
+import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 const {useToken} = theme;
 
 /**
  * Helper method to get a mod from database by ID
  */
-async function getModById(modId: number): Promise<ModListItem | null> {
+async function getModById(modId: number): Promise<CompleteModData | null> {
     const modsApi = await StorageAPI.getMods();
-    const modData = await modsApi.getModById(modId);
-    if (!modData) return null;
-
-    return {
-        id: modData.modId!,
-        modId: modData.platformId,
-        url: modData.url || "",
-        nameId: modData.nameId,
-        displayName: modData.displayName,
-        required: false,
-        enabled: true,
-        fileVersion: "-",
-        tags: modData.tags || [],
-        usedVersion: "",
-        versions: [],
-        approval: modData.approvalStatus || "Sandbox",
-        sourceType: modData.sourceType as ModSourceType || ModSourceType.Unknown,
-        downloadUrl: "",
-        cachePath: "",
-        downloadProgress: 100,
-        fileSize: 0,
-        lastUpdateDate: 0,
-        onlineUpdateDate: 0,
-        onlineAvailable: true,
-        localNoFound: false
-    };
+    return await modsApi.getCompleteModData(modId);
 }
 
 
@@ -132,13 +108,20 @@ function ModTreeViewVersionSelect({nodeData}) {
 
         const modItem = await getModById(nodeData.key);
         if (!modItem) return;
-        modItem.downloadUrl = fileInfo.download.binary_url;
-        modItem.downloadProgress = 0;
-        modItem.fileSize = fileInfo.filesize;
-        modItem.usedVersion = fileInfo.version;
 
-        await emit("mod-treeview-update" + nodeData.key, modItem);
-        await ModUpdateApi.updateModFile(modItem);
+        // Update modItem with new download info (usedVersion is stored in profile context, not mod data)
+        const updatedModItem: CompleteModData = {
+            ...modItem,
+            download: {
+                ...modItem.download!,
+                downloadUrl: fileInfo.download.binary_url,
+                downloadProgress: 0,
+                fileSize: fileInfo.filesize,
+            }
+        };
+
+        await emit("mod-treeview-update" + nodeData.key, updatedModItem);
+        await ModUpdateApi.updateModFile(updatedModItem);
     }
 
     return (
@@ -178,7 +161,7 @@ function ModTreeViewWarring({nodeData}) {
     const [isLocalNoFound, setIsLocalNoFound] = useState(checkLocalNoFound());
     const [isOnlineUnavailable, setIsOnlineUnavailable] = useState(checkOnlineUnavailable());
 
-    listen<ModListItem>("mod-treeview-update" + nodeData.key, (event) => {
+    listen<CompleteModData>("mod-treeview-update" + nodeData.key, (event) => {
         nodeData = event.payload;
         setIsExpired(checkExpired());
         setIsLocalNoFound(checkLocalNoFound());
@@ -222,8 +205,8 @@ function ModTreeViewProgress({nodeData}) {
 
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
 
-    listen<ModListItem>("mod-treeview-update" + nodeData.key, (event) => {
-        setDownloadProgress(event.payload.downloadProgress);
+    listen<CompleteModData>("mod-treeview-update" + nodeData.key, (event) => {
+        setDownloadProgress(event.payload.download?.downloadProgress || 100);
     }).then();
 
     return (
@@ -255,8 +238,8 @@ function ModTreeViewTitle({nodeData}) {
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
     const {token} = useToken();
 
-    listen<ModListItem>("mod-treeview-update" + nodeData.key, (event) => {
-        setDownloadProgress(event.payload.downloadProgress);
+    listen<CompleteModData>("mod-treeview-update" + nodeData.key, (event) => {
+        setDownloadProgress(event.payload.download?.downloadProgress || 100);
     }).then();
 
     return (

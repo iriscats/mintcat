@@ -3,7 +3,7 @@ import { ProfileTreeItem } from '@/models/profile/ProfileTreeItem';
 import { ProfileTreeType } from '@/models/profile/types';
 import type { ProfileDAO, ProfileData, ProfileFolderData, ProfileModData, ProfileFolderTreeData } from '@/storage/dao/ProfileDAO';
 import { StorageAPI } from '@/storage';
-import type { ModListItem } from '@/storage/db/types';
+import type { CompleteModData } from '@/storage/dao/ModDAO';
 
 /**
  * ProfileTreeService
@@ -307,46 +307,28 @@ export class ProfileTreeService {
      * 获取当前配置树中所有 mods 的列表
      * Migrated from ProfileTree.getModList
      */
-    public getModList(tree: ProfileTree, modDataList: any[]): ModListItem[] {
-        const modList: ModListItem[] = [];
+    /**
+     * 获取 Profile Tree 中所有模组的完整数据
+     * @param tree Profile 树结构
+     * @returns 完整模组数据列表
+     */
+    public async getModsForTree(tree: ProfileTree): Promise<CompleteModData[]> {
+        const modIds: number[] = [];
+
         const traverse = (node: ProfileTreeItem) => {
             if (node.type === ProfileTreeType.ITEM) {
-                const modData = modDataList.find(m => m.modId === node.id);
-                if (modData) {
-                    // Convert ModData to ModListItem
-                    const modItem: ModListItem = {
-                        id: modData.modId,
-                        modId: modData.platformId,
-                        url: modData.url || "",
-                        nameId: modData.nameId,
-                        displayName: modData.displayName,
-                        required: false,
-                        enabled: true,
-                        fileVersion: "-",
-                        tags: modData.tags || [],
-                        usedVersion: "",
-                        versions: [],
-                        approval: modData.approvalStatus || "Sandbox",
-                        sourceType: modData.sourceType as any || "Unknown",
-                        downloadUrl: "",
-                        cachePath: "",
-                        downloadProgress: 100,
-                        fileSize: 0,
-                        lastUpdateDate: 0,
-                        onlineUpdateDate: 0,
-                        onlineAvailable: true,
-                        localNoFound: false
-                    };
-                    modList.push(modItem);
-                }
+                modIds.push(node.id);
             } else {
                 for (const child of node.children) {
                     traverse(child);
                 }
             }
         };
+
         traverse(tree.root);
-        return modList;
+
+        const modsDAO = await StorageAPI.getMods();
+        return await modsDAO.getBatchCompleteModData(modIds);
     }
 
     // ====================================
