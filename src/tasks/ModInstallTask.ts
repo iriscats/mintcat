@@ -71,7 +71,6 @@ export class ModInstallTask implements ITask {
         // Get mod list
         const profilesDAO = await StorageAPI.getProfiles();
         const activeProfileData = await profileVM.getActiveProfileData();
-        const activeProfileTree = await profileVM.getActiveProfileTree();
 
         // Get profile mods (with enabled status)
         const profileMods = await profilesDAO.getProfileMods(activeProfileData.id!);

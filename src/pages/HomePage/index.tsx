@@ -161,11 +161,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const allMods = await modsApi.getAllMods();
 
         const profileVM = await IoC.get(ProfileViewModel);
-        const activeProfile = await profileVM.getActiveProfileTree();
+        const activeRoot = await profileVM.getActiveProfileTreeRoot();
 
         // Use ProfileTreeService to get mod list
         const treeService = (profileVM as any).profileService.getTreeService();
-        const subModList = treeService.getModList(activeProfile, allMods);
+        const subModList = await treeService.getModsForTree(activeRoot);
 
         let list = "";
         for (const mod of subModList) {
@@ -307,16 +307,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
-        const activeProfile = await profileVM.getActiveProfileTree();
+        const activeRoot = await profileVM.getActiveProfileTreeRoot();
         const activeProfileName = await profileVM.getActiveProfileName();
 
         console.log(`[HomePage] Got ${allMods.length} mods from database`);
         console.log(`[HomePage] Converting profile tree, active profile: ${activeProfileName}`);
-        console.log(`[HomePage] ActiveProfile root children:`, activeProfile.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+        console.log(`[HomePage] ActiveProfile root children:`, activeRoot.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
 
         // TreeViewConverter now accepts CompleteModData[] directly
         const converter = new TreeViewConverter(allMods);
-        const treeData = converter.convertTo(activeProfile);
+        const treeData = converter.convertToFromRoot(activeRoot);
 
         console.log(`[HomePage] Converted treeData:`, treeData);
 

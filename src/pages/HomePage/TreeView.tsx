@@ -41,7 +41,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
 
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
-        const activeProfile = await profileVM.getActiveProfileTree();
+        const activeRoot = await profileVM.getActiveProfileTreeRoot();
         let treeData: any[];
         const modList = await this.getAllModsAsList();
         const converter = new TreeViewConverter(modList);
@@ -51,7 +51,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
         if (TreeViewConverter.filterList.length > 0) {
             const filterList = TreeViewConverter.filterList;
             TreeViewConverter.filterList = [];
-            treeData = converter.convertTo(activeProfile);
+            treeData = converter.convertToFromRoot(activeRoot);
             TreeViewConverter.filterList = filterList;
         } else {
             treeData = this.props.treeData || [];

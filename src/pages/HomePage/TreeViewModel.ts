@@ -44,11 +44,11 @@ export class TreeViewModel extends BaseViewModel {
     public async sortMods(order: string): Promise<void> {
         if (!this.profileViewModel) return;
 
-        const activeTree = await this.profileViewModel.getActiveProfileTree();
+        const activeRoot = await this.profileViewModel.getActiveProfileTreeRoot();
         const treeService = (this.profileViewModel as any).profileService.getTreeService();
 
-        await treeService.sortTreeNodes(activeTree, order);
-        await this.profileViewModel.saveProfileTreeToDatabase(activeTree.root);
+        await treeService.sortTreeNodes(activeRoot, order);
+        await this.profileViewModel.saveProfileTreeToDatabase(activeRoot);
 
         TreeViewModel.updateTreeView();
     }
@@ -71,10 +71,10 @@ export class TreeViewModel extends BaseViewModel {
     public async getGroupName(id: number): Promise<string | undefined> {
         if (!this.profileViewModel) return undefined;
 
-        const activeTree = await this.profileViewModel.getActiveProfileTree();
+        const activeRoot = await this.profileViewModel.getActiveProfileTreeRoot();
         const treeService = (this.profileViewModel as any).profileService.getTreeService();
 
-        return treeService.getGroupName(activeTree, id);
+        return treeService.getGroupName(activeRoot, id);
     }
 
     /**

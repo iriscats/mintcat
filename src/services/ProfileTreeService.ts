@@ -1,6 +1,5 @@
-import { ProfileTree } from '@/models/profile/ProfileTree';
 import { ProfileTreeItem } from '@/models/profile/ProfileTreeItem';
-import { ProfileTreeType } from '@/models/profile/types';
+import { ProfileTreeType, ProfileTreeGroupType } from '@/models/profile/types';
 import type { ProfileDAO, ProfileData, ProfileFolderData, ProfileModData, ProfileFolderTreeData } from '@/storage/dao/ProfileDAO';
 import { StorageAPI } from '@/storage';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
@@ -17,13 +16,14 @@ export class ProfileTreeService {
     // ====================================
 
     /**
-     * 从数据库加载并构建 ProfileTree
+     * 从数据库加载并构建 Profile Tree Root
      * Migrated from ProfileViewModel.buildProfileTreeFromDatabase
+     * Renamed from loadProfileTree to loadProfileTreeRoot
      */
-    public async loadProfileTree(profileData: ProfileData): Promise<ProfileTree> {
-        console.log(`[ProfileTreeService] loadProfileTree called for profile: ${profileData.name}, id=${profileData.id}`);
+    public async loadProfileTreeRoot(profileData: ProfileData): Promise<ProfileTreeItem> {
+        console.log(`[ProfileTreeService] loadProfileTreeRoot called for profile: ${profileData.name}, id=${profileData.id}`);
         const profiles = await StorageAPI.getProfiles();
-        const profileTree = new ProfileTree(profileData.name);
+        const root = new ProfileTreeItem(ProfileTreeGroupType.ROOT, ProfileTreeType.FOLDER, "root");
 
         try {
             // Get profile tree data (folders and mods)
@@ -37,7 +37,7 @@ export class ProfileTreeService {
                 });
 
                 // Clear the default root children and rebuild from database
-                profileTree.root.children = [];
+                root.children = [];
 
                 // Build folder structure and add mods
                 // Collect all mods including those in folders
@@ -60,7 +60,7 @@ export class ProfileTreeService {
 
                 for (const folder of treeData.folders) {
                     console.log(`[ProfileTreeService] Adding folder to tree: ${folder.name}, id=${folder.id}, parentFolderId=${folder.parentFolderId}`);
-                    await this.addFolderToTree(profileTree, folder, allMods, allModData);
+                    await this.addFolderToTree(root, folder, allMods, allModData);
                 }
 
                 // Also handle root mods (mods without parent folder)
@@ -68,11 +68,11 @@ export class ProfileTreeService {
                 for (const modData of rootMods) {
                     const modItem = allModData.find(m => m.modId === modData.modId);
                     if (modItem) {
-                        this.addModToTree(profileTree, modItem.modId, 0); // Add to root
+                        this.addModToTree(root, modItem.modId, 0); // Add to root
                     }
                 }
 
-                console.log(`[ProfileTreeService] Profile tree built from database. Root children:`, profileTree.root.children.map(c => ({
+                console.log(`[ProfileTreeService] Profile tree built from database. Root children:`, root.children.map(c => ({
                     id: c.id,
                     name: c.name,
                     type: c.type,
@@ -86,7 +86,7 @@ export class ProfileTreeService {
             console.error(`[ProfileTreeService] Failed to build profile tree for ${profileData.name}:`, error);
         }
 
-        return profileTree;
+        return root;
     }
 
     /**
@@ -205,12 +205,12 @@ export class ProfileTreeService {
      * 添加 mod 到树
      * Migrated from ProfileTree.addMod
      */
-    public addModToTree(tree: ProfileTree, modId: number, parentId: number = 0): void {
-        const parent = this.findNode(tree.root.children, parentId);
+    public addModToTree(root: ProfileTreeItem, modId: number, parentId: number = 0): void {
+        const parent = this.findNode(root.children, parentId);
         if (parent) {
             parent.add(modId, ProfileTreeType.ITEM);
         } else {
-            tree.root.add(modId, ProfileTreeType.ITEM);
+            root.add(modId, ProfileTreeType.ITEM);
         }
     }
 
@@ -218,16 +218,16 @@ export class ProfileTreeService {
      * 移除 mod
      * Migrated from ProfileTree.removeMod
      */
-    public removeModFromTree(tree: ProfileTree, modId: number): void {
-        tree.root.remove(modId);
+    public removeModFromTree(root: ProfileTreeItem, modId: number): void {
+        root.remove(modId);
     }
 
     /**
      * 设置文件夹名称
      * Migrated from ProfileTree.setGroupName
      */
-    public setGroupName(tree: ProfileTree, id: number, name: string): void {
-        const parent = this.findNode(tree.root.children, id);
+    public setGroupName(root: ProfileTreeItem, id: number, name: string): void {
+        const parent = this.findNode(root.children, id);
         if (parent) {
             parent.name = name;
         }
@@ -237,8 +237,8 @@ export class ProfileTreeService {
      * 获取文件夹名称
      * Migrated from ProfileTree.getGroupName
      */
-    public getGroupName(tree: ProfileTree, id: number): string | undefined {
-        const node = this.findNode(tree.root.children, id);
+    public getGroupName(root: ProfileTreeItem, id: number): string | undefined {
+        const node = this.findNode(root.children, id);
         return node?.name;
     }
 
@@ -246,15 +246,15 @@ export class ProfileTreeService {
      * 添加新文件夹
      * Migrated from ProfileTree.addGroup
      */
-    public addGroup(tree: ProfileTree, name: string, parentId: number = 0): void {
-        const parent = this.findNode(tree.root.children, parentId);
+    public addGroup(root: ProfileTreeItem, name: string, parentId: number = 0): void {
+        const parent = this.findNode(root.children, parentId);
         const newId = this.generateId();
 
         if (parent) {
             parent.children.push(new ProfileTreeItem(newId, ProfileTreeType.FOLDER, name));
         } else {
             // 默认添加到根目录
-            tree.root.add(newId, ProfileTreeType.FOLDER, name);
+            root.add(newId, ProfileTreeType.FOLDER, name);
         }
     }
 
@@ -262,13 +262,13 @@ export class ProfileTreeService {
      * 移除文件夹
      * Migrated from ProfileTree.removeGroup
      */
-    public removeGroup(tree: ProfileTree, id: number): ProfileTreeItem | undefined {
-        console.log(`[ProfileTreeService] removeGroup called for profile="${tree.name}", id=${id}`);
-        console.log(`[ProfileTreeService] Current root children:`, tree.root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
+    public removeGroup(root: ProfileTreeItem, id: number): ProfileTreeItem | undefined {
+        console.log(`[ProfileTreeService] removeGroup called, id=${id}`);
+        console.log(`[ProfileTreeService] Current root children:`, root.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
 
         // 找到要删除的节点和其父节点
         // 传递root作为初始parent来处理根节点子项的情况
-        const { parent, node } = this.findNodeWithParent(tree.root.children, id, tree.root);
+        const { parent, node } = this.findNodeWithParent(root.children, id, root);
 
         console.log(`[ProfileTreeService] findNodeWithParent result:`, {
             parentId: parent?.id,
@@ -294,12 +294,15 @@ export class ProfileTreeService {
      * 排序节点
      * Migrated from TreeViewModel.sortMods
      */
-    public async sortTreeNodes(tree: ProfileTree, order: string): Promise<void> {
-        if (tree.ModioFolder) {
-            tree.ModioFolder.children = await this.sortNode(tree.ModioFolder, order);
+    public async sortTreeNodes(root: ProfileTreeItem, order: string): Promise<void> {
+        const modioFolder = this.getModioFolder(root);
+        const localFolder = this.getLocalFolder(root);
+
+        if (modioFolder) {
+            modioFolder.children = await this.sortNode(modioFolder, order);
         }
-        if (tree.LocalFolder) {
-            tree.LocalFolder.children = await this.sortNode(tree.LocalFolder, order);
+        if (localFolder) {
+            localFolder.children = await this.sortNode(localFolder, order);
         }
     }
 
@@ -309,10 +312,10 @@ export class ProfileTreeService {
      */
     /**
      * 获取 Profile Tree 中所有模组的完整数据
-     * @param tree Profile 树结构
+     * @param root Profile 树根节点
      * @returns 完整模组数据列表
      */
-    public async getModsForTree(tree: ProfileTree): Promise<CompleteModData[]> {
+    public async getModsForTree(root: ProfileTreeItem): Promise<CompleteModData[]> {
         const modIds: number[] = [];
 
         const traverse = (node: ProfileTreeItem) => {
@@ -325,7 +328,7 @@ export class ProfileTreeService {
             }
         };
 
-        traverse(tree.root);
+        traverse(root);
 
         const modsDAO = await StorageAPI.getMods();
         return await modsDAO.getBatchCompleteModData(modIds);
@@ -486,7 +489,7 @@ export class ProfileTreeService {
      * Migrated from ProfileViewModel.addFolderToTree
      */
     private async addFolderToTree(
-        profileTree: ProfileTree,
+        root: ProfileTreeItem,
         folderData: any,
         allMods: any[],
         allModData: any[],
@@ -496,7 +499,7 @@ export class ProfileTreeService {
         console.log(`[ProfileTreeService] Folder has ${folderData.children?.length || 0} children, ${folderData.mods?.length || 0} mods`);
 
         // Ensure the folder exists in the profile tree
-        let folderNode = this.findFolderNode(profileTree.root, folderData.id);
+        let folderNode = this.findFolderNode(root, folderData.id);
         if (!folderNode) {
             // Create the folder node if it doesn't exist
             folderNode = new ProfileTreeItem(folderData.id, ProfileTreeType.FOLDER, folderData.name);
@@ -506,7 +509,7 @@ export class ProfileTreeService {
                 parentNode.children.push(folderNode);
                 console.log(`[ProfileTreeService] Added folder ${folderData.name} (id=${folderData.id}) to parent ${parentNode.name} (id=${parentNode.id})`);
             } else {
-                profileTree.root.children.push(folderNode);
+                root.children.push(folderNode);
                 console.log(`[ProfileTreeService] Added folder ${folderData.name} (id=${folderData.id}) to root`);
             }
         }
@@ -529,7 +532,7 @@ export class ProfileTreeService {
         if (folderData.children && folderData.children.length > 0) {
             console.log(`[ProfileTreeService] Processing ${folderData.children.length} child folders of ${folderData.name}`);
             for (const childFolder of folderData.children) {
-                await this.addFolderToTree(profileTree, childFolder, allMods, allModData, folderNode);
+                await this.addFolderToTree(root, childFolder, allMods, allModData, folderNode);
             }
         } else {
             console.log(`[ProfileTreeService] No child folders for ${folderData.name}`);
@@ -711,5 +714,31 @@ export class ProfileTreeService {
                 );
             }
         }
+    }
+
+    // ====================================
+    // Helper methods for folder access
+    // ====================================
+
+    /**
+     * Get Mod.io folder from tree root
+     * Migrated from ProfileTree.ModioFolder accessor
+     */
+    public getModioFolder(root: ProfileTreeItem): ProfileTreeItem | undefined {
+        return root.children.find(p =>
+            p.type === ProfileTreeType.FOLDER &&
+            (p.name === "Mod.io" || p.name === "mod.io")
+        );
+    }
+
+    /**
+     * Get Local folder from tree root
+     * Migrated from ProfileTree.LocalFolder accessor
+     */
+    public getLocalFolder(root: ProfileTreeItem): ProfileTreeItem | undefined {
+        return root.children.find(p =>
+            p.type === ProfileTreeType.FOLDER &&
+            (p.name === "Local" || p.name === "本地")
+        );
     }
 }

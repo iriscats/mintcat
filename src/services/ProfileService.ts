@@ -1,7 +1,7 @@
 import { StorageAPI } from '@/storage';
 import type { ProfileDAO, ProfileData } from '@/storage/dao/ProfileDAO';
 import { ProfileTreeService } from './ProfileTreeService';
-import { ProfileTree } from '@/models/profile/ProfileTree';
+import { ProfileTreeItem } from '@/models/profile/ProfileTreeItem';
 
 type ProfileRuntimeState = {
     lastUpdate?: number;
@@ -86,13 +86,11 @@ export class ProfileService {
     }
 
     /**
-     * 获取活跃 profile 的树结构
+     * 获取活跃 profile 的树结构根节点
      */
-    public async getActiveProfileTree(): Promise<ProfileTree> {
+    public async getActiveProfileTreeRoot(): Promise<ProfileTreeItem> {
         const activeProfile = await this.ensureActiveProfile();
-        const profileTree = await this.treeService.loadProfileTree(activeProfile);
-        this.applyRuntimeState(profileTree, activeProfile.id!);
-        return profileTree;
+        return await this.treeService.loadProfileTreeRoot(activeProfile);
     }
 
     /**
@@ -161,24 +159,6 @@ export class ProfileService {
     // ====================================
     // Runtime State 管理
     // ====================================
-
-    /**
-     * 应用运行时状态到树
-     */
-    private applyRuntimeState(tree: ProfileTree, profileId: number): void {
-        const state = this.runtimeState.get(profileId);
-        if (!state) return;
-
-        if (state.lastUpdate !== undefined) {
-            tree.lastUpdate = state.lastUpdate;
-        }
-        if (state.editTime !== undefined) {
-            tree.editTime = state.editTime;
-        }
-        if (state.installTime !== undefined) {
-            tree.installTime = state.installTime;
-        }
-    }
 
     /**
      * 更新运行时状态

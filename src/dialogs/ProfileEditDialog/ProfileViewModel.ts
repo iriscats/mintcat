@@ -1,6 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {ProfileTree, ProfileTreeItem} from "@/storage/db/Schema.ts";
+import {ProfileTreeItem} from "@/storage/db/Schema.ts";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import type {ProfileData} from "@/storage/dao/ProfileDAO.ts";
@@ -41,8 +41,8 @@ export class ProfileViewModel {
         return await this.profileService.getActiveProfileName();
     }
 
-    public async getActiveProfileTree(): Promise<ProfileTree> {
-        return await this.profileService.getActiveProfileTree();
+    public async getActiveProfileTreeRoot(): Promise<ProfileTreeItem> {
+        return await this.profileService.getActiveProfileTreeRoot();
     }
 
     public async getActiveProfileData(): Promise<ProfileData> {

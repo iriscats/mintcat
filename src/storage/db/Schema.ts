@@ -236,4 +236,3 @@ export { MOD_INVALID_ID } from '@/constants/mod';
 // Profile tree types moved to @/models/profile
 export { ProfileTreeType, ProfileTreeGroupType } from '@/models/profile/types';
 export { ProfileTreeItem } from '@/models/profile/ProfileTreeItem';
-export { ProfileTree } from '@/models/profile/ProfileTree';

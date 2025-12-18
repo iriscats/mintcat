@@ -1,13 +1,13 @@
 import {TreeProps} from "antd";
-import {ProfileTree, ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
+import {ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 /**
  * TreeViewConverter
  *
  * 职责：UI 数据格式转换
- * - 将 ProfileTree (Domain Model) 转换为 AntD TreeView 格式
- * - 将 AntD TreeView 格式转换回 ProfileTree
+ * - 将 ProfileTreeItem (Domain Model) 转换为 AntD TreeView 格式
+ * - 将 AntD TreeView 格式转换回 ProfileTreeItem
  * - 处理 UI 过滤逻辑
  *
  * Note: 这是一个纯粹的数据转换器，不包含业务逻辑
@@ -54,20 +54,20 @@ export class TreeViewConverter {
     }
 
     // ====================================
-    // ProfileTree -> AntD TreeView
+    // ProfileTreeItem -> AntD TreeView
     // ====================================
 
     /**
-     * 将 ProfileTree 转换为 AntD TreeView 格式
+     * 将 ProfileTreeItem root 转换为 AntD TreeView 格式
      */
-    public convertTo(tree: ProfileTree): TreeProps['treeData'] {
-        const root = {
+    public convertToFromRoot(root: ProfileTreeItem): TreeProps['treeData'] {
+        const treeRoot = {
             key: "root",
             isLeaf: false,
             children: [],
         }
-        this.buildTreeNode(root, tree.root);
-        this.treeData = root.children;
+        this.buildTreeNode(treeRoot, root);
+        this.treeData = treeRoot.children;
         return this.treeData;
     }
 
@@ -142,11 +142,11 @@ export class TreeViewConverter {
     }
 
     // ====================================
-    // AntD TreeView -> ProfileTree
+    // AntD TreeView -> ProfileTreeItem
     // ====================================
 
     /**
-     * 将 AntD TreeView 数据转换回 ProfileTree
+     * 将 AntD TreeView 数据转换回 ProfileTreeItem root
      */
     public convertFrom(treeData: any): ProfileTreeItem {
         const rootTreeData = {
