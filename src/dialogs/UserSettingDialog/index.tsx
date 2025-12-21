@@ -38,12 +38,11 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         this.loadUserInfo = this.loadUserInfo.bind(this);
     }
 
-    public show() {
-        this.loadUserInfo().then(() => {
-            this.setState({
-                isModalOpen: true
-            });
+    public async show() {
+        this.setState({
+            isModalOpen: true
         });
+        await this.loadUserInfo();
     }
 
     private async loadUserInfo() {

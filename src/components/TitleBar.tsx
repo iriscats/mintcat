@@ -1,5 +1,5 @@
 import React from "react";
-import {Avatar, Badge, Button, Dropdown, Flex, Image, List, Popover, Space, Tooltip, message} from "antd";
+import {Avatar, Badge, Button, Flex, Image, Popover, Space, Tooltip, message} from "antd";
 import {t} from "i18next";
 import {
     BellOutlined,
@@ -12,10 +12,11 @@ import {
 import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {emit} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
 import {TaskManager} from "@/tasks/TaskManager.ts";
+import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
+import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 
 const items = [
 
@@ -23,12 +24,14 @@ const items = [
 
 class TitleBar extends React.Component<any, any> {
 
-    private readonly userSettingDialogRef: React.RefObject<UserSettingDialog>;
+    private readonly userSettingDialogRef: React.RefObject<UserSettingDialog>
+    private readonly selectGameDialogRef: React.RefObject<SelectGameDialogRef>
 
     public constructor(props: any) {
         super(props);
 
         this.userSettingDialogRef = React.createRef();
+        this.selectGameDialogRef = React.createRef();
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
     }
@@ -133,6 +136,7 @@ class TitleBar extends React.Component<any, any> {
                                 <Button type="primary" 
                                     className={"ant-header-start-button"}
                                     icon={<EllipsisOutlined />} 
+                                    onClick={() => this.selectGameDialogRef.current?.show()}
                                 />
                             </Tooltip>
                         </Space.Compact>
@@ -151,26 +155,23 @@ class TitleBar extends React.Component<any, any> {
                         placement="bottom"
                         title={""}
                         content={
-                            <List grid={{gutter: 16, column: 3}}
-                                  dataSource={[
-                                      {key: 'Light', title: t('Light'), color: "#F5F8FF"},
-                                      {key: 'Dark', title: t('Dark'), color: "black"},
-                                      {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
-                                  ]}
-                                  renderItem={(item) => (
-                                      <List.Item>
-                                          <Button className={"app-title-bar-skin-button"}
-                                                  title={item.title}
-                                                  style={{backgroundColor: item.color}}
-                                                  onClick={async () => {
-                                                      await this.onThemeClick(item.key)
-                                                  }}
-                                          >
-                                          </Button>
-                                      </List.Item>
-                                  )}
-                            >
-                            </List>
+                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16}}>
+                                {[
+                                    {key: 'Light', title: t('Light'), color: "#F5F8FF"},
+                                    {key: 'Dark', title: t('Dark'), color: "black"},
+                                    {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
+                                ].map((item) => (
+                                    <Button
+                                        key={item.key}
+                                        className={"app-title-bar-skin-button"}
+                                        title={item.title}
+                                        style={{backgroundColor: item.color}}
+                                        onClick={async () => {
+                                            await this.onThemeClick(item.key);
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         }
                     >
                        <Button type={"text"}
@@ -192,6 +193,7 @@ class TitleBar extends React.Component<any, any> {
                     />
                 </Flex>
                 <UserSettingDialog ref={this.userSettingDialogRef}/>
+                <SelectGameDialog ref={this.selectGameDialogRef}/>
             </Flex>
         );
     }

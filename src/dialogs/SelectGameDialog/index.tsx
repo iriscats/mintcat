@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
 import {t} from "i18next";
 import {Button, Flex, List, message, Radio, Typography, Modal} from 'antd';
 import {GameData} from "@/storage/dao/GameDAO.ts";
@@ -7,18 +7,16 @@ import {listen} from "@tauri-apps/api/event";
 
 const {Text} = Typography;
 
-interface SelectGameDialogProps {
-    visible: boolean;
-    onOk: (result: SelectGameDialogResult) => void;
-    onCancel: () => void;
-}
-
 export interface SelectGameDialogResult {
     gameId?: number;
     gameData?: GameData;
 }
 
-export const SelectGameDialog = () => {
+export interface SelectGameDialogRef {
+    show: () => void;
+}
+
+export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => {
     const [games, setGames] = useState<GameData[]>([]);
     const [selectedGameId, setSelectedGameId] = useState<number | undefined>();
     const [loading, setLoading] = useState<boolean>(true);
@@ -58,11 +56,19 @@ export const SelectGameDialog = () => {
         //     gameId: selectedGameId,
         //     gameData: selectedGame
         // } as SelectGameDialogResult);
+        setIsModalOpen(false);
     };
 
     const handleCancel = () => {
         //onCancel();
+        setIsModalOpen(false);
     };
+
+    useImperativeHandle(ref, () => ({
+        show: () => {
+            setIsModalOpen(true);
+        }
+    }));
 
     const onGameChange = (gameId: number) => {
         setSelectedGameId(gameId);
@@ -178,4 +184,4 @@ export const SelectGameDialog = () => {
             </Flex>
         </Modal>
     );
-};
+});
