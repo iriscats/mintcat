@@ -5,13 +5,32 @@ import {configDir} from "@tauri-apps/api/path";
 
 
 let dbInstance: Awaited<ReturnType<typeof Database.load>>;
+let dbInitPromise: Promise<Awaited<ReturnType<typeof Database.load>>> | null = null;
 
 export async function initDb() {
-    if (!dbInstance) {
-        const configPath = await path.join(await configDir(), 'com.mint.cat', 'mintcat.sqlite');
-        dbInstance = await Database.load(`sqlite:${configPath}`);
+    // If instance exists, return it immediately
+    if (dbInstance) {
+        return dbInstance;
     }
-    return dbInstance;
+
+    // If initialization is in progress, wait for it
+    if (dbInitPromise) {
+        return dbInitPromise;
+    }
+
+    // Start initialization
+    dbInitPromise = (async () => {
+        try {
+            const configPath = await path.join(await configDir(), 'com.mint.cat', 'mintcat.sqlite');
+            dbInstance = await Database.load(`sqlite:${configPath}`);
+            return dbInstance;
+        } finally {
+            // Clear the promise after initialization completes (success or failure)
+            dbInitPromise = null;
+        }
+    })();
+
+    return dbInitPromise;
 }
 
 export async function getDb() {

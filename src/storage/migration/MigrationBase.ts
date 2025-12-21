@@ -3,6 +3,7 @@ import {ConfigMigrationV3} from './ConfigMigrationV3';
 import {ConfigMigrationV4} from './ConfigMigrationV4';
 import {ConfigDataType} from '@/storage/DataType';
 import {ModDAO} from '@/storage/dao/ModDAO';
+import {DatabaseInitializer} from '@/storage/db/DatabaseInitializer';
 
 /**
  * 配置迁移工具类
@@ -29,8 +30,9 @@ export class MigrationBase {
 
         } catch (error) {
             console.error('检查现有数据失败:', error);
-            // 出错时默认为有数据，避免意外迁移
-            return true;
+            // 出错时默认为没有数据，允许初始化继续进行
+            // 这样可以避免在首次启动时因为表不存在而跳过初始化
+            return false;
         }
     }
 
@@ -149,8 +151,13 @@ export class MigrationBase {
             } else {
                 console.log('无需迁移配置');
             }
+
+            // 迁移完成后，确保存在默认profile（如果没有profile的话）
+            await DatabaseInitializer.ensureDefaultProfile();
         } catch (error) {
             console.error('自动迁移过程出错:', error);
+            // 即使迁移出错，也尝试创建默认profile
+            await DatabaseInitializer.ensureDefaultProfile();
         }
     }
 

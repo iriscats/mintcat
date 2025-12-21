@@ -16,6 +16,7 @@ import {t} from "i18next";
 export class StorageAPI {
 
     private static instance: StorageAPI = undefined;
+    private static initPromise: Promise<StorageAPI> | null = null;
     private games: GameDAO = new GameDAO();
     private users: UserDAO = new UserDAO();
     private profiles: ProfileDAO = new ProfileDAO();
@@ -57,12 +58,30 @@ export class StorageAPI {
     }
 
     public static async getInstance(): Promise<StorageAPI> {
+        // If instance exists and is fully initialized, return it immediately
         if (this.instance) {
             return this.instance;
         }
-        this.instance = new StorageAPI();
-        await this.instance.initDB();
-        return this.instance;
+
+        // If initialization is in progress, wait for it
+        if (this.initPromise) {
+            return this.initPromise;
+        }
+
+        // Start initialization
+        this.initPromise = (async () => {
+            try {
+                const instance = new StorageAPI();
+                await instance.initDB();
+                this.instance = instance;
+                return this.instance;
+            } finally {
+                // Clear the promise after initialization completes (success or failure)
+                this.initPromise = null;
+            }
+        })();
+
+        return this.initPromise;
     }
 
     public async initDB() {

@@ -320,7 +320,7 @@ export class ConfigMigrationV4 {
             const profileDetailPath = await path.join(
                 await configDir(),
                 'com.mint.cat',
-                `profile_${profile.displayName}.json`
+                `profile_${profile.name}.json`
             );
 
             const detailContent = await readTextFile(profileDetailPath);
@@ -380,7 +380,7 @@ export class ConfigMigrationV4 {
     private getFolderTypeFromName(name: string): string {
         if (name === 'mod.io')
             return 'modio';
-        if (name === '本地')
+        if (name === '本地' || name === 'Local')
             return 'local';
         return 'custom';
     }
@@ -467,20 +467,26 @@ export class ConfigMigrationV4 {
      */
     private async createProfileFromName(name: string, isActive: boolean): Promise<void> {
         try {
+            console.log(`[Migration] 尝试创建profile: ${name}`);
             // 检查配置文件是否已存在
-            const existingProfile = await this.profileDAO.getProfileByName(name.toLowerCase().replace(/\s+/g, '_'), this.gameId, this.userId);
+            const normalizedName = name.toLowerCase().replace(/\s+/g, '_');
+            console.log(`[Migration] 标准化后的profile name: ${normalizedName}`);
+
+            const existingProfile = await this.profileDAO.getProfileByName(normalizedName, this.gameId, this.userId);
             if (existingProfile) {
                 console.log(`配置文件 ${name} 已存在，跳过创建`);
                 return;
             }
 
-            await this.profileDAO.createProfile({
-                name: name.toLowerCase().replace(/\s+/g, '_'),
+            const createdProfile = await this.profileDAO.createProfile({
+                name: normalizedName,
                 displayName: name, // 使用原始名称作为显示名称
                 gameId: this.gameId,
                 userId: this.userId,
                 isActive
             });
+
+            console.log(`[Migration] Profile创建成功: ${name}, ID: ${createdProfile?.id}`);
         } catch (error) {
             console.error('创建配置文件失败:', error);
         }
