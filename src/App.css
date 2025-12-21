@@ -201,3 +201,7 @@ body::before {
     background-color: #fff;
     padding: 20px 30px;
 }
+
+.ant-progress-rail {
+   background-color: transparent !important; 
+}
