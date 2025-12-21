@@ -33,6 +33,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
         this.show = this.show.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
+        this.onOAuthChange = this.onOAuthChange.bind(this);
+        this.onOpenModioClick = this.onOpenModioClick.bind(this);
+        this.loadUserInfo = this.loadUserInfo.bind(this);
     }
 
     public show() {
