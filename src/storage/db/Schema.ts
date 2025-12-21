@@ -230,8 +230,8 @@ export const settings = sqliteTable("settings", {
 // Mod types moved to @/models/mod/types
 export { ModSourceType, ModApprovalStatus, DownloadStatus } from '@/models/mod/types';
 
-// Constants moved to @/constants/mod
-export { MOD_INVALID_ID } from '@/constants/mod';
+// Constants moved to @/models/mod/types
+export { MOD_INVALID_ID } from '@/models/mod/types';
 
 // Profile tree types moved to @/models/profile
 export { ProfileTreeType, ProfileTreeGroupType } from '@/models/profile/types';

@@ -31,3 +31,12 @@ export enum DownloadStatus {
     Completed = "completed",
     Failed = "failed"
 }
+
+/**
+ * 模组相关常量
+ */
+
+/**
+ * 无效模组ID常量
+ */
+export const MOD_INVALID_ID = 999999;
