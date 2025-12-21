@@ -29,8 +29,11 @@ export function GameSettings() {
                 result.endsWith("FSD-WinGDK.pak")
             ) {
                 setDrgPakPath(result);
-                const settings = await StorageAPI.getSettings();
-                await settings.setValue('drgPakPath', result);
+                const gameDAO = await StorageAPI.getGames();
+                const activeGame = await gameDAO.getActiveGame();
+                if (activeGame) {
+                    await gameDAO.updateGame(activeGame.id, { installPath: result });
+                }
             } else {
                 message.error(t("Please select FSD-WindowsNoEditor.pak"));
             }
@@ -41,8 +44,11 @@ export function GameSettings() {
         const path = await IntegrateApi.findGamePak();
         if (path) {
             setDrgPakPath(path);
-            const settings = await StorageAPI.getSettings();
-            await settings.setValue('drgPakPath', path);
+            const gameDAO = await StorageAPI.getGames();
+            const activeGame = await gameDAO.getActiveGame();
+            if (activeGame) {
+                await gameDAO.updateGame(activeGame.id, { installPath: path });
+            }
         } else {
             message.error(t("Can't find FSD-WindowsNoEditor.pak"));
         }
@@ -63,9 +69,13 @@ export function GameSettings() {
 
     React.useEffect(() => {
         const fetchData = async () => {
+            const gameDAO = await StorageAPI.getGames();
+            const activeGame = await gameDAO.getActiveGame();
+            const drgPath = activeGame?.installPath || "";
+
             const settings = await StorageAPI.getSettings();
-            const drgPath = await settings.getValue('drgPakPath');
             const ue4ssValue = await settings.getValue('ue4ss');
+
             setDrgPakPath(drgPath);
             setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
         }

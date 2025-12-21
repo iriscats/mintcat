@@ -131,7 +131,13 @@ export class ModInstallTask implements ITask {
             installTime = editTime;
         }
 
-        const drgPakPath = await settings.getValue('drgPakPath');
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const drgPakPath = activeGame?.installPath;
+        if (!drgPakPath) {
+            throw new Error(t('Game Path Not Found'));
+        }
+
         const ue4ss = await settings.getValue('ue4ss');
 
         const installType = await IntegrateApi.checkInstalled(drgPakPath, installTime);

@@ -77,12 +77,13 @@ export class IntegrateApi extends ILock {
     }
 
     public static async uninstallMods() {
-        const settings = await StorageAPI.getSettings();
         if (!await IntegrateApi.checkGamePath()) {
             return false;
         }
-        const drgPakPath = await settings.getValue('drgPakPath');
-        if (await IntegrateApi.uninstall(drgPakPath)) {
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const drgPakPath = activeGame?.installPath;
+        if (drgPakPath && await IntegrateApi.uninstall(drgPakPath)) {
             message.success(t("Uninstall Success"));
         }
     }
