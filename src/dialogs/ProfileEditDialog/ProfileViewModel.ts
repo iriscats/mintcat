@@ -14,7 +14,7 @@ import { ProfileService } from "@/services/ProfileService";
 export class ProfileViewModel {
 
     private static instance: ProfileViewModel;
-    private profileService: ProfileService;
+    public profileService: ProfileService;
 
     private constructor() {
         this.profileService = new ProfileService();

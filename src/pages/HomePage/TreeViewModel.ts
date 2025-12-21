@@ -12,7 +12,7 @@ import { IoC } from "@/core/IoC.ts";
 export class TreeViewModel extends BaseViewModel {
 
     private static instance: TreeViewModel;
-    private profileViewModel?: ProfileViewModel;
+    private profileViewModel: ProfileViewModel;
 
 
     public static updateTreeView() {
@@ -42,10 +42,11 @@ export class TreeViewModel extends BaseViewModel {
      * Delegated to ProfileTreeService
      */
     public async sortMods(order: string): Promise<void> {
-        if (!this.profileViewModel) return;
+        if (!this.profileViewModel) 
+            return;
 
         const activeRoot = await this.profileViewModel.getActiveProfileTreeRoot();
-        const treeService = (this.profileViewModel as any).profileService.getTreeService();
+        const treeService = this.profileViewModel.profileService.getTreeService();
 
         await treeService.sortTreeNodes(activeRoot, order);
         await this.profileViewModel.saveProfileTreeToDatabase(activeRoot);

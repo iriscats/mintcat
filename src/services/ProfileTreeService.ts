@@ -466,9 +466,9 @@ export class ProfileTreeService {
                 if (!modAData || !modBData) return 0;
 
                 if (order === "asc") {
-                    return modAData.displayName.localeCompare(modBData.displayName);
-                } else if (order === "desc") {
                     return modAData.displayName.localeCompare(modBData.displayName) * -1;
+                } else if (order === "desc") {
+                    return modAData.displayName.localeCompare(modBData.displayName);
                 } else if (order === "time") {
                     const modAStatus = modAData.modId ? modsApi.getModStatus(modAData.modId) : null;
                     const modBStatus = modBData.modId ? modsApi.getModStatus(modBData.modId) : null;
