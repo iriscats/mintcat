@@ -4,7 +4,6 @@ import ReactDOM from "react-dom/client";
 import {Routes, Route, HashRouter} from "react-router-dom";
 
 import {ConfigProvider, App as AntdApp} from "antd";
-import '@ant-design/v5-patch-for-react-19';
 import {listen} from "@tauri-apps/api/event";
 
 import App from "@/App";

@@ -541,7 +541,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                       }
                 >
                     <Flex vertical={true}>
-                        <Space split={<Divider type="vertical"/>} size={2}
+                        <Space separator={<Divider orientation="vertical"/>} size={2}
                                style={{
                                    borderBottom: "1px solid #eee",
                                    paddingBottom: "2px",

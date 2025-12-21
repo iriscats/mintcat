@@ -1,8 +1,9 @@
 import React from "react";
-import {Avatar, Badge, Button, Dropdown, Flex, Image, List, Popover, message} from "antd";
+import {Avatar, Badge, Button, Dropdown, Flex, Image, List, Popover, Space, Tooltip, message} from "antd";
 import {t} from "i18next";
 import {
     BellOutlined,
+    EllipsisOutlined,
     PlayCircleOutlined,
     QuestionCircleOutlined,
     SkinOutlined,
@@ -115,22 +116,26 @@ class TitleBar extends React.Component<any, any> {
                 </Flex>
                 <Flex gap="small" justify={"flex-end"} wrap>
                     <span>
-                    <Dropdown.Button menu={{
-                        items, onClick: () => {
-                        }
-                    }}
-                                     type="primary"
-                                     onClick={this.onLaunchGameClick}
-                                     className={"ant-header-start-button"}
-                    >
-                        <PlayCircleOutlined/>
-                        <span>
-                            <b>
-                                深岩银河
-                                {/*{t("Launch Game")}*/}
-                            </b>
-                        </span>
-                    </Dropdown.Button>
+                        <Space.Compact block>
+                            <Button type="primary"
+                                onClick={this.onLaunchGameClick}
+                                className={"ant-header-start-button"}
+                            >
+                                <PlayCircleOutlined/>
+                                <span>
+                                    <b>
+                                        深岩银河
+                                        {/*{t("Launch Game")}*/}
+                                    </b>
+                                </span>
+                            </Button>
+                            <Tooltip title="Tooltip">
+                                <Button type="primary" 
+                                    className={"ant-header-start-button"}
+                                    icon={<EllipsisOutlined />} 
+                                />
+                            </Tooltip>
+                        </Space.Compact>
                     </span>
                     <span>
                         <Badge size={"small"}
