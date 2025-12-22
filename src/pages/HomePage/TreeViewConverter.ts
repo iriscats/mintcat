@@ -1,6 +1,7 @@
 import {TreeProps} from "antd";
 import {ProfileTreeItem, ProfileTreeType} from "@/storage/db/Schema.ts";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
+import type {ProfileModData} from "@/storage/dao/ProfileDAO";
 
 /**
  * TreeViewConverter
@@ -19,9 +20,11 @@ export class TreeViewConverter {
     public treeData?: TreeProps['treeData'] = []
     public expandedKeys?: TreeProps['expandedKeys'] = [];
     private modList?: CompleteModData[];
+    private profileModList?: ProfileModData[];
 
-    public constructor(modList: CompleteModData[]) {
+    public constructor(modList: CompleteModData[], profileModList?: ProfileModData[]) {
         this.modList = modList;
+        this.profileModList = profileModList;
     }
 
     // ====================================
@@ -98,23 +101,28 @@ export class TreeViewConverter {
             return; // 不满足过滤条件，跳过
         }
 
+        // Find profile-specific data (enabled status, used version)
+        const profileMod = this.profileModList?.find(pm => pm.modId === modItem.modId);
+
         const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
         const key = `mod-${item.id}`;
 
         parent.children.push({
             key,
-            modId: modItem.platformId,
+            modId: modItem.modId,
+            platformId: modItem.platformId,  // Add platformId for mod.io API calls
+            profileModId: profileMod?.id,  // Add profile_mods.id for updates
             isLeaf: true,
             title,
             url: modItem.url || "",
             tags: modItem.tags || [],
             required: modItem.tags?.includes('RequiredByAll') || false,
-            enabled: true,  // Profile context - will be loaded separately
+            enabled: profileMod?.isEnabled ?? true,  // Use profile-specific enabled status
             sourceType: modItem.sourceType,
             approval: modItem.approvalStatus,
             versions: modItem.version?.availableVersions || [],
             fileVersion: modItem.version?.currentVersion || "-",
-            usedVersion: "",  // Profile context - will be loaded separately
+            usedVersion: profileMod?.usedVersion || "",  // Use profile-specific used version
             downloadProgress: modItem.download?.downloadProgress || 100,
             lastUpdateDate: modItem.status?.lastUpdateDate || 0,
             onlineUpdateDate: modItem.status?.onlineUpdateDate || 0,

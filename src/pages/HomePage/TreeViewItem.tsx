@@ -57,9 +57,11 @@ function ModTreeViewFolder({nodeData, onMenuClick}) {
 function ModTreeViewSwitch({nodeData}) {
 
     const onSwitchChange = async (checked: boolean) => {
-        nodeData.enabled = checked;
+        console.log(`[ModTreeViewSwitch] onSwitchChange called: key=${nodeData.key}, modId=${nodeData.modId}, checked=${checked}`);
         const viewModel = await IoC.get(HomeViewModel);
-        await viewModel.setModEnabled(nodeData.key, checked);
+        console.log(`[ModTreeViewSwitch] Got HomeViewModel, calling setModEnabled`);
+        await viewModel.setModEnabled(nodeData.modId, checked);
+        console.log(`[ModTreeViewSwitch] setModEnabled completed`);
 
         await emit("tree-view-count-label-update");
     };
@@ -84,7 +86,8 @@ function ModTreeViewVersionSelect({nodeData}) {
         if (visible) {
             setFetching(true);
 
-            fileInfos = await ModioApi.getModFiles(nodeData.modId);
+            // Use platformId for mod.io API calls
+            fileInfos = await ModioApi.getModFiles(nodeData.platformId);
             const optionList = [];
             for (const fileInfo of fileInfos) {
                 optionList.push({
@@ -100,13 +103,15 @@ function ModTreeViewVersionSelect({nodeData}) {
 
     const onChange = async (value: string) => {
         const fileInfo = JSON.parse(value);
-        nodeData.usedVersion = fileInfo.version;
         await emit("status-bar-log", `${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
 
         const viewModel = await IoC.get(HomeViewModel);
-        await viewModel.setModUsedVersion(nodeData.key, fileInfo.version);
+        // Use profileModId (profile_mods.id) instead of key
+        if (nodeData.profileModId) {
+            await viewModel.setModUsedVersion(nodeData.profileModId, fileInfo.version);
+        }
 
-        const modItem = await getModById(nodeData.key);
+        const modItem = await getModById(nodeData.modId);
         if (!modItem) return;
 
         // Update modItem with new download info (usedVersion is stored in profile context, not mod data)

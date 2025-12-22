@@ -475,7 +475,7 @@ export class ProfileDAO {
 
             return result.length > 0 ? this.mapToProfileModData(result[0]) : null;
         } catch (error) {
-            console.error('添加模组到配置文件失败:', error);
+            console.error('addModToProfile 失败:', error);
             throw error;
         }
     }
@@ -487,7 +487,10 @@ export class ProfileDAO {
         try {
             const db = await getDb();
             await db.update(profileMods)
-                .set({isEnabled: enabled})
+                .set({
+                    isEnabled: enabled,
+                    updatedAt: new Date()
+                })
                 .where(and(
                     eq(profileMods.profileId, profileId),
                     eq(profileMods.modId, modId)

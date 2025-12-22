@@ -229,25 +229,31 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     public async setModEnabled(modId: number, enable: boolean): Promise<void> {
+        console.log(`[HomeViewModel] setModEnabled called: modId=${modId}, enable=${enable}`);
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
             const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
         }
+        console.log(`[HomeViewModel] Active profile: ${activeProfile?.name}, id=${activeProfile?.id}`);
         await profiles.setModEnabled(activeProfile.id!, modId, enable);
+        console.log(`[HomeViewModel] Database updated, calling TreeViewModel.updateTreeView()`);
+
+        TreeViewModel.updateTreeView();
+        console.log(`[HomeViewModel] setModEnabled completed`);
     }
 
-    public async setModUsedVersion(id: number, version: string): Promise<void> {
+    public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
+        console.log(`[HomeViewModel] setModUsedVersion called: profileModId=${profileModId}, version=${version}`);
         const profiles = await StorageAPI.getProfiles();
-        let activeProfile = await profiles.getActiveProfile();
-        if (!activeProfile) {
-            const profileVM = await IoC.get(ProfileViewModel);
-            activeProfile = await profileVM.getActiveProfileData();
-        }
 
         // Update the used version in the profile_mods table
-        await profiles.updateProfileMod(id, { usedVersion: version });
+        await profiles.updateProfileMod(profileModId, { usedVersion: version });
+        console.log(`[HomeViewModel] Database updated, calling TreeViewModel.updateTreeView()`);
+
+        TreeViewModel.updateTreeView();
+        console.log(`[HomeViewModel] setModUsedVersion completed`);
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
