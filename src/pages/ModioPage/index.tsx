@@ -9,6 +9,7 @@ import {ModioApi} from "@/apis/modio";
 import {TranslateApi} from "@/apis/TranslateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
+import {ProfileService} from "@/services/ProfileService.ts";
 import {BasePage} from "../IBasePage.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {openWindow} from "@/dialogs/AddModDialog/open.ts";
@@ -70,8 +71,17 @@ export class ModioPage extends BasePage<any, ModioPageState> {
         });
     }
 
-    private onAddClick(url: string) {
-        openWindow(AddModType.MODIO, ProfileTreeGroupType.MODIO, url).then();
+    private async onAddClick(url: string) {
+        // Get current active profile's modio folder ID using ProfileService
+        const profileService = new ProfileService();
+        const modioFolderId = await profileService.getActiveProfileFolderId('modio');
+
+        if (!modioFolderId) {
+            message.error(t("Modio Folder Not Found"));
+            return;
+        }
+
+        openWindow(AddModType.MODIO, modioFolderId, url).then();
     }
 
     private async onMenuClick(key: string, item: ModInfo) {

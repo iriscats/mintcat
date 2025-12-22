@@ -10,6 +10,32 @@ import type { CompleteModData } from '@/storage/dao/ModDAO';
  */
 export class ModService {
 
+    private static async ensureProfileModAssociation(options: {
+        profileId: number;
+        modId: number;
+        folderId: number;
+        usedVersion: string;
+    }): Promise<void> {
+        const profilesDAO = await StorageAPI.getProfiles();
+
+        const existing = await profilesDAO.getProfileMod(options.profileId, options.modId);
+        if (existing) {
+            return;
+        }
+
+        const existingMods = await profilesDAO.getProfileMods(options.profileId);
+        const maxSortOrder = existingMods.reduce((max, pm) => Math.max(max, pm.sortOrder ?? 0), -1);
+
+        await profilesDAO.addModToProfile({
+            profileId: options.profileId,
+            modId: options.modId,
+            parentFolderId: options.folderId,
+            sortOrder: maxSortOrder + 1,
+            isEnabled: true,
+            usedVersion: options.usedVersion,
+        });
+    }
+
     /**
      * 获取所有模组的完整数据
      */
@@ -39,25 +65,50 @@ export class ModService {
         folderId: number
     ): Promise<CompleteModData> {
         const modsDAO = await StorageAPI.getMods();
-        const profilesDAO = await StorageAPI.getProfiles();
 
         // 转换 API 响应到 DTO
         const dto = ModMapper.fromModioResponse(modInfo);
 
-        // 保存到数据库
-        const savedMod = await modsDAO.addMod(dto);
+        let savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+        if (!savedMod && dto.url) {
+            savedMod = await modsDAO.getModByUrl(dto.url);
+        }
+
+        if (!savedMod) {
+            try {
+                savedMod = await modsDAO.addMod(dto);
+            } catch (error) {
+                savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+                if (!savedMod && dto.url) {
+                    savedMod = await modsDAO.getModByUrl(dto.url);
+                }
+                if (!savedMod) {
+                    throw error;
+                }
+            }
+        }
+
         if (!savedMod) {
             throw new Error("Failed to save mod to database");
         }
 
-        // 添加到配置文件
-        await profilesDAO.addModToProfile({
+        await modsDAO.updateMod(savedMod.modId!, {
+            platformId: dto.platformId,
+            gameId: dto.gameId,
+            nameId: dto.nameId,
+            displayName: dto.displayName,
+            url: dto.url,
+            sourceType: dto.sourceType,
+            tags: dto.tags,
+            approvalStatus: dto.approvalStatus,
+            dependModId: dto.dependModId,
+        });
+
+        await ModService.ensureProfileModAssociation({
             profileId,
             modId: savedMod.modId!,
-            parentFolderId: folderId,
-            sortOrder: 0,
-            isEnabled: true,
-            usedVersion: dto.version?.currentVersion || ""
+            folderId,
+            usedVersion: dto.version?.currentVersion || "",
         });
 
         // 保存版本、下载、状态信息
@@ -90,25 +141,50 @@ export class ModService {
         folderId: number
     ): Promise<CompleteModData> {
         const modsDAO = await StorageAPI.getMods();
-        const profilesDAO = await StorageAPI.getProfiles();
 
         // 转换文件路径到 DTO
         const dto = ModMapper.fromLocalPath(filePath, fileName);
 
-        // 保存到数据库
-        const savedMod = await modsDAO.addMod(dto);
+        let savedMod = dto.url ? await modsDAO.getModByUrl(dto.url) : null;
+        if (!savedMod) {
+            savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+        }
+
+        if (!savedMod) {
+            try {
+                savedMod = await modsDAO.addMod(dto);
+            } catch (error) {
+                savedMod = dto.url ? await modsDAO.getModByUrl(dto.url) : null;
+                if (!savedMod) {
+                    savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+                }
+                if (!savedMod) {
+                    throw error;
+                }
+            }
+        }
+
         if (!savedMod) {
             throw new Error("Failed to save mod to database");
         }
 
-        // 添加到配置文件
-        await profilesDAO.addModToProfile({
+        await modsDAO.updateMod(savedMod.modId!, {
+            platformId: dto.platformId,
+            gameId: dto.gameId,
+            nameId: dto.nameId,
+            displayName: dto.displayName,
+            url: dto.url,
+            sourceType: dto.sourceType,
+            tags: dto.tags,
+            approvalStatus: dto.approvalStatus,
+            dependModId: dto.dependModId,
+        });
+
+        await ModService.ensureProfileModAssociation({
             profileId,
             modId: savedMod.modId!,
-            parentFolderId: folderId,
-            sortOrder: 0,
-            isEnabled: true,
-            usedVersion: "-"
+            folderId,
+            usedVersion: "-",
         });
 
         // 保存版本、下载、状态信息

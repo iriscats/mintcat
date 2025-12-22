@@ -314,6 +314,25 @@ export class ProfileDAO {
     }
 
     /**
+     * 根据文件夹类型获取配置文件的文件夹ID
+     */
+    public async getProfileFolderIdByType(profileId: number, folderType: string): Promise<number | null> {
+        try {
+            const db = await getDb();
+            const result = await db.select().from(profileFolders)
+                .where(and(
+                    eq(profileFolders.profileId, profileId),
+                    eq(profileFolders.folderType, folderType)
+                ))
+                .limit(1);
+            return result.length > 0 ? result[0].id : null;
+        } catch (error) {
+            console.error(`获取配置文件文件夹ID失败 [配置ID: ${profileId}, 类型: ${folderType}]:`, error);
+            return null;
+        }
+    }
+
+    /**
      * 创建文件夹
      */
     public async createFolder(folderData: Omit<ProfileFolderData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileFolderData | null> {
@@ -419,6 +438,22 @@ export class ProfileDAO {
             return result.map(this.mapToProfileModData);
         } catch (error) {
             console.error(`获取配置文件模组关联失败 [配置ID: ${profileId}]:`, error);
+            throw error;
+        }
+    }
+
+    public async getProfileMod(profileId: number, modId: number): Promise<ProfileModData | null> {
+        try {
+            const db = await getDb();
+            const result = await db.select().from(profileMods)
+                .where(and(
+                    eq(profileMods.profileId, profileId),
+                    eq(profileMods.modId, modId)
+                ))
+                .limit(1);
+            return result.length > 0 ? this.mapToProfileModData(result[0]) : null;
+        } catch (error) {
+            console.error(`获取配置文件模组关联失败 [配置ID: ${profileId}, 模组ID: ${modId}]:`, error);
             throw error;
         }
     }

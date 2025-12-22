@@ -29,6 +29,7 @@ import {autoBind} from "@/utils/ReactUtils.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import {ProfileService} from "@/services/ProfileService.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
 import {emit, listen} from "@tauri-apps/api/event";
@@ -181,7 +182,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarAddModClick() {
-        openWindow().then();
+        // Get current active profile's Local folder ID using ProfileService
+        const profileService = new ProfileService();
+        const localFolderId = await profileService.getActiveProfileFolderId('local');
+
+        if (!localFolderId) {
+            message.error(t("Local Folder Not Found"));
+            return;
+        }
+
+        openWindow(AddModType.LOCAL, localFolderId).then();
     }
 
     @autoBind

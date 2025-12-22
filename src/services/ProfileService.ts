@@ -119,6 +119,23 @@ export class ProfileService {
         }
     }
 
+    /**
+     * 获取当前活跃 profile 指定类型的文件夹 ID
+     * @param folderType 文件夹类型 ('modio' | 'local')
+     * @returns 文件夹 ID，如果未找到返回 null
+     */
+    public async getActiveProfileFolderId(folderType: 'modio' | 'local'): Promise<number | null> {
+        const profiles = await StorageAPI.getProfiles();
+        const activeProfile = await this.ensureActiveProfile(profiles);
+
+        if (!activeProfile?.id) {
+            console.warn(`[ProfileService] No active profile found`);
+            return null;
+        }
+
+        return await profiles.getProfileFolderIdByType(activeProfile.id, folderType);
+    }
+
     // ====================================
     // Profile CRUD 操作
     // ====================================

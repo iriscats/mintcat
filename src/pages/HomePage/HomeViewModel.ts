@@ -40,10 +40,6 @@ export class HomeViewModel extends BaseViewModel {
             return;
         }
 
-        // Get current mods from database
-        const modsApi = await StorageAPI.getMods();
-        const currentMods = await modsApi.getAllMods();
-
         // Get active profile
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
@@ -53,12 +49,6 @@ export class HomeViewModel extends BaseViewModel {
         }
 
         for (const depend of depends) {
-            // Check if mod already exists
-            const existingMod = currentMods.find(m => m.platformId === depend.id);
-            if (existingMod) {
-                continue;
-            }
-
             // Add mod using ModService
             try {
                 const addedMod = await ModService.addModFromModio(depend, activeProfile.id!, groupId);
@@ -80,20 +70,49 @@ export class HomeViewModel extends BaseViewModel {
             return false;
         }
 
-        // Check if mod already exists by querying mods directly
-        const modsApi = await StorageAPI.getMods();
-        const existingMod = await modsApi.getModByPlatformId(modInfoResp.id);
-        if (existingMod) {
-            message.warning(`${t("Mod Already Exists")} ${modInfoResp.name}`);
-            return true;
-        }
-
         // Get active profile
+        const modsApi = await StorageAPI.getMods();
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
             const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
+        }
+
+        const existingMod = await modsApi.getModByPlatformId(modInfoResp.id);
+        if (existingMod) {
+            const existingProfileMod = await profiles.getProfileMod(activeProfile.id!, existingMod.modId!);
+            if (existingProfileMod) {
+                message.warning(`${t("Mod Already Exists")} ${modInfoResp.name}`);
+                return true;
+            }
+
+            const profileMods = await profiles.getProfileMods(activeProfile.id!);
+            const maxSortOrder = profileMods.reduce((max, pm) => Math.max(max, pm.sortOrder ?? 0), -1);
+            const modVersion = await modsApi.getModVersion(existingMod.modId!);
+
+            await profiles.addModToProfile({
+                profileId: activeProfile.id!,
+                modId: existingMod.modId!,
+                parentFolderId: groupId,
+                sortOrder: maxSortOrder + 1,
+                isEnabled: true,
+                usedVersion: modVersion?.currentVersion || "",
+            });
+
+            const completeData = await modsApi.getCompleteModData(existingMod.modId!);
+            if (completeData) {
+                await ModUpdateApi.updateMod(completeData);
+            }
+
+            if (modInfoResp.dependencies) {
+                await this.addModDependencies(modInfoResp.id, groupId);
+            }
+
+            TreeViewModel.updateTreeView();
+            TreeViewModel.updateTreeViewCountLabel();
+
+            return true;
         }
 
         // Add mod using ModService
@@ -126,19 +145,39 @@ export class HomeViewModel extends BaseViewModel {
             return true;
         }
 
-        const modsApi = await StorageAPI.getMods();
-        const existingMod = await modsApi.getModByUrl(modPath);
-        if (existingMod) {
-            message.error(`${t("Mod Already Exists")}: ${modPath}`);
-            return false;
-        }
-
         // Get active profile
+        const modsApi = await StorageAPI.getMods();
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
             const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
+        }
+
+        const existingMod = await modsApi.getModByUrl(modPath);
+        if (existingMod) {
+            const existingProfileMod = await profiles.getProfileMod(activeProfile.id!, existingMod.modId!);
+            if (existingProfileMod) {
+                message.warning(`${t("Mod Already Exists")}: ${modPath}`);
+                return true;
+            }
+
+            const profileMods = await profiles.getProfileMods(activeProfile.id!);
+            const maxSortOrder = profileMods.reduce((max, pm) => Math.max(max, pm.sortOrder ?? 0), -1);
+
+            await profiles.addModToProfile({
+                profileId: activeProfile.id!,
+                modId: existingMod.modId!,
+                parentFolderId: groupId,
+                sortOrder: maxSortOrder + 1,
+                isEnabled: true,
+                usedVersion: "-",
+            });
+
+            TreeViewModel.updateTreeView();
+            TreeViewModel.updateTreeViewCountLabel();
+
+            return true;
         }
 
         // Add mod using ModService

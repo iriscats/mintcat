@@ -8,6 +8,7 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModDialogResult, AddModType} from "@/dialogs/AddModDialog/index.tsx";
+import { ProfileService } from "@/services/ProfileService.ts";
 
 let windowInstance: WebviewWindow;
 
@@ -105,7 +106,16 @@ async function onClipboardChange(text: string) {
         }
     }
 
-    openWindow(AddModType.MODIO, ProfileTreeGroupType.MODIO, text).then();
+    // Get current active profile's modio folder ID using ProfileService
+    const profileService = new ProfileService();
+    const modioFolderId = await profileService.getActiveProfileFolderId('modio');
+
+    if (!modioFolderId) {
+        console.warn("[AddModDialog] Modio folder not found for active profile");
+        return;
+    }
+
+    openWindow(AddModType.MODIO, modioFolderId, text).then();
 }
 
 
