@@ -86,9 +86,14 @@ export class ModUpdateApi {
             await emit("mod-treeview-update" + mod.modId, { modId: mod.modId, downloadProgress });
         });
 
-        // Update download progress and last update date in database
+        // Update download information in database (cachePath, progress, status)
         const modsApi = await StorageAPI.getMods();
-        await modsApi.updateDownloadProgress(mod.modId!, 100);
+        await modsApi.upsertModDownload({
+            modId: mod.modId!,
+            cachePath: newItem.download?.cachePath || "",
+            downloadProgress: 100,
+            downloadStatus: "completed"
+        });
 
         // Update fileVersion to match the downloaded version
         if (mod.version?.currentVersion) {

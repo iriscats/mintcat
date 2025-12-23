@@ -1,7 +1,7 @@
 import React from "react";
 import {t} from "i18next";
 import {save} from "@tauri-apps/plugin-dialog";
-import {copyFile} from "@tauri-apps/plugin-fs";
+import {copyFile, exists} from "@tauri-apps/plugin-fs";
 import {
     Button, Checkbox, Divider,
     Flex, MenuProps, message, Select,
@@ -448,6 +448,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 try {
                     const mod = await this.getModById(id);
                     if (mod?.url) {
+                        console.log(`[HomePage] Copying link for mod ${mod.displayName}: ${mod.url}`);
                         ClipboardApi.setLastClipboardText(mod.url);
                         await navigator.clipboard.writeText(mod.url);
                         message.success(t("Copied To Clipboard") + `: ${mod.url} `);
@@ -457,6 +458,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         message.success(t("Copied To Clipboard") + `: ${cachePath} `);
                     }
                 } catch (err) {
+                    console.error(`[HomePage] Copy link failed for id=${id}:`, err);
                     message.error(t("Copy Failed"));
                 }
                 break;
@@ -467,21 +469,46 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         message.error(t("Mod Not Found"));
                         break;
                     }
+
                     const cachePath = mod.download?.cachePath || "";
-                    if (!cachePath) {
-                        message.error(t("File Not Found"));
+                    const downloadStatus = mod.download?.downloadStatus || "pending";
+
+                    // Check if mod has been downloaded
+                    if (!cachePath || downloadStatus !== "completed") {
+                        if (downloadStatus === "downloading") {
+                            message.warning(t("Mod is downloading, please wait"));
+                        } else if (downloadStatus === "failed") {
+                            message.error(t("Mod download failed, please click update to download mod try again"));
+                        } else {
+                            message.warning(t("Please click update to download mod"));
+                        }
                         break;
                     }
+
+                    // Check if the file actually exists
+                    const fileExists = await exists(cachePath);
+                    if (!fileExists) {
+                        message.error(t("File Not Found") + `: ${cachePath}`);
+                        break;
+                    }
+
                     const path = await save({
                         filters: [{
                             name: mod.displayName,
                             extensions: ['zip', 'pak'],
                         }]
                     });
+
+                    // User cancelled the save dialog
+                    if (!path) {
+                        break;
+                    }
+
                     await copyFile(cachePath, path);
                     message.success(t("Export Success"));
                 } catch (e) {
-                    message.error(t("Export Failed"));
+                    console.error(`[HomePage] Export failed for id=${id}:`, e);
+                    message.error(t("Export Failed") + `: ${e}`);
                 }
             }
                 break;
