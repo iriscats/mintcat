@@ -9,6 +9,7 @@ import {
 } from 'antd';
 import {
     CloseCircleOutlined, CloseOutlined, CopyOutlined,
+    DeleteOutlined,
     EditOutlined, FieldTimeOutlined, LoadingOutlined, PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined, SaveOutlined, SortAscendingOutlined, SortDescendingOutlined, SyncOutlined,
     UnorderedListOutlined
@@ -87,14 +88,70 @@ export class HomePage extends BasePage<any, ModListPageState> {
         return await modsApi.getCompleteModData(modId);
     }
 
-    /**
-     * Helper method to get all mods from database as CompleteModData array
-     */
-    private async getAllModsAsList(): Promise<CompleteModData[]> {
-        const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
-        const modIds = allMods.map(m => m.modId!);
-        return await modsApi.getBatchCompleteModData(modIds);
+    private async handleExportMod(id: number): Promise<void> {
+        try {
+            const mod = await this.getModById(id);
+            if (!mod) {
+                message.error(t("Mod Not Found"));
+                return;
+            }
+
+            const cachePath = mod.download?.cachePath || "";
+            const downloadStatus = mod.download?.downloadStatus || "pending";
+
+            if (!cachePath || downloadStatus !== "completed") {
+                if (downloadStatus === "downloading") {
+                    message.warning(t("Mod is downloading, please wait"));
+                } else if (downloadStatus === "failed") {
+                    message.error(t("Mod download failed, please click update to download mod try again"));
+                } else {
+                    message.warning(t("Please click update to download mod"));
+                }
+                return;
+            }
+
+            const fileExists = await exists(cachePath);
+            if (!fileExists) {
+                message.error(t("File Not Found") + `: ${cachePath}`);
+                return;
+            }
+
+            const path = await save({
+                filters: [{
+                    name: mod.displayName,
+                    extensions: ['zip', 'pak'],
+                }]
+            });
+
+            if (!path) {
+                return;
+            }
+
+            await copyFile(cachePath, path);
+            message.success(t("Export Success"));
+        } catch (e) {
+            console.error(`[HomePage] Export failed for id=${id}:`, e);
+            message.error(t("Export Failed") + `: ${e}`);
+        }
+    }
+
+    private async handleCopyLink(id: number): Promise<void> {
+        try {
+            const mod = await this.getModById(id);
+            if (mod?.url) {
+                console.log(`[HomePage] Copying link for mod ${mod.displayName}: ${mod.url}`);
+                ClipboardApi.setLastClipboardText(mod.url);
+                await navigator.clipboard.writeText(mod.url);
+                message.success(t("Copied To Clipboard") + `: ${mod.url} `);
+            } else {
+                const cachePath = mod?.download?.cachePath || "";
+                await navigator.clipboard.writeText(cachePath);
+                message.success(t("Copied To Clipboard") + `: ${cachePath} `);
+            }
+        } catch (err) {
+            console.error(`[HomePage] Copy link failed for id=${id}:`, err);
+            message.error(t("Copy Failed"));
+        }
     }
 
     // Multi Operations
@@ -238,6 +295,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await ModUpdateApi.checkModUpdate();
         await ModUpdateApi.checkModList();
         message.success(t("Update Finish"));
+    }
+
+    @autoBind
+    private async onMenuBarUninstallModsClick() {
+        try {
+            await IntegrateApi.uninstallMods();
+        } catch (error) {
+            console.error('[HomePage] Uninstall mods failed:', error);
+            message.error(t("Uninstall Failed"));
+        }
     }
 
     @autoBind
@@ -445,71 +512,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 await vm.removeMod(id);
                 break;
             case "copy_link":
-                try {
-                    const mod = await this.getModById(id);
-                    if (mod?.url) {
-                        console.log(`[HomePage] Copying link for mod ${mod.displayName}: ${mod.url}`);
-                        ClipboardApi.setLastClipboardText(mod.url);
-                        await navigator.clipboard.writeText(mod.url);
-                        message.success(t("Copied To Clipboard") + `: ${mod.url} `);
-                    } else {
-                        const cachePath = mod?.download?.cachePath || "";
-                        await navigator.clipboard.writeText(cachePath);
-                        message.success(t("Copied To Clipboard") + `: ${cachePath} `);
-                    }
-                } catch (err) {
-                    console.error(`[HomePage] Copy link failed for id=${id}:`, err);
-                    message.error(t("Copy Failed"));
-                }
+                await this.handleCopyLink(id);
                 break;
             case "export": {
-                try {
-                    const mod = await this.getModById(id);
-                    if (!mod) {
-                        message.error(t("Mod Not Found"));
-                        break;
-                    }
-
-                    const cachePath = mod.download?.cachePath || "";
-                    const downloadStatus = mod.download?.downloadStatus || "pending";
-
-                    // Check if mod has been downloaded
-                    if (!cachePath || downloadStatus !== "completed") {
-                        if (downloadStatus === "downloading") {
-                            message.warning(t("Mod is downloading, please wait"));
-                        } else if (downloadStatus === "failed") {
-                            message.error(t("Mod download failed, please click update to download mod try again"));
-                        } else {
-                            message.warning(t("Please click update to download mod"));
-                        }
-                        break;
-                    }
-
-                    // Check if the file actually exists
-                    const fileExists = await exists(cachePath);
-                    if (!fileExists) {
-                        message.error(t("File Not Found") + `: ${cachePath}`);
-                        break;
-                    }
-
-                    const path = await save({
-                        filters: [{
-                            name: mod.displayName,
-                            extensions: ['zip', 'pak'],
-                        }]
-                    });
-
-                    // User cancelled the save dialog
-                    if (!path) {
-                        break;
-                    }
-
-                    await copyFile(cachePath, path);
-                    message.success(t("Export Success"));
-                } catch (e) {
-                    console.error(`[HomePage] Export failed for id=${id}:`, e);
-                    message.error(t("Export Failed") + `: ${e}`);
-                }
+                await this.handleExportMod(id);
             }
                 break;
             default:
@@ -598,6 +604,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 <Tooltip title={t("Save Changes")}>
                                     <Button icon={<SaveOutlined/>} type={"text"}
                                             onClick={this.onMenuBarSaveChangesClick}/>
+                                </Tooltip>
+                                <Tooltip title={t("Uninstall Mods")}>
+                                    <Button icon={<DeleteOutlined/>} type={"text"}
+                                            onClick={this.onMenuBarUninstallModsClick}/>
                                 </Tooltip>
                                 <Tooltip title={t("Add Mod")}>
                                     <Button icon={<PlusCircleOutlined/>} type={"text"}
