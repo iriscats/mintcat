@@ -68,6 +68,15 @@ export class ModUpdateApi {
             fileSize: modInfo.modfile?.filesize || 0,
             downloadProgress: 0
         });
+
+        // Update status info with current online update date
+        // Note: mod.io API returns Unix timestamp in seconds, but we store milliseconds
+        const onlineUpdateDate = modInfo.date_updated ? modInfo.date_updated * 1000 : Date.now();
+        await modsApi.upsertModStatus({
+            modId: modId,
+            onlineUpdateDate: onlineUpdateDate,
+            isOnlineAvailable: true
+        });
     }
 
     public static async updateModFile(mod: CompleteModData) {
@@ -77,9 +86,27 @@ export class ModUpdateApi {
             await emit("mod-treeview-update" + mod.modId, { modId: mod.modId, downloadProgress });
         });
 
-        // Update download progress in database
+        // Update download progress and last update date in database
         const modsApi = await StorageAPI.getMods();
         await modsApi.updateDownloadProgress(mod.modId!, 100);
+
+        // Update fileVersion to match the downloaded version
+        if (mod.version?.currentVersion) {
+            await modsApi.upsertModVersion({
+                modId: mod.modId!,
+                currentVersion: mod.version.currentVersion,
+                availableVersions: mod.version.availableVersions || []
+            });
+        }
+
+        // Update lastUpdateDate to match onlineUpdateDate after successful download
+        const currentStatus = await modsApi.getModStatus(mod.modId!);
+        if (currentStatus) {
+            await modsApi.upsertModStatus({
+                modId: mod.modId!,
+                lastUpdateDate: currentStatus.onlineUpdateDate || Date.now()
+            });
+        }
 
         await emit("status-bar-log", t("Update Finish"));
     }
@@ -129,7 +156,8 @@ export class ModUpdateApi {
             const cachePath = modItem.download?.cachePath || "";
             if (await exists(cachePath)) {
                 const fileInfo = await stat(cachePath);
-                const mtime = TimeUtils.getTimeSecond(fileInfo.mtime.getTime());
+                // fileInfo.mtime.getTime() returns milliseconds, store as-is
+                const mtime = fileInfo.mtime.getTime();
                 const lastUpdateDate = modItem.status?.lastUpdateDate || 0;
 
                 if (mtime === lastUpdateDate) {
@@ -195,9 +223,10 @@ export class ModUpdateApi {
                     const mod = allMods.find(m => m.platformId === event.mod_id);
                     if (mod) {
                         // Update mod status in database
+                        // Note: event.date_added is in seconds, convert to milliseconds
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
-                            onlineUpdateDate: event.date_added,
+                            onlineUpdateDate: event.date_added * 1000,
                             lastUpdateDate: 0
                         });
                     }
@@ -208,11 +237,12 @@ export class ModUpdateApi {
                     const mod = allMods.find(m => m.platformId === event.mod_id);
                     if (mod) {
                         // Update mod status in database
+                        // Note: event.date_added is in seconds, convert to milliseconds
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
                             isOnlineAvailable: false,
-                            lastUpdateDate: event.date_added,
-                            onlineUpdateDate: event.date_added
+                            lastUpdateDate: event.date_added * 1000,
+                            onlineUpdateDate: event.date_added * 1000
                         });
                     }
                 }

@@ -114,9 +114,13 @@ function ModTreeViewVersionSelect({nodeData}) {
         const modItem = await getModById(nodeData.modId);
         if (!modItem) return;
 
-        // Update modItem with new download info (usedVersion is stored in profile context, not mod data)
+        // Update modItem with new version and download info
         const updatedModItem: CompleteModData = {
             ...modItem,
+            version: {
+                ...modItem.version!,
+                currentVersion: fileInfo.version || fileInfo.filename
+            },
             download: {
                 ...modItem.download!,
                 downloadUrl: fileInfo.download.binary_url,
@@ -147,10 +151,28 @@ function ModTreeViewVersionSelect({nodeData}) {
 function ModTreeViewWarring({nodeData}) {
 
     const checkExpired = () => {
-        return nodeData.sourceType === ModSourceType.Modio &&
-            nodeData.downloadProgress === 100 &&
-            (nodeData.onlineUpdateDate > nodeData.lastUpdateDate ||
-                nodeData.usedVersion !== nodeData.fileVersion);
+        if (nodeData.sourceType !== ModSourceType.Modio) {
+            return false;
+        }
+
+        if (nodeData.downloadProgress !== 100) {
+            return false;
+        }
+
+        // 如果用户手动选择了版本（usedVersion 不为空），则不提示更新
+        // 因为用户可能故意选择了旧版本
+        if (nodeData.usedVersion && nodeData.usedVersion !== "") {
+            return false;
+        }
+
+        // 只有在用户没有手动选择版本时，才检查在线是否有新版本
+        // 如果 lastUpdateDate 为 0，说明是旧数据或初始化数据，不应该显示警告
+        const hasNewerOnlineVersion = nodeData.lastUpdateDate > 0 &&
+                                      nodeData.onlineUpdateDate > nodeData.lastUpdateDate;
+
+        const result = hasNewerOnlineVersion;
+
+        return result;
     }
 
     const checkLocalNoFound = () => {
@@ -205,6 +227,7 @@ function ModTreeViewWarring({nodeData}) {
         </>
     )
 }
+
 
 function ModTreeViewProgress({nodeData}) {
 

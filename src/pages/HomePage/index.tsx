@@ -317,7 +317,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
         const profilesApi = await StorageAPI.getProfiles();
-        const allMods = await modsApi.getAllMods();
+
+        // Get all mods with complete data (version, download, status)
+        const basicMods = await modsApi.getAllMods();
+        const modIds = basicMods.map(m => m.modId!);
+        const allMods = await modsApi.getBatchCompleteModData(modIds);
+
         const activeRoot = await profileVM.getActiveProfileTreeRoot();
         const activeProfileName = await profileVM.getActiveProfileName();
         const activeProfile = await profilesApi.getActiveProfile();
