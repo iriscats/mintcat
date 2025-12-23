@@ -5,6 +5,7 @@ import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import type {ProfileData} from "@/storage/dao/ProfileDAO.ts";
 import { ProfileService } from "@/services/ProfileService";
+import { StorageAPI } from "@/storage";
 
 /**
  * ProfileViewModel manages profile-level operations
@@ -111,9 +112,25 @@ export class ProfileViewModel {
             return;
         }
 
-        const profileData = await this.profileService.getActiveProfileData();
-        if (profileData.name === name) {
-            await this.profileService.deleteProfile(profileData.id!);
+        const profiles = await StorageAPI.getProfiles();
+        const allProfiles = await profiles.getAllProfiles();
+        const targetProfile = allProfiles.find(p => p.name === name);
+
+        if (!targetProfile || !targetProfile.id) {
+            message.error(t("Profile not found"));
+            return;
+        }
+
+        const activeProfile = await this.profileService.getActiveProfileData();
+        const wasActive = activeProfile.name === name;
+
+        await this.profileService.deleteProfile(targetProfile.id);
+
+        if (wasActive) {
+            const remainingProfiles = profileList.filter(p => p !== name);
+            if (remainingProfiles.length > 0) {
+                await this.profileService.setActiveProfile(remainingProfiles[0]);
+            }
         }
 
         HomeViewModel.updateProfileSelect();
@@ -134,6 +151,43 @@ export class ProfileViewModel {
         }
 
         HomeViewModel.updateProfileSelect();
+    }
+
+    public async copyProfile(sourceName: string, newName: string): Promise<void> {
+        const profileList = await this.profileService.getProfileList();
+
+        if (profileList.some(p => p === newName)) {
+            message.error(t("Profile Already Exists"));
+            return;
+        }
+
+        const profiles = await StorageAPI.getProfiles();
+        const allProfiles = await profiles.getAllProfiles();
+        const sourceProfile = allProfiles.find(p => p.name === sourceName);
+
+        if (!sourceProfile || !sourceProfile.id) {
+            message.error(t("Source profile not found"));
+            return;
+        }
+
+        const newProfile = await this.profileService.createProfile({
+            name: newName,
+            displayName: newName,
+            gameId: sourceProfile.gameId,
+            userId: sourceProfile.userId,
+            isActive: false
+        }, false);
+
+        if (!newProfile || !newProfile.id) {
+            message.error(t("Failed to create new profile"));
+            return;
+        }
+
+        const treeService = this.profileService.getTreeService();
+        await treeService.duplicateProfileTree(sourceProfile.id, newProfile.id);
+
+        HomeViewModel.updateProfileSelect();
+        TreeViewModel.updateTreeView();
     }
 
     // ====================================

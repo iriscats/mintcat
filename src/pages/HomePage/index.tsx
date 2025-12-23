@@ -300,6 +300,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onMenuBarUninstallModsClick() {
         try {
+            const confirm = await MessageBox.confirm({
+                title: t("Uninstall Mods"),
+                content: t("Are you sure you want to uninstall the selected mods?"),
+            });
+            if (!confirm) {
+                return;
+            }
             await IntegrateApi.uninstallMods();
         } catch (error) {
             console.error('[HomePage] Uninstall mods failed:', error);

@@ -143,14 +143,14 @@ export class ProfileService {
     /**
      * 创建新 profile（包含默认文件夹）
      */
-    public async createProfile(data: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileData | null> {
+    public async createProfile(data: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>, createDefaultFolders: boolean = true): Promise<ProfileData | null> {
         const profiles = await StorageAPI.getProfiles();
 
         // Create profile
         const newProfile = await profiles.createProfile(data);
 
         // Create default folders
-        if (newProfile?.id) {
+        if (newProfile?.id && createDefaultFolders) {
             await this.treeService.createDefaultFolders(newProfile.id);
         }
 

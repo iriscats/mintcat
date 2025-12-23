@@ -108,8 +108,12 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
     }
 
     private async handleCopy(key: string) {
-        // TODO: Implement profile copying using HomeViewModel
-        message.info(t("Feature not implemented"));
+        const vm = await IoC.get(ProfileViewModel);
+        await vm.copyProfile(key, key + "_copy");
+        await this.fetchData();
+        this.setState({
+            newProfileName: ""
+        });
     }
 
     private handleProfileInputChange(e: React.ChangeEvent<HTMLInputElement>) {

@@ -741,4 +741,63 @@ export class ProfileTreeService {
             (p.name === "Local" || p.name === "本地")
         );
     }
+
+    /**
+     * Duplicate profile tree (folders and mods) to a new profile
+     */
+    public async duplicateProfileTree(sourceProfileId: number, targetProfileId: number): Promise<void> {
+        console.log(`[ProfileTreeService] duplicateProfileTree called, sourceProfileId=${sourceProfileId}, targetProfileId=${targetProfileId}`);
+
+        const profileDAO = await StorageAPI.getProfiles();
+
+        const sourceFolders = await profileDAO.getProfileFolders(sourceProfileId);
+        const sourceMods = await profileDAO.getProfileMods(sourceProfileId);
+
+        const folderIdMap = new Map<number, number>();
+
+        for (const folder of sourceFolders) {
+            const newFolder = await profileDAO.createFolder({
+                profileId: targetProfileId,
+                parentFolderId: folder.parentFolderId ? undefined : null,
+                name: folder.name,
+                folderType: folder.folderType || 'custom',
+                sortOrder: folder.sortOrder || 0,
+                isExpanded: folder.isExpanded ?? true
+            });
+
+            if (newFolder?.id) {
+                folderIdMap.set(folder.id!, newFolder.id);
+            }
+        }
+
+        for (const folder of sourceFolders) {
+            if (folder.parentFolderId) {
+                const newParentId = folderIdMap.get(folder.id!);
+                const originalParentId = folder.parentFolderId;
+
+                if (newParentId) {
+                    const originalNewParent = sourceFolders.find(f => f.id === originalParentId);
+                    if (originalNewParent) {
+                        const newActualParentId = folderIdMap.get(originalNewParent.id!);
+                        if (newActualParentId) {
+                            await profileDAO.updateFolder(newParentId, { parentFolderId: newActualParentId });
+                        }
+                    }
+                }
+            }
+        }
+
+        for (const mod of sourceMods) {
+            await profileDAO.addModToProfile({
+                profileId: targetProfileId,
+                modId: mod.modId,
+                parentFolderId: mod.parentFolderId ? folderIdMap.get(mod.parentFolderId) : null,
+                sortOrder: mod.sortOrder || 0,
+                isEnabled: mod.isEnabled ?? true,
+                usedVersion: mod.usedVersion || ""
+            });
+        }
+
+        console.log(`[ProfileTreeService] duplicateProfileTree completed successfully`);
+    }
 }
