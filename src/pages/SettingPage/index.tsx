@@ -1,7 +1,5 @@
-import React from 'react';
 import {BasePage} from "../IBasePage.ts";
 import {MintCatSettings} from "@/pages/SettingPage/MintCatSettings.tsx";
-import {GameSettings} from "@/pages/SettingPage/GameSettings.tsx";
 
 
 export class SettingPage extends BasePage<any, any> {
@@ -24,7 +22,6 @@ export class SettingPage extends BasePage<any, any> {
                     padding: '30px',
                 }}>
                 <MintCatSettings/>
-                <GameSettings/>
             </div>
         );
     }

@@ -30,6 +30,7 @@ export function MintCatSettings() {
     const [theme, setTheme] = React.useState<string>("Light");
     const [configDirectory, setConfigDirectory] = React.useState<string>("");
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
+    const [ue4ss, setUe4ss] = React.useState<string>("");
 
     const onOpenConfigDirClick = async () => {
         const settings = await StorageAPI.getSettings();
@@ -67,6 +68,15 @@ export function MintCatSettings() {
         await emit("theme-change", value);
     }
 
+    const onUe4ssChange = async (value: string) => {
+        setUe4ss(value);
+        if (value === "Custom") {
+            message.warning(t("Disclaimer: The installation of the Custom mode UE4SS will be taken over by the user, and all consequences are the user's sole responsibility."));
+        }
+        const settings = await StorageAPI.getSettings();
+        await settings.setValue('ue4ss', value);
+    }
+
     const onDevToolsClick = async () => {
         await IntegrateApi.openDevTools();
     }
@@ -92,6 +102,8 @@ export function MintCatSettings() {
             setTheme(await settings.getGuiTheme());
             setConfigDirectory(await settings.getConfigPath());
             setCacheDirectory(await settings.getCachePath());
+            const ue4ssValue = await settings.getValue('ue4ss');
+            setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
         }
         fetchData().then();
     }, []);
@@ -161,6 +173,20 @@ export function MintCatSettings() {
                             onClick={onDevToolsClick}>
                         {t("Open Dev Tools")}
                     </Button>
+                </Form.Item>
+                <Form.Item label={t("UE4SS")}>
+                    <Select onChange={onUe4ssChange}
+                            value={ue4ss}
+                            options={[
+                                {
+                                    value: "UE4SS-Lite",
+                                    label: "UE4SS-Lite",
+                                },
+                                {
+                                    value: "Custom",
+                                    label: "Custom",
+                                },
+                            ]}/>
                 </Form.Item>
             </Form>
         </Card>

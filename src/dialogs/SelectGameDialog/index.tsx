@@ -4,6 +4,10 @@ import {Button, Flex, List, message, Radio, Typography, Modal} from 'antd';
 import {GameData} from "@/storage/dao/GameDAO.ts";
 import {StorageAPI} from "@/storage";
 import {listen} from "@tauri-apps/api/event";
+import {open} from "@tauri-apps/plugin-dialog";
+import Search from "antd/es/input/Search";
+import {FolderAddOutlined} from "@ant-design/icons";
+import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 
 const {Text} = Typography;
 
@@ -21,6 +25,8 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const [selectedGameId, setSelectedGameId] = useState<number | undefined>();
     const [loading, setLoading] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [editingPathGameId, setEditingPathGameId] = useState<number | undefined>();
+    const [editingPathValue, setEditingPathValue] = useState<string>("");
 
 
     const loadGames = async () => {
@@ -74,6 +80,45 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
         setSelectedGameId(gameId);
     };
 
+    const onGamePathClick = async (gameId: number) => {
+        const game = games.find(g => g.id === gameId);
+        const currentPath = game?.installPath || "";
+
+        const result = await open({
+            defaultPath: currentPath,
+            filters: [{
+                name: 'FSD-*',
+                extensions: ['pak'],
+            }],
+            multiple: false,
+        });
+
+        if (result) {
+            if (result.endsWith("FSD-WindowsNoEditor.pak") ||
+                result.endsWith("FSD-WinGDK.pak")
+            ) {
+                setEditingPathValue(result);
+                const gameDAO = await StorageAPI.getGames();
+                await gameDAO.updateGame(gameId, { installPath: result });
+                await loadGames();
+            } else {
+                message.error(t("Please select FSD-WindowsNoEditor.pak"));
+            }
+        }
+    };
+
+    const onFindGamePathClick = async (gameId: number) => {
+        const path = await IntegrateApi.findGamePak();
+        if (path) {
+            setEditingPathValue(path);
+            const gameDAO = await StorageAPI.getGames();
+            await gameDAO.updateGame(gameId, { installPath: path });
+            await loadGames();
+        } else {
+            message.error(t("Can't find FSD-WindowsNoEditor.pak"));
+        }
+    };
+
     useEffect(() => {
         loadGames().then();
     }, []);
@@ -83,6 +128,9 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     }).then();
 
     const renderGameItem = (game: GameData) => {
+        const isEditingPath = editingPathGameId === game.id;
+        const currentPath = game.installPath || editingPathValue;
+
         return (
             <List.Item
                 key={game.id}
@@ -110,11 +158,29 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                     <Text type="secondary" style={{fontSize: '14px'}}>
                         {t("Game ID")}: {game.name}
                     </Text>
-                    {game.installPath && (
+                    <Flex vertical gap="small">
                         <Text type="secondary" style={{fontSize: '12px'}}>
-                            {t("Install Path")}: {game.installPath}
+                            {t("Install Path")}:
                         </Text>
-                    )}
+                        <Flex gap="small">
+                            <Search
+                                placeholder={"FSD-WindowsNoEditor.pak"}
+                                value={currentPath}
+                                enterButton={<FolderAddOutlined/>}
+                                onSearch={() => onGamePathClick(game.id!)}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <Button
+                                type="default"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onFindGamePathClick(game.id!);
+                                }}
+                            >
+                                {t("Auto Find")}
+                            </Button>
+                        </Flex>
+                    </Flex>
                     <Flex gap="small">
                         {game.isActive && (
                             <span style={{
