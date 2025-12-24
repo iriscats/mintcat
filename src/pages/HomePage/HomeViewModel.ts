@@ -10,7 +10,7 @@ import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
-import {emit} from "@tauri-apps/api/event";
+import {emitVoidEvent} from "@/events";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ModService} from "@/services/ModService.ts";
 import {ModMapper} from "@/mappers/ModMapper.ts";
@@ -29,7 +29,7 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     public static updateProfileSelect() {
-        emit("home-page-update-profile-select");
+        emitVoidEvent("home-page-update-profile-select");
     }
 
     private async addModDependencies(modId: number, groupId: number): Promise<void> {

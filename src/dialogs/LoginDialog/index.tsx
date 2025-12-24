@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {t} from "i18next";
 import {Button, Flex, Form, Input, Modal, Tabs, message} from 'antd';
 import {UserOutlined, LockOutlined, MailOutlined} from '@ant-design/icons';
-import {listen} from "@tauri-apps/api/event";
+import {useEventListener} from "@/events";
 import {login, register, sendVerificationCode, verifyCode, resetPassword} from "@/apis/mintcat";
 const {TabPane} = Tabs;
 
@@ -203,12 +203,13 @@ export const LoginDialog = () => {
         }
     };
 
-    useEffect(() => {
-        listen("login-dialog-open", async () => {
-            setIsModalOpen(true);
-            setActiveTab('login');
-        }).then();
+    // ✅ 使用 useEventListener 自动管理清理
+    useEventListener("login-dialog-open", () => {
+        setIsModalOpen(true);
+        setActiveTab('login');
+    });
 
+    useEffect(() => {
         // 组件卸载时清理定时器
         return () => {
             const timer = (window as any).__verificationTimer;

@@ -10,7 +10,7 @@ import {Button, Card, Flex, Form, Input, message, Select} from "antd";
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
-import {emit, listen} from "@tauri-apps/api/event";
+import {emitEvent, emitVoidEvent, useEventListener} from "@/events";
 
 
 export function MintCatSettings() {
@@ -65,7 +65,7 @@ export function MintCatSettings() {
         const settings = await StorageAPI.getSettings();
         await settings.setGuiTheme(value);
         localStorage.setItem('theme', value);
-        await emit("theme-change", value);
+        await emitEvent("theme-change", value as 'Light' | 'Dark' | 'Pink');
     }
 
     const onUe4ssChange = async (value: string) => {
@@ -88,12 +88,13 @@ export function MintCatSettings() {
     }
 
     const onImportConfigClick = async () => {
-        await emit("config-manage-dialog-open");
+        await emitVoidEvent("config-manage-dialog-open");
     }
 
-    listen<string>("theme-change", (event) => {
-        setTheme(event.payload);
-    }).then();
+    // ✅ 使用 useEventListener 自动管理清理
+    useEventListener("theme-change", (theme) => {
+        setTheme(theme);
+    });
 
     React.useEffect(() => {
         const fetchData = async () => {

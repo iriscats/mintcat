@@ -1,7 +1,7 @@
 import React from 'react';
 import {t} from "i18next";
 import {Button, Flex, Form, message, Select, Tabs} from 'antd';
-import {emit, listen} from "@tauri-apps/api/event";
+import {emitEvent, emitVoidEvent, listenEvent, type UnlistenFn} from "@/events";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
 import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
@@ -34,6 +34,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     private readonly modioFormRef: any = React.createRef();
     private readonly localFormRef: any = React.createRef();
+    private unlistenInitData?: UnlistenFn;
 
     public constructor(props: any) {
         super(props);
@@ -66,16 +67,16 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             return;
         }
 
-        await emit('add-mod-dialog-ok', {
-            groupId: this.state.groupId,
-            addModType: this.state.addModType,
+        await emitEvent('add-mod-dialog-ok', {
+            groupId: this.state.groupId!,
+            addModType: this.state.addModType!,
             list: list
         });
     }
 
     @autoBind
     private async handleCancel() {
-        await emit('add-mod-dialog-close');
+        await emitVoidEvent('add-mod-dialog-close');
     }
 
     @autoBind
@@ -136,15 +137,22 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             }),
         });
 
-        // Listen for dialog data updates (when window is reused)
-        listen<any>("add-mod-dialog-init-data", async (event) => {
-            console.log("AddModDialog init event", event);
+        // ✅ Listen for dialog data updates (when window is reused)
+        this.unlistenInitData = await listenEvent("add-mod-dialog-init-data", (payload) => {
+            console.log("AddModDialog init event", payload);
             this.setState({
-                addModType: event.payload.addModType,
-                groupId: event.payload.groupId,
-                text: event.payload.text
+                addModType: payload.addModType,
+                groupId: payload.groupId,
+                text: payload.text
             });
-        }).then();
+        });
+    }
+
+    componentWillUnmount(): void {
+        // ✅ 清理监听器
+        if (this.unlistenInitData) {
+            this.unlistenInitData();
+        }
     }
 
     render() {

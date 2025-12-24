@@ -3,7 +3,7 @@ import React, {useState} from "react";
 import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
-import {emit, listen} from "@tauri-apps/api/event";
+import {emitEvent, emitVoidEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
@@ -63,7 +63,7 @@ function ModTreeViewSwitch({nodeData}) {
         await viewModel.setModEnabled(nodeData.modId, checked);
         console.log(`[ModTreeViewSwitch] setModEnabled completed`);
 
-        await emit("tree-view-count-label-update");
+        await emitVoidEvent("tree-view-count-label-update");
     };
 
     return (
@@ -103,7 +103,7 @@ function ModTreeViewVersionSelect({nodeData}) {
 
     const onChange = async (value: string) => {
         const fileInfo = JSON.parse(value);
-        await emit("status-bar-log", `${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
+        await emitEvent("status-bar-log", `${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
 
         const viewModel = await IoC.get(HomeViewModel);
         // Use profileModId (profile_mods.id) instead of key
@@ -129,7 +129,10 @@ function ModTreeViewVersionSelect({nodeData}) {
             }
         };
 
-        await emit("mod-treeview-update" + nodeData.key, updatedModItem);
+        await emitEvent("mod-treeview-update", {
+            modId: updatedModItem.modId!,
+            data: updatedModItem
+        });
         await ModUpdateApi.updateModFile(updatedModItem);
     }
 
@@ -149,51 +152,62 @@ function ModTreeViewVersionSelect({nodeData}) {
 
 
 function ModTreeViewWarring({nodeData}) {
+    // 使用 ref 存储 nodeData 以便在回调中访问最新值
+    const nodeDataRef = React.useRef(nodeData);
+    nodeDataRef.current = nodeData;
 
     const checkExpired = () => {
-        if (nodeData.sourceType !== ModSourceType.Modio) {
+        const data = nodeDataRef.current;
+        if (data.sourceType !== ModSourceType.Modio) {
             return false;
         }
 
-        if (nodeData.downloadProgress !== 100) {
+        if (data.downloadProgress !== 100) {
             return false;
         }
 
         // 如果用户手动选择了版本（usedVersion 不为空），则不提示更新
         // 因为用户可能故意选择了旧版本
-        if (nodeData.usedVersion && nodeData.usedVersion !== "") {
+        if (data.usedVersion && data.usedVersion !== "") {
             return false;
         }
 
         // 只有在用户没有手动选择版本时，才检查在线是否有新版本
         // 如果 lastUpdateDate 为 0，说明是旧数据或初始化数据，不应该显示警告
-        const hasNewerOnlineVersion = nodeData.lastUpdateDate > 0 &&
-                                      nodeData.onlineUpdateDate > nodeData.lastUpdateDate;
+        const hasNewerOnlineVersion = data.lastUpdateDate > 0 &&
+                                      data.onlineUpdateDate > data.lastUpdateDate;
 
-        const result = hasNewerOnlineVersion;
-
-        return result;
+        return hasNewerOnlineVersion;
     }
 
     const checkLocalNoFound = () => {
-        return nodeData.localNoFound === true;
+        return nodeDataRef.current.localNoFound === true;
     }
 
     const checkOnlineUnavailable = () => {
-        return nodeData.sourceType === ModSourceType.Modio &&
-            nodeData.onlineAvailable === false;
+        const data = nodeDataRef.current;
+        return data.sourceType === ModSourceType.Modio &&
+            data.onlineAvailable === false;
     }
 
     const [isExpired, setIsExpired] = useState(checkExpired());
     const [isLocalNoFound, setIsLocalNoFound] = useState(checkLocalNoFound());
     const [isOnlineUnavailable, setIsOnlineUnavailable] = useState(checkOnlineUnavailable());
 
-    listen<CompleteModData>("mod-treeview-update" + nodeData.key, (event) => {
-        nodeData = event.payload;
-        setIsExpired(checkExpired());
-        setIsLocalNoFound(checkLocalNoFound());
-        setIsOnlineUnavailable(checkOnlineUnavailable());
-    }).then();
+    // ✅ 使用 useFilteredEventListener 自动清理监听器
+    useFilteredEventListener(
+        'mod-treeview-update',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            // 更新 nodeDataRef
+            nodeDataRef.current = payload.data;
+            // 重新检查状态
+            setIsExpired(checkExpired());
+            setIsLocalNoFound(checkLocalNoFound());
+            setIsOnlineUnavailable(checkOnlineUnavailable());
+        },
+        [nodeData.modId]
+    );
 
     return (
         <>
@@ -233,9 +247,15 @@ function ModTreeViewProgress({nodeData}) {
 
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
 
-    listen<CompleteModData>("mod-treeview-update" + nodeData.key, (event) => {
-        setDownloadProgress(event.payload.download?.downloadProgress || 100);
-    }).then();
+    // ✅ 使用 useFilteredEventListener 自动清理监听器
+    useFilteredEventListener(
+        'mod-treeview-update',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setDownloadProgress(payload.data.download?.downloadProgress || 100);
+        },
+        [nodeData.modId]
+    );
 
     return (
         <span style={{
@@ -266,9 +286,15 @@ function ModTreeViewTitle({nodeData}) {
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
     const {token} = useToken();
 
-    listen<CompleteModData>("mod-treeview-update" + nodeData.key, (event) => {
-        setDownloadProgress(event.payload.download?.downloadProgress || 100);
-    }).then();
+    // ✅ 使用 useFilteredEventListener 自动清理监听器
+    useFilteredEventListener(
+        'mod-treeview-update',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setDownloadProgress(payload.data.download?.downloadProgress || 100);
+        },
+        [nodeData.modId]
+    );
 
     return (
         <a style={{

@@ -33,7 +33,7 @@ import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts"
 import {ProfileService} from "@/services/ProfileService.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
-import {emit, listen} from "@tauri-apps/api/event";
+import {emitEvent, emitVoidEvent, listenEvent, type UnlistenFn} from "@/events";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
@@ -64,6 +64,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private readonly profileEditDialogRef: React.RefObject<ProfileEditDialog> = React.createRef();
 
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
+
+    // Event listener cleanup functions
+    private unlistenHomePageLoading?: UnlistenFn;
+    private unlistenUpdateTreeView?: UnlistenFn;
+    private unlistenUpdateProfileSelect?: UnlistenFn;
 
     public constructor(props: any) {
         super(props);
@@ -262,7 +267,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             const unlisten = await taskManager.onTaskUpdated((task) => {
                 if (task.id === taskId) {
                     // Update status bar with progress
-                    emit("status-bar-percent", task.progress).catch(console.error);
+                    emitEvent("status-bar-percent", task.progress).catch(console.error);
 
                     if (task.status === 'processing') {
                         console.log(`[HomePage] Installation progress: ${task.progress}%`);
@@ -277,15 +282,15 @@ export class HomePage extends BasePage<any, ModListPageState> {
             unlisten();
 
             if (result.status === 'completed') {
-                await emit("status-bar-percent", 0);
+                await emitEvent("status-bar-percent", 0);
                 message.success(t("Installation Finish"));
             } else if (result.status === 'failed') {
-                await emit("status-bar-percent", 0);
+                await emitEvent("status-bar-percent", 0);
                 message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('[HomePage] Installation failed:', error);
-            await emit("status-bar-percent", 0);
+            await emitEvent("status-bar-percent", 0);
             message.error(t("Installation Failed"));
         }
     }
@@ -342,7 +347,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await ModUpdateApi.checkModUpdate();
         await ModUpdateApi.checkModList();
 
-        await emit("tree-view-count-label-update");
+        await emitVoidEvent("tree-view-count-label-update");
     };
 
     @autoBind
@@ -547,19 +552,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.hookWindowResized();
 
         // Setup event listeners
-        listen<boolean>("home-page-loading", async (event) => {
+        this.unlistenHomePageLoading = await listenEvent("home-page-loading", (loading) => {
             this.setState({
-                loading: event.payload,
+                loading: loading,
             });
-        }).then();
+        });
 
-        listen("home-page-update-tree-view", async () => {
+        this.unlistenUpdateTreeView = await listenEvent("home-page-update-tree-view", async () => {
             await this.updateTreeView();
-        }).then();
+        });
 
-        listen("home-page-update-profile-select", async () => {
+        this.unlistenUpdateProfileSelect = await listenEvent("home-page-update-profile-select", async () => {
             await this.updateProfileSelect();
-        }).then();
+        });
 
         // Initial UI update
         this.updateProfileSelect().then();
@@ -567,6 +572,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // Check for mod updates
         ModUpdateApi.checkModList().then();
+    }
+
+    componentWillUnmount(): void {
+        // ✅ 清理所有事件监听器
+        if (this.unlistenHomePageLoading) {
+            this.unlistenHomePageLoading();
+        }
+        if (this.unlistenUpdateTreeView) {
+            this.unlistenUpdateTreeView();
+        }
+        if (this.unlistenUpdateProfileSelect) {
+            this.unlistenUpdateProfileSelect();
+        }
     }
 
     render() {

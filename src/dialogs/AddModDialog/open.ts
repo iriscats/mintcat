@@ -1,5 +1,6 @@
 import {t} from "i18next";
-import {emit, once} from "@tauri-apps/api/event";
+import {emitEvent, onceEvent} from "@/events";
+import {once} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/modio";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
@@ -27,9 +28,9 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     };
 
     const sendInitData = async () => {
-        await emit("add-mod-dialog-init-data", {
+        await emitEvent("add-mod-dialog-init-data", {
             text: text,
-            groupId:groupId,
+            groupId: groupId,
             addModType: addModType,
         });
     }
@@ -56,9 +57,8 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         windowInstance = null;
     }).then();
 
-    await once<AddModDialogResult>('add-mod-dialog-ok', async (event) => {
-        const result = event.payload;
-
+    // ✅ 使用 onceEvent 自动管理类型安全
+    await onceEvent('add-mod-dialog-ok', async (result) => {
         // result.list 去重
         result.list = [...new Set(result.list)];
 
@@ -81,14 +81,14 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                 break;
         }
 
-        await emit("status-bar-log", t("Add Complete"));
+        await emitEvent("status-bar-log", t("Add Complete"));
         TreeViewModel.updateTreeView();
 
         await windowInstance.close();
         windowInstance = null;
     });
 
-    await once('add-mod-dialog-close', async () => {
+    await onceEvent('add-mod-dialog-close', async () => {
         await windowInstance.close();
         windowInstance = null;
     });

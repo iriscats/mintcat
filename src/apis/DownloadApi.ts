@@ -1,5 +1,5 @@
 import {invoke} from '@tauri-apps/api/core';
-import {listen} from "@tauri-apps/api/event";
+import {listenEvent} from "@/events";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
 
 export type DownloadProgressCallBack = (downloaded: number, total: number) => void
@@ -14,20 +14,20 @@ export class DownloadApi {
 
     public static async downloadLargeFile(url: string, filePath: string, callback?: DownloadProgressCallBack): Promise<string> {
         return new Promise<string>(async (resolve, reject) => {
-            const unlisten1 = await listen<DownloadProgress>('download-api-progress', (event) => {
-                console.log(event.payload);
+            const unlisten1 = await listenEvent('download-api-progress', (payload) => {
+                console.log(payload);
                 if (callback)
-                    callback(event.payload.downloadedSize, event.payload.totalSize);
+                    callback(payload.downloadedSize, payload.totalSize);
             });
 
-            const unlisten2 = await listen<string>('download-api-statue', (event) => {
+            const unlisten2 = await listenEvent('download-api-status', (status) => {
                 unlisten1();
                 unlisten2();
-                console.log(event.payload);
-                if (event.payload === "success") {
-                    resolve(event.payload);
+                console.log(status);
+                if (status === "success") {
+                    resolve(status);
                 } else {
-                    reject(event.payload);
+                    reject(status);
                 }
             });
 

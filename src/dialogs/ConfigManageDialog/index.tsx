@@ -6,7 +6,7 @@ import {CloseOutlined, FileOutlined, FolderOpenOutlined} from "@ant-design/icons
 import {ConfigDataType} from "@/storage/DataType.ts";
 import {openPath} from "@tauri-apps/plugin-opener";
 import {MessageBox} from "@/components/MessageBox.ts";
-import {emit, listen} from "@tauri-apps/api/event";
+import {emitVoidEvent, useEventListener} from "@/events";
 
 
 interface ListDataType extends ConfigDataType {
@@ -16,7 +16,7 @@ interface ListDataType extends ConfigDataType {
 export class ConfigManageDialogViewModel {
 
     public static async open() {
-        await emit("config-manage-dialog-open");
+        await emitVoidEvent("config-manage-dialog-open");
     }
 
 }
@@ -84,9 +84,10 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
         // setDataSource(configs);
     }
 
-    listen("config-manage-dialog-open", async () => {
+    // ✅ 使用 useEventListener 自动管理监听器清理
+    useEventListener("config-manage-dialog-open", () => {
         setIsModalOpen(true);
-    }).then();
+    });
 
     useEffect(() => {
         getData().then();

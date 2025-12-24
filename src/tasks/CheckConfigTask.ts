@@ -4,7 +4,6 @@ import {ConfigV4} from "@/storage/model/ConfigV4.ts";
 import {ConfigV5} from "@/storage/model/ConfigV5.ts";
 import {ConfigDataType} from "@/storage/DataType.ts";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
-import {emit} from "@tauri-apps/api/event";
 import {ITask} from "@/tasks/ITask.ts";
 import {ConfigManageDialogViewModel} from "@/dialogs/ConfigManageDialog";
 

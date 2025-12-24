@@ -1,31 +1,22 @@
-import {useEffect} from 'react';
-import {App} from 'antd';
-import {listen} from '@tauri-apps/api/event';
+import { App } from 'antd';
+import { useEventListener } from '@/events';
 
+/**
+ * Hook to display application errors in Ant Design message
+ * Listens to 'app-error' events and shows error notifications
+ *
+ * @example
+ * function App() {
+ *   useAppError();
+ *   return <div>...</div>;
+ * }
+ */
 export const useAppError = () => {
-    const {message} = App.useApp();
+    const { message } = App.useApp();
 
-    useEffect(() => {
-        let unlisten: (() => void) | undefined;
-
-        const setupListener = async () => {
-            try {
-                const listener = await listen<string>('app-error', (event) => {
-                    message.error(event.payload);
-                });
-                unlisten = listener;
-            } catch (e) {
-                console.error('Failed to register error listener:', e);
-            }
-        };
-
-        setupListener();
-
-        return () => {
-            if (unlisten) {
-                unlisten();
-            }
-        };
+    // ✅ 使用 useEventListener 自动管理监听器生命周期
+    useEventListener('app-error', (errorMessage) => {
+        message.error(errorMessage);
     }, [message]);
 
     return null;

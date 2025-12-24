@@ -1,6 +1,6 @@
 import {t} from "i18next";
 import {message} from "antd";
-import {emit, once} from "@tauri-apps/api/event";
+import {emitEvent, onceEvent} from "@/events";
 import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
@@ -40,11 +40,11 @@ export class IntegrateApi extends ILock {
         try {
             if (!await exists(drgPakPath)) {
                 //TODO: auto found or open game path dialog
-                await emit("app-error", t("Game Path Not Found"));
+                await emitEvent("app-error", t("Game Path Not Found"));
                 return false;
             }
         } catch (e) {
-            await emit("app-error", t("No Permission To Access Game Path"));
+            await emitEvent("app-error", t("No Permission To Access Game Path"));
             return false;
         }
 
@@ -95,15 +95,15 @@ export class IntegrateApi extends ILock {
                 modListJson: modListJson,
             });
 
-            await once<number>('install-success', async (event) => {
+            await onceEvent('install-success', async (installTime) => {
                 const profileVM = await IoC.get(ProfileViewModel);
-                await profileVM.setActiveProfileInstallTime(event.payload);
-                await emit("status-bar-log", t("Installation Finish"));
+                await profileVM.setActiveProfileInstallTime(installTime);
+                await emitEvent("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });
-            await once<string>('install-error', async (event) => {
-                await emit("status-bar-log", `${t("Installation Failed")} Mod: ${event.payload}`);
-                await emit("status-bar-percent", 0);
+            await onceEvent('install-error', async (modName) => {
+                await emitEvent("status-bar-log", `${t("Installation Failed")} Mod: ${modName}`);
+                await emitEvent("status-bar-percent", 0);
                 reject(false);
             });
         });

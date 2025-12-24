@@ -2,7 +2,7 @@ import React from "react";
 import {t} from "i18next";
 import {Modal} from "antd";
 import {check} from "@tauri-apps/plugin-updater";
-import {emit} from "@tauri-apps/api/event";
+import {emitEvent} from "@/events";
 import Markdown from "react-markdown";
 
 class UpdateDialog extends React.Component<any, any> {
@@ -24,7 +24,7 @@ class UpdateDialog extends React.Component<any, any> {
 
     private async handleOk() {
         try {
-            await emit("status-bar-log", t("MintCat Update"));
+            await emitEvent("status-bar-log", t("MintCat Update"));
 
             let downloaded = 0;
             let contentLength = 0;
@@ -37,10 +37,10 @@ class UpdateDialog extends React.Component<any, any> {
                         break;
                     case 'Progress':
                         downloaded += event.data.chunkLength;
-                        await emit("status-bar-log", `${t("Downloading")} ${downloaded} / ${contentLength}`);
+                        await emitEvent("status-bar-log", `${t("Downloading")} ${downloaded} / ${contentLength}`);
                         break;
                     case 'Finished':
-                        await emit("status-bar-log", t("Download Finished"));
+                        await emitEvent("status-bar-log", t("Download Finished"));
                         break;
                 }
             });

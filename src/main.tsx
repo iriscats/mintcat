@@ -4,7 +4,7 @@ import ReactDOM from "react-dom/client";
 import {Routes, Route, HashRouter} from "react-router-dom";
 
 import {ConfigProvider, App as AntdApp} from "antd";
-import {listen} from "@tauri-apps/api/event";
+import {useEventListener, EventDebugger} from "@/events";
 
 import App from "@/App";
 import {AddModDialog} from "@/dialogs/AddModDialog";
@@ -21,17 +21,26 @@ const Main = () => {
     const defaultTheme = getDefaultTheme();
     const [theme, setTheme] = React.useState(defaultTheme);
 
-    try {
-        listen<string>("theme-change", (event) => {
-            const defaultTheme = renderTheme(event.payload);
-            setTheme(defaultTheme);
-        }).then();
-    } catch (_) {
-    }
+    // ✅ 使用 useEventListener 自动管理清理
+    useEventListener("theme-change", (themeValue) => {
+        const defaultTheme = renderTheme(themeValue);
+        setTheme(defaultTheme);
+    });
 
     useEffect(() => {
+        // ✅ 启用 EventDebugger (开发模式)
+        if (import.meta.env.DEV) {
+            EventDebugger.enable({
+                consoleLog: true,
+                showPayload: true,
+                collectStats: true,
+            }).then(() => {
+                console.log('[EventDebugger] Enabled in development mode');
+            });
+        }
+
         if (!packageJson.version.endsWith("dev")) {
-            const handler = (e) => e.preventDefault();
+            const handler = (e: Event) => e.preventDefault();
             document.addEventListener('contextmenu', handler);
             return () => document.removeEventListener('contextmenu', handler);
         }

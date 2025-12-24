@@ -4,7 +4,7 @@ import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {exists} from "@tauri-apps/plugin-fs";
-import {emit} from "@tauri-apps/api/event";
+import {emitEvent, emitVoidEvent} from "@/events";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
 import {StorageAPI} from "@/storage";
 import {BaseViewModel} from "@/core/BaseViewModel";
@@ -33,7 +33,7 @@ export class AppViewModel extends BaseViewModel {
         if (modioOAuth?.oauth !== "") {
             this.appStartAutoCheckModUpdate();
         } else {
-            await emit("app-error", t("mod.io OAuth No Found"));
+            await emitEvent("app-error", t("mod.io OAuth No Found"));
         }
     }
 
@@ -51,7 +51,7 @@ export class AppViewModel extends BaseViewModel {
             }
         } catch (err) {
             console.warn(err);
-            await emit("app-error", t("No Permission To Access the Config Folder"));
+            await emitEvent("app-error", t("No Permission To Access the Config Folder"));
         }
     }
 
@@ -79,14 +79,14 @@ export class AppViewModel extends BaseViewModel {
             guiTheme = "Light";
             await settings.setGuiTheme(guiTheme);
         }
-        await emit("theme-change", guiTheme);
+        await emitEvent("theme-change", guiTheme as 'Light' | 'Dark' | 'Pink');
     }
 
     public async loadUserInfo() {
         const user = await StorageAPI.getUsers();
         const activeUser = await user.getActiveUser();
         if (activeUser) {
-            await emit("user-info-load-success", activeUser);
+            await emitEvent("user-info-load-success", activeUser);
         }
     }
 
@@ -95,7 +95,7 @@ export class AppViewModel extends BaseViewModel {
         const activeGame = await game.getActiveGame();
         console.log("activeGame", activeGame);
         if (activeGame) {
-            await emit("game-info-load-success", activeGame);
+            await emitEvent("game-info-load-success", activeGame);
         }
     }
 
@@ -113,9 +113,9 @@ export class AppViewModel extends BaseViewModel {
         await this.checkOauth();
         await IntegrateApi.checkGamePath();
 
-        await emit("title-bar-load-avatar");
+        await emitVoidEvent("title-bar-load-avatar");
         if (await DeviceApi.isFirstRun()) {
-            await emit("config-manage-dialog-open");
+            await emitVoidEvent("config-manage-dialog-open");
         }
 
         this.initialized = true;

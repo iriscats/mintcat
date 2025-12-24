@@ -12,8 +12,8 @@ import {
 import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
-import {emit} from "@tauri-apps/api/event";
 import {StorageAPI} from "@/storage";
+import {emitEvent} from "@/events";
 import {TaskManager} from "@/tasks/TaskManager.ts";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
@@ -50,7 +50,7 @@ class TitleBar extends React.Component<any, any> {
             const unlisten = await taskManager.onTaskUpdated((task) => {
                 if (task.id === taskId) {
                     // Update status bar with progress
-                    emit("status-bar-percent", task.progress).catch(console.error);
+                    emitEvent("status-bar-percent", task.progress).catch(console.error);
 
                     if (task.status === 'processing') {
                         console.log(`[TitleBar] Installation progress: ${task.progress}%`);
@@ -66,15 +66,15 @@ class TitleBar extends React.Component<any, any> {
 
             if (result.status === 'completed') {
                 // Installation succeeded, launch game
-                await emit("status-bar-percent", 0);
+                await emitEvent("status-bar-percent", 0);
                 await IntegrateApi.launchGame();
             } else if (result.status === 'failed') {
-                await emit("status-bar-percent", 0);
+                await emitEvent("status-bar-percent", 0);
                 message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('[TitleBar] Installation failed:', error);
-            await emit("status-bar-percent", 0);
+            await emitEvent("status-bar-percent", 0);
             message.error(t("Installation Failed"));
         }
     }
@@ -83,7 +83,7 @@ class TitleBar extends React.Component<any, any> {
         const storage = await StorageAPI.getSettings();
         await storage.setGuiTheme(value);
         localStorage.setItem('theme', value);
-        await emit("theme-change", value);
+        await emitEvent("theme-change", value as 'Light' | 'Dark' | 'Pink');
     }
 
     componentDidMount(): void {

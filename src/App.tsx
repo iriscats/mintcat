@@ -22,7 +22,7 @@ import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
 import {LoginDialog} from "@/dialogs/LoginDialog";
 import {useKeyboardListener} from "@/hooks/useKeyboardListener.tsx";
-import {emit} from "@tauri-apps/api/event";
+import {emitEvent} from "@/events";
 
 const {
     Header,
@@ -96,7 +96,7 @@ const AppContent = () => {
             .catch((error) => {
                 console.error('[App] Core initialization failed:', error);
                 // Show error UI
-                emit('app-error', error.message || 'Application initialization failed').catch(console.error);
+                emitEvent('app-error', error.message || 'Application initialization failed').catch(console.error);
             });
 
         initClipboardWatcher();

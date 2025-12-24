@@ -1,6 +1,6 @@
 import {t} from "i18next";
 import {exists, stat} from "@tauri-apps/plugin-fs";
-import {emit} from "@tauri-apps/api/event";
+import {emitEvent} from "@/events";
 import {ModioApi} from "@/apis/modio";
 import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
@@ -15,7 +15,7 @@ export class ModUpdateApi {
     private static loading = false;
 
     public static async updateMod(mod: CompleteModData) {
-        await emit("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
+        await emitEvent("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
         const resp = await ModioApi.getModInfoByLink(mod.url || "");
         if (!resp) {
             // Update status to mark as unavailable
@@ -24,7 +24,14 @@ export class ModUpdateApi {
                 modId: mod.modId!,
                 isOnlineAvailable: false
             });
-            await emit("mod-treeview-update" + mod.modId, { modId: mod.modId, downloadProgress: mod.download?.downloadProgress || 0 });
+            // Get updated mod data and emit event
+            const updatedMod = await modsApi.getCompleteModData(mod.modId!);
+            if (updatedMod) {
+                await emitEvent("mod-treeview-update", {
+                    modId: updatedMod.modId!,
+                    data: updatedMod
+                });
+            }
             return;
         }
 
@@ -33,7 +40,7 @@ export class ModUpdateApi {
         await this.updateModFile(mod);
 
         TreeViewModel.updateTreeView();
-        await emit("status-bar-log", t("Update Finish"));
+        await emitEvent("status-bar-log", t("Update Finish"));
     }
 
     /**
@@ -79,9 +86,17 @@ export class ModUpdateApi {
 
     public static async updateModFile(mod: CompleteModData) {
         const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
-            await emit("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
+            await emitEvent("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
             const downloadProgress = (loaded / total) * 100;
-            await emit("mod-treeview-update" + mod.modId, { modId: mod.modId, downloadProgress });
+            // Update mod download progress and emit event
+            const updatedMod = { ...mod };
+            if (updatedMod.download) {
+                updatedMod.download = { ...updatedMod.download, downloadProgress };
+            }
+            await emitEvent("mod-treeview-update", {
+                modId: updatedMod.modId!,
+                data: updatedMod
+            });
         });
 
         // Update download information in database (cachePath, progress, status)
@@ -111,7 +126,7 @@ export class ModUpdateApi {
             });
         }
 
-        await emit("status-bar-log", t("Update Finish"));
+        await emitEvent("status-bar-log", t("Update Finish"));
     }
 
     public static async checkOnlineModUpdate(modItem: CompleteModData, isEnabled: boolean) {
@@ -140,7 +155,14 @@ export class ModUpdateApi {
                     modId: modItem.modId!,
                     isLocalNotFound: true
                 });
-                await emit("mod-treeview-update" + modItem.modId, { modId: modItem.modId });
+                // Get updated mod data and emit event
+                const updatedMod = await modsApi.getCompleteModData(modItem.modId!);
+                if (updatedMod) {
+                    await emitEvent("mod-treeview-update", {
+                        modId: updatedMod.modId!,
+                        data: updatedMod
+                    });
+                }
                 return false;
             } else {
                 await modsApi.upsertModStatus({
@@ -149,7 +171,14 @@ export class ModUpdateApi {
                 });
             }
 
-            await emit("mod-treeview-update" + modItem.modId, { modId: modItem.modId });
+            // Get updated mod data and emit event
+            const updatedMod = await modsApi.getCompleteModData(modItem.modId!);
+            if (updatedMod) {
+                await emitEvent("mod-treeview-update", {
+                    modId: updatedMod.modId!,
+                    data: updatedMod
+                });
+            }
         }
         return true;
     }
@@ -171,7 +200,14 @@ export class ModUpdateApi {
                         modId: modItem.modId!,
                         lastUpdateDate: mtime
                     });
-                    await emit("mod-treeview-update" + modItem.modId, { modId: modItem.modId });
+                    // Get updated mod data and emit event
+                    const updatedMod = await modsApi.getCompleteModData(modItem.modId!);
+                    if (updatedMod) {
+                        await emitEvent("mod-treeview-update", {
+                            modId: updatedMod.modId!,
+                            data: updatedMod
+                        });
+                    }
                     return true;
                 }
             }
@@ -180,7 +216,7 @@ export class ModUpdateApi {
     }
 
     public static async checkModList() {
-        await emit("home-page-loading", true);
+        await emitEvent("home-page-loading", true);
         ModUpdateApi.loading = true;
 
         const viewModel = await IoC.get(TreeViewModel);
@@ -196,12 +232,12 @@ export class ModUpdateApi {
         }
 
         ModUpdateApi.loading = false;
-        await emit("home-page-loading", false);
+        await emitEvent("home-page-loading", false);
         return true;
     }
 
     public static async checkModUpdate() {
-        await emit("status-bar-log", t("Mod Update Check Start"));
+        await emitEvent("status-bar-log", t("Mod Update Check Start"));
         if (ModUpdateApi.loading) {
             return;
         }
@@ -256,7 +292,7 @@ export class ModUpdateApi {
         await profileVM.setActiveProfileLastUpdate(TimeUtils.getCurrentTime());
         TreeViewModel.updateTreeView();
 
-        await emit("status-bar-log", t("Mod Update Check Finish"));
+        await emitEvent("status-bar-log", t("Mod Update Check Finish"));
     }
 
 

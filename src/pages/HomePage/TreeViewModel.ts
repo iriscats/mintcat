@@ -1,4 +1,4 @@
-import {emit} from "@tauri-apps/api/event";
+import {emitVoidEvent} from "@/events";
 import {StorageAPI} from "@/storage";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
@@ -17,7 +17,7 @@ export class TreeViewModel extends BaseViewModel {
 
     public static updateTreeView() {
         console.log(`[TreeViewModel] updateTreeView() called - emitting event`);
-        emit("home-page-update-tree-view").then(() => {
+        emitVoidEvent("home-page-update-tree-view").then(() => {
             console.log(`[TreeViewModel] home-page-update-tree-view event emitted`);
         }).catch((error) => {
             console.error(`[TreeViewModel] Failed to emit home-page-update-tree-view event:`, error);
@@ -26,7 +26,7 @@ export class TreeViewModel extends BaseViewModel {
 
     public static updateTreeViewCountLabel() {
         console.log(`[TreeViewModel] updateTreeViewCountLabel() called - emitting event`);
-        emit("tree-view-count-label-update").then(() => {
+        emitVoidEvent("tree-view-count-label-update").then(() => {
             console.log(`[TreeViewModel] tree-view-count-label-update event emitted`);
         }).catch((error) => {
             console.error(`[TreeViewModel] Failed to emit tree-view-count-label-update event:`, error);
@@ -130,7 +130,7 @@ export class TreeViewModel extends BaseViewModel {
             TreeViewModel.updateTreeViewCountLabel();
 
             // Notify frontend components that profile data is ready
-            emit("home-page-update-profile-select").then();
+            emitVoidEvent("home-page-update-profile-select").then();
 
             // Mark as initialized
             this.initialized = true;

@@ -1,11 +1,12 @@
-import React, {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
+import {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
 import {t} from "i18next";
-import {Button, Flex, List, message, Typography, Modal, Tag, Input, Tooltip} from 'antd';
+import {Button, Flex, message, Typography, Modal, Tag, Input, Tooltip} from 'antd';
+import {FolderOpenOutlined, AimOutlined, RocketOutlined, CheckCircleFilled} from "@ant-design/icons";
+import {useEventListener} from "@/events";
+import {open} from "@tauri-apps/plugin-dialog";
+
 import {GameData} from "@/storage/dao/GameDAO.ts";
 import {StorageAPI} from "@/storage";
-import {listen} from "@tauri-apps/api/event";
-import {open} from "@tauri-apps/plugin-dialog";
-import {FolderOpenOutlined, AimOutlined, RocketOutlined, CheckCircleFilled} from "@ant-design/icons";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 
 const {Text} = Typography;
@@ -121,9 +122,10 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
         loadGames().then();
     }, []);
 
-    listen("select-game-dialog-open", async () => {
+    // ✅ 使用 useEventListener 自动管理清理
+    useEventListener("select-game-dialog-open", () => {
         setIsModalOpen(true);
-    }).then();
+    });
 
     const renderGameItem = (game: GameData) => {
         const isSelected = selectedGameId === game.id;

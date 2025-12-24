@@ -3,10 +3,11 @@ import {t} from "i18next";
 import {Avatar, Button, Divider, Flex, Input, message, Modal, Typography} from "antd";
 import {UserOutlined, LinkOutlined, KeyOutlined} from "@ant-design/icons";
 import {open as openShell} from "@tauri-apps/plugin-shell";
+
 import {ModioApi} from "@/apis/modio";
 import {CacheApi} from "@/apis/CacheApi";
 import {AppViewModel} from "@/AppViewModel";
-import { IoC } from "@/core/IoC.ts";
+import {IoC} from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
 
 const {Text, Title} = Typography;
