@@ -1,13 +1,15 @@
 import React from "react";
 import {t} from "i18next";
-import {Avatar, Button, Card, Descriptions, Flex, Form, Input, message, Modal} from "antd";
-import {UserOutlined} from "@ant-design/icons";
+import {Avatar, Button, Divider, Flex, Input, message, Modal, Typography} from "antd";
+import {UserOutlined, LinkOutlined, KeyOutlined} from "@ant-design/icons";
 import {open as openShell} from "@tauri-apps/plugin-shell";
 import {ModioApi} from "@/apis/modio";
 import {CacheApi} from "@/apis/CacheApi";
 import {AppViewModel} from "@/AppViewModel";
 import { IoC } from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
+
+const {Text, Title} = Typography;
 
 interface UserSettingDialogStates {
     isModalOpen?: boolean;
@@ -112,47 +114,68 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                    open={this.state.isModalOpen}
                    onCancel={this.handleCancel}
                    footer={null}
-                   width={600}
+                   width={480}
+                   centered
             >
-                <Flex vertical gap="middle">
-                    <Card>
-                        <Flex vertical gap="middle" align="center">
-                            <Avatar size={80}
-                                    icon={<UserOutlined/>}
-                                    src={
-                                        this.state.profileUrl &&
-                                        <img src={this.state.profileUrl} alt="avatar"/>
-                                    }
-                            />
-                            <Descriptions bordered column={1} size="small">
-                                <Descriptions.Item label={t("Username")}>
-                                    {this.state.username}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="ID">
-                                    {this.state.modioId}
-                                </Descriptions.Item>
-                                <Descriptions.Item label={t("Email")}>
-                                    {this.state.userEmail}
-                                </Descriptions.Item>
-                            </Descriptions>
+                <Flex vertical gap={24} style={{ paddingTop: 12 }}>
+                    {/* User Profile Section */}
+                    <Flex align="center" gap={20}>
+                        <Avatar 
+                            size={80}
+                            icon={<UserOutlined/>}
+                            src={this.state.profileUrl}
+                            style={{
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                border: '2px solid #fff'
+                            }}
+                        />
+                        <Flex vertical gap={4}>
+                            <Title level={4} style={{ margin: 0, color: '#1F2937' }}>
+                                {this.state.username || t("Guest User")}
+                            </Title>
+                            <Text type="secondary">
+                                ID: {this.state.modioId || "N/A"}
+                            </Text>
                         </Flex>
-                    </Card>
-                    <Card title={t("User Settings")}>
-                        <Form layout="vertical">
-                            <Form.Item label={t("mod.io key")}>
-                                <Flex>
-                                    <Input onChange={this.onOAuthChange}
-                                           allowClear
-                                           value={this.state.modioOAuth}
-                                    />
-                                    <Button type="default"
-                                            onClick={this.onOpenModioClick}>
-                                        {t("Open mod.io")}
-                                    </Button>
-                                </Flex>
-                            </Form.Item>
-                        </Form>
-                    </Card>
+                    </Flex>
+
+                    <Divider style={{ margin: 0 }} />
+
+                    {/* Mod.io Configuration Section */}
+                    <Flex vertical gap={8}>
+                        <Flex justify="space-between" align="center">
+                            <Text strong style={{ fontSize: 15 }}>{t("Mod.io Configuration")}</Text>
+                            <Button 
+                                type="link" 
+                                size="small" 
+                                onClick={this.onOpenModioClick}
+                                icon={<LinkOutlined/>}
+                                style={{ padding: 0 }}
+                            >
+                                {t("Get Access Key")}
+                            </Button>
+                        </Flex>
+                        
+                        <Input 
+                            prefix={<KeyOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />}
+                            onChange={this.onOAuthChange}
+                            allowClear
+                            value={this.state.modioOAuth}
+                            placeholder={t("Enter your mod.io OAuth key")}
+                        />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            {t("Paste your OAuth key here to sync your subscriptions.")}
+                        </Text>
+                    </Flex>
+
+                    {/* Footer Actions */}
+                    <Button type="primary"
+                            block
+                            onClick={this.handleCancel}
+                            style={{ marginTop: 8 }}
+                    >
+                        {t("Save Changes")}
+                    </Button>
                 </Flex>
             </Modal>
         );

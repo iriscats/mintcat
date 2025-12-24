@@ -1,12 +1,11 @@
 import React, {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
 import {t} from "i18next";
-import {Button, Flex, List, message, Radio, Typography, Modal} from 'antd';
+import {Button, Flex, List, message, Typography, Modal, Tag, Input, Tooltip} from 'antd';
 import {GameData} from "@/storage/dao/GameDAO.ts";
 import {StorageAPI} from "@/storage";
 import {listen} from "@tauri-apps/api/event";
 import {open} from "@tauri-apps/plugin-dialog";
-import Search from "antd/es/input/Search";
-import {FolderAddOutlined} from "@ant-design/icons";
+import {FolderOpenOutlined, AimOutlined, RocketOutlined, CheckCircleFilled} from "@ant-design/icons";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 
 const {Text} = Typography;
@@ -25,7 +24,6 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const [selectedGameId, setSelectedGameId] = useState<number | undefined>();
     const [loading, setLoading] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [editingPathGameId, setEditingPathGameId] = useState<number | undefined>();
     const [editingPathValue, setEditingPathValue] = useState<string>("");
 
 
@@ -128,74 +126,116 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     }).then();
 
     const renderGameItem = (game: GameData) => {
-        const isEditingPath = editingPathGameId === game.id;
+        const isSelected = selectedGameId === game.id;
         const currentPath = game.installPath || editingPathValue;
 
         return (
-            <List.Item
+            <div
                 key={game.id}
-                style={{
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #d9d9d9',
-                    marginBottom: '8px',
-                    cursor: 'pointer',
-                    backgroundColor: selectedGameId === game.id ? '#f0f9ff' : '#fff',
-                    borderColor: selectedGameId === game.id ? '#1890ff' : '#d9d9d9'
-                }}
                 onClick={() => onGameChange(game.id!)}
+                style={{
+                    border: `2px solid ${isSelected ? '#1677ff' : '#f0f0f0'}`,
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '12px',
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? '#f0f9ff' : '#fff',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}
             >
-                <Flex vertical gap="small" style={{width: '100%'}}>
-                    <Flex justify="space-between" align="center">
-                        <Text strong style={{fontSize: '16px'}}>
-                            {game.displayName}
-                        </Text>
-                        <Radio
-                            checked={selectedGameId === game.id}
-                            onChange={() => onGameChange(game.id!)}
-                        />
-                    </Flex>
-                    <Text type="secondary" style={{fontSize: '14px'}}>
-                        {t("Game ID")}: {game.name}
-                    </Text>
-                    <Flex vertical gap="small">
-                        <Text type="secondary" style={{fontSize: '12px'}}>
-                            {t("Install Path")}:
-                        </Text>
-                        <Flex gap="small">
-                            <Search
-                                placeholder={"FSD-WindowsNoEditor.pak"}
-                                value={currentPath}
-                                enterButton={<FolderAddOutlined/>}
-                                onSearch={() => onGamePathClick(game.id!)}
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                            <Button
-                                type="default"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onFindGamePathClick(game.id!);
-                                }}
-                            >
-                                {t("Auto Find")}
-                            </Button>
+                {isSelected && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        width: 0,
+                        height: 0,
+                        borderStyle: 'solid',
+                        borderWidth: '0 40px 40px 0',
+                        borderColor: 'transparent #1677ff transparent transparent',
+                        zIndex: 1
+                    }}>
+                        <CheckCircleFilled style={{
+                            position: 'absolute',
+                            top: 6,
+                            right: -34,
+                            color: '#fff',
+                            fontSize: '14px'
+                        }}/>
+                    </div>
+                )}
+
+                <Flex vertical gap="middle">
+                    <Flex justify="space-between" align="start">
+                        <Flex gap="middle" align="center">
+                            <div style={{
+                                width: 100,
+                                height: 48,
+                                borderRadius: 8,
+                                background: isSelected ? '#1677ff' : '#f5f5f5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: isSelected ? '#fff' : '#8c8c8c',
+                                transition: 'all 0.2s ease',
+                                overflow: 'hidden',
+                                flexShrink: 0
+                            }}>
+                                <img
+                                    src="https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/548430/header.jpg?t=1766071358"
+                                    alt={game.displayName}
+                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                />
+                            </div>
+                            <Flex vertical gap={2}>
+                                <Text strong style={{fontSize: 16}}>{game.displayName}</Text>
+                                <Flex gap="small" align="center">
+                                    <Text type="secondary" style={{fontSize: 12}}>ID: {game.name}</Text>
+                                    {game.isActive && (
+                                        <Tag color="success" style={{margin: 0, fontSize: 10, lineHeight: '18px', border: 'none'}}>
+                                            {t("Active")}
+                                        </Tag>
+                                    )}
+                                </Flex>
+                            </Flex>
                         </Flex>
                     </Flex>
-                    <Flex gap="small">
-                        {game.isActive && (
-                            <span style={{
-                                backgroundColor: '#52c41a',
-                                color: '#fff',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px'
-                            }}>
-                                {t("Active")}
-                            </span>
-                        )}
-                    </Flex>
+
+                    <div style={{
+                        background: isSelected ? 'rgba(22, 119, 255, 0.02)' : '#f9fafb',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #f0f0f0'
+                    }} onClick={e => e.stopPropagation()}>
+                        <Flex vertical gap="small">
+                            <Text type="secondary" style={{fontSize: 12}}>{t("Install Path")}</Text>
+                            <Flex gap="small">
+                                <Input
+                                    value={currentPath}
+                                    placeholder={t("Select game executable path")}
+                                    readOnly
+                                    style={{flex: 1, fontSize: 13}}
+                                    prefix={<FolderOpenOutlined style={{color: '#bfbfbf'}}/>}
+                                />
+                                <Tooltip title={t("Browse")}>
+                                    <Button
+                                        icon={<FolderOpenOutlined/>}
+                                        onClick={() => onGamePathClick(game.id!)}
+                                    />
+                                </Tooltip>
+                                <Tooltip title={t("Auto Find")}>
+                                    <Button 
+                                        icon={<AimOutlined/>}
+                                        onClick={() => onFindGamePathClick(game.id!)}
+                                    />
+                                </Tooltip>
+                            </Flex>
+                        </Flex>
+                    </div>
                 </Flex>
-            </List.Item>
+            </div>
         );
     };
 
@@ -205,10 +245,11 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             open={isModalOpen}
             onOk={handleOk}
             onCancel={handleCancel}
-            width={500}
+            width={520}
+            centered
             footer={[
-                <Button key="cancel" onClick={handleCancel}>
-                    Cancel
+                <Button key="cancel" onClick={handleCancel} >
+                    {t("Cancel")}
                 </Button>,
                 <Button
                     key="ok"
@@ -216,34 +257,28 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                     onClick={handleOk}
                     disabled={!selectedGameId}
                 >
-                    OK
+                    {t("Confirm")}
                 </Button>
             ]}
         >
-            <Flex vertical gap="large" style={{minHeight: '300px'}}>
-                <div>
-                    <Text type="secondary">
-                        {t("Please select the game you want to manage mods for")}
-                    </Text>
-                </div>
-
-                <div style={{flex: 1, overflow: 'auto', maxHeight: '400px'}}>
+            <Flex vertical gap="large" style={{padding: '20px 0'}}>
+                <div style={{maxHeight: '500px', overflowY: 'auto', padding: '0 4px'}}>
                     {loading ? (
                         <Flex justify="center" align="center" style={{height: '200px'}}>
-                            <Text>{t("Loading games...")}</Text>
+                            <Text type="secondary">{t("Loading games...")}</Text>
                         </Flex>
                     ) : games && games.length > 0 ? (
-                        <List
-                            dataSource={games}
-                            renderItem={renderGameItem}
-                            style={{width: '100%'}}
-                            size="small"
-                        />
+                        <Flex vertical gap="small">
+                            {games.map(renderGameItem)}
+                        </Flex>
                     ) : (
-                        <Flex justify="center" align="center" style={{height: '200px'}}>
-                            <Text type="secondary">
-                                {t("No games available")}
-                            </Text>
+                        <Flex justify="center" align="center" style={{height: '200px', background: '#f5f5f5', borderRadius: '8px'}}>
+                            <Flex vertical align="center" gap="small">
+                                <RocketOutlined style={{fontSize: 32, color: '#d9d9d9'}}/>
+                                <Text type="secondary">
+                                    {t("No games available")}
+                                </Text>
+                            </Flex>
                         </Flex>
                     )}
                 </div>
