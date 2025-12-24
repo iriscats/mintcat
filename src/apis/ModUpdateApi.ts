@@ -15,6 +15,7 @@ export class ModUpdateApi {
     private static loading = false;
 
     public static async updateMod(mod: CompleteModData) {
+        await emit("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
         const resp = await ModioApi.getModInfoByLink(mod.url || "");
         if (!resp) {
             // Update status to mark as unavailable
@@ -29,12 +30,9 @@ export class ModUpdateApi {
 
         // Update mod in database
         await this.updateModInDatabase(mod.modId!, resp);
-
-        TreeViewModel.updateTreeView();
-        await emit("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
-
         await this.updateModFile(mod);
 
+        TreeViewModel.updateTreeView();
         await emit("status-bar-log", t("Update Finish"));
     }
 
