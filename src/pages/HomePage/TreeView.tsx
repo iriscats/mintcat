@@ -131,24 +131,6 @@ export class TreeView extends React.Component<TreeViewProps, any> {
     private onCustomTitleRender(nodeData: any) {
         return TreeViewItem(nodeData, this.props.onMenuClick);
     }
-
-    /**
-     * Check if a tree node is draggable
-     * Default folders (Mod.io, Local) are not draggable
-     */
-    @autoBind
-    private isNodeDraggable(nodeData: any): boolean {
-        // Check if this is a default folder (Mod.io or Local)
-        // Default folders have IDs 1 (Mod.io) and 2 (Local)
-        if (typeof nodeData.key === 'string' && nodeData.key.startsWith('folder-')) {
-            const folderId = parseInt(nodeData.key.split('-')[1]);
-            if (folderId === 1 || folderId === 2) {
-                return false; // Don't allow dragging default folders
-            }
-        }
-        return true;
-    }
-
     /**
      * Helper method to get all mods from database as CompleteModData array
      */
@@ -163,7 +145,6 @@ export class TreeView extends React.Component<TreeViewProps, any> {
         return (
             <Tree
                 className="ant-tree-content"
-                draggable={this.isNodeDraggable}
                 blockNode
                 virtual={this.props.virtual}
                 height={window.innerHeight - 155}
