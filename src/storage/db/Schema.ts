@@ -84,7 +84,7 @@ export const mods = sqliteTable("mods", {
     updatedAt: integer("updated_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 }, (table) => [
     index("mods_name_idx").on(table.nameId), // 游戏-模组复合索引
-    uniqueIndex("mods_platform_id_unique").on(table.platformId),
+    index("mods_platform_id_idx").on(table.platformId), // platformId 索引（非唯一，因为本地模组共享 platformId=0）
     uniqueIndex("mods_url_unique").on(table.url), // URL唯一索引
 ]);
 

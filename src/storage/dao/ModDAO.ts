@@ -131,10 +131,11 @@ export class ModDAO {
 
     /**
      * 根据平台ID获取模组
+     * 注意：本地模组共享 platformId=0，此方法对本地模组只返回第一个匹配
      */
     public async getModByPlatformId(platformId: number): Promise<ModData | null> {
         try {
-            if (!platformId) return null;
+            if (platformId === undefined || platformId === null) return null;
             const db = await getDb();
             const result = await db.select().from(mods).where(eq(mods.platformId, platformId)).limit(1);
             return result.length > 0 ? this.mapToModData(result[0]) : null;

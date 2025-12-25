@@ -68,7 +68,7 @@ export const ALL_SQL_CONTENT = `
     );
 --> statement-breakpoint
     CREATE INDEX \`mods_name_idx\` ON \`mods\` (\`name_id\`);--> statement-breakpoint
-    CREATE UNIQUE INDEX \`mods_platform_id_unique\` ON \`mods\` (\`platform_id\`);--> statement-breakpoint
+    CREATE INDEX \`mods_platform_id_idx\` ON \`mods\` (\`platform_id\`);--> statement-breakpoint
     CREATE UNIQUE INDEX \`mods_url_unique\` ON \`mods\` (\`url\`);--> statement-breakpoint
     CREATE TABLE \`oauths\`
     (

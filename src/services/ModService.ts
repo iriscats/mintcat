@@ -147,25 +147,11 @@ export class ModService {
 
         let savedMod = dto.url ? await modsDAO.getModByUrl(dto.url) : null;
         if (!savedMod) {
-            savedMod = await modsDAO.getModByPlatformId(dto.platformId);
-        }
-
-        if (!savedMod) {
             try {
                 savedMod = await modsDAO.addMod(dto);
             } catch (error) {
-                savedMod = dto.url ? await modsDAO.getModByUrl(dto.url) : null;
-                if (!savedMod) {
-                    savedMod = await modsDAO.getModByPlatformId(dto.platformId);
-                }
-                if (!savedMod) {
-                    throw error;
-                }
+                throw new Error("Failed to save mod to database");
             }
-        }
-
-        if (!savedMod) {
-            throw new Error("Failed to save mod to database");
         }
 
         await modsDAO.updateMod(savedMod.modId!, {

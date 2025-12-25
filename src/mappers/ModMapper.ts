@@ -64,11 +64,9 @@ export class ModMapper {
      * 迁移自 HomeViewModel.addModFromPath()
      */
     static fromLocalPath(filePath: string, fileName: string): CompleteModData {
-        const platformId = ModMapper.generateLocalModId(filePath);
-
         const dto: CompleteModData = {
             modId: undefined,
-            platformId: platformId,
+            platformId: 0,
             gameId: 1,
             nameId: fileName,
             displayName: fileName,
@@ -142,17 +140,4 @@ export class ModMapper {
         return { tags, versions, approval };
     }
 
-    /**
-     * 为本地模组生成唯一的平台 ID
-     * 迁移自 HomeViewModel.generateLocalModId()
-     */
-    private static generateLocalModId(filePath: string): number {
-        let hash = 0;
-        for (let i = 0; i < filePath.length; i++) {
-            const char = filePath.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return Math.abs(hash) + 1000000;
-    }
 }
