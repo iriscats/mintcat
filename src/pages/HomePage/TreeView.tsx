@@ -146,6 +146,7 @@ export class TreeView extends React.Component<TreeViewProps, any> {
             <Tree
                 className="ant-tree-content"
                 blockNode
+                draggable
                 virtual={this.props.virtual}
                 height={window.innerHeight - 155}
                 checkable={this.props.isMultiSelect}

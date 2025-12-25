@@ -24,7 +24,6 @@ import {TreeViewOutlined} from "@/components/SvgIcon.tsx";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
-import {ModSourceType} from "@/storage/db/Schema.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
@@ -219,27 +218,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
     // Menu Bar Operations
     @autoBind
     private async onMenuBarCopyListClick() {
-        await IoC.get(TreeViewModel);
-        const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
-
-        const profileVM = await IoC.get(ProfileViewModel);
-        const activeRoot = await profileVM.getActiveProfileTreeRoot();
-
-        // Use ProfileTreeService to get mod list
-        const treeService = (profileVM as any).profileService.getTreeService();
-        const subModList = await treeService.getModsForTree(activeRoot);
-
-        let list = "";
-        for (const mod of subModList) {
-            if (TreeViewConverter.filter(mod) && mod.sourceType === ModSourceType.Modio) {
-                list += mod.url + "\n";
-            }
-        }
-
-        ClipboardApi.setLastClipboardText(list);
-        await navigator.clipboard.writeText(list);
-        message.success(t("Copied To Clipboard"));
+        const vm = await IoC.get(HomeViewModel);
+        await vm.exportModioUrlsToClipboard();
     }
 
     @autoBind

@@ -15,6 +15,8 @@ import {BaseViewModel} from "@/core/BaseViewModel";
 import {ModService} from "@/services/ModService.ts";
 import {ModMapper} from "@/mappers/ModMapper.ts";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
+import {ProfileService} from "@/services/ProfileService.ts";
+import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 
 /**
  * HomeViewModel handles mod operations and business logic
@@ -305,6 +307,28 @@ export class HomeViewModel extends BaseViewModel {
             console.error(`[HomeViewModel] Error removing group ${groupId}:`, error);
             throw error;
         }
+    }
+
+    /**
+     * 导出当前 profile 的 mod.io URL 列表到剪贴板
+     * @returns 是否成功导出
+     */
+    public async exportModioUrlsToClipboard(): Promise<boolean> {
+        const profileService = new ProfileService();
+        const urls = await profileService.getActiveProfileModioUrls();
+
+        if (urls.length === 0) {
+            message.warning(t("No mod.io mods found in current profile"));
+            return false;
+        }
+
+        const list = urls.join("\n") + "\n";
+
+        ClipboardApi.setLastClipboardText(list);
+        await navigator.clipboard.writeText(list);
+        message.success(t("Copied To Clipboard"));
+
+        return true;
     }
 
     /**

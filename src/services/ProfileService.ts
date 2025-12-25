@@ -136,6 +136,52 @@ export class ProfileService {
         return await profiles.getProfileFolderIdByType(activeProfile.id, folderType);
     }
 
+    /**
+     * 获取活跃 profile 中所有 mod.io 类型的 mod URL 列表
+     * @returns mod.io mod 的 URL 数组
+     */
+    public async getActiveProfileModioUrls(): Promise<string[]> {
+        const profilesApi = await StorageAPI.getProfiles();
+        const activeProfile = await profilesApi.getActiveProfile();
+
+        if (!activeProfile?.id) {
+            return [];
+        }
+
+        return await this.getProfileModioUrls(activeProfile.id);
+    }
+
+    /**
+     * 获取指定 profile 中所有 mod.io 类型的 mod URL 列表
+     * @param profileId Profile ID
+     * @returns mod.io mod 的 URL 数组
+     */
+    public async getProfileModioUrls(profileId: number): Promise<string[]> {
+        const profilesApi = await StorageAPI.getProfiles();
+        const modsApi = await StorageAPI.getMods();
+
+        // Get all mod associations for this profile
+        const profileMods = await profilesApi.getProfileMods(profileId);
+
+        if (profileMods.length === 0) {
+            return [];
+        }
+
+        // Get mod IDs and fetch mod information
+        const modIds = profileMods.map(pm => pm.modId);
+        const modDataList = await modsApi.getBatchCompleteModData(modIds);
+
+        // Filter and collect URLs
+        const urls: string[] = [];
+        for (const mod of modDataList) {
+            if (mod.sourceType === 'Modio' && mod.url) {
+                urls.push(mod.url);
+            }
+        }
+
+        return urls;
+    }
+
     // ====================================
     // Profile CRUD 操作
     // ====================================
