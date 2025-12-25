@@ -283,8 +283,8 @@ for (const event of events) {
 **代码位置**: `src/services/ModService.ts:62-89`
 ```typescript
 public async saveMod(dto: CompleteModData): Promise<ModData | null> {
-    // 1. 先通过 platformId 检查
-    let savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+    // 1. 先通过 platformId 和 sourceType 检查
+    let savedMod = await modsDAO.getModByPlatformId(dto.platformId, dto.sourceType);
 
     // 2. 如果未找到，再通过 url 检查（兜底机制）
     if (!savedMod && dto.url) {
@@ -300,13 +300,13 @@ public async saveMod(dto: CompleteModData): Promise<ModData | null> {
 }
 ```
 
-**DAO 查询方法**: `src/storage/dao/ModDAO.ts:136-146`
+**DAO 查询方法**: `src/storage/dao/ModDAO.ts:136-149`
 ```typescript
-public async getModByPlatformId(platformId: number): Promise<ModData | null> {
+public async getModByPlatformId(platformId: number, sourceType: string): Promise<ModData | null> {
     const result = await this.db
         .select()
         .from(mods)
-        .where(eq(mods.platformId, platformId))
+        .where(and(eq(mods.platformId, platformId), eq(mods.sourceType, sourceType)))
         .limit(1);
 
     return result.length > 0 ? result[0] : null;
@@ -357,7 +357,7 @@ getModSource(0)        // "local"  - 本地模组
 ┌────────────────────────────────────────────────────────────┐
 │ 3. 去重检查                                                 │
 │    ModService.saveMod(dto)                                 │
-│    ├─ getModByPlatformId(123456)  ← 使用 platformId 查询  │
+│    ├─ getModByPlatformId(123456, "Modio") ← platformId+sourceType │
 │    ├─ 如果存在 → 返回已有记录                              │
 │    └─ 如果不存在 → 继续插入                                │
 └────────────────────────────────────────────────────────────┘
@@ -490,7 +490,7 @@ getModSource(0)        // "local"  - 本地模组
 | 方法 | 参数 | 用途 | 返回类型 | 使用场景 |
 |------|------|------|---------|---------|
 | `getModById(modId)` | `modId: number` | 通过内部ID查询 | `ModData \| null` | 应用内部查询 |
-| `getModByPlatformId(platformId)` | `platformId: number` | 通过平台ID查询 | `ModData \| null` | 去重检查、API匹配 |
+| `getModByPlatformId(platformId, sourceType)` | `platformId: number, sourceType: string` | 通过平台ID和来源类型查询 | `ModData \| null` | 去重检查、API匹配 |
 | `getModByUrl(url)` | `url: string` | 通过URL查询 | `ModData \| null` | 去重检查（兜底） |
 | `getCompleteModData(modId)` | `modId: number` | 获取完整数据 | `CompleteModData \| null` | 获取模组全部信息 |
 | `getAllMods()` | 无 | 获取所有模组 | `ModData[]` | 列表展示、批量操作 |
@@ -512,11 +512,11 @@ public async getModById(modId: number): Promise<ModData | null> {
 
 #### getModByPlatformId - 平台匹配
 ```typescript
-public async getModByPlatformId(platformId: number): Promise<ModData | null> {
+public async getModByPlatformId(platformId: number, sourceType: string): Promise<ModData | null> {
     const result = await this.db
         .select()
         .from(mods)
-        .where(eq(mods.platformId, platformId))  // 使用 platformId
+        .where(and(eq(mods.platformId, platformId), eq(mods.sourceType, sourceType)))
         .limit(1);
 
     return result.length > 0 ? result[0] : null;
@@ -645,8 +645,8 @@ const mod = await modsDAO.getModById(modId);
 // ✅ API 交互使用 platformId
 const events = await ModioApi.getEvents(platformIdList);
 
-// ✅ 去重检查使用 platformId
-const existing = await modsDAO.getModByPlatformId(platformId);
+// ✅ 去重检查使用 platformId 和 sourceType
+const existing = await modsDAO.getModByPlatformId(platformId, 'Modio');
 
 // ✅ 数据库关联使用 modId
 await profileDAO.addModToProfile(profileId, modId);
@@ -679,7 +679,7 @@ await modsApi.upsertModStatus({
 // ❌ 不要假设 platformId 连续
 // 错误: platformId 不保证连续性
 for (let id = 1; id <= maxPlatformId; id++) {
-    const mod = await getModByPlatformId(id);  // ❌ 效率低且不可靠
+    const mod = await getModByPlatformId(id, 'Modio');  // ❌ 效率低且不可靠
 }
 ```
 
@@ -734,7 +734,7 @@ for (let id = 1; id <= maxPlatformId; id++) {
 **方案**:
 ```typescript
 // ModService.saveMod 中的去重逻辑
-let savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+let savedMod = await modsDAO.getModByPlatformId(dto.platformId, dto.sourceType);
 if (savedMod) {
     // 模组已存在，更新信息而非重新插入
     await modsDAO.updateMod(savedMod.modId, dto);
