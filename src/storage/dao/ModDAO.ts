@@ -1,5 +1,5 @@
 import {mods, modVersions, modDownloads, modStatus} from '@/storage/db/Schema';
-import {eq, desc} from 'drizzle-orm';
+import {eq, desc, and} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
 
 /**
@@ -130,17 +130,20 @@ export class ModDAO {
     }
 
     /**
-     * 根据平台ID获取模组
-     * 注意：本地模组共享 platformId=0，此方法对本地模组只返回第一个匹配
+     * 根据平台ID和来源类型获取模组
+     * @param platformId 平台模组ID
+     * @param sourceType 模组来源类型: Local, Modio, Unknown
      */
-    public async getModByPlatformId(platformId: number): Promise<ModData | null> {
+    public async getModByPlatformId(platformId: number, sourceType: string): Promise<ModData | null> {
         try {
             if (platformId === undefined || platformId === null) return null;
             const db = await getDb();
-            const result = await db.select().from(mods).where(eq(mods.platformId, platformId)).limit(1);
+            const result = await db.select().from(mods)
+                .where(and(eq(mods.platformId, platformId), eq(mods.sourceType, sourceType)))
+                .limit(1);
             return result.length > 0 ? this.mapToModData(result[0]) : null;
         } catch (error) {
-            console.error(`获取模组失败 [Platform ID: ${platformId}]:`, error);
+            console.error(`获取模组失败 [Platform ID: ${platformId}, Source: ${sourceType}]:`, error);
             throw error;
         }
     }

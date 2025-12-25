@@ -69,7 +69,7 @@ export class ModService {
         // 转换 API 响应到 DTO
         const dto = ModMapper.fromModioResponse(modInfo);
 
-        let savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+        let savedMod = await modsDAO.getModByPlatformId(dto.platformId, 'Modio');
         if (!savedMod && dto.url) {
             savedMod = await modsDAO.getModByUrl(dto.url);
         }
@@ -78,7 +78,7 @@ export class ModService {
             try {
                 savedMod = await modsDAO.addMod(dto);
             } catch (error) {
-                savedMod = await modsDAO.getModByPlatformId(dto.platformId);
+                savedMod = await modsDAO.getModByPlatformId(dto.platformId, 'Modio');
                 if (!savedMod && dto.url) {
                     savedMod = await modsDAO.getModByUrl(dto.url);
                 }

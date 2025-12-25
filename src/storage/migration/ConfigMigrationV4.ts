@@ -189,7 +189,7 @@ export class ConfigMigrationV4 {
             const approvalStatus = oldMod.approval || 'Sandbox';
 
             // 检查模组是否已存在 - 通过URL和platform ID双重检查
-            const existingMod = await this.modDAO.getModByPlatformId(platformId);
+            const existingMod = await this.modDAO.getModByPlatformId(platformId, sourceType);
             if (existingMod) {
                 console.log(`模组 ${displayName} (ID: ${platformId}) 已存在，跳过迁移`);
                 return; // 跳过已存在的模组
@@ -414,14 +414,20 @@ export class ConfigMigrationV4 {
      */
     private async addModToProfileById(modId: number, profileId: number, parentFolderId: number | null, sortOrder: number): Promise<void> {
         try {
-            // 首先尝试通过platform ID查找模组
-            let mod = await this.modDAO.getModByPlatformId(modId);
+            // 首先尝试通过platform ID查找模组（先尝试Modio，再尝试Local）
+            let mod = await this.modDAO.getModByPlatformId(modId, 'Modio');
+            if (!mod) {
+                mod = await this.modDAO.getModByPlatformId(modId, 'Local');
+            }
 
             // 如果没找到，尝试通过原始mods.json中的id找到对应的mod_id
             if (!mod) {
                 const originalModId = await this.findModIdByOriginalId(modId);
                 if (originalModId) {
-                    mod = await this.modDAO.getModByPlatformId(originalModId);
+                    mod = await this.modDAO.getModByPlatformId(originalModId, 'Modio');
+                    if (!mod) {
+                        mod = await this.modDAO.getModByPlatformId(originalModId, 'Local');
+                    }
                 }
             }
 

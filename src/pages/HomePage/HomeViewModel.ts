@@ -81,7 +81,7 @@ export class HomeViewModel extends BaseViewModel {
             activeProfile = await profileVM.getActiveProfileData();
         }
 
-        const existingMod = await modsApi.getModByPlatformId(modInfoResp.id);
+        const existingMod = await modsApi.getModByPlatformId(modInfoResp.id, 'Modio');
         if (existingMod) {
             const existingProfileMod = await profiles.getProfileMod(activeProfile.id!, existingMod.modId!);
             if (existingProfileMod) {
