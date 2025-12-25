@@ -111,7 +111,7 @@ export class ModInstallTask implements ITask {
 
             // Check if mod was modified
             if (await ModUpdateApi.checkLocalModModify(item, true)) {
-                editTime = TimeUtils.getCurrentTime();
+                editTime = TimeUtils.nowSeconds();
                 await profileVM.setActiveProfileEditTime(editTime);
             }
 

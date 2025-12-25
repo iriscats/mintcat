@@ -12,6 +12,7 @@ import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
 import {ModFile} from "@/apis/modio/ModInfo.ts";
 import {StorageAPI} from "@/storage";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
+import {TimeUtils} from "@/utils/TimeUtils.ts";
 
 const {useToken} = theme;
 
@@ -174,8 +175,10 @@ function ModTreeViewWarring({nodeData}) {
 
         // 只有在用户没有手动选择版本时，才检查在线是否有新版本
         // 如果 lastUpdateDate 为 0，说明是旧数据或初始化数据，不应该显示警告
-        const hasNewerOnlineVersion = data.lastUpdateDate > 0 &&
-                                      data.onlineUpdateDate > data.lastUpdateDate;
+        const hasNewerOnlineVersion = TimeUtils.hasUpdate(
+            data.onlineUpdateDate,
+            data.lastUpdateDate
+        );
 
         return hasNewerOnlineVersion;
     }

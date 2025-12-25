@@ -76,7 +76,7 @@ export class ModUpdateApi {
 
         // Update status info with current online update date
         // Note: mod.io API returns Unix timestamp in seconds, but we store milliseconds
-        const onlineUpdateDate = modInfo.date_updated ? modInfo.date_updated * 1000 : Date.now();
+        const onlineUpdateDate = TimeUtils.fromModio(modInfo.date_updated) || TimeUtils.now();
         await modsApi.upsertModStatus({
             modId: modId,
             onlineUpdateDate: onlineUpdateDate,
@@ -122,7 +122,7 @@ export class ModUpdateApi {
         if (currentStatus) {
             await modsApi.upsertModStatus({
                 modId: mod.modId!,
-                lastUpdateDate: currentStatus.onlineUpdateDate || Date.now()
+                lastUpdateDate: currentStatus.onlineUpdateDate || TimeUtils.now()
             });
         }
 
@@ -244,7 +244,7 @@ export class ModUpdateApi {
 
         const profileVM = await IoC.get(ProfileViewModel);
         const lastUpdate = await profileVM.getActiveProfileLastUpdate();
-        const updateTime = lastUpdate || (TimeUtils.getCurrentTime() - 60 * 60 * 24 * 30); // 最近 1 一个月的更新
+        const updateTime = lastUpdate || (TimeUtils.nowSeconds() - 60 * 60 * 24 * 30); // 最近 1 一个月的更新
 
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
@@ -265,7 +265,7 @@ export class ModUpdateApi {
                         // Note: event.date_added is in seconds, convert to milliseconds
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
-                            onlineUpdateDate: event.date_added * 1000,
+                            onlineUpdateDate: TimeUtils.fromModio(event.date_added),
                             lastUpdateDate: 0
                         });
                     }
@@ -280,8 +280,8 @@ export class ModUpdateApi {
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
                             isOnlineAvailable: false,
-                            lastUpdateDate: event.date_added * 1000,
-                            onlineUpdateDate: event.date_added * 1000
+                            lastUpdateDate: TimeUtils.fromModio(event.date_added),
+                            onlineUpdateDate: TimeUtils.fromModio(event.date_added)
                         });
                     }
                 }
@@ -289,7 +289,7 @@ export class ModUpdateApi {
             }
         }
 
-        await profileVM.setActiveProfileLastUpdate(TimeUtils.getCurrentTime());
+        await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
         TreeViewModel.updateTreeView();
 
         await emitEvent("status-bar-log", t("Mod Update Check Finish"));

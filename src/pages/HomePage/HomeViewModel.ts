@@ -190,6 +190,7 @@ export class HomeViewModel extends BaseViewModel {
             // Update last update date based on file modification time
             const fileInfo = await stat(modPath);
             if (addedMod.status) {
+                // fileInfo.mtime.getTime() returns milliseconds (JavaScript standard)
                 addedMod.status.lastUpdateDate = fileInfo.mtime.getTime();
                 await modsApi.upsertModStatus(addedMod.status);
             }

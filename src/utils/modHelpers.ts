@@ -1,5 +1,6 @@
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { ModSourceType, ModApprovalStatus } from '@/models/mod/types';
+import { TimeUtils } from '@/utils/TimeUtils';
 
 /**
  * Mod 工具函数
@@ -50,7 +51,7 @@ export const ModHelpers = {
     needsUpdate(mod: CompleteModData): boolean {
         const onlineDate = mod.status?.onlineUpdateDate ?? 0;
         const localDate = mod.status?.lastUpdateDate ?? 0;
-        return onlineDate > localDate;
+        return TimeUtils.hasUpdate(onlineDate, localDate);
     },
 
     /**

@@ -1,5 +1,6 @@
 import { ModSourceType, ModApprovalStatus } from '@/models/mod/types';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
+import { TimeUtils } from '@/utils/TimeUtils';
 
 /**
  * ModMapper 映射器
@@ -49,8 +50,8 @@ export class ModMapper {
             },
             status: {
                 modId: 0,
-                lastUpdateDate: Date.now(),
-                onlineUpdateDate: Date.now(),
+                lastUpdateDate: TimeUtils.now(),
+                onlineUpdateDate: TimeUtils.now(),
                 isOnlineAvailable: true,
                 isLocalNotFound: false
             }
@@ -89,7 +90,7 @@ export class ModMapper {
             },
             status: {
                 modId: 0,
-                lastUpdateDate: Date.now(),
+                lastUpdateDate: TimeUtils.now(),
                 onlineUpdateDate: 0,
                 isOnlineAvailable: false,
                 isLocalNotFound: false

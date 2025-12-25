@@ -140,7 +140,7 @@ export class ModioApi {
     public static async getEvents(dateAdded: number, modIds: string) {
         try {
             // 如果时间小 10 分钟，不请求
-            if (TimeUtils.getCurrentTime() - dateAdded < 10 * 60) {
+            if (TimeUtils.nowSeconds() - dateAdded < 10 * 60) {
                 return [];
             }
 
