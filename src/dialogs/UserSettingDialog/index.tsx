@@ -56,7 +56,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
-                const url = await CacheApi.cacheImage(userInfo.avatar.thumb_50x50);
+                const url = await CacheApi.cacheImage(userInfo.avatar.thumb_100x100);
                 const oauths = await StorageAPI.getOAuths();
                 const modioOAuth = await oauths.getModioOAuth();
 
@@ -147,7 +147,8 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                         <Flex justify="space-between" align="center">
                             <Text strong style={{ fontSize: 15 }}>{t("Mod.io Configuration")}</Text>
                             <Button 
-                                type="link" 
+                                color="primary"
+                                variant="link" 
                                 size="small" 
                                 onClick={this.onOpenModioClick}
                                 icon={<LinkOutlined/>}
