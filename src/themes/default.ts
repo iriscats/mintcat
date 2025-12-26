@@ -1,4 +1,4 @@
-import {ThemeConfig} from "antd";
+import { ThemeConfig } from "antd";
 
 export const getDefaultTheme = (): ThemeConfig => {
     return {
@@ -40,14 +40,20 @@ export function renderTheme(theme: string = undefined) {
             link.href = '/themes/dark-theme.css';
         }
             break;
-        case "Pink":
+        case "Pink": {
             defaultTheme.token.colorPrimary = "#ff69b4";
             link.href = '/themes/pink-theme.css';
+        }
+            break;
+        case "Blue": {
+            defaultTheme.token.colorPrimary = "#1677FF";
+            link.href = '/themes/blue-theme.css';
+        }
             break;
         case "Light":
         default: {
-            defaultTheme.token.colorPrimary = "#1677FF";
-            link.href = '/themes/light-theme.css';
+            defaultTheme.token.colorPrimary = "#804bcc";
+            link.href = '/themes/purple-theme.css';
         }
             break;
     }

@@ -157,7 +157,8 @@ class TitleBar extends React.Component<any, any> {
                         content={
                             <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16}}>
                                 {[
-                                    {key: 'Light', title: t('Light'), color: "#F5F8FF"},
+                                    {key: 'Light', title: t('Light'), color: "#804bcc"},
+                                    {key: 'Blue', title: t('Blue'), color: "#F5F8FF"},
                                     {key: 'Dark', title: t('Dark'), color: "black"},
                                     {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
                                 ].map((item) => (
