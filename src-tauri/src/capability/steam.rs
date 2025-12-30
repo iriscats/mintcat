@@ -62,4 +62,3 @@ pub fn launch_steam_game() {
         }
     }
 }
-

@@ -32,6 +32,7 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
@@ -56,11 +57,11 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
-//         .plugin(tauri_plugin_mcp::init_with_config(
-//             tauri_plugin_mcp::PluginConfig::new("MintCat".parse().unwrap())
-//                 .start_socket_server(true)
-//                 .tcp("127.0.0.1".parse().unwrap(), 9999),
-//         ))
+        //         .plugin(tauri_plugin_mcp::init_with_config(
+        //             tauri_plugin_mcp::PluginConfig::new("MintCat".parse().unwrap())
+        //                 .start_socket_server(true)
+        //                 .tcp("127.0.0.1".parse().unwrap(), 9999),
+        //         ))
         .invoke_handler(tauri::generate_handler![
             integrator::drg::install_mods,
             integrator::drg::uninstall_mods,

@@ -1,4 +1,16 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
+use crate::integrator::drg::game_pak_patch;
+use crate::integrator::drg::game_pak_patch::{
+    get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
+    SERVER_LIST_ENTRY_PATH,
+};
+use crate::integrator::drg::installation::DRGInstallation;
+use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
+use crate::integrator::drg::raw_asset::RawAsset;
+use crate::integrator::ue4ss::ue4ss_integrate::{
+    install_ue4ss, install_ue4ss_mod, uninstall_ue4ss,
+};
+use crate::integrator::{ModInfo, ReadSeek};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
@@ -9,13 +21,6 @@ use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
 use uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
-use crate::integrator::{ModInfo, ReadSeek};
-use crate::integrator::drg::game_pak_patch::{get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH, SERVER_LIST_ENTRY_PATH};
-use crate::integrator::drg::installation::DRGInstallation;
-use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
-use crate::integrator::drg::raw_asset::RawAsset;
-use crate::integrator::drg::game_pak_patch;
-use crate::integrator::ue4ss::ue4ss_integrate::{install_ue4ss, install_ue4ss_mod, uninstall_ue4ss};
 
 static FSD_AR_PATH: &str = "FSD/AssetRegistry.bin";
 
@@ -128,10 +133,10 @@ impl PakIntegrator {
 
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             app.emit("status-bar-percent", current_percent).unwrap();
-            
+
             // install ue4ssl
             install_ue4ss(&self.installation.binaries_directory());
-            
+
             let result = self.process_mod(mod_info);
             match result {
                 Ok(_) => {
@@ -382,10 +387,8 @@ impl PakIntegrator {
             self.init_space_rig_assets.clone(),
             self.init_cave_assets.clone(),
         );
-        self.bundle.write_asset(
-            asset,
-            "FSD/Content/ModIntegration/MI_SpawnMods",
-        )?;
+        self.bundle
+            .write_asset(asset, "FSD/Content/ModIntegration/MI_SpawnMods")?;
 
         Ok(())
     }

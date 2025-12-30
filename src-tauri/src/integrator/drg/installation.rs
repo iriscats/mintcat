@@ -45,7 +45,7 @@ impl DRGInstallation {
             root,
         })
     }
-    
+
     pub fn install_type(&self) -> DRGInstallationType {
         let pak_name = self.pak_path.file_name().unwrap();
         let name_str = pak_name.to_str().expect("Invalid UTF-8 path name");

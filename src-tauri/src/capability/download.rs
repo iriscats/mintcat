@@ -1,6 +1,6 @@
+use serde::Serialize;
 use std::fs::File;
 use std::io::{Read, Write};
-use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Clone, Serialize)]
@@ -30,7 +30,7 @@ pub fn download_large_file(app: AppHandle, url: String, file_path: String) -> Re
                 "download-api-statue",
                 format!("HTTP错误: {}", response.status()),
             )
-                .unwrap();
+            .unwrap();
             return;
         }
 
@@ -79,7 +79,7 @@ pub fn download_large_file(app: AppHandle, url: String, file_path: String) -> Re
                         total_size: total_size,
                     },
                 )
-                    .unwrap();
+                .unwrap();
             }
         }
 

@@ -1,5 +1,5 @@
-use std::io::{Read, Seek};
 use serde::{Deserialize, Serialize};
+use std::io::{Read, Seek};
 
 pub mod drg;
 pub mod drgrc;

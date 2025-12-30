@@ -25,7 +25,8 @@ pub fn install_ue4ss(install_path: &PathBuf) {
         fs::write(ue4ss_csharp_dll, ue4ss_csharp_dll_buff).unwrap();
 
         let ue4ss_runtime_json = ue4ss_path.join("UE4SSL.Runtime.runtimeconfig.json");
-        let ue4ss_runtime_json_buff = include_bytes!("../../../assets/UE4SSL.Runtime.runtimeconfig.json");
+        let ue4ss_runtime_json_buff =
+            include_bytes!("../../../assets/UE4SSL.Runtime.runtimeconfig.json");
         fs::write(ue4ss_runtime_json, ue4ss_runtime_json_buff).unwrap();
 
         let proxy_dll_path = install_path.join("dwmapi.dll");
