@@ -115,6 +115,11 @@ export class DatabaseInitializer {
         OR IGNORE INTO games (name, display_name, install_path, is_active)
                           VALUES ('drg', 'Deep Rock Galactic', '', true)`);
 
+
+        await db.run(sql`INSERT
+        OR IGNORE INTO games (name, display_name, install_path, is_active)
+                          VALUES ('rc', 'Deep Rock Galactic: Rogue Core', '', true)`);
+
         // 插入默认用户
         await db.run(sql`INSERT
         OR IGNORE INTO users (username, email, avatar_url)

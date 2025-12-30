@@ -7,6 +7,7 @@ import {ConfigDataType} from "@/storage/DataType.ts";
 import {openPath} from "@tauri-apps/plugin-opener";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {emitVoidEvent, useEventListener} from "@/events";
+import { MigrationBase } from '@/storage/migration';
 
 
 interface ListDataType extends ConfigDataType {
@@ -80,8 +81,8 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     }
 
     const getData = async () => {
-        // const configs = await getExistingConfigList();
-        // setDataSource(configs);
+        const configs = await MigrationBase.getExistingConfigList();
+        setDataSource(configs);
     }
 
     // ✅ 使用 useEventListener 自动管理监听器清理
@@ -103,7 +104,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
             onCancel={handleCancel}
             width={600}
         >
-            <Space direction="vertical"
+            <Space orientation="vertical"
                    style={{
                        width: "100%",
                        height: "100%",
@@ -132,7 +133,6 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                                           {`${t("Saved at")}: ${item.saveTime}`}
                                       </span>
                                       <Tag color="blue"
-                                           bordered={false}
                                            style={{
                                                height: "20px",
                                                marginTop: "5px",
@@ -143,7 +143,6 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                                       {
                                           item.version === "0.4.0" &&
                                           <Tag color="green"
-                                               bordered={false}
                                                style={{
                                                    height: "20px",
                                                    marginTop: "5px",

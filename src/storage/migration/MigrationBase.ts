@@ -56,7 +56,7 @@ export class MigrationBase {
     /**
      * 获取现有配置列表
      */
-    private static async getExistingConfigList(): Promise<ConfigDataType[]> {
+    public static async getExistingConfigList(): Promise<ConfigDataType[]> {
         const configs: ConfigDataType[] = [];
 
         try {
