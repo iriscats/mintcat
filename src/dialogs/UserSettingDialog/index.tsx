@@ -1,7 +1,7 @@
 import React from "react";
 import {t} from "i18next";
 import {Avatar, Button, Divider, Flex, Input, message, Modal, Typography} from "antd";
-import {UserOutlined, LinkOutlined, KeyOutlined} from "@ant-design/icons";
+import {UserOutlined, LinkOutlined, KeyOutlined, CrownOutlined} from "@ant-design/icons";
 import {open as openShell} from "@tauri-apps/plugin-shell";
 
 import {ModioApi} from "@/apis/modio";
@@ -131,9 +131,28 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                             }}
                         />
                         <Flex vertical gap={4}>
-                            <Title level={4} style={{ margin: 0, color: '#1F2937' }}>
-                                {this.state.username || t("Guest User")}
-                            </Title>
+                            <Flex align="center" gap={8}>
+                                <Title level={4} style={{ margin: 0, color: '#1F2937' }}>
+                                    {this.state.username || t("Guest User")}
+                                </Title>
+                                <Button
+                                    size="small"
+                                    type="primary"
+                                    icon={<CrownOutlined />}
+                                    style={{
+                                        backgroundColor: '#FFD700',
+                                        borderColor: '#FFD700',
+                                        color: '#725e0c',
+                                        fontWeight: 'bold',
+                                        fontSize: '12px',
+                                        height: '22px',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    VIP
+                                </Button>
+                            </Flex>
                             <Text type="secondary">
                                 ID: {this.state.modioId || "N/A"}
                             </Text>

@@ -18,9 +18,6 @@ import {TaskManager} from "@/tasks/TaskManager.ts";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 
-const items = [
-
-];
 
 class TitleBar extends React.Component<any, any> {
 
@@ -33,7 +30,23 @@ class TitleBar extends React.Component<any, any> {
         this.userSettingDialogRef = React.createRef();
         this.selectGameDialogRef = React.createRef();
 
+        this.state = {
+            gameName: "深岩银河"
+        };
+
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
+    }
+
+    private async loadActiveGame() {
+        try {
+            const gameDAO = await StorageAPI.getGames();
+            const activeGame = await gameDAO.getActiveGame();
+            if (activeGame) {
+                this.setState({ gameName: activeGame.displayName });
+            }
+        } catch (e) {
+            console.error("Failed to load active game", e);
+        }
     }
 
     private async onOpenWikiClick() {
@@ -60,7 +73,7 @@ class TitleBar extends React.Component<any, any> {
 
             // Wait for task to complete
             const result = await taskManager.waitForTask(taskId, 120000); // 2 min timeout
-
+            
             // Cleanup listener
             unlisten();
 
@@ -86,8 +99,8 @@ class TitleBar extends React.Component<any, any> {
         await emitEvent("theme-change", value as 'Light' | 'Dark' | 'Pink');
     }
 
-    componentDidMount(): void {
-        // Avatar loading is now handled by UserSettingDialog
+    componentDidMount() {
+        this.loadActiveGame();
     }
 
     render() {
@@ -127,7 +140,7 @@ class TitleBar extends React.Component<any, any> {
                                 <PlayCircleOutlined/>
                                 <span>
                                     <b>
-                                        深岩银河
+                                        {this.state.gameName}
                                         {/*{t("Launch Game")}*/}
                                     </b>
                                 </span>

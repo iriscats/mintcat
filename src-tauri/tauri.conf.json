@@ -51,6 +51,11 @@
         "https://github.com/iriscats/mintcat/releases/latest/download/latest.json",
         "https://api.v1st.net/https://github.com/iriscats/mintcat/releases/latest/download/latest.json"
       ]
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["mintcat"]
+      }
     }
   }
 }

@@ -32,6 +32,7 @@
     "sql:allow-select",
     "sql:allow-close",
     "sql:allow-execute",
+    "deep-link:default",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [

@@ -32,7 +32,6 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_deep_link::init())
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
@@ -42,6 +41,7 @@ pub fn run() {
             }
         })
         //.plugin(tauri_plugin_sentry::init(&client))
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

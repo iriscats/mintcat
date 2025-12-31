@@ -20,7 +20,6 @@ import {EmptyPage} from "@/pages/EmptyPage.tsx";
 import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 
 import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
-import {LoginDialog} from "@/dialogs/LoginDialog";
 import {useKeyboardListener} from "@/hooks/useKeyboardListener.tsx";
 import {emitEvent} from "@/events";
 
@@ -109,7 +108,6 @@ const AppContent = () => {
             <UpdateDialog/>
             <ConfigManageDialog/>
             <SelectGameDialog/>
-            <LoginDialog/>
             <Header className={"app-header"}>
                 <TitleBar/>
             </Header>
