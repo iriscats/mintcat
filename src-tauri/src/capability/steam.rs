@@ -26,20 +26,25 @@ fn kill_steam() {
 }
 
 #[tauri::command]
-pub fn check_steam_game(_exe_name: String) -> bool {
-    return false;
+pub fn check_steam_game(exe_name: String) -> bool {
     #[cfg(windows)]
     {
+        use std::process::Command;
         let output = Command::new("tasklist")
             .args(&["/FI", format!("IMAGENAME eq {}", exe_name).as_str()])
             .output()
             .unwrap();
 
         if String::from_utf8_lossy(&output.stdout).contains(exe_name.as_str()) {
-            true
+            return true;
         } else {
-            false
+            return false;
         }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = exe_name;
+        false
     }
 }
 
@@ -47,6 +52,7 @@ pub fn check_steam_game(_exe_name: String) -> bool {
 pub fn launch_steam_game() {
     #[cfg(target_os = "windows")]
     {
+        use std::process::Command;
         let game_id = "548430";
         //let url = format!("steam://run/{}//-disablemodding", game_id);
         let url = format!("steam://run/{}", game_id);
