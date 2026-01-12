@@ -68,6 +68,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private unlistenHomePageLoading?: UnlistenFn;
     private unlistenUpdateTreeView?: UnlistenFn;
     private unlistenUpdateProfileSelect?: UnlistenFn;
+    private unlistenActiveGameChange?: UnlistenFn;
 
     public constructor(props: any) {
         super(props);
@@ -546,6 +547,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await this.updateProfileSelect();
         });
 
+        // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
+        this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
+            await this.updateProfileSelect();
+            await this.updateTreeView();
+        });
+
         // Initial UI update
         this.updateProfileSelect().then();
         this.updateTreeView().then();
@@ -564,6 +571,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
         if (this.unlistenUpdateProfileSelect) {
             this.unlistenUpdateProfileSelect();
+        }
+        if (this.unlistenActiveGameChange) {
+            this.unlistenActiveGameChange();
         }
     }
 

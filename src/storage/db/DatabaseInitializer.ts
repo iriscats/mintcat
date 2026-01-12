@@ -110,15 +110,16 @@ export class DatabaseInitializer {
     public static async setDefaultValues() {
         const db = await getDb();
 
-        // 插入默认游戏
+        // 插入默认游戏 - Deep Rock Galactic
         await db.run(sql`INSERT
-        OR IGNORE INTO games (name, display_name, install_path, is_active)
-                          VALUES ('drg', 'Deep Rock Galactic', '', true)`);
+        OR IGNORE INTO games (name, display_name, icon, install_path, is_active)
+                          VALUES ('drg', 'Deep Rock Galactic', 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/548430/header.jpg', '', true)`);
 
 
+        // 插入默认游戏 - Deep Rock Galactic: Rogue Core
         await db.run(sql`INSERT
-        OR IGNORE INTO games (name, display_name, install_path, is_active)
-                          VALUES ('rc', 'Deep Rock Galactic: Rogue Core', '', true)`);
+        OR IGNORE INTO games (name, display_name, icon, install_path, is_active)
+                          VALUES ('rc', 'Deep Rock Galactic: Rogue Core', 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2605790/c0a291000146bffd3c7934ac69e2dbdea86aef4f/header.jpg', '', false)`);
 
         // 插入默认用户
         await db.run(sql`INSERT

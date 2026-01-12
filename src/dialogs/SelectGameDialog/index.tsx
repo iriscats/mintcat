@@ -1,6 +1,6 @@
 import {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
 import {t} from "i18next";
-import {Button, Flex, message, Typography, Modal, Tag, Input, Tooltip} from 'antd';
+import {Button, Flex, message, Typography, Modal, Tag, Input, Tooltip, theme} from 'antd';
 import {FolderOpenOutlined, AimOutlined, RocketOutlined, CheckCircleFilled} from "@ant-design/icons";
 import {useEventListener, emitEvent} from "@/events";
 import {open} from "@tauri-apps/plugin-dialog";
@@ -10,6 +10,7 @@ import {StorageAPI} from "@/storage";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 
 const {Text} = Typography;
+const {useToken} = theme;
 
 export interface SelectGameDialogResult {
     gameId?: number;
@@ -21,6 +22,7 @@ export interface SelectGameDialogRef {
 }
 
 export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => {
+    const {token} = useToken();
     const [games, setGames] = useState<GameData[]>([]);
     const [selectedGameId, setSelectedGameId] = useState<number | undefined>();
     const [loading, setLoading] = useState<boolean>(true);
@@ -157,12 +159,12 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                 key={game.id}
                 onClick={() => onGameChange(game.id!)}
                 style={{
-                    border: `2px solid ${isSelected ? '#1677ff' : '#f0f0f0'}`,
+                    border: `2px solid ${isSelected ? token.colorPrimary : '#f0f0f0'}`,
                     borderRadius: '12px',
                     padding: '16px',
                     marginBottom: '12px',
                     cursor: 'pointer',
-                    backgroundColor: isSelected ? '#f0f9ff' : '#fff',
+                    backgroundColor: isSelected ? token.colorPrimaryBg : '#fff',
                     transition: 'all 0.2s ease',
                     position: 'relative',
                     overflow: 'hidden'
@@ -177,7 +179,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                         height: 0,
                         borderStyle: 'solid',
                         borderWidth: '0 40px 40px 0',
-                        borderColor: 'transparent #1677ff transparent transparent',
+                        borderColor: `transparent ${token.colorPrimary} transparent transparent`,
                         zIndex: 1
                     }}>
                         <CheckCircleFilled style={{
@@ -197,7 +199,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                                 width: 100,
                                 height: 48,
                                 borderRadius: 8,
-                                background: isSelected ? '#1677ff' : '#f5f5f5',
+                                background: isSelected ? token.colorPrimary : '#f5f5f5',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -207,7 +209,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                                 flexShrink: 0
                             }}>
                                 <img
-                                    src="https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/548430/header.jpg?t=1766071358"
+                                    src={game.icon}
                                     alt={game.displayName}
                                     style={{width: '100%', height: '100%', objectFit: 'cover'}}
                                 />
@@ -227,7 +229,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                     </Flex>
 
                     <div style={{
-                        background: isSelected ? 'rgba(22, 119, 255, 0.02)' : '#f9fafb',
+                        background: isSelected ? token.colorPrimaryBg : '#f9fafb',
                         padding: '12px',
                         borderRadius: '8px',
                         border: '1px solid #f0f0f0'
@@ -249,7 +251,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                                     />
                                 </Tooltip>
                                 <Tooltip title={t("Auto Find")}>
-                                    <Button 
+                                    <Button
                                         icon={<AimOutlined/>}
                                         onClick={() => onFindGamePathClick(game.id!)}
                                     />

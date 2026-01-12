@@ -27,6 +27,7 @@ export const games = sqliteTable("games", {
     id: integer("id").primaryKey({ autoIncrement: true }), // 游戏唯一标识
     name: text("name").notNull(), // 游戏名称
     displayName: text("display_name").notNull(), // 游戏显示名称
+    icon: text("icon").notNull().default(""), // 游戏图标URL
     installPath: text("install_path").notNull().default(""), // 游戏安装路径
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true), // 是否启用
     createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

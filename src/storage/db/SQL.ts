@@ -4,6 +4,7 @@ export const ALL_SQL_CONTENT = `
         \`id\`           integer PRIMARY KEY AUTOINCREMENT NOT NULL,
         \`name\`         text                          NOT NULL,
         \`display_name\` text                          NOT NULL,
+        \`icon\`         text    DEFAULT ''            NOT NULL,
         \`install_path\` text    DEFAULT ''            NOT NULL,
         \`is_active\`    integer DEFAULT true          NOT NULL,
         \`created_at\`   integer DEFAULT (unixepoch()) NOT NULL,

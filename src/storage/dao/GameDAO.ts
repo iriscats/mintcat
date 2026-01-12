@@ -11,6 +11,7 @@ export interface GameData {
     id?: number;
     name: string;
     displayName: string;
+    icon?: string;
     installPath?: string;
     isActive?: boolean;
     createdAt?: Date;
@@ -87,6 +88,7 @@ export class GameDAO {
             const result = await db.insert(games).values({
                 name: gameData.name,
                 displayName: gameData.displayName,
+                icon: gameData.icon || "",
                 installPath: gameData.installPath || "",
                 isActive: gameData.isActive ?? true,
             }).returning();
@@ -108,6 +110,7 @@ export class GameDAO {
 
             if (gameData.name !== undefined) updateData.name = gameData.name;
             if (gameData.displayName !== undefined) updateData.displayName = gameData.displayName;
+            if (gameData.icon !== undefined) updateData.icon = gameData.icon;
             if (gameData.installPath !== undefined) updateData.installPath = gameData.installPath;
             if (gameData.isActive !== undefined) updateData.isActive = gameData.isActive;
 
@@ -158,6 +161,7 @@ export class GameDAO {
             id: record.id,
             name: record.name,
             displayName: record.displayName,
+            icon: record.icon,
             installPath: record.installPath,
             isActive: record.isActive,
             createdAt: record.createdAt,

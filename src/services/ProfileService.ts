@@ -32,10 +32,21 @@ export class ProfileService {
      */
     public async ensureActiveProfile(profileDAO?: ProfileDAO): Promise<ProfileData> {
         const dao = profileDAO ?? await StorageAPI.getProfiles();
-        let profileList = await dao.getAllProfiles();
+        const games = await StorageAPI.getGames();
+        const users = await StorageAPI.getUsers();
+
+        const activeGame = await games.getActiveGame();
+        const activeUser = await users.getActiveUser();
+
+        if (!activeGame || !activeUser) {
+            throw new Error("[ProfileService] No active game or user");
+        }
+
+        // 只获取当前游戏和用户的 profile
+        let profileList = await dao.getProfilesByUserAndGame(activeUser.id!, activeGame.id!);
 
         if (profileList.length === 0) {
-            const created = await this.createDefaultProfile(dao);
+            const created = await this.createDefaultProfile(dao, activeGame.id!, activeUser.id!);
             if (created) {
                 profileList = [created];
             }
@@ -56,14 +67,25 @@ export class ProfileService {
     }
 
     /**
-     * 获取所有 profile 的名称列表
+     * 获取当前活跃游戏的所有 profile 的名称列表
      */
     public async getProfileList(): Promise<string[]> {
         const profiles = await StorageAPI.getProfiles();
-        const profileData = await profiles.getAllProfiles();
+        const games = await StorageAPI.getGames();
+        const users = await StorageAPI.getUsers();
+
+        const activeGame = await games.getActiveGame();
+        const activeUser = await users.getActiveUser();
+
+        if (!activeGame || !activeUser) {
+            return [];
+        }
+
+        // 只获取当前游戏和用户的 profile
+        const profileData = await profiles.getProfilesByUserAndGame(activeUser.id!, activeGame.id!);
 
         if (profileData.length === 0) {
-            const created = await this.createDefaultProfile(profiles);
+            const created = await this.createDefaultProfile(profiles, activeGame.id!, activeUser.id!);
             return created ? [created.name] : [];
         }
 
@@ -98,10 +120,22 @@ export class ProfileService {
      */
     public async setActiveProfile(profileName: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
-        const profileData = await profiles.getAllProfiles();
+        const games = await StorageAPI.getGames();
+        const users = await StorageAPI.getUsers();
+
+        const activeGame = await games.getActiveGame();
+        const activeUser = await users.getActiveUser();
+
+        if (!activeGame || !activeUser) {
+            console.warn(`[ProfileService] No active game or user`);
+            return;
+        }
+
+        // 只获取当前游戏和用户的 profile
+        const profileData = await profiles.getProfilesByUserAndGame(activeUser.id!, activeGame.id!);
 
         if (profileData.length === 0) {
-            await this.createDefaultProfile(profiles);
+            await this.createDefaultProfile(profiles, activeGame.id!, activeUser.id!);
             return;
         }
 
@@ -271,12 +305,12 @@ export class ProfileService {
     /**
      * 创建默认 profile
      */
-    private async createDefaultProfile(profileDAO: ProfileDAO): Promise<ProfileData | null> {
+    private async createDefaultProfile(profileDAO: ProfileDAO, gameId: number, userId: number): Promise<ProfileData | null> {
         const defaultProfile = await profileDAO.createProfile({
             name: "default",
             displayName: "default",
-            gameId: 1,
-            userId: 1,
+            gameId: gameId,
+            userId: userId,
             isActive: true
         });
 
