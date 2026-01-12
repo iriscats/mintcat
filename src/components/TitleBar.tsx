@@ -13,7 +13,7 @@ import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
-import {emitEvent} from "@/events";
+import {emitEvent, listenEvent, UnlistenFn} from "@/events";
 import {TaskManager} from "@/tasks/TaskManager.ts";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
@@ -23,6 +23,7 @@ class TitleBar extends React.Component<any, any> {
 
     private readonly userSettingDialogRef: React.RefObject<UserSettingDialog>
     private readonly selectGameDialogRef: React.RefObject<SelectGameDialogRef>
+    private unlistenActiveGameChange: UnlistenFn | undefined;
 
     public constructor(props: any) {
         super(props);
@@ -99,8 +100,17 @@ class TitleBar extends React.Component<any, any> {
         await emitEvent("theme-change", value as 'Light' | 'Dark' | 'Pink');
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         this.loadActiveGame();
+        this.unlistenActiveGameChange = await listenEvent('active-game-change', (game) => {
+            this.setState({ gameName: game.displayName });
+        });
+    }
+
+    componentWillUnmount() {
+        if (this.unlistenActiveGameChange) {
+            this.unlistenActiveGameChange();
+        }
     }
 
     render() {

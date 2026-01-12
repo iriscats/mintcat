@@ -31,6 +31,9 @@ export interface EventPayloads {
   /** 游戏信息加载成功 */
   'game-info-load-success': GameData;
 
+  /** 激活游戏变更 */
+  'active-game-change': GameData;
+
   // ========================================
   // UI 更新事件
   // ========================================

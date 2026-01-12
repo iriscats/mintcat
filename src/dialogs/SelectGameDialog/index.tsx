@@ -2,7 +2,7 @@ import {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
 import {t} from "i18next";
 import {Button, Flex, message, Typography, Modal, Tag, Input, Tooltip} from 'antd';
 import {FolderOpenOutlined, AimOutlined, RocketOutlined, CheckCircleFilled} from "@ant-design/icons";
-import {useEventListener} from "@/events";
+import {useEventListener, emitEvent} from "@/events";
 import {open} from "@tauri-apps/plugin-dialog";
 
 import {GameData} from "@/storage/dao/GameDAO.ts";
@@ -55,17 +55,39 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             return;
         }
 
-        const selectedGame = games.find(game => game.id === selectedGameId);
+        try {
+            const gameDAO = await StorageAPI.getGames();
 
-        // onOk({
-        //     gameId: selectedGameId,
-        //     gameData: selectedGame
-        // } as SelectGameDialogResult);
-        setIsModalOpen(false);
+            // 更新激活状态
+            for (const game of games) {
+                if (game.id === selectedGameId) {
+                    if (!game.isActive) {
+                        await gameDAO.setGameActive(game.id!, true);
+                    }
+                } else {
+                    if (game.isActive) {
+                        await gameDAO.setGameActive(game.id!, false);
+                    }
+                }
+            }
+
+            const selectedGame = games.find(game => game.id === selectedGameId);
+            if (selectedGame) {
+                // 发送激活游戏变更事件
+                const updatedGame = { ...selectedGame, isActive: true };
+                await emitEvent('active-game-change', updatedGame);
+            }
+
+            // 重新加载列表以确保状态最新
+            await loadGames();
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error('Failed to update active game:', error);
+            message.error(t("Failed to update active game"));
+        }
     };
 
     const handleCancel = () => {
-        //onCancel();
         setIsModalOpen(false);
     };
 
@@ -122,7 +144,6 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
         loadGames().then();
     }, []);
 
-    // ✅ 使用 useEventListener 自动管理清理
     useEventListener("select-game-dialog-open", () => {
         setIsModalOpen(true);
     });
