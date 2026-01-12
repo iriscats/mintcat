@@ -57,6 +57,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_task_queue::init().build())
         //         .plugin(tauri_plugin_mcp::init_with_config(
         //             tauri_plugin_mcp::PluginConfig::new("MintCat".parse().unwrap())
         //                 .start_socket_server(true)

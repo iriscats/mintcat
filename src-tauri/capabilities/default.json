@@ -33,6 +33,7 @@
     "sql:allow-close",
     "sql:allow-execute",
     "deep-link:default",
+    "task-queue:default",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [

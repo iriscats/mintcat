@@ -480,7 +480,9 @@ export class TaskQueueAPI {
 
         if (this.isValidTask(task)) {
           // Check if we have a registered handler for this task type
-          const handler = this.frontendTaskHandlers.get(task.type);
+          // Support both 'type' (frontend) and 'task_type' (backend) field names
+          const taskType = (task as any).type || (task as any).task_type;
+          const handler = this.frontendTaskHandlers.get(taskType);
           if (handler) {
             try {
               // Execute the frontend handler
@@ -493,7 +495,7 @@ export class TaskQueueAPI {
               await this.handleFrontendTaskCompletion(task.id, 'failed', task.progress || 0);
             }
           } else {
-            console.warn(`No frontend handler registered for task type: ${task.type}`);
+            console.warn(`No frontend handler registered for task type: ${taskType}`);
             // Mark task as failed due to no handler
             await this.handleFrontendTaskCompletion(task.id, 'failed', 0);
           }
@@ -606,13 +608,18 @@ export class TaskQueueAPI {
    * Private helper to validate task object
    */
   private isValidTask(task: any): task is Task {
+    // Support both 'type' (frontend) and 'task_type' (backend) field names
+    const taskType = task.type || task.task_type;
+    // Support both number (frontend) and string (backend) priority
+    const hasValidPriority = typeof task.priority === 'number' || typeof task.priority === 'string';
+
     return (
       typeof task === 'object' &&
       task !== null &&
       typeof task.id === 'string' &&
-      typeof task.type === 'string' &&
+      typeof taskType === 'string' &&
       typeof task.status === 'string' &&
-      typeof task.priority === 'number' &&
+      hasValidPriority &&
       typeof task.progress === 'number' &&
       typeof task.created_at === 'string'
     );
