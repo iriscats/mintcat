@@ -54,6 +54,42 @@ export class CacheApi {
         }
     }
 
+    public static async getAvatarCachePath(userId: number) {
+        const appCachePath = await this.getCacheDir();
+        const avatarCachePath = await path.join(appCachePath, "avatars");
+        if (!await exists(avatarCachePath)) {
+            await mkdir(avatarCachePath)
+        }
+        return await path.join(avatarCachePath, `avatar_${userId}.png`);
+    }
+
+    public static async cacheAvatar(userId: number, avatarUrl: string) {
+        try {
+            const avatarPath = await CacheApi.getAvatarCachePath(userId);
+            if (!await exists(avatarPath)) {
+                const response = await NetworkApi.get(avatarUrl);
+                const data = await response.arrayBuffer();
+                const buffer = new Uint8Array(data);
+                await writeFile(avatarPath, buffer);
+            }
+            return convertFileSrc(avatarPath);
+        } catch (error) {
+            console.error(`Failed to cache avatar for user ${userId}:`, error);
+        }
+    }
+
+    public static async loadAvatar(userId: number) {
+        try {
+            const avatarPath = await CacheApi.getAvatarCachePath(userId);
+            if (await exists(avatarPath)) {
+                return convertFileSrc(avatarPath);
+            }
+        } catch (error) {
+            console.error(`Failed to load avatar for user ${userId}:`, error);
+        }
+        return null;
+    }
+
     public static async saveCacheFile(modName: string, version: string, data: Uint8Array): Promise<any> {
         try {
             const fileName = await CacheApi.getModCachePath(modName, version);

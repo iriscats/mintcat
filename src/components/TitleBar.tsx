@@ -17,6 +17,8 @@ import {emitEvent, listenEvent, UnlistenFn} from "@/events";
 import {TaskManager} from "@/tasks/TaskManager.ts";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
+import {CacheApi} from "@/apis/CacheApi.ts";
+import {ModioApi} from "@/apis/modio";
 
 
 class TitleBar extends React.Component<any, any> {
@@ -32,7 +34,8 @@ class TitleBar extends React.Component<any, any> {
         this.selectGameDialogRef = React.createRef();
 
         this.state = {
-            gameName: "深岩银河"
+            gameName: "未选择",
+            avatarUrl: null
         };
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
@@ -50,8 +53,22 @@ class TitleBar extends React.Component<any, any> {
         }
     }
 
+    private async loadUserAvatar() {
+        try {
+            const userInfo = await ModioApi.getUserInfo();
+            if (userInfo) {
+                const avatarUrl = await CacheApi.loadAvatar(userInfo.id);
+                if (avatarUrl) {
+                    this.setState({ avatarUrl });
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load user avatar", e);
+        }
+    }
+
     private async onOpenWikiClick() {
-        await open("https://mintcat.v1st.net");
+        await open("https://www.mintcat.work");
     }
 
     private async onLaunchGameClick() {
@@ -102,6 +119,7 @@ class TitleBar extends React.Component<any, any> {
 
     async componentDidMount() {
         this.loadActiveGame();
+        this.loadUserAvatar();
         this.unlistenActiveGameChange = await listenEvent('active-game-change', (game) => {
             this.setState({ gameName: game.displayName });
         });
@@ -211,6 +229,7 @@ class TitleBar extends React.Component<any, any> {
                     </span>
                     <Avatar className={"app-header-avatar"}
                             icon={<UserOutlined/>}
+                            src={this.state.avatarUrl}
                             onClick={() => {
                                 this.userSettingDialogRef.current?.show();
                             }}

@@ -78,16 +78,16 @@ macOS:
 # RoadMap
 
 ## 0.5.0-beta1
-- [ ] Task Manager
-- [ ] Sqlite and Tauri Store
+- [wip] Task Manager
+- [done] Sqlite and Tauri Store
 
 ## 0.5.0-beta2
-- [ ] Multi Game
+- [done] Multi Game
 - [ ] Plugin System
 
 ## 0.5.0-beta3
 - [ ] Multi Mod Provider
-- [ ] Login / Register
+- [wip] Login / Register
 
 ## 0.5.0-beta4
 - [ ] Mod Hot Patch
