@@ -257,9 +257,9 @@ const displayTime = TimeUtils.formatDate(new Date());
 | 文件路径 | 修改内容 | 行号 |
 |---------|---------|------|
 | `src/utils/TimeUtils.ts` | 新增完整工具方法 | 全文 |
-| `src/apis/ModUpdateApi.ts` | 使用 `fromModio()` 转换 | 79, 268, 283 |
-| `src/apis/ModUpdateApi.ts` | 使用 `now()` 替代 `Date.now()` | 125 |
-| `src/apis/ModUpdateApi.ts` | 使用 `nowSeconds()` 获取秒时间戳 | 247, 292 |
+| `src/apis/ModUpdateService.ts` | 使用 `fromModio()` 转换 | 79, 268, 283 |
+| `src/apis/ModUpdateService.ts` | 使用 `now()` 替代 `Date.now()` | 125 |
+| `src/apis/ModUpdateService.ts` | 使用 `nowSeconds()` 获取秒时间戳 | 247, 292 |
 | `src/pages/HomePage/TreeViewItem.tsx` | 使用 `hasUpdate()` 判断更新 | 178-181 |
 | `src/utils/modHelpers.ts` | 使用 `hasUpdate()` 判断更新 | 54 |
 | `src/mappers/ModMapper.ts` | 使用 `now()` 初始化时间 | 53, 54, 93 |

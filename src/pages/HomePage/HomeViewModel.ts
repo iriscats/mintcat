@@ -13,8 +13,6 @@ import { IoC } from "@/core/IoC.ts";
 import {emitVoidEvent} from "@/events";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ModService} from "@/services/ModService.ts";
-import {ModMapper} from "@/mappers/ModMapper.ts";
-import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {ProfileService} from "@/services/ProfileService.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 
@@ -104,7 +102,7 @@ export class HomeViewModel extends BaseViewModel {
 
             const completeData = await modsApi.getCompleteModData(existingMod.modId!);
             if (completeData) {
-                await ModUpdateApi.updateMod(completeData);
+                await ModUpdateService.updateMod(completeData);
             }
 
             if (modInfoResp.dependencies) {
@@ -121,7 +119,7 @@ export class HomeViewModel extends BaseViewModel {
         try {
             const addedMod = await ModService.addModFromModio(modInfoResp, activeProfile.id!, groupId);
 
-            await ModUpdateApi.updateMod(addedMod);
+            await ModUpdateService.updateMod(addedMod);
 
             if (modInfoResp.dependencies) {
                 await this.addModDependencies(modInfoResp.id, groupId);

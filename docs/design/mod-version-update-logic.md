@@ -104,8 +104,8 @@
 #### `onlineUpdateDate` (mod_status.online_update_date)
 - **含义**: mod.io 上该 Mod 最新版本的发布时间戳（毫秒）
 - **更新时机**:
-  - 调用 `ModUpdateApi.updateModInDatabase()` 时，从 mod.io API 获取
-  - 调用 `ModUpdateApi.checkModUpdate()` 接收到 `MODFILE_CHANGED` 事件时
+  - 调用 `ModUpdateService.updateModInDatabase()` 时，从 mod.io API 获取
+  - 调用 `ModUpdateService.checkModUpdate()` 接收到 `MODFILE_CHANGED` 事件时
 - **数据来源**: mod.io API 的 `date_updated` 字段（**注意：API 返回秒级时间戳，需 ×1000 转换为毫秒**）
 
 ### 1.3 CompleteModData 结构
@@ -191,7 +191,7 @@ const checkExpired = () => {
 
 ### 3.2 更新检测流程
 
-#### 主动检测（`ModUpdateApi.checkModUpdate()`）
+#### 主动检测（`ModUpdateService.checkModUpdate()`）
 1. 调用 mod.io Events API 获取最近更新事件
 2. 处理 `MODFILE_CHANGED` 事件：
    - 更新 `onlineUpdateDate`（秒转毫秒）
@@ -200,7 +200,7 @@ const checkExpired = () => {
    - 设置 `isOnlineAvailable = false`
 
 #### 被动检测（启用 Mod 时）
-在 `ModUpdateApi.checkOnlineModUpdate()` 中：
+在 `ModUpdateService.checkOnlineModUpdate()` 中：
 1. 检查本地文件是否存在
 2. 比较 `onlineUpdateDate` 和 `lastUpdateDate`
 3. 检查下载进度是否为 100
@@ -228,12 +228,12 @@ const checkExpired = () => {
       └─ lastUpdateDate = 0 (未下载)
 
 3. 启动下载任务（如果用户启用）
-   └─ 调用 ModUpdateApi.updateModFile()
+   └─ 调用 ModUpdateService.updateModFile()
 ```
 
 ### 4.2 下载 Mod 文件
 
-**文件**: `src/apis/ModUpdateApi.ts` - `updateModFile()`
+**文件**: `src/apis/ModUpdateService.ts` - `updateModFile()`
 
 **流程**:
 ```
@@ -286,7 +286,7 @@ await modsApi.upsertModStatus({
    └─ emit("mod-treeview-update" + nodeData.key, updatedModItem)
 
 5. 开始下载新版本
-   └─ ModUpdateApi.updateModFile(updatedModItem)
+   └─ ModUpdateService.updateModFile(updatedModItem)
 ```
 
 **关键代码**:
@@ -321,13 +321,13 @@ const onChange = async (value: string) => {
     await emit("mod-treeview-update" + nodeData.key, updatedModItem);
 
     // 下载新版本
-    await ModUpdateApi.updateModFile(updatedModItem);
+    await ModUpdateService.updateModFile(updatedModItem);
 }
 ```
 
 ### 4.4 自动更新检测
 
-**文件**: `src/apis/ModUpdateApi.ts` - `checkModUpdate()`
+**文件**: `src/apis/ModUpdateService.ts` - `checkModUpdate()`
 
 **流程**:
 ```
@@ -423,7 +423,7 @@ const onChange = async (value: string) => {
 | `src/pages/HomePage/TreeViewItem.tsx` | UI 组件：显示 Mod 条目、版本选择、更新警告 |
 | `src/pages/HomePage/index.tsx` | 主页面：获取 Mod 列表、初始化 TreeView |
 | `src/pages/HomePage/TreeViewConverter.ts` | 数据转换：ProfileTreeItem ↔ AntD TreeView 格式 |
-| `src/apis/ModUpdateApi.ts` | 更新逻辑：检测更新、下载文件、更新数据库 |
+| `src/apis/ModUpdateService.ts` | 更新逻辑：检测更新、下载文件、更新数据库 |
 | `src/storage/dao/ModDAO.ts` | 数据访问：CRUD 操作、获取完整 Mod 数据 |
 | `src/vm/HomeViewModel.ts` | 业务逻辑：Mod 启用/禁用、版本管理 |
 
@@ -431,8 +431,8 @@ const onChange = async (value: string) => {
 
 #### 更新检测
 - `TreeViewItem.tsx:153` - `checkExpired()`: 判断是否显示更新警告
-- `ModUpdateApi.ts:200` - `checkModUpdate()`: 主动检测线上更新
-- `ModUpdateApi.ts:114` - `checkOnlineModUpdate()`: 启用 Mod 时检测更新
+- `ModUpdateService.ts:200` - `checkModUpdate()`: 主动检测线上更新
+- `ModUpdateService.ts:114` - `checkOnlineModUpdate()`: 启用 Mod 时检测更新
 
 #### 数据获取
 - `HomePage/index.tsx:320` - **必须使用** `getBatchCompleteModData()`
@@ -441,10 +441,10 @@ const onChange = async (value: string) => {
 
 #### 版本管理
 - `TreeViewItem.tsx:104` - `onChange()`: 用户手动切换版本
-- `ModUpdateApi.ts:82` - `updateModFile()`: 下载 Mod 文件
+- `ModUpdateService.ts:82` - `updateModFile()`: 下载 Mod 文件
 - `HomeViewModel.ts:setModUsedVersion()`: 更新 profile_mods.used_version
 
 #### 数据库更新
-- `ModUpdateApi.ts:44` - `updateModInDatabase()`: 更新 Mod 信息（含时间戳转换）
+- `ModUpdateService.ts:44` - `updateModInDatabase()`: 更新 Mod 信息（含时间戳转换）
 - `ModDAO.ts:258` - `upsertModVersion()`: 创建/更新版本信息
 - `ModDAO.ts:386` - `upsertModStatus()`: 创建/更新状态信息

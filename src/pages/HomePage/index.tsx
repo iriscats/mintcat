@@ -86,6 +86,22 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     /**
+     * Helper method to extract modId from tree node key
+     * Keys can be in format "mod-123" or just a number
+     */
+    private extractModIdFromKey(key: string | number): number | null {
+        if (typeof key === 'number') {
+            return key;
+        }
+        if (typeof key === 'string' && key.startsWith('mod-')) {
+            const id = parseInt(key.substring(4));
+            return isNaN(id) ? null : id;
+        }
+        const id = parseInt(String(key));
+        return isNaN(id) ? null : id;
+    }
+
+    /**
      * Helper method to get a mod from database by ID
      */
     private async getModById(modId: number): Promise<CompleteModData | null> {
@@ -182,7 +198,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         if (confirm) {
             for (const key of this.state.selectedKeys) {
-                const modItem = await this.getModById(key);
+                const modId = this.extractModIdFromKey(key);
+                if (modId === null) continue;
+                const modItem = await this.getModById(modId);
                 if (modItem) {
                     await vm.removeMod(modItem.modId!);
                 }
@@ -199,7 +217,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
 
         for (const key of this.state.selectedKeys) {
-            await vm.setModEnabled(key, isEnable);
+            const modId = this.extractModIdFromKey(key);
+            if (modId === null) continue;
+            await vm.setModEnabled(modId, isEnable);
         }
         await this.updateTreeView();
     }
@@ -209,7 +229,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const vm = await IoC.get(TreeViewModel);
 
         for (const key of this.state.selectedKeys) {
-            const modItem = await this.getModById(key);
+            const modId = this.extractModIdFromKey(key);
+            if (modId === null) continue;
+            const modItem = await this.getModById(modId);
             if (modItem) {
                 await ModUpdateService.updateMod(modItem)
             }
@@ -473,7 +495,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             case "update": {
                 const mod = await this.getModById(id);
                 if (mod) {
-                    await ModUpdateApi.updateMod(mod);
+                    await ModUpdateService.updateMod(mod);
                 }
             }
                 break;

@@ -440,7 +440,7 @@ useEffect(() => {
 - ✅ 与旧系统并存
 
 #### 阶段 2: 修复关键问题
-- ✅ 修复动态事件名（ModUpdateApi.ts）
+- ✅ 修复动态事件名（ModUpdateService.ts）
 - ✅ 修复内存泄漏（TreeViewItem.tsx）
 - ✅ 验证新系统可用性
 

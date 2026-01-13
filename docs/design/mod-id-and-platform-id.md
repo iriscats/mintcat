@@ -202,7 +202,7 @@ public async removeModFromProfile(profileId: number, modId: number) {
 
 #### 3.1.3 模组状态更新
 
-**代码位置**: `src/apis/ModUpdateApi.ts`
+**代码位置**: `src/apis/ModUpdateService.ts`
 ```typescript
 // 更新模组状态
 await modsApi.upsertModStatus({
@@ -225,7 +225,7 @@ await modsApi.upsertModDownload({
 
 **场景**: 批量检查模组更新时，需要传递 platformId 列表给 mod.io API。
 
-**代码位置**: `src/apis/ModUpdateApi.ts:251-258`
+**代码位置**: `src/apis/ModUpdateService.ts:251-258`
 ```typescript
 // 收集所有在线模组的 platformId
 const modIdList: number[] = [];
@@ -257,7 +257,7 @@ interface EventInfo {
 
 **场景**: 将 mod.io 事件与本地模组数据匹配。
 
-**代码位置**: `src/apis/ModUpdateApi.ts:259-290`
+**代码位置**: `src/apis/ModUpdateService.ts:259-290`
 ```typescript
 // 遍历 mod.io 事件
 for (const event of events) {
@@ -557,7 +557,7 @@ public async getCompleteModData(modId: number): Promise<CompleteModData | null> 
 | `src/mappers/ModMapper.ts` | ID 映射逻辑 | 20-60 (在线), 66-100 (本地) |
 | `src/storage/dao/ModDAO.ts` | 数据访问对象 | 106-146 (查询方法) |
 | `src/services/ModService.ts` | 业务逻辑层 | 62-89 (去重检查) |
-| `src/apis/ModUpdateApi.ts` | mod.io 交互 | 239-296 (更新检查) |
+| `src/apis/ModUpdateService.ts` | mod.io 交互 | 239-296 (更新检查) |
 | `src/apis/modio/ModInfo.ts` | API 类型定义 | ModInfo.id 字段 |
 | `src/apis/modio/EventInfo.ts` | 事件类型定义 | EventInfo.mod_id 字段 |
 
