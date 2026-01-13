@@ -186,8 +186,10 @@ export class TreeViewConverter {
             }
 
             if (item.isLeaf === true) {
-                // Mod 节点
-                const newItem = new ProfileTreeItem(id, ProfileTreeType.ITEM);
+                // Mod 节点，保留 enabled 状态和使用版本
+                const isEnabled = item.enabled ?? true;
+                const usedVersion = item.usedVersion ?? "";
+                const newItem = new ProfileTreeItem(id, ProfileTreeType.ITEM, "", isEnabled, usedVersion);
                 root.children.push(newItem);
             } else {
                 // 文件夹节点

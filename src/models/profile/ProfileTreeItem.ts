@@ -9,18 +9,22 @@ export class ProfileTreeItem {
     public type: ProfileTreeType = ProfileTreeType.ITEM;
     public name: string = "";
     public children: ProfileTreeItem[] = [];
+    public enabled: boolean = true;
+    public usedVersion: string = "";
 
-    public constructor(id: number, type: ProfileTreeType, name: string = "") {
+    public constructor(id: number, type: ProfileTreeType, name: string = "", enabled: boolean = true, usedVersion: string = "") {
         this.id = id;
         this.type = type;
         this.name = name;
+        this.enabled = enabled;
+        this.usedVersion = usedVersion;
     }
 
     /**
      * 添加子节点
      */
-    public add(id: number, type: ProfileTreeType, name: string = ""): void {
-        this.children.unshift(new ProfileTreeItem(id, type, name));
+    public add(id: number, type: ProfileTreeType, name: string = "", enabled: boolean = true, usedVersion: string = ""): void {
+        this.children.unshift(new ProfileTreeItem(id, type, name, enabled, usedVersion));
     }
 
     /**

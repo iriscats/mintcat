@@ -522,7 +522,10 @@ export class ProfileTreeService {
         for (const modData of folderMods) {
             const modItem = allModData.find(m => m.modId === modData.modId);
             if (modItem) {
-                folderNode.add(modItem.modId, ProfileTreeType.ITEM);
+                // 保留 mod 的启用状态和使用版本
+                const isEnabled = modData.isEnabled ?? true;
+                const usedVersion = modData.usedVersion ?? "";
+                folderNode.add(modItem.modId, ProfileTreeType.ITEM, "", isEnabled, usedVersion);
             } else {
                 console.warn(`[ProfileTreeService] Mod not found for mod_id ${modData.modId} in folder ${folderData.name}`);
             }
@@ -639,15 +642,15 @@ export class ProfileTreeService {
                     console.error(`[ProfileTreeService] Failed to create folder: ${item.name}`);
                 }
             } else if (item.type === ProfileTreeType.ITEM) {
-                // Create mod association
-                console.log(`[ProfileTreeService] Adding mod to profile: modId=${item.id}, parentFolderId=${parentFolderId}`);
+                // Create mod association，保留原有的启用状态和使用版本
+                console.log(`[ProfileTreeService] Adding mod to profile: modId=${item.id}, parentFolderId=${parentFolderId}, isEnabled=${item.enabled}, usedVersion=${item.usedVersion}`);
                 await profileDAO.addModToProfile({
                     profileId,
                     modId: item.id,
                     parentFolderId,
                     sortOrder: sortOrder + i,
-                    isEnabled: true,
-                    usedVersion: ""
+                    isEnabled: item.enabled,
+                    usedVersion: item.usedVersion
                 });
             }
         }
@@ -677,14 +680,14 @@ export class ProfileTreeService {
         console.log(`[ProfileTreeService] 在默认文件夹中找到 ${mods.length} 个 mods:`, mods.map(m => ({ id: m.id, name: m.name })));
 
         for (let i = 0; i < mods.length; i++) {
-            console.log(`[ProfileTreeService] 添加 mod 到默认文件夹 [${i + 1}/${mods.length}]: modId=${mods[i].id}, name=${mods[i].name}, parentFolderId=${defaultFolderId}, sortOrder=${i}`);
+            console.log(`[ProfileTreeService] 添加 mod 到默认文件夹 [${i + 1}/${mods.length}]: modId=${mods[i].id}, name=${mods[i].name}, parentFolderId=${defaultFolderId}, sortOrder=${i}, isEnabled=${mods[i].enabled}, usedVersion=${mods[i].usedVersion}`);
             await profileDAO.addModToProfile({
                 profileId,
                 modId: mods[i].id,
                 parentFolderId: defaultFolderId,
                 sortOrder: i,
-                isEnabled: true,
-                usedVersion: ""
+                isEnabled: mods[i].enabled,
+                usedVersion: mods[i].usedVersion
             });
         }
         console.log(`[ProfileTreeService] ✅ 成功添加 ${mods.length} 个 mods 到默认文件夹`);
