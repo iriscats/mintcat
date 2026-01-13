@@ -595,7 +595,9 @@ export class TaskQueueAPI {
 
       this.onTaskUpdated((task) => {
         if (task.id === taskId) {
-          if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+          // Support both lowercase (frontend) and capitalized (backend) status values
+          const status = task.status.toLowerCase();
+          if (status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'canceled') {
             clearTimeout(timeout);
             resolve(task);
           }
