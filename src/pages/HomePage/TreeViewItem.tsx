@@ -8,7 +8,7 @@ import {ModSourceType} from "@/storage/db/Schema.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {ModioApi} from "@/apis/modio";
-import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {ModFile} from "@/apis/modio/ModInfo.ts";
 import {StorageAPI} from "@/storage";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
@@ -134,7 +134,7 @@ function ModTreeViewVersionSelect({nodeData}) {
             modId: updatedModItem.modId!,
             data: updatedModItem
         });
-        await ModUpdateApi.updateModFile(updatedModItem);
+        await ModUpdateService.updateModFile(updatedModItem);
     }
 
     return (

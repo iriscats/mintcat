@@ -83,7 +83,7 @@ macOS:
 
 ## 0.5.0-beta2
 - [done] Multi Game
-- [ ] Plugin System
+- [wip] C# Mod System
 
 ## 0.5.0-beta3
 - [ ] Multi Mod Provider

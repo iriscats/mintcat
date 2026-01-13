@@ -4,7 +4,7 @@ import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {ModioApi} from "@/apis/modio";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
-import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
@@ -57,7 +57,7 @@ export class HomeViewModel extends BaseViewModel {
 
                 TreeViewModel.updateTreeView();
 
-                await ModUpdateApi.updateMod(addedMod);
+                await ModUpdateService.updateMod(addedMod);
             } catch (error) {
                 console.error('Failed to add dependency:', error);
                 continue;

@@ -2,7 +2,7 @@ import {t} from "i18next";
 import i18n from "@/locales/i18n";
 import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
-import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {exists} from "@tauri-apps/plugin-fs";
 import {emitEvent, emitVoidEvent} from "@/events";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
@@ -57,7 +57,7 @@ export class AppViewModel extends BaseViewModel {
 
     public appStartAutoCheckModUpdate() {
         setTimeout(async () => {
-            await ModUpdateApi.checkModUpdate();
+            await ModUpdateService.checkModUpdate();
         }, 1000 * 120);
     }
 

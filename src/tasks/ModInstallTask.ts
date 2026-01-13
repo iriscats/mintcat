@@ -2,7 +2,7 @@ import { ITask, TaskContext } from './ITask';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
 import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
 import { IoC } from '@/core/IoC.ts';
-import { ModUpdateApi } from '@/apis/ModUpdateApi';
+import { ModUpdateService } from '@/services/ModUpdateService';
 import { IntegrateApi } from '@/apis/IntegrateApi';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { StorageAPI } from '@/storage';
@@ -52,7 +52,6 @@ export class ModInstallTask implements ITask {
         await emit("status-bar-log", t("Start installation"));
 
         // Get tree view model and settings
-        const treeViewModel = await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
         const settings = await StorageAPI.getSettings();
 
@@ -103,20 +102,20 @@ export class ModInstallTask implements ITask {
             const item = enabledMods[i];
 
             // Check for online updates (mod is enabled since we filtered above)
-            await ModUpdateApi.checkOnlineModUpdate(item, true);
+            await ModUpdateService.checkOnlineModAndUpdate(item, true);
             const cachePath = item.download?.cachePath || "";
             if (cachePath === "") {
                 throw new Error(`${t("File Not Found")}: ${item.url}`);
             }
 
             // Check if mod was modified
-            if (await ModUpdateApi.checkLocalModModify(item, true)) {
+            if (await ModUpdateService.checkLocalModModify(item, true)) {
                 editTime = TimeUtils.nowSeconds();
                 await profileVM.setActiveProfileEditTime(editTime);
             }
 
             // Validate mod cache
-            if (!await ModUpdateApi.checkLocalModCache(item)) {
+            if (!await ModUpdateService.checkLocalModCache(item)) {
                 throw new Error(`${t("File Not Found")}: ${item.displayName}: ${cachePath}`);
             }
 
@@ -176,6 +175,10 @@ export class ModInstallTask implements ITask {
                 pak_path: item.download?.cachePath || "",
             });
         }
+      
+        //https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip
+
+
 
         // Step 7: Install mods (90% progress)
         await context.updateProgress(90);
@@ -184,7 +187,7 @@ export class ModInstallTask implements ITask {
         if (!result) {
             throw new Error(t("Installation Failed"));
         }
-
+  
         // Complete (100% progress)
         await emit("status-bar-log", t("Installation Finish"));
         await context.updateProgress(100);

@@ -1,19 +1,31 @@
-import {t} from "i18next";
-import {exists, stat} from "@tauri-apps/plugin-fs";
-import {emitEvent} from "@/events";
-import {ModioApi} from "@/apis/modio";
-import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
-import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
+import { t } from "i18next";
+import { exists, stat } from "@tauri-apps/plugin-fs";
+import { emitEvent } from "@/events";
+import { ModioApi } from "@/apis/modio";
+import { TreeViewModel } from "@/pages/HomePage/TreeViewModel.ts";
+import { ProfileViewModel } from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
-import {ModSourceType} from "@/models/mod/types";
-import {TimeUtils} from "@/utils/TimeUtils.ts";
-import {StorageAPI} from "@/storage";
-import type {CompleteModData} from "@/storage/dao/ModDAO";
+import { ModSourceType } from "@/models/mod/types";
+import { TimeUtils } from "@/utils/TimeUtils.ts";
+import { StorageAPI } from "@/storage";
+import type { CompleteModData } from "@/storage/dao/ModDAO";
 
-export class ModUpdateApi {
+/**
+ * ModUpdateService 服务层
+ *
+ * 封装模组更新相关的业务逻辑
+ * - 检查模组更新
+ * - 下载模组文件
+ * - 检查本地模组缓存
+ * - 检查本地模组修改
+ */
+export class ModUpdateService {
 
     private static loading = false;
 
+    /**
+     * 更新单个模组
+     */
     public static async updateMod(mod: CompleteModData) {
         await emitEvent("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
         const resp = await ModioApi.getModInfoByLink(mod.url || "");
@@ -44,7 +56,7 @@ export class ModUpdateApi {
     }
 
     /**
-     * Update mod information in database
+     * 更新数据库中的模组信息
      */
     private static async updateModInDatabase(modId: number, modInfo: any) {
         const modsApi = await StorageAPI.getMods();
@@ -84,6 +96,9 @@ export class ModUpdateApi {
         });
     }
 
+    /**
+     * 更新模组文件（下载）
+     */
     public static async updateModFile(mod: CompleteModData) {
         const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
             await emitEvent("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
@@ -117,7 +132,7 @@ export class ModUpdateApi {
             });
         }
 
-        // Update lastUpdateDate to match onlineUpdateDate after successful download
+        // Update lastUpdateDate to matchUpdateDate after successful download
         const currentStatus = await modsApi.getModStatus(mod.modId!);
         if (currentStatus) {
             await modsApi.upsertModStatus({
@@ -129,7 +144,10 @@ export class ModUpdateApi {
         await emitEvent("status-bar-log", t("Update Finish"));
     }
 
-    public static async checkOnlineModUpdate(modItem: CompleteModData, isEnabled: boolean) {
+    /**
+     * 检查在线模组并更新
+     */
+    public static async checkOnlineModAndUpdate(modItem: CompleteModData, isEnabled: boolean) {
         if (modItem.sourceType === ModSourceType.Modio && isEnabled) {
             const cachePath = modItem.download?.cachePath || "";
             const onlineUpdateDate = modItem.status?.onlineUpdateDate || 0;
@@ -140,11 +158,14 @@ export class ModUpdateApi {
                 onlineUpdateDate > lastUpdateDate ||
                 downloadProgress != 100
             ) {
-                await ModUpdateApi.updateMod(modItem);
+                await ModUpdateService.updateMod(modItem);
             }
         }
     }
 
+    /**
+     * 检查本地模组缓存
+     */
     public static async checkLocalModCache(modItem: CompleteModData) {
         if (modItem.sourceType === ModSourceType.Local) {
             const cachePath = modItem.download?.cachePath || "";
@@ -183,6 +204,9 @@ export class ModUpdateApi {
         return true;
     }
 
+    /**
+     * 检查本地模组是否被修改
+     */
     public static async checkLocalModModify(modItem: CompleteModData, isEnabled: boolean) {
         if (modItem.sourceType === ModSourceType.Local && isEnabled) {
             const cachePath = modItem.download?.cachePath || "";
@@ -215,11 +239,13 @@ export class ModUpdateApi {
         return false;
     }
 
+    /**
+     * 检查模组列表（本地缓存）
+     */
     public static async checkModList() {
         await emitEvent("home-page-loading", true);
-        ModUpdateApi.loading = true;
+        ModUpdateService.loading = true;
 
-        const viewModel = await IoC.get(TreeViewModel);
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
 
@@ -231,14 +257,17 @@ export class ModUpdateApi {
             }
         }
 
-        ModUpdateApi.loading = false;
+        ModUpdateService.loading = false;
         await emitEvent("home-page-loading", false);
         return true;
     }
 
+    /**
+     * 检查模组更新（在线）
+     */
     public static async checkModUpdate() {
         await emitEvent("status-bar-log", t("Mod Update Check Start"));
-        if (ModUpdateApi.loading) {
+        if (ModUpdateService.loading) {
             return;
         }
 
@@ -294,6 +323,4 @@ export class ModUpdateApi {
 
         await emitEvent("status-bar-log", t("Mod Update Check Finish"));
     }
-
-
 }

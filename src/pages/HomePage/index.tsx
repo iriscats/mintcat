@@ -22,7 +22,7 @@ import {InputDialog} from "@/dialogs/InputDialog.tsx";
 import {TreeViewConverter} from "./TreeViewConverter.ts";
 import {TreeViewOutlined} from "@/components/SvgIcon.tsx";
 import {MessageBox} from "@/components/MessageBox.ts";
-import {ModUpdateApi} from "@/apis/ModUpdateApi.ts";
+import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
@@ -211,7 +211,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         for (const key of this.state.selectedKeys) {
             const modItem = await this.getModById(key);
             if (modItem) {
-                await ModUpdateApi.updateMod(modItem)
+                await ModUpdateService.updateMod(modItem)
             }
         }
     }
@@ -278,8 +278,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarUpdateClick() {
-        await ModUpdateApi.checkModUpdate();
-        await ModUpdateApi.checkModList();
+        await ModUpdateService.checkModUpdate();
+        await ModUpdateService.checkModList();
         message.success(t("Update Finish"));
     }
 
@@ -325,8 +325,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.setState({
             defaultProfile: value as string,
         })
-        await ModUpdateApi.checkModUpdate();
-        await ModUpdateApi.checkModList();
+        await ModUpdateService.checkModUpdate();
+        await ModUpdateService.checkModList();
 
         await emitVoidEvent("tree-view-count-label-update");
     };
@@ -558,7 +558,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.updateTreeView().then();
 
         // Check for mod updates
-        ModUpdateApi.checkModList().then();
+        ModUpdateService.checkModList().then();
     }
 
     componentWillUnmount(): void {
