@@ -28,8 +28,10 @@ const Main = () => {
     });
 
     useEffect(() => {
-        // ✅ 启用 EventDebugger (开发模式)
-        if (import.meta.env.DEV) {
+
+        if (packageJson.version.indexOf("beta") > 0) {
+
+            // ✅ 启用 EventDebugger (开发模式)
             EventDebugger.enable({
                 consoleLog: true,
                 showPayload: true,
@@ -37,9 +39,7 @@ const Main = () => {
             }).then(() => {
                 console.log('[EventDebugger] Enabled in development mode');
             });
-        }
 
-        if (!packageJson.version.endsWith("dev")) {
             const handler = (e: Event) => e.preventDefault();
             document.addEventListener('contextmenu', handler);
             return () => document.removeEventListener('contextmenu', handler);

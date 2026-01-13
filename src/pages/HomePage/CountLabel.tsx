@@ -10,14 +10,20 @@ export const CountLabel = () => {
 
     const fetchData = React.useCallback(async () => {
         const profileVM = await IoC.get(ProfileViewModel);
-        const activeRoot = await profileVM.getActiveProfileTreeRoot();
+        const activeProfile = await profileVM.getActiveProfileData();
 
-        // Use ProfileTreeService to get mod list
-        const treeService = (profileVM as any).profileService.getTreeService();
-        const subModList = await treeService.getModsForTree(activeRoot);
+        if (!activeProfile?.id) {
+            setEnableCount(0);
+            setTotalCount(0);
+            return;
+        }
 
-        setEnableCount(subModList.filter(mod => mod.enabled).length);
-        setTotalCount(subModList.length);
+        // Get profile mods which contain the isEnabled status
+        const profilesApi = await StorageAPI.getProfiles();
+        const profileMods = await profilesApi.getProfileMods(activeProfile.id);
+
+        setEnableCount(profileMods.filter(mod => mod.isEnabled).length);
+        setTotalCount(profileMods.length);
     }, []);
 
     // ✅ 使用 useEventListener 自动管理清理
