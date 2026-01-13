@@ -180,36 +180,57 @@ export class ConfigMigrationV4 {
     private async migrateSingleMod(oldMod: any): Promise<void> {
         try {
             // 提取模组数据 - 修正字段映射
-            const platformId = oldMod.mod_id || oldMod.id || 0;
-            const nameId = oldMod.name_id || `mod_${platformId}`;
-            const displayName = oldMod.display_name || nameId;
+            const originalPlatformId = oldMod.mod_id || oldMod.id || 0;
             const url = oldMod.url || '';
             const sourceType = oldMod.source_type || (url.startsWith('http') ? 'Modio' : 'Local');
+
+            // 判断是否为本地模组（source_type 为 Local 或 mod_id 为 999999）
+            const isLocalMod = sourceType === 'Local' || originalPlatformId === 999999;
+
+            // 本地模组 platformId 应为 0，mod.io 模组使用原始 ID
+            const platformId = isLocalMod ? 0 : originalPlatformId;
+
+            const nameId = oldMod.name_id || `mod_${originalPlatformId}`;
+            const displayName = oldMod.display_name || nameId;
             const tags = oldMod.tags || [];
             const approvalStatus = oldMod.approval || 'Sandbox';
 
-            // 检查模组是否已存在 - 通过URL和platform ID双重检查
-            const existingMod = await this.modDAO.getModByPlatformId(platformId, sourceType);
-            if (existingMod) {
-                console.log(`模组 ${displayName} (ID: ${platformId}) 已存在，跳过迁移`);
-                return; // 跳过已存在的模组
+            // 根据模组类型选择不同的去重策略
+            if (isLocalMod) {
+                // 本地模组：通过 URL（文件路径）检查是否已存在
+                if (url) {
+                    const existingModByUrl = await this.modDAO.getModByUrl(url);
+                    if (existingModByUrl) {
+                        console.log(`本地模组 ${displayName} URL已存在，跳过迁移`);
+                        return;
+                    }
+                }
+            } else {
+                // mod.io 模组：通过 platformId 和 sourceType 检查
+                const existingMod = await this.modDAO.getModByPlatformId(platformId, sourceType);
+                if (existingMod) {
+                    console.log(`模组 ${displayName} (ID: ${platformId}) 已存在，跳过迁移`);
+                    return;
+                }
+
+                // 额外检查 URL 重复
+                if (url) {
+                    const existingModByUrl = await this.modDAO.getModByUrl(url);
+                    if (existingModByUrl) {
+                        console.log(`模组 ${displayName} URL已存在，跳过迁移`);
+                        return;
+                    }
+                }
             }
 
-            // 检查URL重复
-            const existingModByUrl = await this.modDAO.getModByUrl(url);
-            if (existingModByUrl) {
-                console.log(`模组 ${displayName} URL已存在，跳过迁移`);
-                return; // 跳过URL重复的模组
-            }
-
-            // 创建模组
+            // 创建模组（本地模组 platformId = 0）
             const mod = await this.modDAO.createMod({
                 platformId,
                 gameId: this.gameId,
                 nameId,
                 displayName,
                 url,
-                sourceType,
+                sourceType: isLocalMod ? 'Local' : sourceType,
                 tags,
                 approvalStatus,
                 dependModId: 0  // TODO: 处理依赖关系，这里存在一个坑，配置中没有依赖关系
@@ -414,20 +435,37 @@ export class ConfigMigrationV4 {
      */
     private async addModToProfileById(modId: number, profileId: number, parentFolderId: number | null, sortOrder: number): Promise<void> {
         try {
-            // 首先尝试通过platform ID查找模组（先尝试Modio，再尝试Local）
-            let mod = await this.modDAO.getModByPlatformId(modId, 'Modio');
-            if (!mod) {
-                mod = await this.modDAO.getModByPlatformId(modId, 'Local');
+            let mod = null;
+            let isEnabled = true; // 默认启用
+
+            // 从原 mods.json 中查找模组信息
+            const modListPath = await path.join(await configDir(), 'com.mint.cat', 'mods.json');
+            if (await exists(modListPath)) {
+                const modListContent = await readTextFile(modListPath);
+                const oldModList = MigrationUtils.safeParseJson(modListContent, {mods: []});
+                const originalMod = oldModList.mods?.find((m: any) => m.id === modId);
+
+                if (originalMod) {
+                    // 获取启用状态
+                    isEnabled = originalMod.enabled !== false;
+
+                    // 优先通过 URL 查找（对本地模组最可靠）
+                    if (originalMod.url) {
+                        mod = await this.modDAO.getModByUrl(originalMod.url);
+                    }
+
+                    // 如果 URL 查找失败，尝试通过 platformId 查找（仅对 mod.io 模组有效）
+                    if (!mod && originalMod.mod_id && originalMod.mod_id !== 999999) {
+                        mod = await this.modDAO.getModByPlatformId(originalMod.mod_id, 'Modio');
+                    }
+                }
             }
 
-            // 如果没找到，尝试通过原始mods.json中的id找到对应的mod_id
+            // 兜底：尝试原有逻辑（通过 platformId 查找）
             if (!mod) {
-                const originalModId = await this.findModIdByOriginalId(modId);
-                if (originalModId) {
-                    mod = await this.modDAO.getModByPlatformId(originalModId, 'Modio');
-                    if (!mod) {
-                        mod = await this.modDAO.getModByPlatformId(originalModId, 'Local');
-                    }
+                mod = await this.modDAO.getModByPlatformId(modId, 'Modio');
+                if (!mod) {
+                    mod = await this.modDAO.getModByPlatformId(modId, 'Local');
                 }
             }
 
@@ -438,20 +476,6 @@ export class ConfigMigrationV4 {
 
             // 获取模组版本信息
             const modVersion = await this.modDAO.getModVersion(mod.modId!);
-
-            // 从原mods.json中查找启用状态
-            const modListPath = await path.join(await configDir(), 'com.mint.cat', 'mods.json');
-            let isEnabled = true; // 默认启用
-
-            if (await exists(modListPath)) {
-                const modListContent = await readTextFile(modListPath);
-                const oldModList = MigrationUtils.safeParseJson(modListContent, {mods: []});
-
-                const originalMod = oldModList.mods?.find((m: any) => (m.id === modId || m.mod_id === modId));
-                if (originalMod) {
-                    isEnabled = originalMod.enabled !== false;
-                }
-            }
 
             await this.profileDAO.addModToProfile({
                 profileId,
