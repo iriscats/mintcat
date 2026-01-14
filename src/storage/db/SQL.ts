@@ -62,7 +62,7 @@ export const ALL_SQL_CONTENT = `
         \`url\`             text    DEFAULT ''            NOT NULL,
         \`source_type\`     text    DEFAULT 'Unknown'     NOT NULL,
         \`tags\`            text    DEFAULT '[]'          NOT NULL,
-        \`approval_status\` text    DEFAULT 'Sandbox'     NOT NULL,
+        \`approval_status\` text    DEFAULT ''     NOT NULL,
         \`depend_mod_id\`   integer DEFAULT 0             NOT NULL,
         \`created_at\`      integer DEFAULT (unixepoch()) NOT NULL,
         \`updated_at\`      integer DEFAULT (unixepoch()) NOT NULL,

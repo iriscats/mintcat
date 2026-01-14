@@ -80,7 +80,7 @@ export const mods = sqliteTable("mods", {
     url: text("url").notNull().default(""), // 模组链接地址
     sourceType: text("source_type").notNull().default("Unknown"), // 模组来源: Local, Modio, Unknown
     tags: text("tags", { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`), // 模组标签列表
-    approvalStatus: text("approval_status").notNull().default("Sandbox"), // 审核状态: Verified, Approved, Sandbox
+    approvalStatus: text("approval_status").notNull().default(""), // 审核状态: Verified, Approved, Sandbox
     dependModId: integer("depend_mod_id").notNull().default(0),
     createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
     updatedAt: integer("updated_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

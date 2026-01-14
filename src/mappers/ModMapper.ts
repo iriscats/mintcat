@@ -78,7 +78,7 @@ export class ModMapper {
             url: filePath,
             sourceType: ModSourceType.Local,
             tags: [],
-            approvalStatus: ModApprovalStatus.Sandbox,
+            approvalStatus: ModApprovalStatus.Unknown,
             version: {
                 modId: 0,
                 currentVersion: "-",
@@ -119,7 +119,7 @@ export class ModMapper {
     } {
         const tags: string[] = [];
         const versions: string[] = [];
-        let approval: ModApprovalStatus = ModApprovalStatus.Sandbox;
+        let approval: ModApprovalStatus = ModApprovalStatus.Unknown;
 
         for (const tag of rawTags) {
             // 提取版本标签（例如 "1.35.0"）

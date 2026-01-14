@@ -19,7 +19,8 @@ export enum ModSourceType {
 export enum ModApprovalStatus {
     Verified = "Verified",
     Approved = "Approved",
-    Sandbox = "Sandbox"
+    Sandbox = "Sandbox",
+    Unknown = ""
 }
 
 /**

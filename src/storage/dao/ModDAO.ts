@@ -179,7 +179,7 @@ export class ModDAO {
                 url: modData.url || "",
                 sourceType: modData.sourceType || "Unknown",
                 tags: modData.tags || [],
-                approvalStatus: modData.approvalStatus || "Sandbox",
+                approvalStatus: modData.approvalStatus || "",
                 dependModId: modData.dependModId || 0,
             }).returning();
 
