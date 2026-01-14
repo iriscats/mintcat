@@ -24,19 +24,7 @@ class MenuBar extends React.Component<MenuBarProps, any> {
         {
             key: MenuPage.Home,
             icon: <HomeOutlined/>,
-            label: t("Home"),
-            // children: [
-            //     {key: '9', label: 'Option 9'},
-            //     {key: '10', label: 'Option 10'},
-            //     {
-            //         key: 'sub3',
-            //         label: 'Submenu',
-            //         children: [
-            //             {key: '11', label: 'Option 11'},
-            //             {key: '12', label: 'Option 12'},
-            //         ],
-            //     },
-            // ],
+            label: t("Home")
         },
         {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io'},
         {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")},

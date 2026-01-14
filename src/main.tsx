@@ -39,7 +39,7 @@ const Main = () => {
             }).then(() => {
                 console.log('[EventDebugger] Enabled in development mode');
             });
-
+        } else {
             const handler = (e: Event) => e.preventDefault();
             document.addEventListener('contextmenu', handler);
             return () => document.removeEventListener('contextmenu', handler);

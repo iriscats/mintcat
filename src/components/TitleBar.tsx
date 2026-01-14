@@ -166,10 +166,9 @@ class TitleBar extends React.Component<any, any> {
                                 className={"ant-header-start-button"}
                             >
                                 <PlayCircleOutlined/>
-                                <span>
+                                <span style={{marginTop: "-1px"}}>
                                     <b>
                                         {this.state.gameName}
-                                        {/*{t("Launch Game")}*/}
                                     </b>
                                 </span>
                             </Button>

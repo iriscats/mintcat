@@ -733,27 +733,29 @@ export class HomePage extends BasePage<any, ModListPageState> {
                             {
                                 this.state.isMultiSelect === true &&
                                 <span style={{marginRight: 'auto'}}>
-                                <Button type="text" size={"small"}
-                                        icon={<CloseCircleOutlined/>}
-                                        onClick={this.onMultiDeleteClick}>
-                                   {t("Delete")}
-                                </Button>
-                                <Button type="text" size={"small"}
-                                        icon={<PlayCircleOutlined/>}
-                                        onClick={() => this.onMultiEnableClick(true)}>
-                                    {t("Enable")}
-                                </Button>
-                                <Button type="text" size={"small"}
-                                        icon={<PauseCircleOutlined/>}
-                                        onClick={() => this.onMultiEnableClick(false)}>
-                                    {t("Disable")}
-                                </Button>
-                                <Button type="text" size={"small"}
-                                        icon={<SyncOutlined/>}
-                                        onClick={this.onMultiUpdateClick}>
-                                    {t("Update")}
-                                </Button>
-                            </span>
+                                    <Button type="text" 
+                                            style={{marginLeft: "10px"}}
+                                            size={"small"}
+                                            icon={<CloseCircleOutlined/>}
+                                            onClick={this.onMultiDeleteClick}>
+                                    {t("Delete")}
+                                    </Button>
+                                    <Button type="text" size={"small"}
+                                            icon={<PlayCircleOutlined/>}
+                                            onClick={() => this.onMultiEnableClick(true)}>
+                                        {t("Enable")}
+                                    </Button>
+                                    <Button type="text" size={"small"}
+                                            icon={<PauseCircleOutlined/>}
+                                            onClick={() => this.onMultiEnableClick(false)}>
+                                        {t("Disable")}
+                                    </Button>
+                                    <Button type="text" size={"small"}
+                                            icon={<SyncOutlined/>}
+                                            onClick={this.onMultiUpdateClick}>
+                                        {t("Update")}
+                                    </Button>
+                                </span>
                             }
                             <CountLabel/>
                         </Flex>
