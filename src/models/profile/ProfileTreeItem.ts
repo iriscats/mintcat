@@ -24,7 +24,7 @@ export class ProfileTreeItem {
      * 添加子节点
      */
     public add(id: number, type: ProfileTreeType, name: string = "", enabled: boolean = true, usedVersion: string = ""): void {
-        this.children.unshift(new ProfileTreeItem(id, type, name, enabled, usedVersion));
+        this.children.push(new ProfileTreeItem(id, type, name, enabled, usedVersion));
     }
 
     /**

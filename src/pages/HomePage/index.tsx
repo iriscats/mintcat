@@ -42,6 +42,7 @@ import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
 import {TaskManager} from "@/tasks/TaskManager.ts";
+import type {DataNode} from "antd/es/tree";
 
 
 interface ModListPageState {
@@ -107,6 +108,66 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private async getModById(modId: number): Promise<CompleteModData | null> {
         const modsApi = await StorageAPI.getMods();
         return await modsApi.getCompleteModData(modId);
+    }
+
+    /**
+     * Helper method to get expanded folder names from current expandedKeys
+     * This is used to preserve expanded state across tree reloads when folder IDs change
+     */
+    private getExpandedFolderNames(): string[] {
+        const { expandedKeys, treeData } = this.state;
+        if (!expandedKeys || !treeData) return [];
+
+        const names: string[] = [];
+
+        const findFolderName = (nodes: DataNode[], key: string): string | null => {
+            for (const node of nodes) {
+                if (node.key === key && key.toString().startsWith('folder-')) {
+                    return node.title as string;
+                }
+                if (node.children) {
+                    const found = findFolderName(node.children as DataNode[], key);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        for (const key of expandedKeys) {
+            const name = findFolderName(treeData as DataNode[], key.toString());
+            if (name) names.push(name);
+        }
+
+        return names;
+    }
+
+    /**
+     * Helper method to reconstruct expandedKeys from folder names after tree reload
+     * Maps folder names back to their new IDs
+     */
+    private reconstructExpandedKeys(folderNames: string[], treeData: DataNode[]): string[] {
+        const newKeys: string[] = [];
+
+        const findKeyByName = (nodes: DataNode[], name: string): string | null => {
+            for (const node of nodes) {
+                const key = node.key.toString();
+                if (key.startsWith('folder-') && node.title === name) {
+                    return key;
+                }
+                if (node.children) {
+                    const found = findKeyByName(node.children as DataNode[], name);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        for (const name of folderNames) {
+            const key = findKeyByName(treeData, name);
+            if (key) newKeys.push(key);
+        }
+
+        return newKeys;
     }
 
     private async handleExportMod(id: number): Promise<void> {
@@ -395,6 +456,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async updateTreeView() {
         console.log(`[HomePage] updateTreeView() called`);
+
+        // Before reload: Save expanded folder names to preserve expanded state
+        const expandedFolderNames = this.getExpandedFolderNames();
+        console.log(`[HomePage] Saving expanded folder names:`, expandedFolderNames);
+
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
@@ -422,18 +488,28 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         console.log(`[HomePage] Converted treeData:`, treeData);
 
+        // After reload: Reconstruct expandedKeys using folder names
+        let newExpandedKeys: any[];
+        if (expandedFolderNames.length > 0) {
+            // Reconstruct expandedKeys from folder names (handles ID changes)
+            newExpandedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
+            console.log(`[HomePage] Reconstructed expandedKeys from folder names:`, newExpandedKeys);
+        } else if (this.state.expandedKeys.length === 0) {
+            // First load: use default expanded keys from converter
+            newExpandedKeys = converter.expandedKeys;
+            console.log(`[HomePage] Using default expandedKeys:`, newExpandedKeys);
+        } else {
+            // Keep existing expandedKeys (shouldn't normally reach here)
+            newExpandedKeys = this.state.expandedKeys;
+        }
+
         this.setState({
             treeData: converter.treeData,
+            expandedKeys: newExpandedKeys,
         }, () => {
             console.log(`[HomePage] treeData state updated, count=${converter.treeData?.length || 0}`);
+            console.log(`[HomePage] expandedKeys updated:`, newExpandedKeys);
         });
-
-        if (this.state.expandedKeys.length === 0) {
-            this.setState({
-                expandedKeys: converter.expandedKeys,
-            });
-            console.log(`[HomePage] Set expandedKeys:`, converter.expandedKeys);
-        }
 
         console.log(`[HomePage] updateTreeView() completed`);
     }
