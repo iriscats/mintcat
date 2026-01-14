@@ -295,15 +295,12 @@ export class ProfileTreeService {
      * Migrated from TreeViewModel.sortMods
      */
     public async sortTreeNodes(root: ProfileTreeItem, order: string): Promise<void> {
-        const modioFolder = this.getModioFolder(root);
-        const localFolder = this.getLocalFolder(root);
+        // 获取所有 mod 数据用于排序
+        const modsApi = await StorageAPI.getMods();
+        const allMods = await modsApi.getAllMods();
 
-        if (modioFolder) {
-            modioFolder.children = await this.sortNode(modioFolder, order);
-        }
-        if (localFolder) {
-            localFolder.children = await this.sortNode(localFolder, order);
-        }
+        // 递归排序所有文件夹（包括自定义文件夹和嵌套子文件夹）
+        await this.sortNodeRecursive(root, order, allMods);
     }
 
     /**
@@ -450,8 +447,49 @@ export class ProfileTreeService {
     }
 
     /**
-     * 排序单个节点
-     * Migrated from TreeViewModel.sortNode
+     * 递归排序节点及其所有子文件夹
+     */
+    private async sortNodeRecursive(node: ProfileTreeItem, order: string, allMods: CompleteModData[]): Promise<void> {
+        // 如果是文件夹，排序其子项
+        if (node.type === ProfileTreeType.FOLDER && node.children.length > 0) {
+            node.children.sort((a, b) => {
+                if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.ITEM) {
+                    const modAData = allMods.find(m => m.modId === a.id);
+                    const modBData = allMods.find(m => m.modId === b.id);
+
+                    // If mods not found, keep original order
+                    if (!modAData || !modBData) return 0;
+
+                    if (order === "asc") {
+                        return modAData.displayName.localeCompare(modBData.displayName) * -1;
+                    } else if (order === "desc") {
+                        return modAData.displayName.localeCompare(modBData.displayName);
+                    } else if (order === "time") {
+                        // 按更新时间排序
+                        const timeA = modAData.status?.lastUpdateDate || 0;
+                        const timeB = modBData.status?.lastUpdateDate || 0;
+                        return timeB - timeA;
+                    }
+                } else if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.FOLDER) {
+                    return -1;
+                } else if (a.type === ProfileTreeType.FOLDER && b.type === ProfileTreeType.ITEM) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            // 递归处理子文件夹
+            for (const child of node.children) {
+                if (child.type === ProfileTreeType.FOLDER) {
+                    await this.sortNodeRecursive(child, order, allMods);
+                }
+            }
+        }
+    }
+
+    /**
+     * 排序单个节点（已废弃，保留用于向后兼容）
+     * @deprecated 使用 sortNodeRecursive 替代
      */
     private async sortNode(modItem: ProfileTreeItem, order: string): Promise<ProfileTreeItem[]> {
         const modsApi = await StorageAPI.getMods();
