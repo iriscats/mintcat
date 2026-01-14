@@ -27,7 +27,6 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const [selectedGameId, setSelectedGameId] = useState<number | undefined>();
     const [loading, setLoading] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [editingPathValue, setEditingPathValue] = useState<string>("");
 
 
     const loadGames = async () => {
@@ -120,7 +119,6 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             if (result.endsWith("FSD-WindowsNoEditor.pak") ||
                 result.endsWith("FSD-WinGDK.pak")
             ) {
-                setEditingPathValue(result);
                 const gameDAO = await StorageAPI.getGames();
                 await gameDAO.updateGame(gameId, { installPath: result });
                 await loadGames();
@@ -133,7 +131,6 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const onFindGamePathClick = async (gameId: number) => {
         const path = await IntegrateApi.findGamePak();
         if (path) {
-            setEditingPathValue(path);
             const gameDAO = await StorageAPI.getGames();
             await gameDAO.updateGame(gameId, { installPath: path });
             await loadGames();
@@ -152,7 +149,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
 
     const renderGameItem = (game: GameData) => {
         const isSelected = selectedGameId === game.id;
-        const currentPath = game.installPath || editingPathValue;
+        const currentPath = game.installPath || "";
 
         return (
             <div
