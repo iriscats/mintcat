@@ -573,6 +573,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
             await this.updateProfileSelect();
             await this.updateTreeView();
+            await emitVoidEvent("tree-view-count-label-update");
         });
 
         // Initial UI update
