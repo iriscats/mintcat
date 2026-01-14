@@ -63,13 +63,31 @@ export class ModUpdateService {
         const modData = await modsApi.getModById(modId);
         if (!modData) return;
 
-        // Update basic mod info
-        await modsApi.updateMod(modId, {
-            displayName: modInfo.name || modData.displayName,
+        // 获取远程名称
+        const remoteName = modInfo.name || "";
+
+        // 智能同步逻辑：
+        // 1. 如果 originalName 为空（旧数据迁移）或 displayName == originalName，说明用户未自定义
+        // 2. 此时应该同步更新 displayName 和 originalName
+        // 3. 如果 displayName != originalName，说明用户已自定义，只更新 originalName
+        const shouldSyncDisplayName =
+            !modData.originalName ||  // 旧数据没有 originalName
+            modData.displayName === modData.originalName;  // 用户未自定义
+
+        const updatePayload: any = {
             nameId: modInfo.name_id || modData.nameId,
             url: modInfo.profile_url || modData.url,
-            tags: modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : modData.tags
-        });
+            tags: modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : modData.tags,
+            originalName: remoteName || modData.originalName,  // 始终更新 originalName
+        };
+
+        // 只有在用户未自定义时才更新 displayName
+        if (shouldSyncDisplayName && remoteName) {
+            updatePayload.displayName = remoteName;
+        }
+
+        // Update basic mod info
+        await modsApi.updateMod(modId, updatePayload);
 
         // Update version info
         await modsApi.upsertModVersion({

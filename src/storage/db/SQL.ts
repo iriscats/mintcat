@@ -58,6 +58,7 @@ export const ALL_SQL_CONTENT = `
         \`game_id\`         integer                       NOT NULL,
         \`name_id\`         text    DEFAULT ''            NOT NULL,
         \`display_name\`    text                          NOT NULL,
+        \`original_name\`   text    DEFAULT ''            NOT NULL,
         \`url\`             text    DEFAULT ''            NOT NULL,
         \`source_type\`     text    DEFAULT 'Unknown'     NOT NULL,
         \`tags\`            text    DEFAULT '[]'          NOT NULL,

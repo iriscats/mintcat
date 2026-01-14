@@ -25,12 +25,15 @@ export class ModMapper {
         // 解析标签以提取版本、审核状态
         const { tags, versions, approval } = ModMapper.parseTags(rawTags);
 
+        const modName = modInfo.name || "";
+
         const dto: CompleteModData = {
             modId: undefined,  // 尚未存入数据库
             platformId: modInfo.id,
             gameId: 1,  // DRG 游戏 ID
             nameId: modInfo.name_id || "",
-            displayName: modInfo.name || "",
+            displayName: modName,
+            originalName: modName,
             url: modInfo.profile_url || "",
             sourceType: ModSourceType.Modio,
             tags: tags,
@@ -71,6 +74,7 @@ export class ModMapper {
             gameId: 1,
             nameId: fileName,
             displayName: fileName,
+            originalName: fileName,
             url: filePath,
             sourceType: ModSourceType.Local,
             tags: [],

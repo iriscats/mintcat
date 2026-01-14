@@ -224,11 +224,13 @@ export class ConfigMigrationV4 {
             }
 
             // 创建模组（本地模组 platformId = 0）
+            // 迁移时设置 originalName = displayName，这样下次更新时如果用户没改过就会同步
             const mod = await this.modDAO.createMod({
                 platformId,
                 gameId: this.gameId,
                 nameId,
                 displayName,
+                originalName: displayName,
                 url,
                 sourceType: isLocalMod ? 'Local' : sourceType,
                 tags,

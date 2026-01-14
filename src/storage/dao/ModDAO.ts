@@ -13,6 +13,7 @@ export interface ModData {
     gameId: number;
     nameId: string;
     displayName: string;
+    originalName?: string;
     url?: string;
     sourceType?: string;
     tags?: string[];
@@ -174,6 +175,7 @@ export class ModDAO {
                 gameId: modData.gameId,
                 nameId: modData.nameId,
                 displayName: modData.displayName,
+                originalName: modData.originalName || modData.displayName,
                 url: modData.url || "",
                 sourceType: modData.sourceType || "Unknown",
                 tags: modData.tags || [],
@@ -200,6 +202,7 @@ export class ModDAO {
             if (modData.gameId !== undefined) updateData.gameId = modData.gameId;
             if (modData.nameId !== undefined) updateData.nameId = modData.nameId;
             if (modData.displayName !== undefined) updateData.displayName = modData.displayName;
+            if (modData.originalName !== undefined) updateData.originalName = modData.originalName;
             if (modData.url !== undefined) updateData.url = modData.url;
             if (modData.sourceType !== undefined) updateData.sourceType = modData.sourceType;
             if (modData.tags !== undefined) updateData.tags = modData.tags;
@@ -521,6 +524,7 @@ export class ModDAO {
                 gameId: record.gameId,
                 nameId: record.nameId,
                 displayName: record.displayName,
+                originalName: record.originalName || "",
                 url: record.url,
                 sourceType: record.sourceType,
                 approvalStatus: record.approvalStatus,

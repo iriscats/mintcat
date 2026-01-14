@@ -76,6 +76,7 @@ export const mods = sqliteTable("mods", {
     gameId: integer("game_id").notNull().references(() => games.id), // 关联游戏表
     nameId: text("name_id").notNull().default(""), // 模组名称标识符
     displayName: text("display_name").notNull(), // 模组显示名称
+    originalName: text("original_name").notNull().default(""), // 原始名称（来自 mod.io 或本地文件）
     url: text("url").notNull().default(""), // 模组链接地址
     sourceType: text("source_type").notNull().default("Unknown"), // 模组来源: Local, Modio, Unknown
     tags: text("tags", { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`), // 模组标签列表
