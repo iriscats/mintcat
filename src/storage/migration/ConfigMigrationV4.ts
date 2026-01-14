@@ -193,7 +193,7 @@ export class ConfigMigrationV4 {
             const nameId = oldMod.name_id || `mod_${originalPlatformId}`;
             const displayName = oldMod.display_name || nameId;
             const tags = oldMod.tags || [];
-            const approvalStatus = oldMod.approval || 'Sandbox';
+            const approvalStatus = oldMod.approval || '';
 
             // 根据模组类型选择不同的去重策略
             if (isLocalMod) {
