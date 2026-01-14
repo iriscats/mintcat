@@ -617,7 +617,13 @@ export class ProfileDAO {
             }
         });
 
-        return rootFolders.sort((a, b) => a.sortOrder! - b.sortOrder!);
+        // 对每个文件夹内的 mods 和 children 按 sortOrder 排序
+        folderMap.forEach(folder => {
+            folder.mods.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            folder.children.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        });
+
+        return rootFolders.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     }
 
 
