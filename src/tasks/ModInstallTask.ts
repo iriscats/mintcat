@@ -152,20 +152,25 @@ export class ModInstallTask implements ITask {
                 throw new Error(t("User Cancels Installation"));
             }
         } else if (installType === "mintcat_installed") {
-            await emit("status-bar-log", t("Installation Finish"));
+            await emit("status-bar-log", t("Mod Already Install"));
             await context.updateProgress(100);
             return;
         }
 
-        // Step 5: Uninstall old mods (80% progress)
+        // Step 5: Uninstall old mods (70% progress)
         if (ue4ss === "UE4SS-Lite") {
             await IntegrateApi.uninstall(drgPakPath);
         } else {
             await IntegrateApi.uninstall(drgPakPath, false);
         }
-        await context.updateProgress(80);
+        await context.updateProgress(70);
 
-        // Step 6: Prepare mod list for installation
+        // Step 6: Install .NET runtime if needed (75% progress)
+        await emit("status-bar-log", t("Installing .NET Runtime..."));
+        await IntegrateApi.installDotnetRuntime(drgPakPath);
+        await context.updateProgress(75);
+
+        // Step 7: Prepare mod list for installation
         const installModList = [];
         for (const item of enabledMods) {
             const modName = item.nameId === "" ? item.displayName : item.nameId;
@@ -175,13 +180,9 @@ export class ModInstallTask implements ITask {
                 pak_path: item.download?.cachePath || "",
             });
         }
-      
-        //https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip
 
-
-
-        // Step 7: Install mods (90% progress)
-        await context.updateProgress(90);
+        // Step 8: Install mods (80% progress)
+        await context.updateProgress(80);
         const result = await IntegrateApi.install(drgPakPath, JSON.stringify(installModList));
 
         if (!result) {

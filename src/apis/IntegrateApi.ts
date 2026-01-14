@@ -101,10 +101,10 @@ export class IntegrateApi extends ILock {
                 await emitEvent("status-bar-log", t("Installation Finish"));
                 resolve(true);
             });
-            await onceEvent('install-error', async (modName) => {
-                await emitEvent("status-bar-log", `${t("Installation Failed")} Mod: ${modName}`);
+            await onceEvent('install-error', async (errorMsg) => {
+                await emitEvent("status-bar-log", `${t("Installation Failed")}: ${errorMsg}`);
                 await emitEvent("status-bar-percent", 0);
-                reject(false);
+                reject(new Error(errorMsg || "Unknown error"));
             });
         });
     }
@@ -134,6 +134,12 @@ export class IntegrateApi extends ILock {
         return await invoke('check_installed', {
             gamePath: gamePath,
             installTime: installTime,
+        });
+    }
+
+    public static async installDotnetRuntime(gamePath: string): Promise<boolean> {
+        return await invoke('install_dotnet_runtime', {
+            gamePath: gamePath,
         });
     }
 

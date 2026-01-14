@@ -135,7 +135,7 @@ impl PakIntegrator {
             app.emit("status-bar-percent", current_percent).unwrap();
 
             // install ue4ssl
-            install_ue4ss(&self.installation.binaries_directory());
+            install_ue4ss(&self.installation.binaries_directory())?;
 
             let result = self.process_mod(mod_info);
             match result {

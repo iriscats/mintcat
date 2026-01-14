@@ -68,6 +68,7 @@ pub fn run() {
             integrator::drg::uninstall_mods,
             integrator::drg::check_installed,
             integrator::drg::find_game_pak,
+            integrator::drg::install_dotnet_runtime,
             capability::steam::launch_steam_game,
             capability::steam::check_steam_game,
             capability::download::download_large_file,
