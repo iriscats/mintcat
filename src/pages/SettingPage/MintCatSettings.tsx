@@ -22,6 +22,7 @@ export function MintCatSettings() {
 
     const themeOptions = [
         {value: 'Light', label: t('Light')},
+        {value: 'Blue', label: t('Blue')},
         {value: 'Dark', label: t('Dark')},
         {value: 'Pink', label: t('Pink')},
     ];
@@ -65,7 +66,7 @@ export function MintCatSettings() {
         const settings = await StorageAPI.getSettings();
         await settings.setGuiTheme(value);
         localStorage.setItem('theme', value);
-        await emitEvent("theme-change", value as 'Light' | 'Dark' | 'Pink');
+        await emitEvent("theme-change", value);
     }
 
     const onUe4ssChange = async (value: string) => {

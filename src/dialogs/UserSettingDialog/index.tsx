@@ -9,6 +9,7 @@ import {CacheApi} from "@/apis/CacheApi";
 import {AppViewModel} from "@/AppViewModel";
 import {IoC} from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
+import { autoBind } from "@/utils/ReactUtils";
 
 const {Text, Title} = Typography;
 
@@ -34,13 +35,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             modioOAuth: ""
         }
 
-        this.show = this.show.bind(this);
-        this.handleCancel = this.handleCancel.bind(this);
-        this.onOAuthChange = this.onOAuthChange.bind(this);
-        this.onOpenModioClick = this.onOpenModioClick.bind(this);
-        this.loadUserInfo = this.loadUserInfo.bind(this);
     }
 
+    @autoBind
     public async show() {
         this.setState({
             isModalOpen: true
@@ -48,6 +45,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         await this.loadUserInfo();
     }
 
+    @autoBind
     private async loadUserInfo() {
         try {
             const vm = await IoC.get(AppViewModel);
@@ -73,14 +71,21 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         }
     }
 
+    @autoBind
     private handleCancel() {
         this.setState({
             isModalOpen: false
         });
     }
 
+    @autoBind
     private async onOpenModioClick() {
         await openShell("https://mod.io/me/access");
+    }
+
+    @autoBind
+    private async onVIPClick() {
+        await openShell("https://vip.mintcat.work");
     }
 
     private async onOAuthChange(e: any) {
@@ -138,6 +143,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                     size="small"
                                     type="primary"
                                     icon={<CrownOutlined />}
+                                    onClick={this.onVIPClick}
                                     style={{
                                         backgroundColor: '#FFD700',
                                         borderColor: '#FFD700',

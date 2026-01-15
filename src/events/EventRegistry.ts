@@ -23,7 +23,7 @@ export interface EventPayloads {
   'app-error': string;
 
   /** 主题变更 */
-  'theme-change': 'Light' | 'Dark' | 'Pink';
+  'theme-change': string;
 
   /** 用户信息加载成功 (from database) */
   'user-info-load-success': UserData;
