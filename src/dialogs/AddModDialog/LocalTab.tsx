@@ -1,11 +1,12 @@
 import {open} from "@tauri-apps/plugin-dialog";
+import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
 import {useEventListener} from "@/events";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import React, {useEffect, useState} from "react";
 import {Button, Flex, Form, List} from "antd";
 import {t} from "i18next";
-import {CloseOutlined, FilePptOutlined, FileZipOutlined, InboxOutlined} from "@ant-design/icons";
+import {CloseOutlined, FilePptOutlined, FileZipOutlined, FolderOutlined, InboxOutlined} from "@ant-design/icons";
 
 
 interface FileItem {
@@ -15,10 +16,11 @@ interface FileItem {
 }
 
 async function makeFileItem(filePath: string) {
+    const fileInfo = await stat(filePath);
     return {
         path: filePath,
         name: await path.basename(filePath),
-        type: await path.extname(filePath)
+        type: fileInfo.isDirectory ? "folder" : await path.extname(filePath)
     }
 }
 
@@ -33,13 +35,19 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
     }));
 
 
-    const addFileList = async (path: string) => {
-        if (!(path.endsWith(".zip") || path.endsWith(".pak")))
+    const addFileList = async (filePath: string) => {
+        if (!(await exists(filePath))) {
             return;
+        }
 
-        const fileItem = await makeFileItem(path);
+        const fileInfo = await stat(filePath);
+        if (!fileInfo.isDirectory && !(filePath.endsWith(".zip") || filePath.endsWith(".pak"))) {
+            return;
+        }
+  
+        const fileItem = await makeFileItem(filePath);
         setFileList(prevList => {
-            if (prevList.find(file => file.path === path)) {
+            if (prevList.find(file => file.path === filePath)) {
                 return prevList;
             }
             return [...prevList, fileItem];
@@ -48,6 +56,19 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
 
     const onSelectPathClick = async () => {
         const results = await open({
+            directory: true,
+            multiple: true,
+        });
+
+        if (results) {
+            for (let result of results) {
+                await addFileList(result);
+            }
+        }
+    }
+
+    const onSelectFileClick = async () => {
+        const results = await open({
             filters: [{
                 name: '*',
                 extensions: ['pak', 'zip'],
@@ -55,8 +76,10 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
             multiple: true,
         });
 
-        for (let result of results) {
-            await addFileList(result);
+        if (results) {
+            for (let result of results) {
+                await addFileList(result);
+            }
         }
     }
 
@@ -92,16 +115,30 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
 
     return (
         <Form layout="vertical">
-            <div className={"ant-upload-drag"}
-                 onClick={onSelectPathClick}
-            >
-                <p className="app-drag-icon">
-                    <InboxOutlined/>
-                </p>
-                <p className="app-drag-hint">
-                    {t("Click or drag file to this area")}
-                </p>
-            </div>
+            <Flex gap={"small"}>
+                <div className={"ant-upload-drag"}
+                     style={{flex: 1}}
+                     onClick={onSelectPathClick}
+                >
+                    <p className="app-drag-icon">
+                        <FolderOutlined/>
+                    </p>
+                    <p className="app-drag-hint">
+                        {t("Select Folder")}
+                    </p>
+                </div>
+                <div className={"ant-upload-drag"}
+                     style={{flex: 1}}
+                     onClick={onSelectFileClick}
+                >
+                    <p className="app-drag-icon">
+                        <InboxOutlined/>
+                    </p>
+                    <p className="app-drag-hint">
+                        {t("Select File")}
+                    </p>
+                </div>
+            </Flex>
             <br/>
             <Form.Item label={`${t("Selected Files")} ${fileList.length}`}>
                 <div className={"app-drag-list"}
@@ -121,6 +158,7 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
                                   >
                                       <Flex gap={"small"}>
                                           {
+                                              item.type === "folder" ? <FolderOutlined/> :
                                               item.type === ".pak" ? <FilePptOutlined/> : <FileZipOutlined/>
                                           }
                                           <span>
