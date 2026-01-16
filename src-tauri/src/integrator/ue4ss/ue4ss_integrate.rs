@@ -180,7 +180,8 @@ pub fn install_dotnet_runtime(
     // Extract ZIP to ue4ss/dotnet directory
     extract_zip_to_directory(&temp_zip_str, dotnet_path.to_str().unwrap())?;
 
-    app.emit("status-bar-log", ".NET Runtime installed").unwrap();
+    app.emit("status-bar-log", ".NET Runtime installed")
+        .unwrap();
 
     Ok(true)
 }

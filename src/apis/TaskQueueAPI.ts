@@ -583,22 +583,27 @@ export class TaskQueueAPI {
 
   /**
    * Wait for task completion
+   * @param taskId - Task ID to wait for
+   * @param timeoutMs - Timeout in milliseconds. Pass 0 or undefined to disable timeout.
    */
   async waitForTaskCompletion(
     taskId: string,
-    timeoutMs: number = 30000
+    timeoutMs?: number
   ): Promise<Task> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Task completion timeout'));
-      }, timeoutMs);
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      if (timeoutMs && timeoutMs > 0) {
+        timeout = setTimeout(() => {
+          reject(new Error('Task completion timeout'));
+        }, timeoutMs);
+      }
 
       this.onTaskUpdated((task) => {
         if (task.id === taskId) {
           // Support both lowercase (frontend) and capitalized (backend) status values
           const status = task.status.toLowerCase();
           if (status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'canceled') {
-            clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
             resolve(task);
           }
         }

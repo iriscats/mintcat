@@ -222,7 +222,7 @@ export class TaskManager {
     /**
      * Wait for a task to complete
      * @param taskId - Task ID to wait for
-     * @param timeout - Timeout in milliseconds (default: 30000)
+     * @param timeout - Timeout in milliseconds. Pass 0 or undefined to disable timeout.
      * @returns Completed task
      *
      * @example
@@ -234,7 +234,7 @@ export class TaskManager {
      * }
      * ```
      */
-    async waitForTask(taskId: string, timeout: number = 30000): Promise<Task> {
+    async waitForTask(taskId: string, timeout?: number): Promise<Task> {
         return this.taskQueue.waitForTaskCompletion(taskId, timeout);
     }
 }

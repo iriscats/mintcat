@@ -89,8 +89,8 @@ class TitleBar extends React.Component<any, any> {
                 }
             });
 
-            // Wait for task to complete
-            const result = await taskManager.waitForTask(taskId, 120000); // 2 min timeout
+            // Wait for task to complete (no timeout)
+            const result = await taskManager.waitForTask(taskId);
             
             // Cleanup listener
             unlisten();

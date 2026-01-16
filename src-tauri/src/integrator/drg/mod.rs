@@ -39,7 +39,10 @@ pub fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) 
                 }
             }
             Err(e) => {
-                let error_msg = format!("Failed to initialize integrator for path '{}': {}", game_path, e);
+                let error_msg = format!(
+                    "Failed to initialize integrator for path '{}': {}",
+                    game_path, e
+                );
                 eprintln!("{}", error_msg);
                 app.emit("install-error", error_msg).unwrap();
             }
@@ -68,12 +71,16 @@ pub fn find_game_pak() -> String {
 }
 
 #[tauri::command]
-pub fn install_dotnet_runtime(app: AppHandle, game_path: String) -> Result<bool, String> {
-    let installation = DRGInstallation::from_pak_path(&game_path)
-        .map_err(|e| format!("Invalid game path: {}", e))?;
+pub async fn install_dotnet_runtime(app: AppHandle, game_path: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let installation = DRGInstallation::from_pak_path(&game_path)
+            .map_err(|e| format!("Invalid game path: {}", e))?;
 
-    let binaries_path = installation.binaries_directory();
+        let binaries_path = installation.binaries_directory();
 
-    ue4ss_integrate::install_dotnet_runtime(&app, &binaries_path)
-        .map_err(|e| format!("Failed to install .NET runtime: {}", e))
+        ue4ss_integrate::install_dotnet_runtime(&app, &binaries_path)
+            .map_err(|e| format!("Failed to install .NET runtime: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Failed to join .NET runtime installation task: {}", e))?
 }
