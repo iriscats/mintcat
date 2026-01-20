@@ -269,7 +269,7 @@ function ModTreeViewProgress({nodeData}) {
                 (downloadProgress !== 100) &&
                 <Progress
                     type="circle"
-                    trailColor="#e6f4ff"
+                    railColor="#e6f4ff"
                     percent={downloadProgress}
                     strokeWidth={20}
                     size={14}
