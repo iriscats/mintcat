@@ -36,7 +36,7 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-store = "2"
 tauri-plugin-sql = { version = "2.3.0",features = ["sqlite"] }
 tauri-plugin-sentry = "0.4"
-tauri-plugin-task-queue = { git = "https://github.com/iriscats/tauri-plugin-task-queue" }
+tauri-plugin-task-queue = { path = "../../tauri-plugin-task-queue" }
 
 
 log = "0.4.27"

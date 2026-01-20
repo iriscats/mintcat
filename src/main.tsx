@@ -12,8 +12,23 @@ import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
 import i18n from "@/locales/i18n"
 import packageJson from '../package.json';
 import {InitLog} from "./apis/LogApi.ts";
+import {initializeTaskSystem} from "@/tasks";
 
 InitLog();
+
+// Initialize task system once for all windows
+let taskSystemInitialized = false;
+async function ensureTaskSystemInitialized(): Promise<void> {
+    if (taskSystemInitialized) return;
+    taskSystemInitialized = true;
+
+    try {
+        await initializeTaskSystem();
+        console.log('[Main] Task system initialized');
+    } catch (error) {
+        console.error('[Main] Failed to initialize task system:', error);
+    }
+}
 
 
 const Main = () => {
@@ -28,6 +43,8 @@ const Main = () => {
     });
 
     useEffect(() => {
+        // Initialize task system for all windows
+        ensureTaskSystemInitialized();
 
         if (packageJson.version.indexOf("beta") > 0) {
 

@@ -8,7 +8,7 @@ import type { UserInfo } from '@/apis/modio/UserInfo';
 import type { UserData } from '@/storage/dao/UserDAO';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import type { GameData } from '@/storage/dao/GameDAO';
-import type { Task, TaskTypeInfo } from '@/apis/TaskQueueAPI';
+import type { TaskData, TaskTypeInfo } from 'tauri-plugin-task-queue-api';
 
 /**
  * 事件 payload 类型映射
@@ -142,7 +142,7 @@ export interface EventPayloads {
    * 任务更新
    * 注意：重命名为 kebab-case (原 task_updated)
    */
-  'task-updated': Task;
+  'task-updated': TaskData;
 
   /**
    * 任务类型注册
@@ -166,7 +166,7 @@ export interface EventPayloads {
    * 前端任务启动
    * 注意：重命名为 kebab-case (原 frontend_task_start)
    */
-  'frontend-task-start': Task;
+  'frontend-task-start': TaskData;
 
   // ========================================
   // Tauri 内部事件

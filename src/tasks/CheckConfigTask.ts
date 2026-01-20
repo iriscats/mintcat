@@ -4,7 +4,7 @@ import {ConfigV4} from "@/storage/model/ConfigV4.ts";
 import {ConfigV5} from "@/storage/model/ConfigV5.ts";
 import {ConfigDataType} from "@/storage/DataType.ts";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
-import {ITask} from "@/tasks/ITask.ts";
+import { ITask } from 'tauri-plugin-task-queue-api';
 import {ConfigManageDialogViewModel} from "@/dialogs/ConfigManageDialog";
 
 

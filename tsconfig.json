@@ -12,6 +12,9 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "tauri-plugin-task-queue-api": [
+        "../tauri-plugin-task-queue/guest-js"
       ]
     },
     /* Bundler mode */

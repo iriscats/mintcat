@@ -56,7 +56,8 @@ export default defineConfig(async () => ({
 
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src')
+            '@': path.resolve(__dirname, './src'),
+            'tauri-plugin-task-queue-api': path.resolve(__dirname, '../tauri-plugin-task-queue/guest-js')
         }
     }
 }));

@@ -14,7 +14,7 @@ import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
 import {emitEvent, listenEvent, UnlistenFn} from "@/events";
-import {TaskManager} from "@/tasks/TaskManager.ts";
+import { TaskQueueAPI } from "tauri-plugin-task-queue-api";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 import {CacheApi} from "@/apis/CacheApi.ts";
@@ -77,8 +77,8 @@ class TitleBar extends React.Component<any, any> {
             const taskId = await IntegrateApi.installMods();
 
             // Setup progress listener
-            const taskManager = TaskManager.getInstance();
-            const unlisten = await taskManager.onTaskUpdated((task) => {
+            const taskQueue = TaskQueueAPI.getInstance();
+            const unlisten = await taskQueue.onTaskUpdated((task) => {
                 if (task.id === taskId) {
                     // Update status bar with progress
                     emitEvent("status-bar-percent", task.progress).catch(console.error);
@@ -90,8 +90,8 @@ class TitleBar extends React.Component<any, any> {
             });
 
             // Wait for task to complete (no timeout)
-            const result = await taskManager.waitForTask(taskId);
-            
+            const result = await taskQueue.waitForTaskCompletion(taskId);
+
             // Cleanup listener
             unlisten();
 

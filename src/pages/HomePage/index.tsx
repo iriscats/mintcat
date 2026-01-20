@@ -41,7 +41,7 @@ import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
-import {TaskManager} from "@/tasks/TaskManager.ts";
+import { TaskQueueAPI } from "tauri-plugin-task-queue-api";
 import type {DataNode} from "antd/es/tree";
 
 
@@ -327,8 +327,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
             const taskId = await IntegrateApi.installMods();
 
             // Setup progress listener
-            const taskManager = TaskManager.getInstance();
-            const unlisten = await taskManager.onTaskUpdated((task) => {
+            const taskQueue = TaskQueueAPI.getInstance();
+            const unlisten = await taskQueue.onTaskUpdated((task) => {
                 if (task.id === taskId) {
                     // Update status bar with progress
                     emitEvent("status-bar-percent", task.progress).catch(console.error);
@@ -340,7 +340,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             });
 
             // Wait for task to complete (no timeout)
-            const result = await taskManager.waitForTask(taskId);
+            const result = await taskQueue.waitForTaskCompletion(taskId);
 
             // Cleanup listener
             unlisten();

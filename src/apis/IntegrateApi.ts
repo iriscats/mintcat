@@ -9,8 +9,7 @@ import { IoC } from "@/core/IoC.ts";
 import {ILock} from "@/core/ILock.ts";
 import {StorageAPI} from "@/storage";
 import {ModSourceType} from "@/models/mod/types";
-import {TaskManager} from "@/tasks/TaskManager.ts";
-import {TaskPriority} from "@/apis/TaskQueueAPI.ts";
+import { TaskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
 import {ModService} from "@/services/ModService.ts";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 
@@ -64,13 +63,13 @@ export class IntegrateApi extends ILock {
     public static async installMods(): Promise<string> {
         console.log('[IntegrateApi] Submitting mod installation task');
 
-        // Submit install task to TaskManager
-        const taskManager = TaskManager.getInstance();
-        const taskId = await taskManager.submitFrontendTask(
-            'mod_install',
-            {}, // ModInstallTask will get active profile automatically
-            TaskPriority.High
-        );
+        // Submit install task directly to plugin
+        const taskQueue = TaskQueueAPI.getInstance();
+        const taskId = await taskQueue.addTask({
+            taskType: 'mod_install',
+            params: {}, // ModInstallTask will get active profile automatically
+            priority: TaskPriority.High
+        });
 
         console.log(`[IntegrateApi] Install task submitted: ${taskId}`);
         return taskId;

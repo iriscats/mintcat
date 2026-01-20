@@ -87,8 +87,9 @@ const AppContent = () => {
 
         // Initialize core (database + AppViewModel)
         AppInitializer.initializeCore()
-            .then(() => {
+            .then(async () => {
                 console.log('[App] Core initialization complete');
+
                 pageConfigs.current.push({key: MenuPage.Home, component: <HomePage/>});
                 setIsAppViewModelReady(true);
             })
