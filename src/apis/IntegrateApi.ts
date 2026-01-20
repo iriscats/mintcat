@@ -81,6 +81,7 @@ export class IntegrateApi  {
             });
             await onceEvent('install-error', async (errorMsg) => {
                 await emitEvent("status-bar-percent", 0);
+                await emitEvent("app-error", errorMsg || "Unknown error");
                 reject(new Error(errorMsg || "Unknown error"));
             });
         });
