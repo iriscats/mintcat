@@ -11,30 +11,6 @@ import { emit } from '@tauri-apps/api/event';
 import { t } from 'i18next';
 
 /**
- * Schema for ModInstallTask parameters
- */
-const ModInstallParamsSchema = new SchemaBuilder<ModInstallTaskParams>()
-    .field('profileId', { type: 'string', required: false })
-    .field('mods', { type: 'array', required: false, default: [] })
-    .build();
-
-/**
- * Parameters for ModInstallTask
- */
-export interface ModInstallTaskParams {
-    /**
-     * Profile ID to install mods from
-     */
-    profileId?: string;
-
-    /**
-     * Optional list of specific mods to install
-     * If not provided, installs all enabled mods from active profile
-     */
-    mods?: CompleteModData[];
-}
-
-/**
  * Task: Install mods to game
  * Execution: Frontend (complex business logic, needs access to multiple ViewModels and database)
  *
@@ -48,21 +24,16 @@ export interface ModInstallTaskParams {
  * 7. Install .NET runtime
  * 8. Install mods
  *
- * @example
- * ```typescript
- * const task = new ModInstallTask({ profileId: 'default' });
- * await task.run(context);
  * ```
  */
 @Task({
     type: 'mod_install',
     name: '模组安装',
     description: '将模组安装到游戏目录',
-    schema: ModInstallParamsSchema,
+    schema: null,
     estimatedDuration: 120
 })
 export class ModInstallTask implements ITask {
-    constructor(private params: ModInstallTaskParams) {}
 
     async run(context: ITaskContext): Promise<void> {
         const TOTAL_STEPS = 8;

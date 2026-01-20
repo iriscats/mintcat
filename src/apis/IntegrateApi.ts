@@ -3,32 +3,50 @@ import {message} from "antd";
 import {emitEvent, onceEvent} from "@/events";
 import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
-import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
-import {ILock} from "@/core/ILock.ts";
 import {StorageAPI} from "@/storage";
-import {ModSourceType} from "@/models/mod/types";
 import { TaskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
-import {ModService} from "@/services/ModService.ts";
-import type {CompleteModData} from "@/storage/dao/ModDAO";
 
 
-export class IntegrateApi extends ILock {
+export class IntegrateApi  {
 
     /**
-     * Shared instance for lock mechanism in static methods
-     * Ensures only one installation operation runs at a time
+     * Install mods to game using async task system
+     * @returns Task ID for tracking progress
+     *
+     * @example
+     * ```typescript
+     * const taskId = await IntegrateApi.installMods();
+     * // UI can listen to task progress via TaskManager.onTaskUpdated()
+     * ```
      */
-    private static lockInstance = new IntegrateApi();
+    public static async installMods(): Promise<string> {
+        console.log('[IntegrateApi] Submitting mod installation task');
 
-    /**
-     * Helper method to get all mods from database as CompleteModData array
-     */
-    private async getAllModsAsList(): Promise<CompleteModData[]> {
-        return await ModService.getAllMods();
+        // Submit install task directly to plugin
+        const taskQueue = TaskQueueAPI.getInstance();
+        const taskId = await taskQueue.addTask({
+            taskType: 'mod_install',
+            params: {}, 
+            priority: TaskPriority.High
+        });
+
+        console.log(`[IntegrateApi] Install task submitted: ${taskId}`);
+        return taskId;
     }
 
+    public static async uninstallMods() {
+        if (!await IntegrateApi.checkGamePath()) {
+            return false;
+        }
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const drgPakPath = activeGame?.installPath;
+        if (drgPakPath && await IntegrateApi.uninstall(drgPakPath)) {
+            message.success(t("Uninstall Success"));
+        }
+    }
 
     public static async checkGamePath(drgPakPath: string = undefined): Promise<boolean> {
         const gameDAO = await StorageAPI.getGames();
@@ -48,43 +66,6 @@ export class IntegrateApi extends ILock {
         }
 
         return true;
-    }
-
-    /**
-     * Install mods to game using async task system
-     * @returns Task ID for tracking progress
-     *
-     * @example
-     * ```typescript
-     * const taskId = await IntegrateApi.installMods();
-     * // UI can listen to task progress via TaskManager.onTaskUpdated()
-     * ```
-     */
-    public static async installMods(): Promise<string> {
-        console.log('[IntegrateApi] Submitting mod installation task');
-
-        // Submit install task directly to plugin
-        const taskQueue = TaskQueueAPI.getInstance();
-        const taskId = await taskQueue.addTask({
-            taskType: 'mod_install',
-            params: {}, // ModInstallTask will get active profile automatically
-            priority: TaskPriority.High
-        });
-
-        console.log(`[IntegrateApi] Install task submitted: ${taskId}`);
-        return taskId;
-    }
-
-    public static async uninstallMods() {
-        if (!await IntegrateApi.checkGamePath()) {
-            return false;
-        }
-        const gameDAO = await StorageAPI.getGames();
-        const activeGame = await gameDAO.getActiveGame();
-        const drgPakPath = activeGame?.installPath;
-        if (drgPakPath && await IntegrateApi.uninstall(drgPakPath)) {
-            message.success(t("Uninstall Success"));
-        }
     }
 
     public static async install(gamePath: string, modListJson: string) {
