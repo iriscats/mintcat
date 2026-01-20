@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { t } from "i18next";
-import { Flex, Progress, ProgressProps } from "antd";
+import { Flex, Progress, ProgressProps, theme } from "antd";
 import { emitEvent, useEventListener } from "@/events";
 import { taskQueueAPI } from 'tauri-plugin-task-queue-api';
 
@@ -15,34 +15,35 @@ const ProgressColors: ProgressProps['strokeColor'] = {
 type LogLevel = 'info' | 'success' | 'warning' | 'error';
 
 /**
- * 获取日志级别对应的颜色
- */
-function getLogLevelColor(level: LogLevel): string {
-    switch (level) {
-        case 'info':
-            return '#1890ff'; // Ant Design blue
-        case 'success':
-            return '#52c41a'; // Ant Design green
-        case 'warning':
-            return '#faad14'; // Ant Design orange
-        case 'error':
-            return '#ff4d4f'; // Ant Design red
-        default:
-            return '#666'; // Default gray
-    }
-}
-
-/**
  * 状态栏组件
  * 显示应用状态消息和进度条
  *
  * 集中管理任务队列监听，作为项目中唯一的任务监听点
  */
 function StatusBar() {
+    const { token } = theme.useToken();
     const [message, setMessage] = useState<string>(t("Ready"));
     const [logLevel, setLogLevel] = useState<LogLevel>('info');
     const [percent, setPercent] = useState<number>(0);
     const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+    /**
+     * 获取日志级别对应的颜色
+     */
+    const getLogLevelColor = (level: LogLevel): string => {
+        switch (level) {
+            case 'info':
+                return token.colorPrimary; // 使用主题主色
+            case 'success':
+                return '#52c41a'; // Ant Design green
+            case 'warning':
+                return '#faad14'; // Ant Design orange
+            case 'error':
+                return '#ff4d4f'; // Ant Design red
+            default:
+                return '#666'; // Default gray
+        }
+    };
 
     // ✅ 自动清理的状态栏日志监听器
     useEventListener('status-bar-log', (msg) => {
@@ -79,22 +80,40 @@ function StatusBar() {
             unlisten = await taskQueueAPI.onTaskUpdated((task) => {
                 // 更新进度条
                 emitEvent("status-bar-percent", task.progress).catch(console.error);
+                console.log('[StatusBar] Task updated:', task);
 
                 // 根据任务状态更新消息
                 if (task.status === 'processing') {
-                    const taskName = task.type || 'Task';
-                    setMessage(`${t("Processing")}: ${taskName} (${task.progress}%)`);
-                    setLogLevel('info');
+                    // 优先显示最新的任务消息
+                    if (task.messages && task.messages.length > 0) {
+                        const latestMessage = task.messages[task.messages.length - 1];
+                        setMessage(latestMessage.message);
+                        // 将任务消息级别映射到日志级别
+                        const levelMap: Record<string, LogLevel> = {
+                            'info': 'info',
+                            'warning': 'warning',
+                            'error': 'error'
+                        };
+                        setLogLevel(levelMap[latestMessage.level] || 'info');
+                    }
+                    // 如果没有消息但有步骤信息，显示步骤名称
+                    else if (task.current_step) {
+                        setMessage(`${task.current_step.name} (${task.current_step.current}/${task.current_step.total})`);
+                        setLogLevel('info');
+                    }
+                    // 否则显示通用消息
+                    else {
+                        const taskName = task.type || 'Task';
+                        setMessage(`${t("Processing")}: ${taskName} (${task.progress}%)`);
+                        setLogLevel('info');
+                    }
                 } else if (task.status === 'completed') {
-                    setMessage(t("Task Completed"));
-                    setLogLevel('success');
                     // 完成后清空进度条
                     emitEvent("status-bar-percent", 0).catch(console.error);
                 } else if (task.status === 'failed') {
-                    setMessage(`${t("Task Failed")}: ${task.error || 'Unknown error'}`);
-                    setLogLevel('error');
                     // 失败后清空进度条
                     emitEvent("status-bar-percent", 0).catch(console.error);
+                    emitEvent('status-bar-log', { message: task.error, level: 'error' });
                 }
             });
         };

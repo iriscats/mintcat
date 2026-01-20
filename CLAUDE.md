@@ -22,13 +22,14 @@ pnpm tauri dev
 ```bash
 pnpm build              # Build frontend assets
 pnpm tauri build        # Build Tauri application for production
-./release.sh            # Publish the application
+./release.sh            # Publish the application (uses cargo-xwin for Windows cross-compilation)
 ```
 
 #### Cross-Platform Builds
 ```bash
 pnpm tauri build --target x86_64-pc-windows-gnu    # Windows build
 pnpm tauri build --target x86_64-unknown-linux-gnu  # Linux build
+pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-gnu  # Windows build with cargo-xwin
 ```
 
 #### Signed Builds (Production)
@@ -59,13 +60,17 @@ pnpm preview           # Preview built application
 
 ### Frontend Structure
 - **App.tsx**: Main application component with page routing and layout
-- **ViewModels** (`src/vm/`): MVVM pattern with singleton ViewModels
-  - `AppViewModel`: Core app initialization, authentication, settings
-  - `HomeViewModel`: Mod management and UI state
-  - `ProfileViewModel`: Configuration profile management
+- **Core** (`src/core/`): Application initialization and dependency injection
+  - `AppInitializer`: Handles database and core ViewModel initialization
+  - `IoCRegistration`: Dependency injection container registration
+- **ViewModels** (`src/`): MVVM pattern with singleton ViewModels at root level
+  - `AppViewModel.ts`: Core app initialization, authentication, settings
+  - Other ViewModels may be in subdirectories or pages
 - **Pages** (`src/pages/`): Main application pages (Home, Modio, Settings, Chat)
 - **Dialogs** (`src/dialogs/`): Modal dialogs for user interactions
 - **Components** (`src/components/`): Reusable UI components
+- **Services** (`src/services/`): Business logic and service layer
+- **Events** (`src/events/`): Event-driven communication system
 
 ### Backend Structure (Rust/Tauri)
 - **Tauri 2.0** plugins for system integration:
@@ -102,17 +107,22 @@ pnpm preview           # Preview built application
 ## Key Files to Understand
 
 ### Core Application Flow
-- `src/App.tsx:80`: AppViewModel initialization on component mount
-- `src/vm/AppViewModel.ts:93`: Main app initialization sequence
+- `src/App.tsx`: Main application component, registers ViewModels and initializes core
+- `src/core/AppInitializer.ts`: Core initialization sequence (database + AppViewModel)
+- `src/core/IoCRegistration.ts`: Dependency injection container setup
+- `src/AppViewModel.ts`: Main app ViewModel for initialization, authentication, settings
 - `src/storage/db/Schema.ts`: Complete database schema with documentation
 
 ### Mod Management
 - `src/apis/modio/`: mod.io API integration
-- `src/tasks/`: Asynchronous task system (install, update, launch)
+- `src/tasks/`: Asynchronous task system (install, update, launch, check updates)
+  - `ModInstallTask.ts`, `ModUpdateTask.ts`, `LaunchTask.ts`, etc.
 - `src/apis/IntegrateApi.ts`: Game integration and mod installation
 
 ### Storage and Configuration
 - `src/storage/`: Database layer with DAOs and migrations
+- `src/storage/dao/`: Data access objects for each entity (Game, Mod, User, Profile, etc.)
+- `src/storage/migration/`: Versioned configuration migrations (V2, V3, V4, V5)
 - `src/storage/index.ts`: Main storage API entry point
 
 ## Configuration Files
@@ -125,18 +135,26 @@ pnpm preview           # Preview built application
 - **Target**: ESNext for modern JavaScript features
 
 ### Vite Configuration (`vite.config.ts`)
-- **Port**: Fixed at 1420 for Tauri integration
+- **Port**: Fixed at 1420 for Tauri integration (HMR on 1421)
 - **React Compiler**: Enabled with babel-plugin-react-compiler
 - **Target**: ESNext for top-level await support
 - **Build Output**: Optimized for Tauri frontend
+- **Path Aliases**:
+  - `@/*` mapped to `src/*`
+  - `tauri-plugin-task-queue-api` mapped to `../tauri-plugin-task-queue/guest-js`
 
 ### Tauri Configuration (`src-tauri/Cargo.toml`)
-- **Nightly Toolchain**: Required for some dependencies
-- **Cross-compilation**: Windows and Linux targets supported
+- **Cross-compilation**: Windows (MSVC) and Linux targets supported
 - **Custom Plugins**:
-  - `tauri-plugin-task-queue` (from GitHub source)
+  - `tauri-plugin-task-queue` (from local path: `../../tauri-plugin-task-queue`)
   - `tauri-plugin-sentry` for error tracking
-- **Game Integration**: `repak`, `unreal_asset`, `steamlocate`
+  - `tauri-plugin-deep-link` for OAuth deep linking
+- **Game Integration**:
+  - `repak` (with oodle compression) - Unreal Engine pak file handling
+  - `unreal_asset`, `uasset_utils` - Unreal asset manipulation
+  - `steamlocate` - Steam game detection
+- **HTTP Client**: `reqwest` with rustls-tls
+- **Archive Handling**: `zip` with AES encryption support
 
 ## Code Quality Tools
 
@@ -154,13 +172,40 @@ pnpm add -D vitest @testing-library/react @testing-library/jest-dom
 
 ## Important Development Notes
 
-- **React Compiler**: Experimental feature enabled, may cause build warnings
+- **React Compiler**: Experimental feature enabled (React 19), may cause build warnings
 - **Decorators Pattern**: Used extensively in ViewModels for reactive programming
-- **Lock Mechanism**: `ILock` abstract class (src/utils/ILock.ts) ensures sequential operation execution in ViewModels
-- **Cross-compilation**: Requires proper Rust toolchain setup for Windows/Linux builds
-- **SQLite Database**: Follows 3NF design principles with proper indexing
-- **Mod Integration**: Supports both local files and mod.io downloads with Unreal Engine pak processing
+  - Requires `experimentalDecorators: true` and `useDefineForClassFields: false` in tsconfig
+- **Lock Mechanism**: `ILock` abstract class ensures sequential operation execution in ViewModels
+- **Cross-compilation**:
+  - Uses `cargo-xwin` for Windows builds from non-Windows platforms
+  - Requires proper Rust toolchain setup for target platforms
+- **SQLite Database**:
+  - Follows 3NF design principles with proper indexing
+  - Uses Drizzle ORM for type-safe queries
+  - Versioned migrations in `src/storage/migration/`
+- **Mod Integration**:
+  - Supports both local files and mod.io downloads
+  - Unreal Engine pak file processing with compression support
+  - Steam game auto-detection
 - **Configuration Profiles**: Users can manage multiple mod setups independently
-- **Task Queue System**: Handles long-running operations asynchronously with progress tracking
+- **Task Queue System**:
+  - Custom Tauri plugin for long-running operations
+  - Progress tracking and real-time UI updates
+  - Task types: Download, Install, Update, Launch, Check Updates
 - **Error Tracking**: Sentry integration for production error monitoring
 - **Auto-updater**: Configured with GitHub releases for seamless updates
+- **Deep Linking**: OAuth authentication flow via deep links
+
+## Application Paths
+
+### Config Path
+- **Windows**: `C:\Users\<Username>\AppData\Roaming\com.mint.cat`
+- **macOS**: `~/Library/Application Support/com.mint.cat`
+
+### Log Path
+- **Windows**: `C:\Users\<Username>\AppData\Local\com.mint.cat\logs`
+- **macOS**: `~/Library/Logs/com.mint.cat/mintcat.log`
+
+### Cache Path
+- **Windows**: `C:\Users\<Username>\AppData\Local\com.mint.cat\`
+- **macOS**: `~/Library/Caches/com.mint.cat`

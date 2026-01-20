@@ -6,8 +6,7 @@ import {exists} from "@tauri-apps/plugin-fs";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
-import { TaskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
-import StatusBar from "@/components/StatusBar.tsx";
+import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
 
 
 export class IntegrateApi  {
@@ -26,8 +25,7 @@ export class IntegrateApi  {
         console.log('[IntegrateApi] Submitting mod installation task');
 
         // Submit install task directly to plugin
-        const taskQueue = TaskQueueAPI.getInstance();
-        const taskId = await taskQueue.addTask({
+        const taskId = await taskQueueAPI.addTask({
             taskType: 'mod_install',
             params: {}, 
             priority: TaskPriority.High
@@ -79,11 +77,9 @@ export class IntegrateApi  {
             await onceEvent('install-success', async (installTime) => {
                 const profileVM = await IoC.get(ProfileViewModel);
                 await profileVM.setActiveProfileInstallTime(installTime);
-                await StatusBar.success(t("Installation Finish"));
                 resolve(true);
             });
             await onceEvent('install-error', async (errorMsg) => {
-                await StatusBar.error(`${t("Installation Failed")}: ${errorMsg}`);
                 await emitEvent("status-bar-percent", 0);
                 reject(new Error(errorMsg || "Unknown error"));
             });

@@ -61,6 +61,7 @@ pub fn run() {
                 ])
                 .max_file_size(50_000_000 /* 50MB */)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                 .build(),
         )
         .plugin(tauri_plugin_os::init())
