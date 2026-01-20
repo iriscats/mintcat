@@ -230,31 +230,23 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     public async setModEnabled(modId: number, enable: boolean): Promise<void> {
-        console.log(`[HomeViewModel] setModEnabled called: modId=${modId}, enable=${enable}`);
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
         if (!activeProfile) {
             const profileVM = await IoC.get(ProfileViewModel);
             activeProfile = await profileVM.getActiveProfileData();
         }
-        console.log(`[HomeViewModel] Active profile: ${activeProfile?.name}, id=${activeProfile?.id}`);
         await profiles.setModEnabled(activeProfile.id!, modId, enable);
-        console.log(`[HomeViewModel] Database updated, calling TreeViewModel.updateTreeView()`);
 
         TreeViewModel.updateTreeView();
-        console.log(`[HomeViewModel] setModEnabled completed`);
     }
 
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
-        console.log(`[HomeViewModel] setModUsedVersion called: profileModId=${profileModId}, version=${version}`);
         const profiles = await StorageAPI.getProfiles();
 
-        // Update the used version in the profile_mods table
         await profiles.updateProfileMod(profileModId, { usedVersion: version });
-        console.log(`[HomeViewModel] Database updated, calling TreeViewModel.updateTreeView()`);
 
         TreeViewModel.updateTreeView();
-        console.log(`[HomeViewModel] setModUsedVersion completed`);
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
@@ -287,21 +279,16 @@ export class HomeViewModel extends BaseViewModel {
         console.log(`[HomeViewModel] removeGroup called with groupId=${groupId}`);
 
         if (groupId === ProfileTreeGroupType.MODIO || groupId === ProfileTreeGroupType.LOCAL) {
-            console.log(`[HomeViewModel] Cannot remove default group (id=${groupId})`);
             message.error(t("Can't Remove Default Group"));
             return;
         }
 
         try {
-            console.log(`[HomeViewModel] Starting to remove group from database, groupId=${groupId}`);
             const profiles = await StorageAPI.getProfiles();
             await profiles.deleteFolder(groupId);
-            console.log(`[HomeViewModel] Removed group from database, groupId=${groupId}`);
 
-            console.log(`[HomeViewModel] Triggering UI update`);
             TreeViewModel.updateTreeView();
             TreeViewModel.updateTreeViewCountLabel();
-            console.log(`[HomeViewModel] UI update triggered`);
         } catch (error) {
             console.error(`[HomeViewModel] Error removing group ${groupId}:`, error);
             throw error;

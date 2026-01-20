@@ -16,21 +16,11 @@ export class TreeViewModel extends BaseViewModel {
 
 
     public static updateTreeView() {
-        console.log(`[TreeViewModel] updateTreeView() called - emitting event`);
-        emitVoidEvent("home-page-update-tree-view").then(() => {
-            console.log(`[TreeViewModel] home-page-update-tree-view event emitted`);
-        }).catch((error) => {
-            console.error(`[TreeViewModel] Failed to emit home-page-update-tree-view event:`, error);
-        });
+        emitVoidEvent("home-page-update-tree-view");
     }
 
     public static updateTreeViewCountLabel() {
-        console.log(`[TreeViewModel] updateTreeViewCountLabel() called - emitting event`);
-        emitVoidEvent("tree-view-count-label-update").then(() => {
-            console.log(`[TreeViewModel] tree-view-count-label-update event emitted`);
-        }).catch((error) => {
-            console.error(`[TreeViewModel] Failed to emit tree-view-count-label-update event:`, error);
-        });
+        emitVoidEvent("tree-view-count-label-update");
     }
 
     private constructor() {
@@ -83,31 +73,15 @@ export class TreeViewModel extends BaseViewModel {
      * Delegated to ProfileViewModel
      */
     public async setProfileData(root: any): Promise<void> {
-        console.log(`\n========== [TreeViewModel] setProfileData 开始 ==========`);
-        console.log(`[TreeViewModel] 传入的 ProfileTreeItem:`, {
-            childrenCount: root.children.length,
-            children: root.children.map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                type: c.type,
-                childrenCount: c.children?.length || 0
-            }))
-        });
-
         try {
             if (!this.profileViewModel) {
                 throw new Error("ProfileViewModel not initialized");
             }
 
             // Save to database
-            console.log(`[TreeViewModel] 委托 ProfileViewModel 保存 profile tree 到数据库...`);
             await this.profileViewModel.saveProfileTreeToDatabase(root);
-            console.log(`[TreeViewModel] ✅ Profile tree 成功保存到数据库`);
-
-            console.log(`========== [TreeViewModel] setProfileData 完成 ==========\n`);
         } catch (error) {
             console.error('[TreeViewModel] ❌ setProfileData 失败:', error);
-            console.log(`========== [TreeViewModel] setProfileData 失败 ==========\n`);
             throw error;
         }
     }

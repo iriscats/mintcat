@@ -59,11 +59,8 @@ function ModTreeViewFolder({nodeData, onMenuClick}) {
 function ModTreeViewSwitch({nodeData}) {
 
     const onSwitchChange = async (checked: boolean) => {
-        console.log(`[ModTreeViewSwitch] onSwitchChange called: key=${nodeData.key}, modId=${nodeData.modId}, checked=${checked}`);
         const viewModel = await IoC.get(HomeViewModel);
-        console.log(`[ModTreeViewSwitch] Got HomeViewModel, calling setModEnabled`);
         await viewModel.setModEnabled(nodeData.modId, checked);
-        console.log(`[ModTreeViewSwitch] setModEnabled completed`);
 
         await emitVoidEvent("tree-view-count-label-update");
     };

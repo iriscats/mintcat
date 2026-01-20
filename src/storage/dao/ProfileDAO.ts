@@ -385,33 +385,25 @@ export class ProfileDAO {
      * 删除文件夹（包括子文件夹和相关的模组）
      */
     public async deleteFolder(id: number): Promise<boolean> {
-        console.log(`[ProfileDAO] deleteFolder called for id=${id}`);
         try {
             const db = await getDb();
 
             // First, recursively delete all child folders
-            console.log(`[ProfileDAO] Looking for child folders of id=${id}`);
             const childFolderRecords = await db.select().from(profileFolders)
                 .where(eq(profileFolders.parentFolderId, id));
 
             const childFolders = childFolderRecords.map(this.mapToProfileFolderData);
-            console.log(`[ProfileDAO] Found ${childFolders.length} child folders for id=${id}:`, childFolders.map(f => ({ id: f.id, name: f.name })));
 
             for (const childFolder of childFolders) {
-                console.log(`[ProfileDAO] Recursively deleting child folder id=${childFolder.id}`);
                 await this.deleteFolder(childFolder.id!);
             }
 
             // Delete all mods in this folder
-            console.log(`[ProfileDAO] Deleting mods in folder id=${id}`);
             const deleteModsResult = await db.delete(profileMods)
                 .where(eq(profileMods.parentFolderId, id));
-            console.log(`[ProfileDAO] Deleted mods in folder id=${id}`);
 
             // Finally, delete the folder itself
-            console.log(`[ProfileDAO] Deleting folder id=${id}`);
             const deleteFolderResult = await db.delete(profileFolders).where(eq(profileFolders.id, id));
-            console.log(`[ProfileDAO] Deleted folder id=${id}`);
 
             return true;
         } catch (error) {

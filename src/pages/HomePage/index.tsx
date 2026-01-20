@@ -221,7 +221,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
         try {
             const mod = await this.getModById(id);
             if (mod?.url) {
-                console.log(`[HomePage] Copying link for mod ${mod.displayName}: ${mod.url}`);
                 ClipboardApi.setLastClipboardText(mod.url);
                 await navigator.clipboard.writeText(mod.url);
                 message.success(t("Copied To Clipboard") + `: ${mod.url} `);
@@ -436,11 +435,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async updateTreeView() {
-        console.log(`[HomePage] updateTreeView() called`);
-
         // Before reload: Save expanded folder names to preserve expanded state
         const expandedFolderNames = this.getExpandedFolderNames();
-        console.log(`[HomePage] Saving expanded folder names:`, expandedFolderNames);
 
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
@@ -456,10 +452,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const activeProfileName = await profileVM.getActiveProfileName();
         const activeProfile = await profilesApi.getActiveProfile();
 
-        console.log(`[HomePage] Got ${allMods.length} mods from database`);
-        console.log(`[HomePage] Converting profile tree, active profile: ${activeProfileName}`);
-        console.log(`[HomePage] ActiveProfile root children:`, activeRoot.children.map(c => ({ id: c.id, name: c.name, type: c.type })));
-
         // Get profile-specific mod data (enabled status, used version)
         const profileMods = activeProfile ? await profilesApi.getProfileMods(activeProfile.id!) : [];
 
@@ -467,18 +459,14 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const converter = new TreeViewConverter(allMods, profileMods);
         const treeData = converter.convertToFromRoot(activeRoot);
 
-        console.log(`[HomePage] Converted treeData:`, treeData);
-
         // After reload: Reconstruct expandedKeys using folder names
         let newExpandedKeys: any[];
         if (expandedFolderNames.length > 0) {
             // Reconstruct expandedKeys from folder names (handles ID changes)
             newExpandedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
-            console.log(`[HomePage] Reconstructed expandedKeys from folder names:`, newExpandedKeys);
         } else if (this.state.expandedKeys.length === 0) {
             // First load: use default expanded keys from converter
             newExpandedKeys = converter.expandedKeys;
-            console.log(`[HomePage] Using default expandedKeys:`, newExpandedKeys);
         } else {
             // Keep existing expandedKeys (shouldn't normally reach here)
             newExpandedKeys = this.state.expandedKeys;
@@ -487,12 +475,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.setState({
             treeData: converter.treeData,
             expandedKeys: newExpandedKeys,
-        }, () => {
-            console.log(`[HomePage] treeData state updated, count=${converter.treeData?.length || 0}`);
-            console.log(`[HomePage] expandedKeys updated:`, newExpandedKeys);
         });
-
-        console.log(`[HomePage] updateTreeView() completed`);
     }
 
     @autoBind
@@ -510,7 +493,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // Extract ID for tree nodes
         const id = extractId(nodeKey);
-        console.log(`[HomePage] Menu click: key=${key}, nodeKey=${nodeKey}, extractedId=${id}`);
 
         switch (key) {
             case "add_new_group": {
@@ -532,10 +514,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     }).show();
                 break;
             case "delete_group":
-                console.log(`[HomePage] Starting delete group operation for id=${id}`);
                 try {
                     await vm.removeGroup(id);
-                    console.log(`[HomePage] Delete group completed for id=${id}`);
                 } catch (error) {
                     console.error(`[HomePage] Delete group failed for id=${id}:`, error);
                 }
@@ -598,15 +578,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
     async componentDidMount(): Promise<void> {
         // Wait for core to be ready
         if (!AppInitializer.isCoreReady()) {
-            console.warn('[HomePage] Core not ready, waiting...');
             await AppInitializer.initializeCore();
         }
 
         // Pre-initialize UI ViewModels (optional but recommended for better UX)
-        console.log('[HomePage] Initializing UI ViewModels...');
         await IoC.get(TreeViewModel);
         await IoC.get(HomeViewModel);
-        console.log('[HomePage] UI ViewModels initialized');
 
         // Setup window resize hook
         this.hookWindowResized();

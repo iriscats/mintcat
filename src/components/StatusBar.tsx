@@ -80,8 +80,7 @@ function StatusBar() {
             unlisten = await taskQueueAPI.onTaskUpdated((task) => {
                 // 更新进度条
                 emitEvent("status-bar-percent", task.progress).catch(console.error);
-                console.log('[StatusBar] Task updated:', task);
-
+                
                 // 根据任务状态更新消息
                 if (task.status === 'processing') {
                     // 优先显示最新的任务消息

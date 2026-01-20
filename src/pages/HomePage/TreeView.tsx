@@ -29,24 +29,12 @@ export class TreeView extends React.Component<TreeViewProps, any> {
 
     @autoBind
     private async onDrop(info: any) {
-        console.log(`\n========== [TreeView] onDrop 开始 ==========`);
-        console.log(`[TreeView] 拖拽信息:`, {
-            dragKey: info.dragNode.key,
-            dragTitle: info.dragNode.title,
-            dropKey: info.node.key,
-            dropTitle: info.node.title,
-            dropPosition: info.dropPosition,
-            dropToGap: info.dropToGap
-        });
-
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
         const activeRoot = await profileVM.getActiveProfileTreeRoot();
         let treeData: any[];
         const modList = await this.getAllModsAsList();
         const converter = new TreeViewConverter(modList);
-
-        console.log(`[TreeView] 当前 modList 数量:`, modList.length);
 
         if (TreeViewConverter.filterList.length > 0) {
             const filterList = TreeViewConverter.filterList;
@@ -57,52 +45,23 @@ export class TreeView extends React.Component<TreeViewProps, any> {
             treeData = this.props.treeData || [];
         }
 
-        console.log(`[TreeView] 拖拽前树形数据:`, JSON.stringify(treeData, null, 2));
-
         const dragTreeData = dragAndDrop(info, treeData);
 
-        console.log(`[TreeView] 拖拽后树形数据:`, JSON.stringify(dragTreeData, null, 2));
-
         try {
-            console.log(`[TreeView] 开始转换 dragTreeData 为 ProfileTreeItem...`);
             const profileTreeItem = converter.convertFrom(dragTreeData);
-            console.log(`[TreeView] 转换后的 ProfileTreeItem:`, JSON.stringify(profileTreeItem, (key, value) => {
-                if (key === 'children' && Array.isArray(value)) {
-                    return `[${value.length} 个子项]`;
-                }
-                return value;
-            }, 2));
-            console.log(`[TreeView] ProfileTreeItem 子项详情:`, profileTreeItem.children.map(c => ({
-                id: c.id,
-                name: c.name,
-                type: c.type,
-                childrenCount: c.children?.length || 0
-            })));
 
             if (!profileTreeItem || profileTreeItem.children.length === 0) {
-                console.warn(`[TreeView] ⚠️ 转换后的 ProfileTreeItem 为空或无效`);
                 return;
             }
 
-            console.log(`[TreeView] 开始保存到数据库...`);
             const profileVM = await IoC.get(ProfileViewModel);
             await profileVM.saveProfileTreeToDatabase(profileTreeItem);
-            console.log(`[TreeView] ✅ Profile data set successfully`);
 
             if (this.props.onUpdateTreeView) {
                 await this.props.onUpdateTreeView();
             }
-            console.log(`[TreeView] ✅ Tree view updated`);
-            console.log(`========== [TreeView] onDrop 完成 ==========\n`);
         } catch (error) {
-            console.error(`[TreeView] ❌ Error during drag and drop:`, error);
-            console.error(`[TreeView] Error details:`, {
-                message: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : 'No stack trace'
-            });
-            console.log(`========== [TreeView] onDrop 失败 ==========\n`);
-            // 可以在这里添加用户通知，例如使用 antd 的 message 组件
-            // message.error(`Failed to move item: ${error instanceof Error ? error.message : String(error)}`);
+            console.error(`[TreeView] Error during drag and drop:`, error);
         }
     }
 
