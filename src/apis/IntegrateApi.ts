@@ -7,6 +7,7 @@ import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts"
 import { IoC } from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
 import { TaskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
+import StatusBar from "@/components/StatusBar.tsx";
 
 
 export class IntegrateApi  {
@@ -78,11 +79,11 @@ export class IntegrateApi  {
             await onceEvent('install-success', async (installTime) => {
                 const profileVM = await IoC.get(ProfileViewModel);
                 await profileVM.setActiveProfileInstallTime(installTime);
-                await emitEvent("status-bar-log", t("Installation Finish"));
+                await StatusBar.success(t("Installation Finish"));
                 resolve(true);
             });
             await onceEvent('install-error', async (errorMsg) => {
-                await emitEvent("status-bar-log", `${t("Installation Failed")}: ${errorMsg}`);
+                await StatusBar.error(`${t("Installation Failed")}: ${errorMsg}`);
                 await emitEvent("status-bar-percent", 0);
                 reject(new Error(errorMsg || "Unknown error"));
             });

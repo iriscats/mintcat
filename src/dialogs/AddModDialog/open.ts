@@ -10,6 +10,7 @@ import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModDialogResult, AddModType} from "@/dialogs/AddModDialog/index.tsx";
 import { ProfileService } from "@/services/ProfileService.ts";
+import StatusBar from "@/components/StatusBar.tsx";
 
 let windowInstance: WebviewWindow;
 
@@ -81,7 +82,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                 break;
         }
 
-        await emitEvent("status-bar-log", t("Add Complete"));
+        await StatusBar.success(t("Add Complete"));
         TreeViewModel.updateTreeView();
 
         await windowInstance.close();

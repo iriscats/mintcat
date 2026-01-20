@@ -33,7 +33,7 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     private async addModDependencies(modId: number, groupId: number): Promise<void> {
-        await StatusBar.log(t("Fetch Mod Dependencies"));
+        await StatusBar.log(t("Fetch Mod Dependencies"), 'info');
 
         const depends = await ModioApi.getDependencies(modId);
         if (!depends) {
@@ -64,7 +64,7 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<boolean> {
-        await StatusBar.log(t("Fetch Mod Info"));
+        await StatusBar.log(t("Fetch Mod Info"), 'info');
         const modInfoResp = await ModioApi.getModInfoByLink(url);
         if (modInfoResp === undefined) {
             return false;

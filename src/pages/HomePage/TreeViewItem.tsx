@@ -11,6 +11,7 @@ import {ModioApi} from "@/apis/modio";
 import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {ModFile} from "@/apis/modio/ModInfo.ts";
 import {StorageAPI} from "@/storage";
+import StatusBar from "@/components/StatusBar.tsx";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 
@@ -104,7 +105,7 @@ function ModTreeViewVersionSelect({nodeData}) {
 
     const onChange = async (value: string) => {
         const fileInfo = JSON.parse(value);
-        await emitEvent("status-bar-log", `${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
+        await StatusBar.info(`${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
 
         const viewModel = await IoC.get(HomeViewModel);
         // Use profileModId (profile_mods.id) instead of key

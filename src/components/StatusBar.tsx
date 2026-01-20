@@ -10,6 +10,29 @@ const ProgressColors: ProgressProps['strokeColor'] = {
 };
 
 /**
+ * 日志级别类型
+ */
+type LogLevel = 'info' | 'success' | 'warning' | 'error';
+
+/**
+ * 获取日志级别对应的颜色
+ */
+function getLogLevelColor(level: LogLevel): string {
+    switch (level) {
+        case 'info':
+            return '#1890ff'; // Ant Design blue
+        case 'success':
+            return '#52c41a'; // Ant Design green
+        case 'warning':
+            return '#faad14'; // Ant Design orange
+        case 'error':
+            return '#ff4d4f'; // Ant Design red
+        default:
+            return '#666'; // Default gray
+    }
+}
+
+/**
  * 状态栏组件
  * 显示应用状态消息和进度条
  *
@@ -17,12 +40,20 @@ const ProgressColors: ProgressProps['strokeColor'] = {
  */
 function StatusBar() {
     const [message, setMessage] = useState<string>(t("Ready"));
+    const [logLevel, setLogLevel] = useState<LogLevel>('info');
     const [percent, setPercent] = useState<number>(0);
     const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     // ✅ 自动清理的状态栏日志监听器
     useEventListener('status-bar-log', (msg) => {
-        setMessage(msg);
+        // 支持向后兼容：处理字符串或对象格式
+        if (typeof msg === 'string') {
+            setMessage(msg);
+            setLogLevel('info');
+        } else {
+            setMessage(msg.message);
+            setLogLevel(msg.level || 'info');
+        }
 
         // 清除之前的定时器
         if (timerRef.current) {
@@ -53,12 +84,15 @@ function StatusBar() {
                 if (task.status === 'processing') {
                     const taskName = task.type || 'Task';
                     setMessage(`${t("Processing")}: ${taskName} (${task.progress}%)`);
+                    setLogLevel('info');
                 } else if (task.status === 'completed') {
                     setMessage(t("Task Completed"));
+                    setLogLevel('success');
                     // 完成后清空进度条
                     emitEvent("status-bar-percent", 0).catch(console.error);
                 } else if (task.status === 'failed') {
                     setMessage(`${t("Task Failed")}: ${task.error || 'Unknown error'}`);
+                    setLogLevel('error');
                     // 失败后清空进度条
                     emitEvent("status-bar-percent", 0).catch(console.error);
                 }
@@ -101,7 +135,7 @@ function StatusBar() {
             <div style={{
                 lineHeight: "30px",
                 marginLeft: "10px",
-                color: "#666"
+                color: getLogLevelColor(logLevel)
             }}>
                 {message}
             </div>
@@ -111,13 +145,42 @@ function StatusBar() {
 
 /**
  * 静态方法：发送日志消息到状态栏
- * 保留向后兼容的 API
+ * 支持指定日志级别
  *
  * @example
  * await StatusBar.log("操作完成");
+ * await StatusBar.log("操作完成", "success");
  */
-StatusBar.log = async function(message: string) {
-    await emitEvent('status-bar-log', message);
+StatusBar.log = async function(message: string, level?: LogLevel) {
+    await emitEvent('status-bar-log', { message, level: level || 'info' });
+};
+
+/**
+ * 静态方法：发送 info 级别日志
+ */
+StatusBar.info = async function(message: string) {
+    await emitEvent('status-bar-log', { message, level: 'info' });
+};
+
+/**
+ * 静态方法：发送 success 级别日志
+ */
+StatusBar.success = async function(message: string) {
+    await emitEvent('status-bar-log', { message, level: 'success' });
+};
+
+/**
+ * 静态方法：发送 warning 级别日志
+ */
+StatusBar.warning = async function(message: string) {
+    await emitEvent('status-bar-log', { message, level: 'warning' });
+};
+
+/**
+ * 静态方法：发送 error 级别日志
+ */
+StatusBar.error = async function(message: string) {
+    await emitEvent('status-bar-log', { message, level: 'error' });
 };
 
 export default StatusBar;

@@ -7,7 +7,7 @@ import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { MessageBox } from '@/components/MessageBox';
-import { emit } from '@tauri-apps/api/event';
+import StatusBar from '@/components/StatusBar.tsx';
 import { t } from 'i18next';
 
 /**
@@ -37,7 +37,7 @@ export class ModInstallTask implements ITask {
 
     async run(context: ITaskContext): Promise<void> {
         const TOTAL_STEPS = 8;
-        await emit("status-bar-log", t("Start installation"));
+        await StatusBar.info(t("Start installation"));
 
         // Get profile view model and settings
         const profileVM = await IoC.get(ProfileViewModel);
@@ -69,7 +69,7 @@ export class ModInstallTask implements ITask {
 
         if (enabledProfileMods.length === 0) {
             await context.setMessage('没有可安装的模组');
-            await emit("status-bar-log", t("No mods to install"));
+            await StatusBar.warning(t("No mods to install"));
             await context.updateProgress(100);
             return;
         }
@@ -162,7 +162,7 @@ export class ModInstallTask implements ITask {
             }
         } else if (installType === "mintcat_installed") {
             await context.setMessage('模组已是最新版本');
-            await emit("status-bar-log", t("Mod Already Install"));
+            await StatusBar.info(t("Mod Already Install"));
             await context.updateProgress(100);
             return;
         }
@@ -180,7 +180,7 @@ export class ModInstallTask implements ITask {
         // Step 7: Install .NET runtime
         await context.setStep('安装运行时环境', 7, TOTAL_STEPS);
         await context.setMessage('正在安装 .NET Runtime...');
-        await emit("status-bar-log", t("Installing .NET Runtime..."));
+        await StatusBar.info(t("Installing .NET Runtime..."));
         await IntegrateApi.installDotnetRuntime(drgPakPath);
 
         // Step 8: Install mods
@@ -206,7 +206,7 @@ export class ModInstallTask implements ITask {
 
         // Complete
         await context.setMessage('安装完成!');
-        await emit("status-bar-log", t("Installation Finish"));
+        await StatusBar.success(t("Installation Finish"));
         await context.updateProgress(100);
     }
 }

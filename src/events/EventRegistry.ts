@@ -55,7 +55,7 @@ export interface EventPayloads {
   // ========================================
 
   /** 状态栏日志消息 */
-  'status-bar-log': string;
+  'status-bar-log': string | { message: string; level?: 'info' | 'success' | 'warning' | 'error' };
 
   /** 状态栏进度百分比 (0-100) */
   'status-bar-percent': number;

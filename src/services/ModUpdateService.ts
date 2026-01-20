@@ -8,6 +8,7 @@ import { IoC } from "@/core/IoC.ts";
 import { ModSourceType } from "@/models/mod/types";
 import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
+import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
 
 /**
@@ -27,7 +28,7 @@ export class ModUpdateService {
      * 更新单个模组
      */
     public static async updateMod(mod: CompleteModData) {
-        await emitEvent("status-bar-log", `${t("Update Mod")} [${mod.displayName}]`);
+        await StatusBar.info(`${t("Update Mod")} [${mod.displayName}]`);
         const resp = await ModioApi.getModInfoByLink(mod.url || "");
         if (!resp) {
             // Update status to mark as unavailable
@@ -52,7 +53,7 @@ export class ModUpdateService {
         await this.updateModFile(mod);
 
         TreeViewModel.updateTreeView();
-        await emitEvent("status-bar-log", t("Update Finish"));
+        await StatusBar.success(t("Update Finish"));
     }
 
     /**
@@ -106,7 +107,7 @@ export class ModUpdateService {
      */
     public static async updateModFile(mod: CompleteModData) {
         const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
-            await emitEvent("status-bar-log", `${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
+            await StatusBar.info(`${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
             const downloadProgress = (loaded / total) * 100;
             // Update mod download progress and emit event
             const updatedMod = { ...mod };
@@ -146,7 +147,7 @@ export class ModUpdateService {
             });
         }
 
-        await emitEvent("status-bar-log", t("Update Finish"));
+        await StatusBar.success(t("Update Finish"));
     }
 
     /**
@@ -271,7 +272,7 @@ export class ModUpdateService {
      * 检查模组更新（在线）
      */
     public static async checkModUpdate() {
-        await emitEvent("status-bar-log", t("Mod Update Check Start"));
+        await StatusBar.info(t("Mod Update Check Start"));
         if (ModUpdateService.loading) {
             return;
         }
@@ -326,6 +327,6 @@ export class ModUpdateService {
         await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
         TreeViewModel.updateTreeView();
 
-        await emitEvent("status-bar-log", t("Mod Update Check Finish"));
+        await StatusBar.success(t("Mod Update Check Finish"));
     }
 }
