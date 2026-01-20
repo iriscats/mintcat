@@ -157,11 +157,11 @@ body::before {
 }
 
 .ant-upload-drag:hover {
-    border: 1px dashed #1677FF;
+    border: 1px dashed var(--ant-color-primary);
 }
 
 .app-drag-icon {
-    color: #1677FF;
+    color: var(--ant-color-primary);
     font-size: 30px;
     line-height: 0;
     margin: 0;

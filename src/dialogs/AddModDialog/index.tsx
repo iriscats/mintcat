@@ -19,6 +19,7 @@ export enum AddModType {
 interface AddModDialogStates {
     addModType?: string;
     groupOptions?: any[];
+    groupFolders?: any[]; // Store full folder data with folderType
     groupId?: number;
     loading?: boolean;
     text?: string;
@@ -42,6 +43,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         this.state = {
             addModType: AddModType.LOCAL,
             groupId: ProfileTreeGroupType.LOCAL,
+            groupOptions: [],
+            groupFolders: [],
         }
     }
 
@@ -82,16 +85,27 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     @autoBind
     private handleTabChange(key: string) {
         let groupId = 0;
+        let targetFolderType = "";
+
         switch (key) {
             case AddModType.MODIO:
-                groupId = ProfileTreeGroupType.MODIO;
+                targetFolderType = "modio";
                 break;
             case AddModType.LOCAL:
-                groupId = ProfileTreeGroupType.LOCAL;
+                targetFolderType = "local";
                 break;
             default:
                 break;
         }
+
+        // Find the actual folder ID by folderType
+        if (this.state.groupFolders && targetFolderType) {
+            const folder = this.state.groupFolders.find(f => f.folderType === targetFolderType);
+            if (folder) {
+                groupId = folder.id;
+            }
+        }
+
         this.setState({
             groupId: groupId,
             addModType: key
@@ -102,6 +116,23 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     private onSelectGroupChange(value: number) {
         this.setState({
             groupId: value
+        });
+    }
+
+    @autoBind
+    private async loadGroupOptions() {
+        const profileDAO = await StorageAPI.getProfiles();
+        const profileData = await profileDAO.getActiveProfile();
+        const profileFolderList = await profileDAO.getProfileFolders(profileData.id);
+
+        this.setState({
+            groupFolders: profileFolderList, // Store full folder data
+            groupOptions: profileFolderList.map((item) => {
+                return {
+                    label: item.name,
+                    value: item.id,
+                }
+            }),
         });
     }
 
@@ -117,32 +148,53 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
         this.hookWindowResized();
 
-        // Load dialog data
-        const profileDAO = await StorageAPI.getProfiles();
-        const profileData = await profileDAO.getActiveProfile();
-        const profileFolderList = await profileDAO.getProfileFolders(profileData.id);
+        // Load group options
+        await this.loadGroupOptions();
 
+        // Load dialog data
         const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
         const initData = JSON.parse(initDataStr);
 
+        // Resolve groupId: if it's an enum constant, find the actual folder ID
+        let resolvedGroupId = initData.groupId;
+        if (this.state.groupFolders) {
+            // Check if groupId is an enum constant (1=MODIO, 2=LOCAL)
+            if (initData.groupId === ProfileTreeGroupType.MODIO) {
+                const folder = this.state.groupFolders.find(f => f.folderType === "modio");
+                if (folder) resolvedGroupId = folder.id;
+            } else if (initData.groupId === ProfileTreeGroupType.LOCAL) {
+                const folder = this.state.groupFolders.find(f => f.folderType === "local");
+                if (folder) resolvedGroupId = folder.id;
+            }
+        }
+
         this.setState({
             addModType: initData.addModType,
-            groupId: initData.groupId,
+            groupId: resolvedGroupId,
             text: initData.text,
-            groupOptions: profileFolderList.map((item) => {
-                return {
-                    label: item.name,
-                    value: item.id,
-                }
-            }),
         });
 
         // ✅ Listen for dialog data updates (when window is reused)
-        this.unlistenInitData = await listenEvent("add-mod-dialog-init-data", (payload) => {
+        this.unlistenInitData = await listenEvent("add-mod-dialog-init-data", async (payload) => {
             console.log("AddModDialog init event", payload);
+            // Reload group options to ensure they're up-to-date
+            await this.loadGroupOptions();
+
+            // Resolve groupId: if it's an enum constant, find the actual folder ID
+            let resolvedGroupId = payload.groupId;
+            if (this.state.groupFolders) {
+                if (payload.groupId === ProfileTreeGroupType.MODIO) {
+                    const folder = this.state.groupFolders.find(f => f.folderType === "modio");
+                    if (folder) resolvedGroupId = folder.id;
+                } else if (payload.groupId === ProfileTreeGroupType.LOCAL) {
+                    const folder = this.state.groupFolders.find(f => f.folderType === "local");
+                    if (folder) resolvedGroupId = folder.id;
+                }
+            }
+
             this.setState({
                 addModType: payload.addModType,
-                groupId: payload.groupId,
+                groupId: resolvedGroupId,
                 text: payload.text
             });
         });

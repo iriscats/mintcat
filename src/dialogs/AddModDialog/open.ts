@@ -1,6 +1,5 @@
 import {t} from "i18next";
 import {emitEvent, onceEvent} from "@/events";
-import {once} from "@tauri-apps/api/event";
 import {ModioApi} from "@/apis/modio";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
@@ -8,7 +7,7 @@ import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
-import {AddModDialogResult, AddModType} from "@/dialogs/AddModDialog/index.tsx";
+import {AddModType} from "@/dialogs/AddModDialog/index.tsx";
 import { ProfileService } from "@/services/ProfileService.ts";
 import StatusBar from "@/components/StatusBar.tsx";
 
