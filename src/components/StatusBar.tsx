@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { t } from "i18next";
 import { Flex, Progress, ProgressProps } from "antd";
 import { emitEvent, useEventListener } from "@/events";
+import { taskQueueAPI } from 'tauri-plugin-task-queue-api';
 
 const ProgressColors: ProgressProps['strokeColor'] = {
     '0%': '#108ee9',
@@ -11,6 +12,8 @@ const ProgressColors: ProgressProps['strokeColor'] = {
 /**
  * 状态栏组件
  * 显示应用状态消息和进度条
+ *
+ * 集中管理任务队列监听，作为项目中唯一的任务监听点
  */
 function StatusBar() {
     const [message, setMessage] = useState<string>(t("Ready"));
@@ -26,16 +29,50 @@ function StatusBar() {
             clearTimeout(timerRef.current);
         }
 
-        // 30秒后清空消息
+        // 清空消息
         timerRef.current = setTimeout(() => {
             setMessage("");
-        }, 30000);
+        }, 60000);
     });
 
     // ✅ 自动清理的进度监听器
     useEventListener('status-bar-percent', (progressPercent) => {
         setPercent(progressPercent);
     });
+
+    // ✅ 任务队列监听器 - 项目中唯一的任务监听点
+    useEffect(() => {
+        let unlisten: (() => void) | undefined;
+
+        const setupTaskListener = async () => {
+            unlisten = await taskQueueAPI.onTaskUpdated((task) => {
+                // 更新进度条
+                emitEvent("status-bar-percent", task.progress).catch(console.error);
+
+                // 根据任务状态更新消息
+                if (task.status === 'processing') {
+                    const taskName = task.type || 'Task';
+                    setMessage(`${t("Processing")}: ${taskName} (${task.progress}%)`);
+                } else if (task.status === 'completed') {
+                    setMessage(t("Task Completed"));
+                    // 完成后清空进度条
+                    emitEvent("status-bar-percent", 0).catch(console.error);
+                } else if (task.status === 'failed') {
+                    setMessage(`${t("Task Failed")}: ${task.error || 'Unknown error'}`);
+                    // 失败后清空进度条
+                    emitEvent("status-bar-percent", 0).catch(console.error);
+                }
+            });
+        };
+
+        setupTaskListener();
+
+        return () => {
+            if (unlisten) {
+                unlisten();
+            }
+        };
+    }, []);
 
     // 清理定时器
     useEffect(() => {

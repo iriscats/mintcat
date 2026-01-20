@@ -14,7 +14,7 @@ import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
 import {emitEvent, listenEvent, UnlistenFn} from "@/events";
-import { TaskQueueAPI } from "tauri-plugin-task-queue-api";
+import { taskQueueAPI } from "tauri-plugin-task-queue-api";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 import {CacheApi} from "@/apis/CacheApi.ts";
@@ -76,36 +76,17 @@ class TitleBar extends React.Component<any, any> {
             // Submit installation task
             const taskId = await IntegrateApi.installMods();
 
-            // Setup progress listener
-            const taskQueue = TaskQueueAPI.getInstance();
-            const unlisten = await taskQueue.onTaskUpdated((task) => {
-                if (task.id === taskId) {
-                    // Update status bar with progress
-                    emitEvent("status-bar-percent", task.progress).catch(console.error);
-
-                    if (task.status === 'processing') {
-                        console.log(`[TitleBar] Installation progress: ${task.progress}%`);
-                    }
-                }
-            });
-
             // Wait for task to complete (no timeout)
-            const result = await taskQueue.waitForTaskCompletion(taskId);
-
-            // Cleanup listener
-            unlisten();
+            const result = await taskQueueAPI.waitForTaskCompletion(taskId);
 
             if (result.status === 'completed') {
                 // Installation succeeded, launch game
-                await emitEvent("status-bar-percent", 0);
                 await IntegrateApi.launchGame();
             } else if (result.status === 'failed') {
-                await emitEvent("status-bar-percent", 0);
                 message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('[TitleBar] Installation failed:', error);
-            await emitEvent("status-bar-percent", 0);
             message.error(t("Installation Failed"));
         }
     }

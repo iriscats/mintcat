@@ -41,7 +41,7 @@ import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
-import { TaskQueueAPI } from "tauri-plugin-task-queue-api";
+import { taskQueueAPI } from "tauri-plugin-task-queue-api";
 import type {DataNode} from "antd/es/tree";
 
 
@@ -326,35 +326,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
             // Submit installation task
             const taskId = await IntegrateApi.installMods();
 
-            // Setup progress listener
-            const taskQueue = TaskQueueAPI.getInstance();
-            const unlisten = await taskQueue.onTaskUpdated((task) => {
-                if (task.id === taskId) {
-                    // Update status bar with progress
-                    emitEvent("status-bar-percent", task.progress).catch(console.error);
-
-                    if (task.status === 'processing') {
-                        console.log(`[HomePage] Installation progress: ${task.progress}%`);
-                    }
-                }
-            });
-
             // Wait for task to complete (no timeout)
-            const result = await taskQueue.waitForTaskCompletion(taskId);
-
-            // Cleanup listener
-            unlisten();
+            const result = await taskQueueAPI.waitForTaskCompletion(taskId);
 
             if (result.status === 'completed') {
-                await emitEvent("status-bar-percent", 0);
                 message.success(t("Installation Finish"));
             } else if (result.status === 'failed') {
-                await emitEvent("status-bar-percent", 0);
                 message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('[HomePage] Installation failed:', error);
-            await emitEvent("status-bar-percent", 0);
             message.error(t("Installation Failed"));
         }
     }
