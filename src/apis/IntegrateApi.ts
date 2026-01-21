@@ -99,7 +99,7 @@ export class IntegrateApi  {
     }
 
     public static async launchGame() {
-        return await invoke('launch_game');
+        return await invoke('launch_steam_game');
     }
 
     public static async checkSteamGame() {

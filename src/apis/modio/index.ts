@@ -111,6 +111,21 @@ export class ModioApi {
         }
     }
 
+    public static async getModInfoByNameList(nameIds: string[]): Promise<ModInfo[]> {
+        try {
+            const normalized = nameIds.filter(Boolean);
+            if (normalized.length === 0) {
+                return [];
+            }
+            const path = `/games/${MODIO_GAME_ID}/mods?name_id-in=${encodeURIComponent(normalized.join(","))}`;
+            const data = await ModioApi.getRequest(path);
+            return data.data as ModInfo[];
+        } catch (e) {
+            message.error(`${t("Fetch Mod Info Error")}: ${e}`);
+            throw e;
+        }
+    }
+
     public static async getModList(pageNo: number = 0, pageSize: number = 20, name: string = undefined): Promise<ModInfo[]> {
         try {
             let path: string;

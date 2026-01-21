@@ -190,7 +190,7 @@ export class ConfigMigrationV4 {
             // 本地模组 platformId 应为 0，mod.io 模组使用原始 ID
             const platformId = isLocalMod ? 0 : originalPlatformId;
 
-            const nameId = oldMod.name_id || `mod_${originalPlatformId}`;
+            const nameId = oldMod.name_id || oldMod.display_name;// 本地模组使用 name_id = display_name
             const displayName = oldMod.display_name || nameId;
             const tags = oldMod.tags || [];
             const approvalStatus = oldMod.approval || '';
