@@ -21,7 +21,7 @@ export function MintCatSettings() {
     ];
 
     const themeOptions = [
-        {value: 'Light', label: t('Light')},
+        {value: 'Light', label: t('Purple')},
         {value: 'Blue', label: t('Blue')},
         {value: 'Dark', label: t('Dark')},
         {value: 'Pink', label: t('Pink')},

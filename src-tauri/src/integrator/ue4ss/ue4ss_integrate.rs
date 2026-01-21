@@ -6,6 +6,45 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 
+fn sanitize_dir_name(input: &str) -> String {
+    let mut s: String = input
+        .chars()
+        .map(|c| {
+            if c.is_control()
+                || std::path::is_separator(c)
+                || matches!(c, ':' | '*' | '?' | '"' | '<' | '>' | '|')
+            {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+
+    s = s.trim().trim_matches('.').to_string();
+    if s.is_empty() {
+        s = "mod".to_string();
+    }
+
+    let base = s.split('.').next().unwrap_or(&s);
+    let base_upper = base.to_ascii_uppercase();
+    let is_reserved = matches!(base_upper.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || base_upper
+            .strip_prefix("COM")
+            .and_then(|n| n.parse::<u8>().ok())
+            .is_some_and(|n| (1..=9).contains(&n))
+        || base_upper
+            .strip_prefix("LPT")
+            .and_then(|n| n.parse::<u8>().ok())
+            .is_some_and(|n| (1..=9).contains(&n));
+
+    if is_reserved {
+        format!("_{}", s)
+    } else {
+        s
+    }
+}
+
 pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
     let ue4ss_path = install_path.join("ue4ss");
     println!("Installing UE4SS to: {:?}", ue4ss_path);
@@ -58,45 +97,6 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn sanitize_dir_name(input: &str) -> String {
-    let mut s: String = input
-        .chars()
-        .map(|c| {
-            if c.is_control()
-                || std::path::is_separator(c)
-                || matches!(c, ':' | '*' | '?' | '"' | '<' | '>' | '|')
-            {
-                '_'
-            } else {
-                c
-            }
-        })
-        .collect();
-
-    s = s.trim().trim_matches('.').to_string();
-    if s.is_empty() {
-        s = "mod".to_string();
-    }
-
-    let base = s.split('.').next().unwrap_or(&s);
-    let base_upper = base.to_ascii_uppercase();
-    let is_reserved = matches!(base_upper.as_str(), "CON" | "PRN" | "AUX" | "NUL")
-        || base_upper
-            .strip_prefix("COM")
-            .and_then(|n| n.parse::<u8>().ok())
-            .is_some_and(|n| (1..=9).contains(&n))
-        || base_upper
-            .strip_prefix("LPT")
-            .and_then(|n| n.parse::<u8>().ok())
-            .is_some_and(|n| (1..=9).contains(&n));
-
-    if is_reserved {
-        format!("_{}", s)
-    } else {
-        s
-    }
-}
-
 pub fn install_ue4ss_mod(
     install_path: &PathBuf,
     mod_name: &String,
@@ -106,13 +106,24 @@ pub fn install_ue4ss_mod(
 
     let sanitized_mod_name = sanitize_dir_name(mod_name);
     let mod_path = mods_home_path.join(&sanitized_mod_name);
-    fs::create_dir(&mod_path).unwrap();
+
+    if !mod_path.exists() {
+        fs::create_dir(&mod_path).unwrap();
+    }
 
     let dll_path = mod_path.join("main.dll");
-
     let mut content = Vec::new();
     mod_data.read_to_end(&mut content).unwrap();
-    fs::write(dll_path, &content).unwrap();
+    let temp_path = dll_path.with_extension("dll.tmp");
+    {
+        let mut file = fs::File::create(&temp_path).unwrap();
+        file.write_all(&content).unwrap();
+        file.flush().unwrap();
+    }
+    if dll_path.exists() {
+        let _ = fs::remove_file(&dll_path);
+    }
+    fs::rename(&temp_path, &dll_path).unwrap();
 }
 
 pub fn uninstall_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
