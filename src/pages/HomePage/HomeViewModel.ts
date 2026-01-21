@@ -238,7 +238,7 @@ export class HomeViewModel extends BaseViewModel {
         }
         await profiles.setModEnabled(activeProfile.id!, modId, enable);
 
-        TreeViewModel.updateTreeView();
+        //局部刷新可以不更新树
     }
 
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {

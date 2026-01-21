@@ -57,16 +57,28 @@ function ModTreeViewFolder({nodeData, onMenuClick}) {
 
 
 function ModTreeViewSwitch({nodeData}) {
+    // 乐观更新：使用本地 state 立即响应用户操作
+    const [checked, setChecked] = useState(nodeData.enabled);
 
-    const onSwitchChange = async (checked: boolean) => {
+    // 同步外部 prop 变化（当 Tree 完整刷新时）
+    React.useEffect(() => {
+        setChecked(nodeData.enabled);
+    }, [nodeData.enabled]);
+
+    const onSwitchChange = async (newChecked: boolean) => {
+        // 1. 立即更新本地状态（乐观更新）
+        setChecked(newChecked);
+
+        // 2. 异步更新数据库（不触发 Tree 完整刷新）
         const viewModel = await IoC.get(HomeViewModel);
-        await viewModel.setModEnabled(nodeData.modId, checked);
+        await viewModel.setModEnabled(nodeData.modId, newChecked);
 
+        // 3. 只更新计数标签
         await emitVoidEvent("tree-view-count-label-update");
     };
 
     return (
-        <Switch checked={nodeData.enabled}
+        <Switch checked={checked}
                 size={"small"}
                 onChange={(checked) => onSwitchChange(checked)}
                 style={{marginRight: "8px", marginTop: "-3px"}}

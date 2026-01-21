@@ -16,7 +16,6 @@ export class ModMapper {
 
     /**
      * 从 mod.io API 响应转换到 CompleteModData
-     * 迁移自 HomeViewModel.createModListItemFromModInfo()
      */
     static fromModioResponse(modInfo: any): CompleteModData {
         // 提取标签

@@ -4,7 +4,6 @@
  * 提供完整的 TypeScript 类型安全
  */
 
-import type { UserInfo } from '@/apis/modio/UserInfo';
 import type { UserData } from '@/storage/dao/UserDAO';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import type { GameData } from '@/storage/dao/GameDAO';
