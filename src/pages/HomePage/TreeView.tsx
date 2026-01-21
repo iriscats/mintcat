@@ -25,7 +25,14 @@ export interface TreeViewProps {
     onVirtualStateChange?: (virtual: boolean) => void;
 }
 
-export class TreeView extends React.Component<TreeViewProps, any> {
+interface TreeViewState {
+    isDragging: boolean;
+}
+
+export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
+    state: TreeViewState = {
+        isDragging: false
+    };
 
     @autoBind
     private async onDrop(info: any) {
@@ -106,8 +113,9 @@ export class TreeView extends React.Component<TreeViewProps, any> {
                 className="ant-tree-content"
                 blockNode
                 draggable
-                // virtual={this.props.virtual}
-                virtual={true}
+                // Workaround for antd bug: https://github.com/ant-design/ant-design/issues/54610
+                // Disable virtual scrolling during drag to prevent auto-scroll from getting stuck
+                virtual={!this.state.isDragging}
                 height={window.innerHeight - 155}
                 checkable={this.props.isMultiSelect}
                 expandedKeys={this.props.expandedKeys}
@@ -119,11 +127,10 @@ export class TreeView extends React.Component<TreeViewProps, any> {
                 onExpand={this.onTreeNodeExpand}
                 onDrop={this.onDrop}
                 onDragStart={() => {
-                    setTimeout(() => {
-                        if (this.props.onVirtualStateChange) {
-                            this.props.onVirtualStateChange(false);
-                        }
-                    }, 1000);
+                    this.setState({ isDragging: true });
+                }}
+                onDragEnd={() => {
+                    this.setState({ isDragging: false });
                 }}
                 titleRender={this.onCustomTitleRender}
             />
