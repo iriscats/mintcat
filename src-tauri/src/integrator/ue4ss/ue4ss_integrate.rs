@@ -6,6 +6,10 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 
+const DOTNET_RUNTIME_URL: &str =
+    "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
+
+
 fn sanitize_dir_name(input: &str) -> String {
     let mut s: String = input
         .chars()
@@ -81,11 +85,15 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
         fs::write(&proxy_dll_path, proxy_dll)
             .map_err(|e| format!("Failed to write dwmapi.dll: {}", e))?;
 
+        // 清除旧的 mods 目录
         let mods_path = ue4ss_path.join("mods");
+        clear_mod_dir(&mods_path);
         fs::create_dir(&mods_path)
             .map_err(|e| format!("Failed to create mods directory: {}", e))?;
 
+        // 清除旧的 csmods 目录
         let csmods_path = ue4ss_path.join("csmods");
+        clear_mod_dir(&csmods_path);
         fs::create_dir(&csmods_path)
             .map_err(|e| format!("Failed to create csmods directory: {}", e))?;
 
@@ -95,6 +103,12 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
             .map_err(|e| format!("Failed to write UE4SSL.Framework.dll: {}", e))?;
     }
     Ok(())
+}
+
+fn clear_mod_dir(mod_path: &PathBuf) {
+    if mod_path.exists() {
+        fs::remove_dir_all(mod_path).unwrap();
+    }
 }
 
 pub fn install_ue4ss_mod(
@@ -150,9 +164,6 @@ pub fn uninstall_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
-const DOTNET_RUNTIME_URL: &str =
-    "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
 
 /// Downloads and extracts the .NET runtime to the UE4SS/dotnet directory.
 /// Skips if runtime is already installed (checks for dotnet directory).
