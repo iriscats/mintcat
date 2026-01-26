@@ -102,17 +102,17 @@ export class MigrationBase {
             let success = false;
 
             switch (latestConfig.version) {
-                case '0.2.0':
-                    const v2Migration = new ConfigMigrationV2();
-                    success = await v2Migration.migrate();
+                    case '0.4':
+                    const v4Migration = new ConfigMigrationV4();
+                    success = await v4Migration.migrate();
                     break;
-                case '0.3.0':
+                case '0.3':
                     const v3Migration = new ConfigMigrationV3();
                     success = await v3Migration.migrate();
                     break;
-                case '0.4.0':
-                    const v4Migration = new ConfigMigrationV4();
-                    success = await v4Migration.migrate();
+                case '0.2':
+                    const v2Migration = new ConfigMigrationV2();
+                    success = await v2Migration.migrate();
                     break;
                 default:
                     console.error(`不支持的配置版本: ${latestConfig.version}`);

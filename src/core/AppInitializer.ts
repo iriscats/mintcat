@@ -68,7 +68,7 @@ export class AppInitializer {
             // Phase 2: Data Migration
             this.currentPhase = InitPhase.Migration;
             console.log('[AppInitializer] Running data migrations...');
-            await MigrationBase.autoMigrate();
+            //await MigrationBase.autoMigrate();
 
             // Phase 3: Core ViewModel
             this.currentPhase = InitPhase.CoreViewModel;
