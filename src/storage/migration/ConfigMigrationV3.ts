@@ -6,7 +6,7 @@ import {OAuthDAO} from '@/storage/dao/OAuthDAO';
 import {SettingDAO} from '@/storage/dao/SettingDAO';
 import {MigrationUtils} from './MigrationUtils';
 import {ConfigDataType} from '@/storage/DataType';
-import {exists, readTextFile} from '@tauri-apps/plugin-fs';
+import {exists, readTextFile, stat} from '@tauri-apps/plugin-fs';
 import {path} from '@tauri-apps/api';
 import {configDir} from '@tauri-apps/api/path';
 
@@ -28,7 +28,6 @@ export class ConfigMigrationV3 {
             const configPath = await path.join(await configDir(), 'mint', 'config');
 
             if (await exists(configPath)) {
-                const {stat} = await import('@tauri-apps/plugin-fs');
                 const dirInfo = await stat(configPath);
 
                 // 检查必要的配置文件是否存在
