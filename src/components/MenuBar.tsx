@@ -16,6 +16,7 @@ export enum MenuPage {
 
 interface MenuBarProps {
     onClick: (key: string) => void;
+    activeKey: string;
 }
 
 class MenuBar extends React.Component<MenuBarProps, any> {
@@ -37,7 +38,7 @@ class MenuBar extends React.Component<MenuBarProps, any> {
     render() {
         return (
             <Menu
-                defaultSelectedKeys={['home']}
+                selectedKeys={[this.props.activeKey]}
                 mode="inline"
                 inlineIndent={14}
                 items={this.items}

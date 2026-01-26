@@ -1,5 +1,6 @@
 import React from 'react';
 import {Layout} from 'antd';
+import {Route, Routes, useLocation, useNavigate} from 'react-router-dom';
 import {useAppError} from '@/hooks/useAppError';
 
 import TitleBar from "@/components/TitleBar.tsx";
@@ -34,43 +35,29 @@ const {
 const AppContent = () => {
 
 
-    const [currentPage, setCurrentPage] = React.useState<MenuPage>(MenuPage.Home);
     const [isAppViewModelReady, setIsAppViewModelReady] = React.useState(false);
-    const pageConfigs = React.useRef<any[]>([]);
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    const clickMenu = React.useCallback(async (key: string) => {
-        setCurrentPage(key as MenuPage);
-
-        if (pageConfigs.current.find(({key: pageKey}) => pageKey === key)) {
+    const clickMenu = React.useCallback((key: string) => {
+        if (key === MenuPage.Home) {
+            navigate('/home');
             return;
         }
+        navigate(`/home/${key}`);
+    }, [navigate]);
 
-        switch (key) {
-            case MenuPage.Modio: {
-                pageConfigs.current.push({
-                    key: MenuPage.Modio,
-                    component: <ModioPage/>
-                });
-            }
-                break;
-            case MenuPage.Setting: {
-                pageConfigs.current.push({
-                    key: MenuPage.Setting,
-                    component: <SettingPage/>
-                });
-            }
-                break;
-            case MenuPage.Chat: {
-                pageConfigs.current.push({
-                    key: MenuPage.Chat,
-                    component: <ChatPage/>
-                });
-            }
-                break;
-            default:
-                break;
+    const activeMenuKey = React.useMemo<MenuPage>(() => {
+        const trimmed = location.pathname.replace(/^\/home\/?/, '');
+        const segment = trimmed.split('/')[0];
+        if (!segment) {
+            return MenuPage.Home;
         }
-    }, []);
+        if (Object.values(MenuPage).includes(segment as MenuPage)) {
+            return segment as MenuPage;
+        }
+        return MenuPage.Home;
+    }, [location.pathname]);
 
     useAppError();
     useKeyboardListener((event) => {
@@ -89,8 +76,6 @@ const AppContent = () => {
         AppInitializer.initializeCore()
             .then(async () => {
                 console.log('[App] Core initialization complete');
-
-                pageConfigs.current.push({key: MenuPage.Home, component: <HomePage/>});
                 setIsAppViewModelReady(true);
             })
             .catch((error) => {
@@ -114,22 +99,19 @@ const AppContent = () => {
             </Header>
             <Layout>
                 <Sider width="50px">
-                    <MenuBar onClick={clickMenu}/>
+                    <MenuBar onClick={clickMenu} activeKey={activeMenuKey}/>
                 </Sider>
                 <Content>
-                    {
-                        !isAppViewModelReady && <EmptyPage/>
-                    }
-                    {
-                        isAppViewModelReady && pageConfigs.current.map(({key, component}) => (
-                            <div key={key} style={{
-                                display: currentPage === key ? 'block' : 'none',
-                                height: '100%'
-                            }}>
-                                {component}
-                            </div>
-                        ))
-                    }
+                    {!isAppViewModelReady && <EmptyPage/>}
+                    {isAppViewModelReady && (
+                        <Routes>
+                            <Route index element={<HomePage/>}/>
+                            <Route path="modio" element={<ModioPage/>}/>
+                            <Route path="setting" element={<SettingPage/>}/>
+                            <Route path="chat" element={<ChatPage/>}/>
+                            <Route path="*" element={<HomePage/>}/>
+                        </Routes>
+                    )}
                 </Content>
             </Layout>
             <Footer style={{height: "30px"}}>
