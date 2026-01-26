@@ -149,10 +149,23 @@ export class OAuthDAO {
                 // 更新现有记录
                 const success = await this.updateOAuth(existing.id!, {oauth});
                 return success ? await this.getOAuthById(existing.id!) : null;
-            } else {
-                // 创建新记录
-                return await this.createOAuth({uid, platform, oauth});
             }
+
+            const platformRecords = await this.getOAuthsByPlatform(platform);
+            const platformRecord = platformRecords[0];
+            if (platformRecord?.id) {
+                const success = await this.updateOAuth(platformRecord.id, {oauth, uid});
+                return success ? await this.getOAuthById(platformRecord.id) : null;
+            }
+
+            const uidRecord = await this.getOAuthByUid(uid);
+            if (uidRecord?.id) {
+                const success = await this.updateOAuth(uidRecord.id, {oauth, platform});
+                return success ? await this.getOAuthById(uidRecord.id) : null;
+            }
+
+            // 创建新记录
+            return await this.createOAuth({uid, platform, oauth});
         } catch (error) {
             console.error(`更新或创建OAuth记录失败 [UID: ${uid}, 平台: ${platform}]:`, error);
             return null;

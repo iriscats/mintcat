@@ -17,20 +17,11 @@ import {registerIoC} from "@/core/IoCRegistration.ts";
 
 InitLog();
 registerIoC();
+initializeTaskSystem()
+    .then(() => console.log('[Main] Task system initialized (startup)'))
+    .catch((error) => console.error('[Main] Failed to initialize task system (startup):', error));
 
 // Initialize task system once for all windows
-let taskSystemInitialized = false;
-async function ensureTaskSystemInitialized(): Promise<void> {
-    if (taskSystemInitialized) return;
-    taskSystemInitialized = true;
-
-    try {
-        await initializeTaskSystem();
-        console.log('[Main] Task system initialized');
-    } catch (error) {
-        console.error('[Main] Failed to initialize task system:', error);
-    }
-}
 
 
 const Main = () => {
@@ -45,8 +36,7 @@ const Main = () => {
     });
 
     useEffect(() => {
-        // Initialize task system for all windows
-        ensureTaskSystemInitialized();
+        // Task system initialized at startup
 
         if (packageJson.version.indexOf("beta") > 0) {
             // ✅ 启用 EventDebugger (开发模式)

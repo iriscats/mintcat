@@ -1,4 +1,9 @@
 import { initTaskRegistry, discoverTasks, taskQueueAPI } from 'tauri-plugin-task-queue-api';
+import "./ModInstallTask";
+import "./ModUpdateTask";
+import "./CheckConfigTask";
+import "./CheckOAuthTask";
+import "./CheckModUpdateTask";
 
 /**
  * Initialize the task system for this project
