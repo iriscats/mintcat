@@ -88,16 +88,20 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         await openShell("https://vip.mintcat.work");
     }
 
+    @autoBind
     private async onOAuthChange(e: any) {
         const value = e.target.value;
-        if (value.length !== 0 && value.length < 20) {
-            message.error(t("Invalid OAuth"));
-            return;
-        }
-
         this.setState({
             modioOAuth: value
         });
+
+        if (value.length !== 0 && value.length < 20) {
+            message.error({
+                content: t("Invalid OAuth"),
+                key: "oauth-invalid"
+            });
+            return;
+        }
 
         try {
             const activeUser = await this.appService.getActiveUser();
