@@ -1,5 +1,4 @@
 use sha2::{Sha256, Digest};
-use std::io::Read;
 
 #[derive(Debug, Clone)]
 pub enum ChecksumType {

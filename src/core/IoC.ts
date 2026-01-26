@@ -23,7 +23,7 @@ export class IoC {
      * ```typescript
      * IoC.register(
      *     AppViewModel,
-     *     async () => await AppViewModel.getInstance(),
+     *     async () => new AppViewModel(),
      *     async (vm) => await vm.initialize()
      * );
      * ```

@@ -63,7 +63,7 @@ export class AppInitializer {
             // Phase 1: Database
             this.currentPhase = InitPhase.Database;
             console.log('[AppInitializer] Initializing database...');
-            await StorageAPI.getInstance();
+            await IoC.get(StorageAPI);
 
             // Phase 2: Data Migration
             this.currentPhase = InitPhase.Migration;

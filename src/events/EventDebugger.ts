@@ -6,6 +6,7 @@
 
 import { listenEvent } from './EventListener';
 import type { EventName, EventPayloads } from './EventRegistry';
+import { IoC } from '@/core/IoC.ts';
 
 /**
  * 事件统计信息
@@ -46,7 +47,6 @@ interface DebuggerConfig {
  * - 支持暂停/恢复调试
  */
 export class EventDebugger {
-  private static instance: EventDebugger | null = null;
   private listeners = new Map<EventName, () => void>();
   private stats = new Map<EventName, EventStats>();
   private enabled = false;
@@ -56,17 +56,7 @@ export class EventDebugger {
     collectStats: true,
   };
 
-  private constructor() {}
-
-  /**
-   * 获取调试器单例
-   */
-  static getInstance(): EventDebugger {
-    if (!EventDebugger.instance) {
-      EventDebugger.instance = new EventDebugger();
-    }
-    return EventDebugger.instance;
-  }
+  constructor() {}
 
   /**
    * 启用事件调试
@@ -88,56 +78,7 @@ export class EventDebugger {
    *   filter: (name) => name.startsWith('mod-')
    * });
    */
-  static async enable(config?: Partial<DebuggerConfig>): Promise<void> {
-    const instance = EventDebugger.getInstance();
-    return instance.enable(config);
-  }
-
-  /**
-   * 禁用事件调试
-   *
-   * 移除所有监听器，清理资源
-   */
-  static disable(): void {
-    const instance = EventDebugger.getInstance();
-    instance.disable();
-  }
-
-  /**
-   * 获取事件统计信息
-   *
-   * @returns 所有事件的统计信息数组
-   *
-   * @example
-   * const stats = EventDebugger.getStats();
-   * console.table(stats);
-   */
-  static getStats(): EventStats[] {
-    const instance = EventDebugger.getInstance();
-    return instance.getStats();
-  }
-
-  /**
-   * 清除统计信息
-   */
-  static clearStats(): void {
-    const instance = EventDebugger.getInstance();
-    instance.clearStats();
-  }
-
-  /**
-   * 检查调试器是否启用
-   */
-  static isEnabled(): boolean {
-    const instance = EventDebugger.getInstance();
-    return instance.enabled;
-  }
-
-  // ========================================
-  // 实例方法
-  // ========================================
-
-  private async enable(config?: Partial<DebuggerConfig>): Promise<void> {
+  async enable(config?: Partial<DebuggerConfig>): Promise<void> {
     if (this.enabled) {
       console.warn('[EventDebugger] Already enabled');
       return;
@@ -185,7 +126,7 @@ export class EventDebugger {
     );
   }
 
-  private disable(): void {
+  disable(): void {
     if (!this.enabled) {
       return;
     }
@@ -241,13 +182,17 @@ export class EventDebugger {
     }
   }
 
-  private getStats(): EventStats[] {
+  getStats(): EventStats[] {
     return Array.from(this.stats.values()).sort((a, b) => b.count - a.count);
   }
 
-  private clearStats(): void {
+  clearStats(): void {
     this.stats.clear();
     console.log('[EventDebugger] Statistics cleared');
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
   }
 
   /**
@@ -308,10 +253,30 @@ export class EventDebugger {
 /**
  * 便捷导出函数
  */
-export const enableEventDebugger = EventDebugger.enable;
-export const disableEventDebugger = EventDebugger.disable;
-export const getEventStats = EventDebugger.getStats;
-export const clearEventStats = EventDebugger.clearStats;
+export const enableEventDebugger = async (config?: Partial<DebuggerConfig>): Promise<void> => {
+  const debuggerInstance = await IoC.get(EventDebugger);
+  await debuggerInstance.enable(config);
+};
+
+export const disableEventDebugger = async (): Promise<void> => {
+  const debuggerInstance = await IoC.get(EventDebugger);
+  debuggerInstance.disable();
+};
+
+export const getEventStats = async (): Promise<EventStats[]> => {
+  const debuggerInstance = await IoC.get(EventDebugger);
+  return debuggerInstance.getStats();
+};
+
+export const clearEventStats = async (): Promise<void> => {
+  const debuggerInstance = await IoC.get(EventDebugger);
+  debuggerInstance.clearStats();
+};
+
+export const isEventDebuggerEnabled = async (): Promise<boolean> => {
+  const debuggerInstance = await IoC.get(EventDebugger);
+  return debuggerInstance.isEnabled();
+};
 
 /**
  * 开发工具：在控制台提供全局访问
@@ -331,6 +296,6 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     disable: disableEventDebugger,
     getStats: getEventStats,
     clearStats: clearEventStats,
-    isEnabled: EventDebugger.isEnabled,
+    isEnabled: isEventDebuggerEnabled,
   };
 }

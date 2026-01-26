@@ -21,10 +21,7 @@ import {ClipboardApi} from "@/apis/ClipboardApi.ts";
  * Manages mod adding, removing, updating, and dependency resolution
  */
 export class HomeViewModel extends BaseViewModel {
-
-    private static instance: HomeViewModel;
-
-    private constructor() {
+    constructor() {
         super();
     }
 
@@ -250,12 +247,12 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
-        const treeViewModel = await TreeViewModel.getInstance();
+        const treeViewModel = await IoC.get(TreeViewModel);
         await treeViewModel.setGroupName(id, name);
     }
 
     public async getGroupName(id: number): Promise<string | undefined> {
-        const treeViewModel = await TreeViewModel.getInstance();
+        const treeViewModel = await IoC.get(TreeViewModel);
         return treeViewModel.getGroupName(id);
     }
 
@@ -318,39 +315,10 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     /**
-     * Shared lock instance for thread-safe singleton initialization
-     */
-    private static lockInstance = new class extends BaseViewModel {}();
-
-    /**
-     * Get singleton instance of HomeViewModel
-     * Thread-safe with initialization lock
-     *
-     * @returns HomeViewModel instance
-     *
-     * @example
-     * ```typescript
-     * const homeViewModel = await HomeViewModel.getInstance();
-     * ```
-     */
-    public static async getInstance(): Promise<HomeViewModel> {
-        const release = await this.lockInstance.acquireLock();
-        try {
-            if (!HomeViewModel.instance) {
-                HomeViewModel.instance = new HomeViewModel();
-                await HomeViewModel.instance.initialize();
-            }
-            return HomeViewModel.instance;
-        } finally {
-            release();
-        }
-    }
-
-    /**
      * Initialize HomeViewModel
      * No specific initialization needed for now
      */
-    protected async initialize(): Promise<void> {
+    async initialize(): Promise<void> {
         this.initialized = true;
     }
 

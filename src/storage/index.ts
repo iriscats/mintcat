@@ -5,6 +5,7 @@ import {ProfileDAO} from "@/storage/dao/ProfileDAO.ts";
 import {ModDAO} from "@/storage/dao/ModDAO.ts";
 import {OAuthDAO} from "@/storage/dao/OAuthDAO.ts";
 import {DatabaseInitializer} from "@/storage/db/DatabaseInitializer.ts";
+import { IoC } from "@/core/IoC.ts";
 import {message} from "antd";
 import {t} from "i18next";
 
@@ -14,9 +15,6 @@ import {t} from "i18next";
  */
 
 export class StorageAPI {
-
-    private static instance: StorageAPI = undefined;
-    private static initPromise: Promise<StorageAPI> | null = null;
     private games: GameDAO = new GameDAO();
     private users: UserDAO = new UserDAO();
     private profiles: ProfileDAO = new ProfileDAO();
@@ -24,64 +22,37 @@ export class StorageAPI {
     private oauths: OAuthDAO = new OAuthDAO();
     private settings: SettingDAO = new SettingDAO();
 
-    private constructor() {
+    constructor() {
     }
 
     public static async getSettings(): Promise<SettingDAO> {
-        const storage = await StorageAPI.getInstance();
+        const storage = await IoC.get(StorageAPI);
         return storage.settings;
     }
 
     public static async getOAuths(): Promise<OAuthDAO> {
-        const storage = await StorageAPI.getInstance();
+        const storage = await IoC.get(StorageAPI);
         return storage.oauths;
     }
 
     public static async getGames(): Promise<GameDAO> {
-        const storage = await StorageAPI.getInstance();
+        const storage = await IoC.get(StorageAPI);
         return storage.games;
     }
 
     public static async getUsers(): Promise<UserDAO> {
-        const storage = await StorageAPI.getInstance();
+        const storage = await IoC.get(StorageAPI);
         return storage.users;
     }
 
     public static async getProfiles(): Promise<ProfileDAO> {
-        const storage = await StorageAPI.getInstance();
+        const storage = await IoC.get(StorageAPI);
         return storage.profiles;
     }
 
     public static async getMods(): Promise<ModDAO> {
-        const storage = await StorageAPI.getInstance();
+        const storage = await IoC.get(StorageAPI);
         return storage.mods;
-    }
-
-    public static async getInstance(): Promise<StorageAPI> {
-        // If instance exists and is fully initialized, return it immediately
-        if (this.instance) {
-            return this.instance;
-        }
-
-        // If initialization is in progress, wait for it
-        if (this.initPromise) {
-            return this.initPromise;
-        }
-
-        // Start initialization
-        this.initPromise = (async () => {
-            try {
-                const instance = new StorageAPI();
-                await instance.initDB();
-                this.instance = instance;
-                return this.instance;
-            } finally {
-                // Clear the promise after initialization completes (success or failure)
-                this.initPromise = null;
-            }
-        })();
-
-        return this.initPromise;
     }
 
     public async initDB() {
@@ -94,4 +65,3 @@ export class StorageAPI {
 
 
 }
-

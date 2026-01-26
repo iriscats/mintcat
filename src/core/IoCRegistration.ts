@@ -3,9 +3,11 @@ import { AppViewModel } from '@/AppViewModel';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
 import { HomeViewModel } from '@/pages/HomePage/HomeViewModel';
 import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
+import { StorageAPI } from '@/storage';
+import { EventDebugger } from '@/events/EventDebugger';
 
 /**
- * Register all ViewModels to DI container
+ * Register services to DI container
  *
  * This function should be called early in the application lifecycle,
  * before any ViewModels are accessed.
@@ -14,32 +16,46 @@ import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
  * ```typescript
  * // In App.tsx
  * React.useEffect(() => {
- *     registerViewModels();
+ *     registerIoC();
  *     AppInitializer.initializeCore();
  * }, []);
  * ```
  */
-export function registerViewModels(): void {
+export function registerIoC(): void {
+    IoC.register(
+        StorageAPI,
+        async () => new StorageAPI(),
+        async (storage) => await storage.initDB()
+    );
+
+    IoC.register(
+        EventDebugger,
+        async () => new EventDebugger()
+    );
+
     // Core ViewModel - shared across windows
     IoC.register(
         AppViewModel,
-        async () => await AppViewModel.getInstance()
+        async () => new AppViewModel(),
+        async (vm) => await vm.initialize()
     );
 
     // UI ViewModels - per-window instances
     // Note: These are registered but not initialized until accessed
     IoC.register(
         TreeViewModel,
-        async () => await TreeViewModel.getInstance()
+        async () => new TreeViewModel(),
+        async (vm) => await vm.initialize()
     );
 
     IoC.register(
         HomeViewModel,
-        async () => await HomeViewModel.getInstance()
+        async () => new HomeViewModel(),
+        async (vm) => await vm.initialize()
     );
 
     IoC.register(
         ProfileViewModel,
-        async () => await ProfileViewModel.getInstance()
+        async () => new ProfileViewModel()
     );
 }

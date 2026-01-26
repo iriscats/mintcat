@@ -9,7 +9,7 @@ import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {StorageAPI} from "@/storage";
 import {AppInitializer} from "@/core/AppInitializer";
-import {registerViewModels} from "@/core/IoCRegistration.ts";
+import {registerIoC} from "@/core/IoCRegistration.ts";
 
 export enum AddModType {
     MODIO = "mod.io",
@@ -139,7 +139,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     async componentDidMount(): Promise<void> {
         // Ensure core is initialized (multi-window support)
         // Register ViewModels if not already registered
-        registerViewModels();
+        registerIoC();
 
         if (!AppInitializer.isCoreReady()) {
             console.log('[AddModDialog] Core not ready, initializing...');
@@ -266,5 +266,4 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         );
     }
 }
-
 

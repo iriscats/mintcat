@@ -105,6 +105,23 @@ export interface EventPayloads {
   /** 下载状态更新 (修复拼写: 原 download-api-statue) */
   'download-api-status': string;
 
+  /** 下载管理器进度更新 */
+  'download-progress': {
+    downloadId: string;
+    downloadedBytes: number;
+    totalBytes: number;
+    speedBytesPerSec: number;
+    etaSecs: number;
+  };
+
+  /** 下载管理器状态更新 */
+  'download-status': {
+    downloadId: string;
+    status: string;
+    error?: string;
+    filePath?: string;
+  };
+
   // ========================================
   // Mod 更新事件
   // ========================================

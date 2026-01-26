@@ -1,5 +1,3 @@
-import { ILock } from '@/core/ILock.ts';
-
 /**
  * Base class for all ViewModels
  * Provides standardized lifecycle and initialization
@@ -20,7 +18,7 @@ import { ILock } from '@/core/ILock.ts';
  * }
  * ```
  */
-export abstract class BaseViewModel extends ILock {
+export abstract class BaseViewModel {
     protected initialized: boolean = false;
 
     /**
@@ -38,7 +36,7 @@ export abstract class BaseViewModel extends ILock {
      * }
      * ```
      */
-    protected async initialize(): Promise<void> {
+    async initialize(): Promise<void> {
         // Override in subclasses
     }
 

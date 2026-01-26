@@ -10,8 +10,6 @@ import { IoC } from "@/core/IoC.ts";
  * Simplified version after refactoring
  */
 export class TreeViewModel extends BaseViewModel {
-
-    private static instance: TreeViewModel;
     private profileViewModel: ProfileViewModel;
 
 
@@ -23,7 +21,7 @@ export class TreeViewModel extends BaseViewModel {
         emitVoidEvent("tree-view-count-label-update");
     }
 
-    private constructor() {
+    constructor() {
         super();
     }
 
@@ -93,7 +91,7 @@ export class TreeViewModel extends BaseViewModel {
      *
      * @throws Error if initialization fails critically
      */
-    protected async initialize(): Promise<void> {
+    async initialize(): Promise<void> {
         try {
             // Get ProfileViewModel instance and load data
             this.profileViewModel = await IoC.get(ProfileViewModel);
@@ -126,34 +124,4 @@ export class TreeViewModel extends BaseViewModel {
             }
         }
     }
-
-    /**
-     * Shared lock instance for thread-safe singleton initialization
-     */
-    private static lockInstance = new class extends BaseViewModel {}();
-
-    /**
-     * Get singleton instance of TreeViewModel
-     * Thread-safe with initialization lock
-     *
-     * @returns TreeViewModel instance
-     *
-     * @example
-     * ```typescript
-     * const treeViewModel = await TreeViewModel.getInstance();
-     * ```
-     */
-    public static async getInstance(): Promise<TreeViewModel> {
-        const release = await this.lockInstance.acquireLock();
-        try {
-            if (!TreeViewModel.instance) {
-                TreeViewModel.instance = new TreeViewModel();
-                await TreeViewModel.instance.initialize();
-            }
-            return TreeViewModel.instance;
-        } finally {
-            release();
-        }
-    }
-
 }

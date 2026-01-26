@@ -14,15 +14,7 @@ import {BaseViewModel} from "@/core/BaseViewModel";
  * Handles user settings, language, theme, OAuth, and game info
  */
 export class AppViewModel extends BaseViewModel {
-
-    private static instance: AppViewModel;
-
-    /**
-     * Shared lock instance for thread-safe singleton initialization
-     */
-    private static lockInstance = new class extends BaseViewModel {}();
-
-    private constructor() {
+    constructor() {
         super();
     }
 
@@ -104,7 +96,7 @@ export class AppViewModel extends BaseViewModel {
      * Loads user settings, checks paths, and initializes UI state
      * Note: Data migration is handled by AppInitializer before this runs
      */
-    protected async initialize(): Promise<void> {
+    async initialize(): Promise<void> {
         await this.loadUserLanguages();
         await this.loadUserGuiTheme();
         await this.loadUserInfo();
@@ -120,33 +112,4 @@ export class AppViewModel extends BaseViewModel {
 
         this.initialized = true;
     }
-
-    /**
-     * @deprecated Use getInstance() which calls initialize() automatically
-     * Kept for backward compatibility during migration
-     */
-    public async initAppViewModel(): Promise<void> {
-        await this.initialize();
-    }
-
-    /**
-     * Get singleton instance of AppViewModel
-     * Thread-safe with initialization lock
-     *
-     * @returns AppViewModel instance
-     */
-    public static async getInstance(): Promise<AppViewModel> {
-        const release = await this.lockInstance.acquireLock();
-        try {
-            if (!AppViewModel.instance) {
-                const appViewModel = new AppViewModel();
-                await appViewModel.initialize();
-                AppViewModel.instance = appViewModel;
-            }
-            return AppViewModel.instance;
-        } finally {
-            release();
-        }
-    }
-
 }

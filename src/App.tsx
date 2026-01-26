@@ -13,7 +13,7 @@ import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
 import ChatPage from "@/pages/ChatPage.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
-import {registerViewModels} from "@/core/IoCRegistration.ts";
+import {registerIoC} from "@/core/IoCRegistration.ts";
 
 import './App.css';
 import {EmptyPage} from "@/pages/EmptyPage.tsx";
@@ -83,7 +83,7 @@ const AppContent = () => {
         console.log('App 组件加载...');
 
         // Register all ViewModels to DI container
-        registerViewModels();
+        registerIoC();
 
         // Initialize core (database + AppViewModel)
         AppInitializer.initializeCore()

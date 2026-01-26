@@ -93,6 +93,7 @@ export {
   disableEventDebugger,
   getEventStats,
   clearEventStats,
+  isEventDebuggerEnabled,
 } from './EventDebugger';
 
 // ========================================

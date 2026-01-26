@@ -13,20 +13,10 @@ import { StorageAPI } from "@/storage";
  * Simplified version after refactoring
  */
 export class ProfileViewModel {
-
-    private static instance: ProfileViewModel;
     public profileService: ProfileService;
 
-    private constructor() {
+    constructor() {
         this.profileService = new ProfileService();
-    }
-
-    public static async getInstance(): Promise<ProfileViewModel> {
-        if (ProfileViewModel.instance) {
-            return ProfileViewModel.instance;
-        }
-        ProfileViewModel.instance = new ProfileViewModel();
-        return ProfileViewModel.instance;
     }
 
     // ====================================

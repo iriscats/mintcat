@@ -4,7 +4,7 @@ import ReactDOM from "react-dom/client";
 import {Routes, Route, HashRouter} from "react-router-dom";
 
 import {ConfigProvider, App as AntdApp} from "antd";
-import {useEventListener, EventDebugger} from "@/events";
+import {useEventListener, enableEventDebugger} from "@/events";
 
 import App from "@/App";
 import {AddModDialog} from "@/dialogs/AddModDialog";
@@ -13,6 +13,7 @@ import i18n from "@/locales/i18n"
 import packageJson from '../package.json';
 import {InitLog} from "./apis/LogApi.ts";
 import {initializeTaskSystem} from "@/tasks";
+import {registerIoC} from "@/core/IoCRegistration.ts";
 
 InitLog();
 
@@ -47,9 +48,10 @@ const Main = () => {
         ensureTaskSystemInitialized();
 
         if (packageJson.version.indexOf("beta") > 0) {
+            registerIoC();
 
             // ✅ 启用 EventDebugger (开发模式)
-            EventDebugger.enable({
+            enableEventDebugger({
                 consoleLog: true,
                 showPayload: true,
                 collectStats: true,
