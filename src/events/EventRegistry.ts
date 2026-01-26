@@ -34,22 +34,6 @@ export interface EventPayloads {
   'active-game-change': GameData;
 
   // ========================================
-  // UI 更新事件
-  // ========================================
-
-  /** 主页树形视图更新 */
-  'home-page-update-tree-view': void;
-
-  /** 主页配置文件选择更新 */
-  'home-page-update-profile-select': void;
-
-  /** 主页加载状态 */
-  'home-page-loading': boolean;
-
-  /** 树形视图计数标签更新 */
-  'tree-view-count-label-update': void;
-
-  // ========================================
   // 状态栏事件
   // ========================================
 

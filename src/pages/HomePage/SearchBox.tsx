@@ -1,7 +1,6 @@
 import React from "react";
 import {Select, SelectProps} from "antd";
 import {SearchOutlined} from "@ant-design/icons";
-import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {TreeViewConverter} from "@/pages/HomePage/TreeViewConverter.ts";
 
 const defaultFilterOptions: SelectProps['options'] = [
@@ -17,7 +16,11 @@ const defaultFilterOptions: SelectProps['options'] = [
     {value: 'Visual', label: 'Visual'},
 ]
 
-export const SearchBox = () => {
+interface SearchBoxProps {
+    onUpdateTreeView: () => void;
+}
+
+export const SearchBox = ({ onUpdateTreeView }: SearchBoxProps) => {
 
     const [searchValue, setSearchValue] = React.useState<string[]>(undefined);
     const [searchOptions, setSearchOptions] = React.useState<SelectProps['options']>(defaultFilterOptions);
@@ -35,14 +38,14 @@ export const SearchBox = () => {
 
         setSearchOptions(searchOptions);
 
-        TreeViewModel.updateTreeView();
+        onUpdateTreeView();
     }
 
     const onSearchSelectChange = async (value: any) => {
         TreeViewConverter.filterList = value;
         setSearchValue(value);
 
-        TreeViewModel.updateTreeView();
+        onUpdateTreeView();
     }
 
     const onBlur = async () => {
@@ -67,5 +70,4 @@ export const SearchBox = () => {
         />
     )
 }
-
 

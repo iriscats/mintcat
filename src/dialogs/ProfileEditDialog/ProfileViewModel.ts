@@ -1,8 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
 import {ProfileTreeItem} from "@/storage/db/Schema.ts";
-import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
-import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import type {ProfileData} from "@/storage/dao/ProfileDAO.ts";
 import { ProfileService } from "@/services/ProfileService";
 import { StorageAPI } from "@/storage";
@@ -90,8 +88,6 @@ export class ProfileViewModel {
             isActive: isFirstProfile
         });
 
-        HomeViewModel.updateProfileSelect();
-        TreeViewModel.updateTreeView();
     }
 
     public async removeProfile(name: string): Promise<void> {
@@ -123,8 +119,6 @@ export class ProfileViewModel {
             }
         }
 
-        HomeViewModel.updateProfileSelect();
-        TreeViewModel.updateTreeView();
     }
 
     public async renameProfile(oldName: string, newName: string): Promise<void> {
@@ -140,7 +134,6 @@ export class ProfileViewModel {
             await this.profileService.renameProfile(profileData.id!, newName);
         }
 
-        HomeViewModel.updateProfileSelect();
     }
 
     public async copyProfile(sourceName: string, newName: string): Promise<void> {
@@ -176,8 +169,6 @@ export class ProfileViewModel {
         const treeService = this.profileService.getTreeService();
         await treeService.duplicateProfileTree(sourceProfile.id, newProfile.id);
 
-        HomeViewModel.updateProfileSelect();
-        TreeViewModel.updateTreeView();
     }
 
     // ====================================
@@ -189,16 +180,9 @@ export class ProfileViewModel {
      * Save ProfileTree to database
      */
     public async saveProfileTreeToDatabase(root: ProfileTreeItem): Promise<void> {
-        console.log(`\n========== [ProfileViewModel] saveProfileTreeToDatabase 开始 ==========`);
-        console.log(`[ProfileViewModel] 传入的 root 有 ${root.children.length} 个子项`);
-
         const profileData = await this.profileService.getActiveProfileData();
         const treeService = this.profileService.getTreeService();
-
         await treeService.saveProfileTree(root, profileData.id!);
-
-        console.log(`[ProfileViewModel] ✅ Profile tree 成功保存到数据库`);
-        console.log(`========== [ProfileViewModel] saveProfileTreeToDatabase 完成 ==========\n`);
     }
 
     /**

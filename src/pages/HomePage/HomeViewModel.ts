@@ -10,7 +10,6 @@ import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
-import {emitVoidEvent} from "@/events";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ModService} from "@/services/ModService.ts";
 import {ProfileService} from "@/services/ProfileService.ts";
@@ -23,10 +22,6 @@ import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 export class HomeViewModel extends BaseViewModel {
     constructor() {
         super();
-    }
-
-    public static updateProfileSelect() {
-        emitVoidEvent("home-page-update-profile-select");
     }
 
     private async addModDependencies(modId: number, groupId: number): Promise<void> {
@@ -49,8 +44,6 @@ export class HomeViewModel extends BaseViewModel {
             // Add mod using ModService
             try {
                 const addedMod = await ModService.addModFromModio(depend, activeProfile.id!, groupId);
-
-                TreeViewModel.updateTreeView();
 
                 await ModUpdateService.updateMod(addedMod);
             } catch (error) {
@@ -106,9 +99,6 @@ export class HomeViewModel extends BaseViewModel {
                 await this.addModDependencies(modInfoResp.id, groupId);
             }
 
-            TreeViewModel.updateTreeView();
-            TreeViewModel.updateTreeViewCountLabel();
-
             return true;
         }
 
@@ -121,9 +111,6 @@ export class HomeViewModel extends BaseViewModel {
             if (modInfoResp.dependencies) {
                 await this.addModDependencies(modInfoResp.id, groupId);
             }
-
-            TreeViewModel.updateTreeView();
-            TreeViewModel.updateTreeViewCountLabel();
 
             return true;
         } catch (error) {
@@ -171,9 +158,6 @@ export class HomeViewModel extends BaseViewModel {
                 usedVersion: "-",
             });
 
-            TreeViewModel.updateTreeView();
-            TreeViewModel.updateTreeViewCountLabel();
-
             return true;
         }
 
@@ -191,9 +175,6 @@ export class HomeViewModel extends BaseViewModel {
             }
 
             console.log(`[addModFromPath] Successfully added mod to database:`, addedMod);
-
-            TreeViewModel.updateTreeView();
-            TreeViewModel.updateTreeViewCountLabel();
 
             return true;
         } catch (error) {
@@ -213,19 +194,12 @@ export class HomeViewModel extends BaseViewModel {
         }
 
         await profiles.removeModFromProfile(activeProfile.id!, id);
-
-        TreeViewModel.updateTreeView();
-        TreeViewModel.updateTreeViewCountLabel();
     }
 
     public async setDisplayName(id: number, name: string): Promise<void> {
-        // Set mod display name - this should update the mod's display name in the mods table
         const modsApi = await StorageAPI.getMods();
         await modsApi.updateMod(id, { displayName: name });
-
-        TreeViewModel.updateTreeView();
     }
-
     public async setModEnabled(modId: number, enable: boolean): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         let activeProfile = await profiles.getActiveProfile();
@@ -242,8 +216,6 @@ export class HomeViewModel extends BaseViewModel {
         const profiles = await StorageAPI.getProfiles();
 
         await profiles.updateProfileMod(profileModId, { usedVersion: version });
-
-        TreeViewModel.updateTreeView();
     }
 
     public async setGroupName(id: number, name: string): Promise<void> {
@@ -268,8 +240,6 @@ export class HomeViewModel extends BaseViewModel {
                 folderType: 'custom'
             });
         }
-
-        TreeViewModel.updateTreeView();
     }
 
     public async removeGroup(groupId: number): Promise<void> {
@@ -284,8 +254,6 @@ export class HomeViewModel extends BaseViewModel {
             const profiles = await StorageAPI.getProfiles();
             await profiles.deleteFolder(groupId);
 
-            TreeViewModel.updateTreeView();
-            TreeViewModel.updateTreeViewCountLabel();
         } catch (error) {
             console.error(`[HomeViewModel] Error removing group ${groupId}:`, error);
             throw error;

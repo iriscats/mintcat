@@ -1,4 +1,3 @@
-import {emitVoidEvent} from "@/events";
 import {StorageAPI} from "@/storage";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
@@ -11,15 +10,6 @@ import { IoC } from "@/core/IoC.ts";
  */
 export class TreeViewModel extends BaseViewModel {
     private profileViewModel: ProfileViewModel;
-
-
-    public static updateTreeView() {
-        emitVoidEvent("home-page-update-tree-view");
-    }
-
-    public static updateTreeViewCountLabel() {
-        emitVoidEvent("tree-view-count-label-update");
-    }
 
     constructor() {
         super();
@@ -38,8 +28,6 @@ export class TreeViewModel extends BaseViewModel {
 
         await treeService.sortTreeNodes(activeRoot, order);
         await this.profileViewModel.saveProfileTreeToDatabase(activeRoot);
-
-        TreeViewModel.updateTreeView();
     }
 
     /**
@@ -49,8 +37,6 @@ export class TreeViewModel extends BaseViewModel {
     public async setGroupName(id: number, name: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.updateFolder(id, { name });
-
-        TreeViewModel.updateTreeView();
     }
 
     /**
@@ -97,13 +83,6 @@ export class TreeViewModel extends BaseViewModel {
             this.profileViewModel = await IoC.get(ProfileViewModel);
             await this.profileViewModel.loadProfilesFromDatabase();
 
-            // Update UI components
-            TreeViewModel.updateTreeView();
-            TreeViewModel.updateTreeViewCountLabel();
-
-            // Notify frontend components that profile data is ready
-            emitVoidEvent("home-page-update-profile-select").then();
-
             // Mark as initialized
             this.initialized = true;
 
@@ -112,9 +91,6 @@ export class TreeViewModel extends BaseViewModel {
 
             // Attempt to recover with minimal setup
             try {
-                TreeViewModel.updateTreeView();
-                TreeViewModel.updateTreeViewCountLabel();
-
                 // Mark as initialized even with error (graceful degradation)
                 this.initialized = true;
 

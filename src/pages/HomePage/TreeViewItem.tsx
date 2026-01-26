@@ -3,7 +3,7 @@ import React, {useState} from "react";
 import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
-import {emitEvent, emitVoidEvent, useFilteredEventListener} from "@/events";
+import {emitEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
@@ -56,7 +56,7 @@ function ModTreeViewFolder({nodeData, onMenuClick}) {
 }
 
 
-function ModTreeViewSwitch({nodeData}) {
+function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
     // 乐观更新：使用本地 state 立即响应用户操作
     const [checked, setChecked] = useState(nodeData.enabled);
 
@@ -74,7 +74,9 @@ function ModTreeViewSwitch({nodeData}) {
         await viewModel.setModEnabled(nodeData.modId, newChecked);
 
         // 3. 只更新计数标签
-        await emitVoidEvent("tree-view-count-label-update");
+        if (onCountLabelUpdate) {
+            await onCountLabelUpdate();
+        }
     };
 
     return (
@@ -325,7 +327,7 @@ function ModTreeViewTitle({nodeData}) {
 }
 
 
-export function TreeViewItem(nodeData: any, onMenuClick: any) {
+export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate?: () => Promise<void>) {
 
     const contextMenus: MenuProps['items'] = [
         {label: t('Rename'), key: 'rename'},
@@ -352,7 +354,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any) {
                       }}
                 >
 
-                    <ModTreeViewSwitch nodeData={nodeData}/>
+                    <ModTreeViewSwitch nodeData={nodeData} onCountLabelUpdate={onCountLabelUpdate}/>
 
                     {nodeData.sourceType === ModSourceType.Modio &&
                         <ModTreeViewVersionSelect nodeData={nodeData}/>

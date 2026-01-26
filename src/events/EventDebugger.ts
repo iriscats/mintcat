@@ -208,12 +208,6 @@ export class EventDebugger {
       'user-info-load-success',
       'game-info-load-success',
 
-      // UI 更新事件
-      'home-page-update-tree-view',
-      'home-page-update-profile-select',
-      'home-page-loading',
-      'tree-view-count-label-update',
-
       // 状态栏事件
       'status-bar-log',
       'status-bar-percent',

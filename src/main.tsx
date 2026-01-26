@@ -16,6 +16,7 @@ import {initializeTaskSystem} from "@/tasks";
 import {registerIoC} from "@/core/IoCRegistration.ts";
 
 InitLog();
+registerIoC();
 
 // Initialize task system once for all windows
 let taskSystemInitialized = false;
@@ -48,8 +49,6 @@ const Main = () => {
         ensureTaskSystemInitialized();
 
         if (packageJson.version.indexOf("beta") > 0) {
-            registerIoC();
-
             // ✅ 启用 EventDebugger (开发模式)
             enableEventDebugger({
                 consoleLog: true,
@@ -74,7 +73,7 @@ const Main = () => {
                 <AntdApp>
                     <HashRouter>
                         <Routes>
-                            <Route path="/home" element={<App/>}/>
+                            <Route path="/*" element={<App/>}/>
                             <Route path="/add_mod_dialog" element={<AddModDialog/>}/>
                         </Routes>
                     </HashRouter>

@@ -2,7 +2,6 @@ import { t } from "i18next";
 import { exists, stat } from "@tauri-apps/plugin-fs";
 import { emitEvent } from "@/events";
 import { ModioApi } from "@/apis/modio";
-import { TreeViewModel } from "@/pages/HomePage/TreeViewModel.ts";
 import { ProfileViewModel } from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import { ModSourceType } from "@/models/mod/types";
@@ -52,7 +51,6 @@ export class ModUpdateService {
         await this.updateModInDatabase(mod.modId!, resp);
         await this.updateModFile(mod);
 
-        TreeViewModel.updateTreeView();
         await StatusBar.success(t("Update Finish"));
     }
 
@@ -248,8 +246,8 @@ export class ModUpdateService {
     /**
      * 检查模组列表（本地缓存）
      */
-    public static async checkModList() {
-        await emitEvent("home-page-loading", true);
+    public static async checkModList(onLoadingChange?: (loading: boolean) => void) {
+        onLoadingChange?.(true);
         ModUpdateService.loading = true;
 
         const modsApi = await StorageAPI.getMods();
@@ -264,7 +262,7 @@ export class ModUpdateService {
         }
 
         ModUpdateService.loading = false;
-        await emitEvent("home-page-loading", false);
+        onLoadingChange?.(false);
         return true;
     }
 
@@ -325,7 +323,6 @@ export class ModUpdateService {
         }
 
         await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
-        TreeViewModel.updateTreeView();
 
         await StatusBar.success(t("Mod Update Check Finish"));
     }

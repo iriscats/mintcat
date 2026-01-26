@@ -32,7 +32,7 @@ import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts"
 import {ProfileService} from "@/services/ProfileService.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
-import {emitEvent, emitVoidEvent, listenEvent, type UnlistenFn} from "@/events";
+import {listenEvent, type UnlistenFn} from "@/events";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
@@ -56,6 +56,8 @@ interface ModListPageState {
     displayMode?: string;
     loading?: boolean;
     virtual?: boolean;
+    enableCount?: number;
+    totalCount?: number;
 }
 
 
@@ -66,9 +68,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private readonly inputDialogRef: React.RefObject<InputDialog> = React.createRef();
 
     // Event listener cleanup functions
-    private unlistenHomePageLoading?: UnlistenFn;
-    private unlistenUpdateTreeView?: UnlistenFn;
-    private unlistenUpdateProfileSelect?: UnlistenFn;
     private unlistenActiveGameChange?: UnlistenFn;
 
     public constructor(props: any) {
@@ -82,6 +81,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
             defaultProfile: "",
             loading: false,
             virtual: true,
+            enableCount: 0,
+            totalCount: 0,
         }
 
     }
@@ -266,6 +267,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 }
             }
             await this.updateTreeView();
+            await this.updateCountLabel();
         }
     }
 
@@ -282,6 +284,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await vm.setModEnabled(modId, isEnable);
         }
         await this.updateTreeView();
+        await this.updateCountLabel();
     }
 
     @autoBind
@@ -316,7 +319,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
             return;
         }
 
-        openWindow(AddModType.LOCAL, localFolderId).then();
+        openWindow(AddModType.LOCAL, localFolderId, "", async () => {
+            await this.updateTreeView();
+            await this.updateCountLabel();
+        }).then();
     }
 
     @autoBind
@@ -342,7 +348,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onMenuBarUpdateClick() {
         await ModUpdateService.checkModUpdate();
-        await ModUpdateService.checkModList();
+        await ModUpdateService.checkModList((loading) => {
+            this.setState({ loading });
+        });
+        await this.updateTreeView();
+        await this.updateCountLabel();
         message.success(t("Update Finish"));
     }
 
@@ -375,6 +385,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.profileEditDialogRef
             .current?.setCallback(async () => {
             await this.updateProfileSelect();
+            await this.updateTreeView();
+            await this.updateCountLabel();
         }).show();
     }
 
@@ -384,14 +396,15 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const profileVM = await IoC.get(ProfileViewModel);
 
         await profileVM.setActiveProfile(value);
-        TreeViewModel.updateTreeView();
         this.setState({
             defaultProfile: value as string,
         })
         await ModUpdateService.checkModUpdate();
-        await ModUpdateService.checkModList();
-
-        await emitVoidEvent("tree-view-count-label-update");
+        await ModUpdateService.checkModList((loading) => {
+            this.setState({ loading });
+        });
+        await this.updateTreeView();
+        await this.updateCountLabel();
     };
 
     @autoBind
@@ -431,6 +444,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             profileOptions: options,
             defaultProfile: activeProfileName,
         })
+        await this.updateCountLabel();
     }
 
     @autoBind
@@ -479,8 +493,32 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     @autoBind
+    private async updateCountLabel() {
+        const profileVM = await IoC.get(ProfileViewModel);
+        const activeProfile = await profileVM.getActiveProfileData();
+
+        if (!activeProfile?.id) {
+            this.setState({
+                enableCount: 0,
+                totalCount: 0,
+            });
+            return;
+        }
+
+        const profilesApi = await StorageAPI.getProfiles();
+        const profileMods = await profilesApi.getProfileMods(activeProfile.id);
+
+        this.setState({
+            enableCount: profileMods.filter(mod => mod.isEnabled).length,
+            totalCount: profileMods.length,
+        });
+    }
+
+    @autoBind
     private async onMenuClick(key: string, nodeKey: string) {
         const vm = await IoC.get(HomeViewModel);
+        let shouldUpdateTree = false;
+        let shouldUpdateCount = false;
 
         // Helper function to extract numeric ID from nodeKey (e.g., "folder-3" -> 3)
         const extractId = (key: string): number => {
@@ -501,6 +539,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     t("New Group"),
                     async (text) => {
                         await vm.addGroup(0, text);
+                        shouldUpdateTree = true;
                     })
                     .show();
             }
@@ -511,11 +550,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     t("New Group"),
                     async (text) => {
                         await vm.addGroup(id, text);
+                        shouldUpdateTree = true;
                     }).show();
                 break;
             case "delete_group":
                 try {
                     await vm.removeGroup(id);
+                    shouldUpdateTree = true;
                 } catch (error) {
                     console.error(`[HomePage] Delete group failed for id=${id}:`, error);
                 }
@@ -527,6 +568,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     groupName || "",
                     async (text) => {
                         await vm.setGroupName(id, text);
+                        shouldUpdateTree = true;
                     }).show();
                 break;
             case "update": {
@@ -539,13 +581,22 @@ export class HomePage extends BasePage<any, ModListPageState> {
             case "add_mod": {
                 switch (id) {
                     case ProfileTreeGroupType.LOCAL:
-                        await openWindow(AddModType.LOCAL, id);
+                        await openWindow(AddModType.LOCAL, id, "", async () => {
+                            await this.updateTreeView();
+                            await this.updateCountLabel();
+                        });
                         break;
                     case ProfileTreeGroupType.MODIO:
-                        await openWindow(AddModType.MODIO, id);
+                        await openWindow(AddModType.MODIO, id, "", async () => {
+                            await this.updateTreeView();
+                            await this.updateCountLabel();
+                        });
                         break;
                     default:
-                        await openWindow(AddModType.MODIO, id);
+                        await openWindow(AddModType.MODIO, id, "", async () => {
+                            await this.updateTreeView();
+                            await this.updateCountLabel();
+                        });
                         break;
                 }
             }
@@ -558,10 +609,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     modName,
                     async (text) => {
                         await vm.setDisplayName(id, text);
+                        shouldUpdateTree = true;
                     }).show();
                 break;
             case "delete":
                 await vm.removeMod(id);
+                shouldUpdateTree = true;
+                shouldUpdateCount = true;
                 break;
             case "copy_link":
                 await this.handleCopyLink(id);
@@ -572,6 +626,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 break;
             default:
                 break;
+        }
+
+        if (shouldUpdateTree) {
+            await this.updateTreeView();
+        }
+        if (shouldUpdateCount) {
+            await this.updateCountLabel();
         }
     }
 
@@ -589,46 +650,26 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.hookWindowResized();
 
         // Setup event listeners
-        this.unlistenHomePageLoading = await listenEvent("home-page-loading", (loading) => {
-            this.setState({
-                loading: loading,
-            });
-        });
-
-        this.unlistenUpdateTreeView = await listenEvent("home-page-update-tree-view", async () => {
-            await this.updateTreeView();
-        });
-
-        this.unlistenUpdateProfileSelect = await listenEvent("home-page-update-profile-select", async () => {
-            await this.updateProfileSelect();
-        });
-
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
             await this.updateProfileSelect();
             await this.updateTreeView();
-            await emitVoidEvent("tree-view-count-label-update");
+            await this.updateCountLabel();
         });
 
         // Initial UI update
         this.updateProfileSelect().then();
         this.updateTreeView().then();
+        this.updateCountLabel().then();
 
         // Check for mod updates
-        ModUpdateService.checkModList().then();
+        ModUpdateService.checkModList((loading) => {
+            this.setState({ loading });
+        }).then();
     }
 
     componentWillUnmount(): void {
         // ✅ 清理所有事件监听器
-        if (this.unlistenHomePageLoading) {
-            this.unlistenHomePageLoading();
-        }
-        if (this.unlistenUpdateTreeView) {
-            this.unlistenUpdateTreeView();
-        }
-        if (this.unlistenUpdateProfileSelect) {
-            this.unlistenUpdateProfileSelect();
-        }
         if (this.unlistenActiveGameChange) {
             this.unlistenActiveGameChange();
         }
@@ -642,7 +683,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 <Spin spinning={this.state.loading}
                       delay={500}
                       size={"large"}
-                      indicator={<></>}
+                      indicator={null}
                       tip={
                           <Flex gap={"large"}
                                 vertical={false}
@@ -735,7 +776,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 </Tooltip>
                             </Typography.Link>
                             <Typography.Link>
-                                <SearchBox/>
+                                <SearchBox onUpdateTreeView={this.updateTreeView}/>
                             </Typography.Link>
                         </Space>
                         <div style={{
@@ -749,6 +790,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 virtual={this.state.virtual}
                                 onMenuClick={this.onMenuClick}
                                 onUpdateTreeView={this.updateTreeView}
+                                onCountLabelUpdate={this.updateCountLabel}
                                 onTreeNodeSelect={this.onTreeNodeSelect}
                                 onTreeNodeExpand={this.onTreeNodeExpand}
                                 onTreeRightClick={this.onTreeRightClick}
@@ -792,7 +834,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                     </Button>
                                 </span>
                             }
-                            <CountLabel/>
+                            <CountLabel enableCount={this.state.enableCount} totalCount={this.state.totalCount}/>
                         </Flex>
                     </Flex>
                 </Spin>

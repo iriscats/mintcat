@@ -3,7 +3,6 @@ import {emitEvent, onceEvent} from "@/events";
 import {ModioApi} from "@/apis/modio";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
-import {TreeViewModel} from "@/pages/HomePage/TreeViewModel.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
@@ -15,7 +14,8 @@ let windowInstance: WebviewWindow;
 
 export async function openWindow(addModType: string = AddModType.LOCAL,
                                  groupId: number = ProfileTreeGroupType.LOCAL,
-                                 text: string = ""): Promise<void> {
+                                 text: string = "",
+                                 onUpdated?: () => Promise<void>): Promise<void> {
 
     const vm = await IoC.get(HomeViewModel);
 
@@ -82,7 +82,9 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         }
 
         await StatusBar.success(t("Add Complete"));
-        TreeViewModel.updateTreeView();
+        if (onUpdated) {
+            await onUpdated();
+        }
 
         await windowInstance.close();
         windowInstance = null;
@@ -122,4 +124,3 @@ async function onClipboardChange(text: string) {
 export function initClipboardWatcher() {
     ClipboardApi.setClipboardWatcher(onClipboardChange).then();
 }
-

@@ -19,6 +19,7 @@ export interface TreeViewProps {
     virtual?: boolean;
     onMenuClick: (key: string, nodeKey: string) => void;
     onUpdateTreeView?: () => void;
+    onCountLabelUpdate?: () => Promise<void>;
     onTreeNodeSelect?: (keys: any) => void;
     onTreeNodeExpand?: (keys: any) => void;
     onTreeRightClick?: (info: any) => void;
@@ -95,7 +96,7 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
 
     @autoBind
     private onCustomTitleRender(nodeData: any) {
-        return TreeViewItem(nodeData, this.props.onMenuClick);
+        return TreeViewItem(nodeData, this.props.onMenuClick, this.props.onCountLabelUpdate);
     }
     /**
      * Helper method to get all mods from database as CompleteModData array
