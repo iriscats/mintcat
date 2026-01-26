@@ -36,16 +36,19 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                 return data;
             }
         });
-        if (result) {
-            if (result.version === "0.4.0") {
-                setIsModalOpen(false);
-                return;
-            }
-            //await importConfig(result);
-            window.location.reload();
-        } else {
+        if (!result) {
             message.error(t("Please select a config"));
+            return;
         }
+
+        const success = await dialogConfigService.importConfig(result);
+        if (!success) {
+            message.error(t("Import Failed"));
+            return;
+        }
+
+        setIsModalOpen(false);
+        window.location.reload();
     };
 
     const handleCancel = () => {

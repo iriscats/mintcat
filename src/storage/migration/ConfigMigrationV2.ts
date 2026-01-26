@@ -59,7 +59,8 @@ export class ConfigMigrationV2 {
      */
     public async migrate(): Promise<boolean> {
         try {
-            return true;
+            console.error(`迁移v${this.version}配置未实现`);
+            return false;
         } catch (error) {
             console.error(`迁移v${this.version}配置失败:`, error);
             return false;
