@@ -6,21 +6,22 @@ import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {exists} from "@tauri-apps/plugin-fs";
 import {emitEvent, emitVoidEvent} from "@/events";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
-import {StorageAPI} from "@/storage";
 import {BaseViewModel} from "@/core/BaseViewModel";
+import {AppService} from "@/services/AppService.ts";
 
 /**
  * AppViewModel manages application-level state and business logic
  * Handles user settings, language, theme, OAuth, and game info
  */
 export class AppViewModel extends BaseViewModel {
+    private appService = new AppService();
+
     constructor() {
         super();
     }
 
     public async checkOauth() {
-        const auths = await StorageAPI.getOAuths();
-        const modioOAuth = await auths.getModioOAuth();
+        const modioOAuth = await this.appService.getModioOAuth();
 
         if (modioOAuth?.oauth !== "") {
             this.appStartAutoCheckModUpdate();
@@ -30,16 +31,15 @@ export class AppViewModel extends BaseViewModel {
     }
 
     public async checkAppPath() {
-        const settings = await StorageAPI.getSettings();
         try {
-            const cachePath = await settings.getCachePath();
+            const cachePath = await this.appService.getCachePath();
             console.log(cachePath)
             if (cachePath === "" || !await exists(cachePath)) {
-                await settings.setCachePath(await appCacheDir());
+                await this.appService.setCachePath(await appCacheDir());
             }
-            const configPath = await settings.getConfigPath();
+            const configPath = await this.appService.getConfigPath();
             if (configPath === "" || !await exists(configPath)) {
-                await settings.setConfigPath(await appConfigDir());
+                await this.appService.setConfigPath(await appConfigDir());
             }
         } catch (err) {
             console.warn(err);
@@ -54,37 +54,33 @@ export class AppViewModel extends BaseViewModel {
     }
 
     public async loadUserLanguages() {
-        const settings = await StorageAPI.getSettings();
-        let language = await settings.getLanguage();
+        let language = await this.appService.getLanguage();
         if (language === "") {
             language = await DeviceApi.getLanguage();
         }
         localStorage.setItem('lang', language);
         await i18n.changeLanguage(language);
-        await settings.setLanguage(language);
+        await this.appService.setLanguage(language);
     }
 
     public async loadUserGuiTheme() {
-        const settings = await StorageAPI.getSettings();
-        let guiTheme = await settings.getGuiTheme();
+        let guiTheme = await this.appService.getGuiTheme();
         if (guiTheme === "") {
             guiTheme = "Light";
-            await settings.setGuiTheme(guiTheme);
+            await this.appService.setGuiTheme(guiTheme);
         }
         await emitEvent("theme-change", guiTheme as 'Light' | 'Dark' | 'Pink');
     }
 
     public async loadUserInfo() {
-        const user = await StorageAPI.getUsers();
-        const activeUser = await user.getActiveUser();
+        const activeUser = await this.appService.getActiveUser();
         if (activeUser) {
             await emitEvent("user-info-load-success", activeUser);
         }
     }
 
     public async loadGameInfo() {
-        const game = await StorageAPI.getGames();
-        const activeGame = await game.getActiveGame();
+        const activeGame = await this.appService.getActiveGame();
         console.log("activeGame", activeGame);
         if (activeGame) {
             await emitEvent("game-info-load-success", activeGame);

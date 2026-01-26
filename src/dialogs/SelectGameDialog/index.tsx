@@ -6,8 +6,8 @@ import {useEventListener, emitEvent} from "@/events";
 import {open} from "@tauri-apps/plugin-dialog";
 
 import {GameData} from "@/storage/dao/GameDAO.ts";
-import {StorageAPI} from "@/storage";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
+import {DialogGameService} from "@/services/DialogGameService.ts";
 
 const {Text} = Typography;
 const {useToken} = theme;
@@ -27,13 +27,13 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const [selectedGameId, setSelectedGameId] = useState<number | undefined>();
     const [loading, setLoading] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const dialogGameService = new DialogGameService();
 
 
     const loadGames = async () => {
         try {
             setLoading(true);
-            const gameDAO = await StorageAPI.getGames();
-            const gamesList = await gameDAO.getAllGames();
+            const gamesList = await dialogGameService.getAllGames();
 
             // 默认选中第一个活跃游戏
             const activeGame = gamesList.find(game => game.isActive);
@@ -57,20 +57,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
         }
 
         try {
-            const gameDAO = await StorageAPI.getGames();
-
-            // 更新激活状态
-            for (const game of games) {
-                if (game.id === selectedGameId) {
-                    if (!game.isActive) {
-                        await gameDAO.setGameActive(game.id!, true);
-                    }
-                } else {
-                    if (game.isActive) {
-                        await gameDAO.setGameActive(game.id!, false);
-                    }
-                }
-            }
+            await dialogGameService.setGameActive(selectedGameId);
 
             const selectedGame = games.find(game => game.id === selectedGameId);
             if (selectedGame) {
@@ -119,8 +106,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             if (result.endsWith("FSD-WindowsNoEditor.pak") ||
                 result.endsWith("FSD-WinGDK.pak")
             ) {
-                const gameDAO = await StorageAPI.getGames();
-                await gameDAO.updateGame(gameId, { installPath: result });
+                await dialogGameService.updateGameInstallPath(gameId, result);
                 await loadGames();
             } else {
                 message.error(t("Please select FSD-WindowsNoEditor.pak"));
@@ -131,8 +117,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const onFindGamePathClick = async (gameId: number) => {
         const path = await IntegrateApi.findGamePak();
         if (path) {
-            const gameDAO = await StorageAPI.getGames();
-            await gameDAO.updateGame(gameId, { installPath: path });
+            await dialogGameService.updateGameInstallPath(gameId, path);
             await loadGames();
         } else {
             message.error(t("Can't find FSD-WindowsNoEditor.pak"));

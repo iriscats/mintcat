@@ -1,13 +1,11 @@
 import {useState, useImperativeHandle, forwardRef, useEffect} from 'react';
 import {Button, Checkbox, Flex, List, message, Modal, Space, Tag} from 'antd';
 import {t} from "i18next";
-import {remove} from "@tauri-apps/plugin-fs";
 import {CloseOutlined, FileOutlined, FolderOpenOutlined} from "@ant-design/icons";
 import {ConfigDataType} from "@/storage/DataType.ts";
-import {openPath} from "@tauri-apps/plugin-opener";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {emitVoidEvent, useEventListener} from "@/events";
-import { MigrationBase } from '@/storage/migration';
+import {DialogConfigService} from "@/services/DialogConfigService.ts";
 
 
 interface ListDataType extends ConfigDataType {
@@ -26,6 +24,7 @@ export class ConfigManageDialogViewModel {
 export const ConfigManageDialog = forwardRef((_props, ref) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dataSource, setDataSource] = useState<ListDataType[]>([]);
+    const dialogConfigService = new DialogConfigService();
 
     useImperativeHandle(ref, () => ({
         show: () => setIsModalOpen(true),
@@ -54,7 +53,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     };
 
     const onOpenClick = async (path: string) => {
-        await openPath(path);
+        await dialogConfigService.openPath(path);
     };
 
     const onDeleteClick = async (path: string) => {
@@ -63,7 +62,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
             content: t("Are you sure to delete the configuration folder?"),
         });
         if (confirmed) {
-            await remove(path, {recursive: true});
+            await dialogConfigService.deleteConfigPath(path);
             getData().then();
         }
     };
@@ -81,7 +80,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     }
 
     const getData = async () => {
-        const configs = await MigrationBase.getExistingConfigList();
+        const configs = await dialogConfigService.getExistingConfigList();
         setDataSource(configs);
     }
 
@@ -175,4 +174,3 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
         </Modal>
     );
 });
-

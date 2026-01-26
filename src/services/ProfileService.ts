@@ -237,6 +237,16 @@ export class ProfileService {
         return newProfile;
     }
 
+    public async getAllProfiles(): Promise<ProfileData[]> {
+        const profiles = await StorageAPI.getProfiles();
+        return await profiles.getAllProfiles();
+    }
+
+    public async getProfileByName(name: string): Promise<ProfileData | undefined> {
+        const profiles = await this.getAllProfiles();
+        return profiles.find(profile => profile.name === name);
+    }
+
     /**
      * 删除 profile
      */
@@ -251,6 +261,11 @@ export class ProfileService {
     public async renameProfile(profileId: number, newName: string): Promise<boolean> {
         const profiles = await StorageAPI.getProfiles();
         return await profiles.updateProfile(profileId, { name: newName });
+    }
+
+    public async updateFolderName(id: number, name: string): Promise<void> {
+        const profiles = await StorageAPI.getProfiles();
+        await profiles.updateFolder(id, { name });
     }
 
     // ====================================

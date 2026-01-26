@@ -8,7 +8,7 @@ import {ModioApi} from "@/apis/modio";
 import {CacheApi} from "@/apis/CacheApi";
 import {AppViewModel} from "@/AppViewModel";
 import {IoC} from "@/core/IoC.ts";
-import {StorageAPI} from "@/storage";
+import {AppService} from "@/services/AppService.ts";
 import { autoBind } from "@/utils/ReactUtils";
 
 const {Text, Title} = Typography;
@@ -23,6 +23,7 @@ interface UserSettingDialogStates {
 }
 
 class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
+    private appService = new AppService();
 
     public constructor(props: any) {
         super(props);
@@ -55,8 +56,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
                 const url = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
-                const oauths = await StorageAPI.getOAuths();
-                const modioOAuth = await oauths.getModioOAuth();
+                const modioOAuth = await this.appService.getModioOAuth();
 
                 this.setState({
                     profileUrl: url,
@@ -100,12 +100,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         });
 
         try {
-            const users = await StorageAPI.getUsers();
-            const activeUser = await users.getActiveUser();
-
+            const activeUser = await this.appService.getActiveUser();
             if (activeUser) {
-                const oauths = await StorageAPI.getOAuths();
-                await oauths.setModioOAuth(activeUser.id, value);
+                await this.appService.setModioOAuth(activeUser.id, value);
             }
         } catch (error) {
             console.error('Failed to save OAuth:', error);

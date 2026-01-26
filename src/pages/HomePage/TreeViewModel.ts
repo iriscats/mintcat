@@ -1,7 +1,7 @@
-import {StorageAPI} from "@/storage";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
+import { ProfileService } from "@/services/ProfileService";
 
 /**
  * TreeViewModel manages profile tree UI state and interactions
@@ -10,6 +10,7 @@ import { IoC } from "@/core/IoC.ts";
  */
 export class TreeViewModel extends BaseViewModel {
     private profileViewModel: ProfileViewModel;
+    private profileService = new ProfileService();
 
     constructor() {
         super();
@@ -35,8 +36,7 @@ export class TreeViewModel extends BaseViewModel {
      * Delegated to ProfileDAO
      */
     public async setGroupName(id: number, name: string): Promise<void> {
-        const profiles = await StorageAPI.getProfiles();
-        await profiles.updateFolder(id, { name });
+        await this.profileService.updateFolderName(id, name);
     }
 
     /**

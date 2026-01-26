@@ -7,7 +7,7 @@ import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
-import {StorageAPI} from "@/storage";
+import {DialogProfileService} from "@/services/DialogProfileService.ts";
 import {AppInitializer} from "@/core/AppInitializer";
 import {registerIoC} from "@/core/IoCRegistration.ts";
 
@@ -32,6 +32,7 @@ export interface AddModDialogResult {
 }
 
 export class AddModDialog extends BasePage<any, AddModDialogStates> {
+    private dialogProfileService = new DialogProfileService();
 
     private readonly modioFormRef: any = React.createRef();
     private readonly localFormRef: any = React.createRef();
@@ -121,9 +122,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     @autoBind
     private async loadGroupOptions() {
-        const profileDAO = await StorageAPI.getProfiles();
-        const profileData = await profileDAO.getActiveProfile();
-        const profileFolderList = await profileDAO.getProfileFolders(profileData.id);
+        const profileFolderList = await this.dialogProfileService.getActiveProfileFolders();
 
         this.setState({
             groupFolders: profileFolderList, // Store full folder data
@@ -266,4 +265,3 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         );
     }
 }
-

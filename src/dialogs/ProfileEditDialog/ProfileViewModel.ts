@@ -3,7 +3,6 @@ import {t} from "i18next";
 import {ProfileTreeItem} from "@/storage/db/Schema.ts";
 import type {ProfileData} from "@/storage/dao/ProfileDAO.ts";
 import { ProfileService } from "@/services/ProfileService";
-import { StorageAPI } from "@/storage";
 
 /**
  * ProfileViewModel manages profile-level operations
@@ -98,9 +97,7 @@ export class ProfileViewModel {
             return;
         }
 
-        const profiles = await StorageAPI.getProfiles();
-        const allProfiles = await profiles.getAllProfiles();
-        const targetProfile = allProfiles.find(p => p.name === name);
+        const targetProfile = await this.profileService.getProfileByName(name);
 
         if (!targetProfile || !targetProfile.id) {
             message.error(t("Profile not found"));
@@ -144,9 +141,7 @@ export class ProfileViewModel {
             return;
         }
 
-        const profiles = await StorageAPI.getProfiles();
-        const allProfiles = await profiles.getAllProfiles();
-        const sourceProfile = allProfiles.find(p => p.name === sourceName);
+        const sourceProfile = await this.profileService.getProfileByName(sourceName);
 
         if (!sourceProfile || !sourceProfile.id) {
             message.error(t("Source profile not found"));
