@@ -32,6 +32,11 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
+        .setup(|app| {
+            // Initialize download manager
+            app.manage(capability::download::init_download_manager());
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
@@ -81,7 +86,8 @@ pub fn run() {
             integrator::drg::install_dotnet_runtime,
             capability::steam::launch_steam_game,
             capability::steam::check_steam_game,
-            capability::download::download_large_file,
+            capability::download::download_file,
+            capability::download::cancel_download,
             open_devtools
         ])
         .run(tauri::generate_context!())

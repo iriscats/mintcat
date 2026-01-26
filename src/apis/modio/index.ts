@@ -191,14 +191,16 @@ export class ModioApi {
             return { ...modInfo, download: { ...modInfo.download!, cachePath, downloadProgress: 100 } };
         }
 
-        let cachePath: string;
-        if (fileSize < 100 * 1024 * 1024) {
-            const data = await DownloadApi.downloadFile(downloadUrl, onProgress);
-            cachePath = await CacheApi.saveCacheFile(fileName, version, data);
-        } else {
-            cachePath = await CacheApi.getModCachePath(fileName, version);
-            await DownloadApi.downloadLargeFile(downloadUrl, cachePath, onProgress);
-        }
+        // Use unified download API for all file sizes
+        const cachePath = await CacheApi.getModCachePath(fileName, version);
+        await DownloadApi.downloadFile(
+            downloadUrl,
+            cachePath,
+            { resume: true, retryCount: 3 },
+            (downloaded, total) => {
+                onProgress?.(downloaded, total);
+            }
+        );
 
         onProgress?.(fileSize, fileSize);
         return { ...modInfo, download: { ...modInfo.download!, cachePath, downloadProgress: 100 } };

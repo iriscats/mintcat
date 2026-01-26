@@ -1,10 +1,11 @@
 use crate::capability::zip::extract_zip_to_directory;
 use crate::integrator::ReadSeek;
 use std::error::Error;
-use std::fs;
+use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
+use zip::ZipArchive;
 
 const DOTNET_RUNTIME_URL: &str =
     "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
@@ -85,15 +86,19 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
         fs::write(&proxy_dll_path, proxy_dll)
             .map_err(|e| format!("Failed to write dwmapi.dll: {}", e))?;
 
-        // 清除旧的 mods 目录
+        // TODO：清除旧的 mods 目录
         let mods_path = ue4ss_path.join("mods");
-        clear_mod_dir(&mods_path);
+        if mods_path.exists() {
+            fs::remove_dir_all(&mods_path).unwrap();
+        }
         fs::create_dir(&mods_path)
             .map_err(|e| format!("Failed to create mods directory: {}", e))?;
 
         // 清除旧的 csmods 目录
         let csmods_path = ue4ss_path.join("csmods");
-        clear_mod_dir(&csmods_path);
+        if csmods_path.exists() {
+            fs::remove_dir_all(&csmods_path).unwrap();
+        }
         fs::create_dir(&csmods_path)
             .map_err(|e| format!("Failed to create csmods directory: {}", e))?;
 
@@ -103,12 +108,6 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
             .map_err(|e| format!("Failed to write UE4SSL.Framework.dll: {}", e))?;
     }
     Ok(())
-}
-
-fn clear_mod_dir(mod_path: &PathBuf) {
-    if mod_path.exists() {
-        fs::remove_dir_all(mod_path).unwrap();
-    }
 }
 
 pub fn install_ue4ss_mod(
@@ -165,8 +164,75 @@ pub fn uninstall_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Validates that a file is a valid ZIP archive by checking if it can be opened.
+fn is_valid_zip(path: &PathBuf) -> bool {
+    match File::open(path) {
+        Ok(file) => ZipArchive::new(file).is_ok(),
+        Err(_) => false,
+    }
+}
+
+/// Downloads the .NET runtime ZIP file to the specified path.
+fn download_dotnet_runtime(
+    app: &AppHandle,
+    dest_path: &PathBuf,
+) -> Result<(), Box<dyn Error>> {
+    app.emit("status-bar-log", "Downloading .NET Runtime...")
+        .unwrap();
+
+    let client = reqwest::blocking::Client::new();
+    let mut response = client.get(DOTNET_RUNTIME_URL).send()?;
+
+    if !response.status().is_success() {
+        return Err(format!("HTTP error: {}", response.status()).into());
+    }
+
+    let total_size = response.content_length().unwrap_or(0);
+
+    // Download to a temp file first, then rename on success
+    let temp_path = dest_path.with_extension("zip.tmp");
+    let mut file = File::create(&temp_path)?;
+    let mut downloaded: u64 = 0;
+    let mut buffer = [0u8; 1024 * 1024]; // 1MB buffer
+
+    loop {
+        let bytes_read = response.read(&mut buffer)?;
+        if bytes_read == 0 {
+            break;
+        }
+
+        file.write_all(&buffer[..bytes_read])?;
+        downloaded += bytes_read as u64;
+
+        if total_size > 0 {
+            let percent = (downloaded as f64 / total_size as f64 * 100.0) as i32;
+            app.emit("status-bar-percent", percent).unwrap();
+        }
+    }
+
+    // Ensure all data is flushed to disk
+    file.flush()?;
+    file.sync_all()?;
+    drop(file);
+
+    // Validate the downloaded file is a valid ZIP
+    if !is_valid_zip(&temp_path) {
+        let _ = fs::remove_file(&temp_path);
+        return Err("Downloaded file is not a valid ZIP archive".into());
+    }
+
+    // Rename temp file to final destination
+    if dest_path.exists() {
+        fs::remove_file(dest_path)?;
+    }
+    fs::rename(&temp_path, dest_path)?;
+
+    Ok(())
+}
+
 /// Downloads and extracts the .NET runtime to the UE4SS/dotnet directory.
 /// Skips if runtime is already installed (checks for dotnet directory).
+/// Automatically retries download if cached file is corrupted.
 pub fn install_dotnet_runtime(
     app: &AppHandle,
     install_path: &PathBuf,
@@ -193,54 +259,53 @@ pub fn install_dotnet_runtime(
         fs::create_dir_all(&cache_dir)?;
     }
 
-    // Create temp file for download in cache directory
-    let temp_zip_path = cache_dir.join("dotnet-runtime-10.0.1-win-x64.zip");
-    let temp_zip_str = temp_zip_path.to_str().unwrap().to_string();
+    let zip_path = cache_dir.join("dotnet-runtime-10.0.1-win-x64.zip");
+    let zip_path_str = zip_path.to_str().unwrap().to_string();
 
-    // Check if ZIP already exists in cache (skip download if present)
-    let need_download = !temp_zip_path.exists();
-
-    if need_download {
-        app.emit("status-bar-log", "Downloading .NET Runtime...")
-            .unwrap();
-
-        // Download the ZIP file
-        let client = reqwest::blocking::Client::new();
-        let mut response = client.get(DOTNET_RUNTIME_URL).send()?;
-
-        if !response.status().is_success() {
-            return Err(format!("HTTP error: {}", response.status()).into());
-        }
-
-        let total_size = response.content_length().unwrap_or(0);
-        let mut file = fs::File::create(&temp_zip_path)?;
-        let mut downloaded: u64 = 0;
-        let mut buffer = [0u8; 1024 * 1024]; // 1MB buffer
-
-        loop {
-            let bytes_read = response.read(&mut buffer)?;
-            if bytes_read == 0 {
-                break;
-            }
-
-            file.write_all(&buffer[..bytes_read])?;
-            downloaded += bytes_read as u64;
-
-            if total_size > 0 {
-                let percent = (downloaded as f64 / total_size as f64 * 100.0) as i32;
-                app.emit("status-bar-percent", percent).unwrap();
-            }
+    // Check if we need to download (file doesn't exist or is invalid)
+    let need_download = if zip_path.exists() {
+        if is_valid_zip(&zip_path) {
+            app.emit("status-bar-log", "Using cached .NET Runtime...")
+                .unwrap();
+            false
+        } else {
+            // Cached file is corrupted, delete and re-download
+            app.emit("status-bar-log", "Cached file corrupted, re-downloading...")
+                .unwrap();
+            let _ = fs::remove_file(&zip_path);
+            true
         }
     } else {
-        app.emit("status-bar-log", "Using cached .NET Runtime...")
-            .unwrap();
+        true
+    };
+
+    if need_download {
+        download_dotnet_runtime(app, &zip_path)?;
     }
 
     app.emit("status-bar-log", "Extracting .NET Runtime...")
         .unwrap();
 
-    // Extract ZIP to ue4ss/dotnet directory
-    extract_zip_to_directory(&temp_zip_str, dotnet_path.to_str().unwrap())?;
+    // Try to extract, if it fails due to corrupted file, retry download once
+    if let Err(_) = extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap()) {
+        app.emit("status-bar-log", "Extraction failed, retrying download...")
+            .unwrap();
+
+        // Delete corrupted file and clean up partial extraction
+        let _ = fs::remove_file(&zip_path);
+        if dotnet_path.exists() {
+            let _ = fs::remove_dir_all(&dotnet_path);
+            fs::create_dir_all(&dotnet_path)?;
+        }
+
+        // Retry download and extract
+        download_dotnet_runtime(app, &zip_path)?;
+
+        app.emit("status-bar-log", "Extracting .NET Runtime...")
+            .unwrap();
+        extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap())
+            .map_err(|e| format!("Extraction failed after retry: {}", e))?;
+    }
 
     app.emit("status-bar-log", ".NET Runtime installed")
         .unwrap();

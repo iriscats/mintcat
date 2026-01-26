@@ -7,7 +7,7 @@ export class NetworkApi {
 
     static IS_PROXY = false;
 
-    private static getUrl(path: string) {
+    public static getUrl(path: string) {
         return NetworkApi.IS_PROXY ? PROXY_API_URL + path : path;
     }
 

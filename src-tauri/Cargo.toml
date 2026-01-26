@@ -43,7 +43,13 @@ log = "0.4.27"
 tracing = { version = "0.1.41", features = ["attributes"] }
 
 # http
-reqwest = { version = "0.12.15", features = ["blocking", "rustls-tls"] }
+reqwest = { version = "0.12.15", features = ["blocking", "stream", "json", "rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
+md5 = "0.7"
+sha2 = "0.10"
+rand = "0.8"
+futures = "0.3"
+uuid = { version = "1", features = ["v4"] }
 
 # json
 serde = { version = "1", features = ["derive"] }

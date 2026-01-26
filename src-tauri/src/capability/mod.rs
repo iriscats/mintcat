@@ -1,3 +1,3 @@
-pub(crate) mod download;
+pub mod download;
 pub(crate) mod steam;
 pub mod zip;
