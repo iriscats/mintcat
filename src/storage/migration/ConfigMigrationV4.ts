@@ -12,7 +12,7 @@ import {configDir} from '@tauri-apps/api/path';
 
 export class ConfigMigrationV4 {
 
-    private version = '0.4.0';
+    private version = '0.4';
     private gameId: number = 0;
     private userId: number = 0;
 
