@@ -205,9 +205,11 @@ impl PakIntegrator {
 
     fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<(), Box<dyn Error>> {
         let (mut pak_buf, mut dll_buf) = self.load_mod_files(mod_info.pak_path.as_ref())?;
-        self.process_pak_files(&mut pak_buf)?;
-        if let Some(mut dll_buf) = dll_buf.take() {
-            self.process_dll_files(mod_info, &mut dll_buf)?;
+        if let Some(ref mut pak) = pak_buf {
+            self.process_pak_files(pak)?;
+        }
+        if let Some(ref mut dll) = dll_buf {
+            self.process_dll_files(mod_info, dll)?;
         }
         Ok(())
     }
@@ -215,34 +217,32 @@ impl PakIntegrator {
     fn load_mod_files(
         &self,
         path: &Path,
-    ) -> Result<(Box<dyn ReadSeek>, Option<Box<dyn ReadSeek>>), Box<dyn Error>> {
+    ) -> Result<(Option<Box<dyn ReadSeek>>, Option<Box<dyn ReadSeek>>), Box<dyn Error>> {
         let mut buf = [0; 4];
         let mut file = fs::File::open(path)?;
         file.read_exact(&mut buf)?;
 
         if buf == [0x50, 0x4B, 0x03, 0x04] {
+            // ZIP file
             let mut pak: Option<Box<dyn ReadSeek>> = None;
             let mut dll: Option<Box<dyn ReadSeek>> = None;
 
             if let Ok(paks) = read_files_from_zip_by_extension(path.to_str().unwrap(), "pak") {
-                if let Some((_, data)) = paks.get(0) {
+                if let Some((_, data)) = paks.first() {
                     pak = Some(Box::new(Cursor::new(data.clone())));
                 }
             }
 
             if let Ok(dlls) = read_files_from_zip_by_extension(path.to_str().unwrap(), "dll") {
-                if let Some((_, data)) = dlls.get(0) {
+                if let Some((_, data)) = dlls.first() {
                     dll = Some(Box::new(Cursor::new(data.clone())));
                 }
             }
 
-            if let Some(pak_data) = pak {
-                Ok((pak_data, dll))
-            } else {
-                Ok((Box::new(BufReader::new(file)), None))
-            }
+            Ok((pak, dll))
         } else {
-            Ok((Box::new(BufReader::new(file)), None))
+            // PAK file (not ZIP)
+            Ok((Some(Box::new(BufReader::new(file))), None))
         }
     }
 
