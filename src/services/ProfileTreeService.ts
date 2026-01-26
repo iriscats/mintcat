@@ -239,37 +239,38 @@ export class ProfileTreeService {
             const profileDAO = await StorageAPI.getProfiles();
 
             const existingFolders = await profileDAO.getProfileFolders(profileId);
-            const hasLocalFolder = existingFolders.some(folder =>
-                folder.name === 'Local' || folder.name === '本地'
-            );
-            const hasModioFolder = existingFolders.some(folder =>
-                folder.name === 'mod.io' || folder.name === 'Mod.io'
-            );
-
-            if (hasLocalFolder && hasModioFolder) {
-                return;
-            }
-
             const defaultFolders = [
                 {
                     profileId,
                     name: 'mod.io',
                     folderType: 'modio',
-                    sortOrder: 0
+                    sortOrder: 0,
+                    aliases: ['mod.io', 'Mod.io']
                 },
                 {
                     profileId,
                     name: 'Local',
                     folderType: 'local',
-                    sortOrder: 1
+                    sortOrder: 1,
+                    aliases: ['Local', '本地']
                 }
             ];
 
             for (const folder of defaultFolders) {
-                const exists = existingFolders.some(f => f.name === folder.name);
-                if (!exists) {
-                    await profileDAO.createFolder(folder);
+                const existsByType = existingFolders.find(f => f.folderType === folder.folderType);
+                if (existsByType) {
+                    continue;
                 }
+
+                const existsByName = existingFolders.find(f => folder.aliases.includes(f.name));
+                if (existsByName?.id) {
+                    await profileDAO.updateFolder(existsByName.id, {
+                        folderType: folder.folderType
+                    });
+                    continue;
+                }
+
+                await profileDAO.createFolder(folder);
             }
         } catch (error) {
             console.error(`[ProfileTreeService] Failed to create default folders for profile ${profileId}:`, error);

@@ -167,6 +167,12 @@ export class ProfileService {
             return null;
         }
 
+        const folderId = await profiles.getProfileFolderIdByType(activeProfile.id, folderType);
+        if (folderId) {
+            return folderId;
+        }
+
+        await this.treeService.createDefaultFolders(activeProfile.id);
         return await profiles.getProfileFolderIdByType(activeProfile.id, folderType);
     }
 
