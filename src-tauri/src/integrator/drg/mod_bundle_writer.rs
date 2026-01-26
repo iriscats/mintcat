@@ -1,6 +1,6 @@
+use anyhow::{Context, Result};
 use repak::PakWriter;
 use std::collections::HashMap;
-use std::error::Error;
 use std::io::{Cursor, Read, Seek, Write};
 use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
 use unreal_asset::Asset;
@@ -17,7 +17,7 @@ pub struct ModBundleWriter<W: Write + Seek> {
 }
 
 impl<W: Write + Seek> ModBundleWriter<W> {
-    pub fn new(writer: W, fsd_paths: &[String]) -> Result<Self, Box<dyn Error>> {
+    pub fn new(writer: W, fsd_paths: &[String]) -> Result<Self> {
         let mut directories: HashMap<String, Dir> = HashMap::new();
         for f in fsd_paths {
             let mut dir = &mut directories;
@@ -55,23 +55,22 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         normalized_path
     }
 
-    pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<()> {
         let normalized_path = self.normalize_path(path);
         self.pak_writer
-            .write_file(normalized_path.as_str(), true, data)?;
+            .write_file(normalized_path.as_str(), true, data)
+            .with_context(|| format!("Failed to write file to pak: {}", path))?;
         Ok(())
     }
 
-    pub fn write_asset<C: Read + Seek>(
-        &mut self,
-        asset: Asset<C>,
-        path: &str,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn write_asset<C: Read + Seek>(&mut self, asset: Asset<C>, path: &str) -> Result<()> {
         let mut data_out = (Cursor::new(vec![]), Cursor::new(vec![]));
 
-        asset.write_data(&mut data_out.0, Some(&mut data_out.1))?;
-        data_out.0.rewind()?;
-        data_out.1.rewind()?;
+        asset
+            .write_data(&mut data_out.0, Some(&mut data_out.1))
+            .with_context(|| format!("Failed to serialize asset: {}", path))?;
+        data_out.0.rewind().context("Failed to rewind uasset buffer")?;
+        data_out.1.rewind().context("Failed to rewind uexp buffer")?;
 
         self.write_file(&data_out.0.into_inner(), &format!("{path}.uasset"))?;
         self.write_file(&data_out.1.into_inner(), &format!("{path}.uexp"))?;
@@ -79,8 +78,10 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         Ok(())
     }
 
-    pub fn finish(self) -> Result<(), Box<dyn Error>> {
-        self.pak_writer.write_index().unwrap();
+    pub fn finish(self) -> Result<()> {
+        self.pak_writer
+            .write_index()
+            .context("Failed to write pak index")?;
         Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use std::error::Error;
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
@@ -32,16 +32,16 @@ impl DRGInstallation {
             .and_then(|path| Self::from_pak_path(path).ok())
     }
 
-    pub fn from_pak_path<P: AsRef<Path>>(pak_path: P) -> Result<Self, Box<dyn Error>> {
-        let root = pak_path
-            .as_ref()
+    pub fn from_pak_path<P: AsRef<Path>>(pak_path: P) -> Result<Self> {
+        let pak = pak_path.as_ref();
+        let root = pak
             .parent()
             .and_then(Path::parent)
             .and_then(Path::parent)
-            .expect("failed to get pak parent directory")
+            .with_context(|| format!("Failed to get pak parent directory: {:?}", pak))?
             .to_path_buf();
         Ok(Self {
-            pak_path: pak_path.as_ref().to_path_buf(),
+            pak_path: pak.to_path_buf(),
             root,
         })
     }

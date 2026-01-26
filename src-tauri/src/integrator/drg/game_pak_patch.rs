@@ -1,5 +1,5 @@
+use anyhow::{Context, Result};
 use std::collections::HashSet;
-use std::error::Error;
 use std::io;
 use std::io::{Read, Seek};
 use tracing::info;
@@ -143,7 +143,7 @@ fn find_struct_property_named<'a>(
 
 /// "it's only 3 instructions"
 /// "how much boilerplate could there possibly be"
-pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Error>> {
+pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<()> {
     let transform = get_import(
         asset,
         vec![
@@ -278,7 +278,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
             }
             None
         })
-        .unwrap();
+        .context("ReceiveBeginPlay function not found in PCB asset")?;
 
     func.struct_export.loaded_properties.push(prop_class.into());
     func.struct_export
@@ -287,7 +287,11 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
     func.struct_export
         .loaded_properties
         .push(prop_begin_spawn.into());
-    let inst = func.struct_export.script_bytecode.as_mut().unwrap();
+    let inst = func
+        .struct_export
+        .script_bytecode
+        .as_mut()
+        .context("No script bytecode in ReceiveBeginPlay")?;
     inst.insert(
         0,
         ExLetObj {
@@ -420,7 +424,7 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
         .into(),
     );
 
-    Ok(inst.insert(
+    inst.insert(
         3,
         ExCallMath {
             token: EExprToken::ExCallMath,
@@ -451,7 +455,9 @@ pub fn hook_pcb<R: Read + Seek>(asset: &mut Asset<R>) -> Result<(), Box<dyn Erro
             ],
         }
         .into(),
-    ))
+    );
+
+    Ok(())
 }
 
 fn patch_is_modded(
@@ -469,7 +475,7 @@ fn patch_is_modded(
     Some(statement)
 }
 
-pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
+pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<()> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
 
@@ -500,7 +506,7 @@ pub fn patch_sandbox<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn
 }
 
 #[allow(dead_code)]
-pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
+pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<()> {
     let ver = AssetVersion::new_from(asset);
     let mut statements = extract_tracked_statements(asset, ver, &None);
 
@@ -523,7 +529,7 @@ pub fn patch_modding_tab<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box
 }
 
 #[allow(dead_code)]
-pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
+pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<()> {
     let itm_tab_modding = get_import(
         asset,
         vec![
@@ -576,7 +582,7 @@ pub fn patch_modding_tab_item<C: Seek + Read>(asset: &mut Asset<C>) -> Result<()
     Ok(())
 }
 
-pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<(), Box<dyn Error>> {
+pub fn patch_server_list_entry<C: Seek + Read>(asset: &mut Asset<C>) -> Result<()> {
     let get_mods_installed = asset
         .imports
         .iter()

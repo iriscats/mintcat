@@ -11,8 +11,8 @@ use crate::integrator::ue4ss::ue4ss_integrate::{
     install_ue4ss, install_ue4ss_mod, uninstall_ue4ss,
 };
 use crate::integrator::{ModInfo, ReadSeek};
+use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
@@ -48,13 +48,22 @@ fn format_soft_class(path: &Path) -> String {
 }
 
 impl PakIntegrator {
-    pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self, Box<dyn Error>> {
-        let mut fsd_pak_reader = BufReader::new(fs::File::open(fsd_path_pak.as_ref())?);
-        let fsd_pak = repak::PakBuilder::new().reader(&mut fsd_pak_reader)?;
+    pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self> {
+        let pak_path = fsd_path_pak.as_ref();
+        let mut fsd_pak_reader = BufReader::new(
+            fs::File::open(pak_path)
+                .with_context(|| format!("Failed to open game pak: {:?}", pak_path))?,
+        );
+        let fsd_pak = repak::PakBuilder::new()
+            .reader(&mut fsd_pak_reader)
+            .context("Failed to parse game pak")?;
 
         let asset_registry = AssetRegistry::read(&mut Cursor::new(
-            fsd_pak.get(FSD_AR_PATH, &mut fsd_pak_reader)?,
-        ))?;
+            fsd_pak
+                .get(FSD_AR_PATH, &mut fsd_pak_reader)
+                .context("Failed to read AssetRegistry.bin from game pak")?,
+        ))
+        .context("Failed to parse AssetRegistry")?;
 
         let mut deferred_assets = Self::init_deferred_assets();
         Self::load_deferred_assets_for_game_pak(
@@ -63,7 +72,8 @@ impl PakIntegrator {
             &mut deferred_assets,
         )?;
 
-        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)
+            .context("Failed to determine DRG installation")?;
         let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         let bundle = ModBundleWriter::new(
             BufWriter::new(
@@ -71,10 +81,12 @@ impl PakIntegrator {
                     .write(true)
                     .create(true)
                     .truncate(true)
-                    .open(&mod_pak_path)?,
+                    .open(&mod_pak_path)
+                    .with_context(|| format!("Failed to create mod pak: {:?}", mod_pak_path))?,
             ),
             &fsd_pak.files(),
-        )?;
+        )
+        .context("Failed to initialize mod bundle writer")?;
 
         Ok(Self {
             installation,
@@ -100,27 +112,25 @@ impl PakIntegrator {
         pak: &repak::PakReader,
         reader: &mut (impl Read + Seek),
         assets: &mut HashMap<&str, RawAsset>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         for (path, asset) in assets.iter_mut() {
             asset.uasset = match pak.get(&format!("{path}.uasset"), reader) {
                 Ok(f) => Some(f),
                 Err(repak::Error::MissingEntry(_)) => None,
-                Err(e) => return Err(e.into()),
+                Err(e) => {
+                    return Err(e).with_context(|| format!("Failed to read {}.uasset", path))
+                }
             };
             asset.uexp = match pak.get(&format!("{path}.uexp"), reader) {
                 Ok(f) => Some(f),
                 Err(repak::Error::MissingEntry(_)) => None,
-                Err(e) => return Err(e.into()),
+                Err(e) => return Err(e).with_context(|| format!("Failed to read {}.uexp", path)),
             };
         }
         Ok(())
     }
 
-    pub fn install(
-        mut self,
-        app: AppHandle,
-        mods: &mut Vec<ModInfo>,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn install(mut self, app: AppHandle, mods: &mut Vec<ModInfo>) -> Result<()> {
         let total_percent = 70.0;
         let mods_size = mods.len();
 
@@ -173,14 +183,15 @@ impl PakIntegrator {
 
         self.write_mint_files(&mut mint_files)?;
         self.serialize_asset_registry()?;
-        self.bundle.finish()?;
+        self.bundle.finish().context("Failed to finalize mod pak")?;
 
         let hook_dll_path = self
             .installation
             .binaries_directory()
             .join("x3daudio1_7.dll");
         let hook_dll = include_bytes!("../../../assets/x3daudio1_7.dll");
-        fs::write(hook_dll_path, hook_dll).unwrap();
+        fs::write(&hook_dll_path, hook_dll)
+            .with_context(|| format!("Failed to write hook dll: {:?}", hook_dll_path))?;
 
         app.emit("status-bar-log", "Install Mod Success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
@@ -192,10 +203,13 @@ impl PakIntegrator {
 
         //recovery_modio(&self.installation).unwrap();
 
-        let metadata = fs::metadata(&mod_pak_path)?;
+        let metadata =
+            fs::metadata(&mod_pak_path).context("Failed to get mod pak metadata after install")?;
         let mod_pak_timestamp = metadata
-            .modified()?
-            .duration_since(std::time::UNIX_EPOCH)?
+            .modified()
+            .context("Failed to get mod pak modified time")?
+            .duration_since(std::time::UNIX_EPOCH)
+            .context("Failed to calculate timestamp")?
             .as_secs();
 
         app.emit("install-success", mod_pak_timestamp).unwrap();
@@ -203,13 +217,18 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<(), Box<dyn Error>> {
-        let (mut pak_buf, mut dll_buf) = self.load_mod_files(mod_info.pak_path.as_ref())?;
+    fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
+        let pak_path = mod_info.pak_path.as_ref();
+        let (mut pak_buf, mut dll_buf) = self
+            .load_mod_files(pak_path)
+            .with_context(|| format!("Failed to load mod files: {:?}", pak_path))?;
         if let Some(ref mut pak) = pak_buf {
-            self.process_pak_files(pak)?;
+            self.process_pak_files(pak)
+                .with_context(|| format!("Failed to process pak for mod: {}", mod_info.name))?;
         }
         if let Some(ref mut dll) = dll_buf {
-            self.process_dll_files(mod_info, dll)?;
+            self.process_dll_files(mod_info, dll)
+                .with_context(|| format!("Failed to process dll for mod: {}", mod_info.name))?;
         }
         Ok(())
     }
@@ -217,10 +236,12 @@ impl PakIntegrator {
     fn load_mod_files(
         &self,
         path: &Path,
-    ) -> Result<(Option<Box<dyn ReadSeek>>, Option<Box<dyn ReadSeek>>), Box<dyn Error>> {
+    ) -> Result<(Option<Box<dyn ReadSeek>>, Option<Box<dyn ReadSeek>>)> {
         let mut buf = [0; 4];
-        let mut file = fs::File::open(path)?;
-        file.read_exact(&mut buf)?;
+        let mut file = fs::File::open(path)
+            .with_context(|| format!("Failed to open mod file: {:?}", path))?;
+        file.read_exact(&mut buf)
+            .with_context(|| format!("Failed to read mod file header: {:?}", path))?;
 
         if buf == [0x50, 0x4B, 0x03, 0x04] {
             // ZIP file
@@ -246,8 +267,10 @@ impl PakIntegrator {
         }
     }
 
-    fn process_pak_files(&mut self, pak_buf: &mut Box<dyn ReadSeek>) -> Result<(), Box<dyn Error>> {
-        let pak = repak::PakBuilder::new().reader(pak_buf)?;
+    fn process_pak_files(&mut self, pak_buf: &mut Box<dyn ReadSeek>) -> Result<()> {
+        let pak = repak::PakBuilder::new()
+            .reader(pak_buf)
+            .context("Failed to parse mod pak")?;
 
         let mount = PakPath::new(pak.mount_point());
         let pak_files = self.normalize_pak_paths(&pak, &mount)?;
@@ -258,10 +281,7 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn process_init_asset(
-        &mut self,
-        pak_files: &HashMap<PathBuf, String>,
-    ) -> Result<(), Box<dyn Error>> {
+    fn process_init_asset(&mut self, pak_files: &HashMap<PathBuf, String>) -> Result<()> {
         for pak_file in pak_files {
             if let Some(filename) = pak_file.0.file_name() {
                 let lower = filename.to_string_lossy().to_lowercase();
@@ -282,12 +302,12 @@ impl PakIntegrator {
         &mut self,
         mod_info: &mut ModInfo,
         dll_buf: &mut Box<dyn ReadSeek>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         install_ue4ss_mod(
             &self.installation.binaries_directory(),
             &mod_info.name,
             dll_buf,
-        );
+        )?;
         Ok(())
     }
 
@@ -295,12 +315,14 @@ impl PakIntegrator {
         &self,
         pak: &repak::PakReader,
         mount: &PakPath,
-    ) -> Result<HashMap<PathBuf, String>, Box<dyn Error>> {
+    ) -> Result<HashMap<PathBuf, String>> {
         pak.files()
             .into_iter()
             .map(|p| {
                 let full_path = mount.join(&p);
-                let normalized = full_path.strip_prefix("../../../")?;
+                let normalized = full_path
+                    .strip_prefix("../../../")
+                    .with_context(|| format!("Invalid pak path: {}", p))?;
                 let std_path = PathBuf::from(normalized.as_str());
                 Ok((std_path, p))
             })
@@ -312,22 +334,30 @@ impl PakIntegrator {
         pak: &repak::PakReader,
         pak_files: &HashMap<PathBuf, String>,
         pak_buf: &mut Box<dyn ReadSeek>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         for (normalized, pak_path) in pak_files {
             if let Some("uasset" | "umap") = normalized.extension().and_then(|e| e.to_str()) {
                 if pak_files.contains_key(&normalized.with_extension("uexp")) {
-                    let uasset = pak.get(pak_path, pak_buf)?;
-                    let uexp = pak.get(
-                        &PakPath::new(pak_path).with_extension("uexp").to_string(),
-                        pak_buf,
-                    )?;
+                    let uasset = pak
+                        .get(pak_path, pak_buf)
+                        .with_context(|| format!("Failed to read uasset: {}", pak_path))?;
+                    let uexp = pak
+                        .get(
+                            &PakPath::new(pak_path).with_extension("uexp").to_string(),
+                            pak_buf,
+                        )
+                        .with_context(|| format!("Failed to read uexp for: {}", pak_path))?;
                     let asset = AssetBuilder::new(Cursor::new(uasset), EngineVersion::VER_UE4_27)
                         .bulk(Cursor::new(uexp))
                         .skip_data(true)
-                        .build()?;
+                        .build()
+                        .with_context(|| format!("Failed to build asset: {}", pak_path))?;
 
                     self.asset_registry
-                        .populate(normalized.with_extension("").to_str().unwrap(), &asset)?;
+                        .populate(normalized.with_extension("").to_str().unwrap(), &asset)
+                        .with_context(|| {
+                            format!("Failed to populate asset registry for: {:?}", normalized)
+                        })?;
                 }
             }
         }
@@ -339,7 +369,7 @@ impl PakIntegrator {
         pak: repak::PakReader,
         pak_files: HashMap<PathBuf, String>,
         pak_buf: &mut Box<dyn ReadSeek>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         for (pak_file, pak_path) in pak_files {
             let lowercase = pak_file.to_str().unwrap().to_lowercase();
             if self.added_paths.contains(&lowercase) {
@@ -356,19 +386,19 @@ impl PakIntegrator {
                 }
             }
 
-            let file_data = pak.get(&pak_path, pak_buf)?;
+            let file_data = pak
+                .get(&pak_path, pak_buf)
+                .with_context(|| format!("Failed to read file from pak: {}", pak_path))?;
             self.bundle
-                .write_file(&file_data, pak_file.to_str().unwrap())?;
+                .write_file(&file_data, pak_file.to_str().unwrap())
+                .with_context(|| format!("Failed to write mod file: {:?}", pak_file))?;
 
             self.added_paths.insert(lowercase);
         }
         Ok(())
     }
 
-    fn apply_mint_patch(
-        &mut self,
-        mint_files: &mut HashMap<String, Vec<u8>>,
-    ) -> Result<(), Box<dyn Error>> {
+    fn apply_mint_patch(&mut self, mint_files: &mut HashMap<String, Vec<u8>>) -> Result<()> {
         let mint_path = (
             "FSD/Content/ModIntegration/MI_SpawnMods.uasset",
             "FSD/Content/ModIntegration/MI_SpawnMods.uexp",
@@ -380,7 +410,8 @@ impl PakIntegrator {
             EngineVersion::VER_UE4_27,
             None,
             false,
-        )?;
+        )
+        .context("Failed to parse MI_SpawnMods asset")?;
 
         game_pak_patch::patch_init_actors(
             &mut asset,
@@ -388,59 +419,77 @@ impl PakIntegrator {
             self.init_cave_assets.clone(),
         );
         self.bundle
-            .write_asset(asset, "FSD/Content/ModIntegration/MI_SpawnMods")?;
+            .write_asset(asset, "FSD/Content/ModIntegration/MI_SpawnMods")
+            .context("Failed to write MI_SpawnMods asset")?;
 
         Ok(())
     }
 
-    fn apply_pcb_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[PCB_PATH].parse()?;
-        game_pak_patch::hook_pcb(&mut asset)?;
-        self.bundle.write_asset(asset, &PCB_PATH)?;
+    fn apply_pcb_patch(&mut self) -> Result<()> {
+        let mut asset = self.deferred_assets[PCB_PATH]
+            .parse()
+            .context("Failed to parse PCB asset")?;
+        game_pak_patch::hook_pcb(&mut asset).context("Failed to apply PCB hook")?;
+        self.bundle
+            .write_asset(asset, &PCB_PATH)
+            .context("Failed to write PCB asset")?;
         Ok(())
     }
 
-    fn apply_sandbox_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        PATCH_PATHS.iter().for_each(|path| {
-            let mut asset = self.deferred_assets[path].parse().unwrap();
-            game_pak_patch::patch_sandbox(&mut asset).expect("TODO: panic message");
-
+    fn apply_sandbox_patch(&mut self) -> Result<()> {
+        for path in PATCH_PATHS.iter() {
+            let mut asset = self.deferred_assets[path]
+                .parse()
+                .with_context(|| format!("Failed to parse sandbox asset: {}", path))?;
+            game_pak_patch::patch_sandbox(&mut asset)
+                .with_context(|| format!("Failed to apply sandbox patch: {}", path))?;
             self.bundle
                 .write_asset(asset, path)
-                .expect("TODO: panic message");
-        });
-
+                .with_context(|| format!("Failed to write sandbox asset: {}", path))?;
+        }
         Ok(())
     }
 
     #[allow(dead_code)]
-    fn apply_escape_menu_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[ESCAPE_MENU_PATH].parse()?;
-        game_pak_patch::patch_modding_tab(&mut asset)?;
-        self.bundle.write_asset(asset, &ESCAPE_MENU_PATH)?;
+    fn apply_escape_menu_patch(&mut self) -> Result<()> {
+        let mut asset = self.deferred_assets[ESCAPE_MENU_PATH]
+            .parse()
+            .context("Failed to parse escape menu asset")?;
+        game_pak_patch::patch_modding_tab(&mut asset)
+            .context("Failed to apply escape menu patch")?;
+        self.bundle
+            .write_asset(asset, &ESCAPE_MENU_PATH)
+            .context("Failed to write escape menu asset")?;
         Ok(())
     }
 
     #[allow(dead_code)]
-    fn apply_modding_tab_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[MODDING_TAB_PATH].parse()?;
-        game_pak_patch::patch_modding_tab_item(&mut asset)?;
-        self.bundle.write_asset(asset, &MODDING_TAB_PATH)?;
+    fn apply_modding_tab_patch(&mut self) -> Result<()> {
+        let mut asset = self.deferred_assets[MODDING_TAB_PATH]
+            .parse()
+            .context("Failed to parse modding tab asset")?;
+        game_pak_patch::patch_modding_tab_item(&mut asset)
+            .context("Failed to apply modding tab patch")?;
+        self.bundle
+            .write_asset(asset, &MODDING_TAB_PATH)
+            .context("Failed to write modding tab asset")?;
         Ok(())
     }
 
     #[allow(dead_code)]
-    fn apply_server_list_entry_patch(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut asset = self.deferred_assets[SERVER_LIST_ENTRY_PATH].parse()?;
-        game_pak_patch::patch_server_list_entry(&mut asset)?;
-        self.bundle.write_asset(asset, &SERVER_LIST_ENTRY_PATH)?;
+    fn apply_server_list_entry_patch(&mut self) -> Result<()> {
+        let mut asset = self.deferred_assets[SERVER_LIST_ENTRY_PATH]
+            .parse()
+            .context("Failed to parse server list entry asset")?;
+        game_pak_patch::patch_server_list_entry(&mut asset)
+            .context("Failed to apply server list entry patch")?;
+        self.bundle
+            .write_asset(asset, &SERVER_LIST_ENTRY_PATH)
+            .context("Failed to write server list entry asset")?;
         Ok(())
     }
 
-    fn write_mint_files(
-        &mut self,
-        mint_files: &mut HashMap<String, Vec<u8>>,
-    ) -> Result<(), Box<dyn Error>> {
+    fn write_mint_files(&mut self, mint_files: &mut HashMap<String, Vec<u8>>) -> Result<()> {
         let mint_path = (
             "FSD/Content/ModIntegration/MI_SpawnMods.uasset",
             "FSD/Content/ModIntegration/MI_SpawnMods.uexp",
@@ -448,7 +497,9 @@ impl PakIntegrator {
         mint_files.remove(mint_path.0);
         mint_files.remove(mint_path.1);
         for (path, data) in mint_files {
-            self.bundle.write_file(&*data, &path)?;
+            self.bundle
+                .write_file(&*data, &path)
+                .with_context(|| format!("Failed to write mint file: {}", path))?;
         }
         Ok(())
     }
@@ -467,55 +518,67 @@ impl PakIntegrator {
         }
     }
 
-    fn serialize_asset_registry(&mut self) -> Result<(), Box<dyn Error>> {
+    fn serialize_asset_registry(&mut self) -> Result<()> {
         let mut buf = Vec::new();
-        self.asset_registry.write(&mut buf)?;
-        self.bundle.write_file(&buf, FSD_AR_PATH)?;
+        self.asset_registry
+            .write(&mut buf)
+            .context("Failed to serialize asset registry")?;
+        self.bundle
+            .write_file(&buf, FSD_AR_PATH)
+            .context("Failed to write asset registry to mod pak")?;
         Ok(())
     }
 
-    pub fn check_installed(fsd_path_pak: String, timestamp: u64) -> Result<String, Box<dyn Error>> {
-        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
+    pub fn check_installed(fsd_path_pak: String, timestamp: u64) -> Result<String> {
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)
+            .context("Failed to determine DRG installation")?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
         //let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
 
         if old_mod_pak_path.exists() {
-            return Ok("old_version_mint_installed".parse().unwrap());
+            return Ok("old_version_mint_installed".to_string());
         }
 
         let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         if mod_pak_path.exists() {
-            let metadata = fs::metadata(&mod_pak_path)?;
+            let metadata = fs::metadata(&mod_pak_path)
+                .with_context(|| format!("Failed to get metadata for: {:?}", mod_pak_path))?;
             let mod_pak_timestamp = metadata
-                .modified()?
-                .duration_since(std::time::UNIX_EPOCH)?
+                .modified()
+                .context("Failed to get mod pak modified time")?
+                .duration_since(std::time::UNIX_EPOCH)
+                .context("Failed to calculate timestamp")?
                 .as_secs();
             if mod_pak_timestamp == timestamp {
-                return Ok("mintcat_installed".parse().unwrap());
+                return Ok("mintcat_installed".to_string());
             }
         }
 
-        Ok("no_installed".parse().unwrap())
+        Ok("no_installed".to_string())
     }
 
-    pub fn uninstall(fsd_path_pak: String, is_delete_ue4ss: bool) -> Result<(), Box<dyn Error>> {
-        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)?;
+    pub fn uninstall(fsd_path_pak: String, is_delete_ue4ss: bool) -> Result<()> {
+        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)
+            .context("Failed to determine DRG installation")?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
         let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
 
-        if fs::exists(&old_mod_pak_path)? {
-            fs::remove_file(&old_mod_pak_path).unwrap();
+        if old_mod_pak_path.exists() {
+            fs::remove_file(&old_mod_pak_path)
+                .with_context(|| format!("Failed to remove old mod pak: {:?}", old_mod_pak_path))?;
         }
 
-        if fs::exists(&mod_pak_path)? {
-            fs::remove_file(&mod_pak_path).unwrap();
+        if mod_pak_path.exists() {
+            fs::remove_file(&mod_pak_path)
+                .with_context(|| format!("Failed to remove mod pak: {:?}", mod_pak_path))?;
         }
 
-        if fs::exists(&hook_dll_path)? {
-            fs::remove_file(&hook_dll_path).unwrap();
+        if hook_dll_path.exists() {
+            fs::remove_file(&hook_dll_path)
+                .with_context(|| format!("Failed to remove hook dll: {:?}", hook_dll_path))?;
         }
 
         if is_delete_ue4ss {

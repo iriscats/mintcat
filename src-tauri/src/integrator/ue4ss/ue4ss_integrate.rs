@@ -1,6 +1,6 @@
 use crate::capability::zip::extract_zip_to_directory;
 use crate::integrator::ReadSeek;
-use std::error::Error;
+use anyhow::{Context, Result};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -50,62 +50,58 @@ fn sanitize_dir_name(input: &str) -> String {
     }
 }
 
-pub fn install_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn install_ue4ss(install_path: &PathBuf) -> Result<()> {
     let ue4ss_path = install_path.join("ue4ss");
     println!("Installing UE4SS to: {:?}", ue4ss_path);
 
     if !ue4ss_path.exists() {
         fs::create_dir(&ue4ss_path)
-            .map_err(|e| format!("Failed to create ue4ss directory {:?}: {}", ue4ss_path, e))?;
+            .with_context(|| format!("Failed to create ue4ss directory {:?}", ue4ss_path))?;
     }
 
     let dll_path = ue4ss_path.join("UE4SSL.dll");
     if !dll_path.exists() {
         let ue4ss_dll = include_bytes!("../../../assets/UE4SSL.dll");
-        fs::write(&dll_path, ue4ss_dll)
-            .map_err(|e| format!("Failed to write UE4SSL.dll: {}", e))?;
+        fs::write(&dll_path, ue4ss_dll).context("Failed to write UE4SSL.dll")?;
 
         let ue4ss_runtime_dll = ue4ss_path.join("UE4SSL.Runtime.dll");
         let ue4ss_runtime_dll_buff = include_bytes!("../../../assets/UE4SSL.Runtime.dll");
         fs::write(&ue4ss_runtime_dll, ue4ss_runtime_dll_buff)
-            .map_err(|e| format!("Failed to write UE4SSL.Runtime.dll: {}", e))?;
+            .context("Failed to write UE4SSL.Runtime.dll")?;
 
         let ue4ss_csharp_dll = ue4ss_path.join("UE4SSL.CSharp.dll");
         let ue4ss_csharp_dll_buff = include_bytes!("../../../assets/UE4SSL.CSharp.dll");
         fs::write(&ue4ss_csharp_dll, ue4ss_csharp_dll_buff)
-            .map_err(|e| format!("Failed to write UE4SSL.CSharp.dll: {}", e))?;
+            .context("Failed to write UE4SSL.CSharp.dll")?;
 
         let ue4ss_runtime_json = ue4ss_path.join("UE4SSL.Runtime.runtimeconfig.json");
         let ue4ss_runtime_json_buff =
             include_bytes!("../../../assets/UE4SSL.Runtime.runtimeconfig.json");
         fs::write(&ue4ss_runtime_json, ue4ss_runtime_json_buff)
-            .map_err(|e| format!("Failed to write UE4SSL.Runtime.runtimeconfig.json: {}", e))?;
+            .context("Failed to write UE4SSL.Runtime.runtimeconfig.json")?;
 
         let proxy_dll_path = install_path.join("dwmapi.dll");
         let proxy_dll = include_bytes!("../../../assets/dwmapi.dll");
-        fs::write(&proxy_dll_path, proxy_dll)
-            .map_err(|e| format!("Failed to write dwmapi.dll: {}", e))?;
+        fs::write(&proxy_dll_path, proxy_dll).context("Failed to write dwmapi.dll")?;
 
         // TODO：清除旧的 mods 目录
         let mods_path = ue4ss_path.join("mods");
         if mods_path.exists() {
-            fs::remove_dir_all(&mods_path).unwrap();
+            fs::remove_dir_all(&mods_path)?;
         }
-        fs::create_dir(&mods_path)
-            .map_err(|e| format!("Failed to create mods directory: {}", e))?;
+        fs::create_dir(&mods_path).context("Failed to create mods directory")?;
 
         // 清除旧的 csmods 目录
         let csmods_path = ue4ss_path.join("csmods");
         if csmods_path.exists() {
-            fs::remove_dir_all(&csmods_path).unwrap();
+            fs::remove_dir_all(&csmods_path)?;
         }
-        fs::create_dir(&csmods_path)
-            .map_err(|e| format!("Failed to create csmods directory: {}", e))?;
+        fs::create_dir(&csmods_path).context("Failed to create csmods directory")?;
 
         let ue4ss_framework_dll = csmods_path.join("UE4SSL.Framework.dll");
         let ue4ss_framework_dll_buff = include_bytes!("../../../assets/UE4SSL.Framework.dll");
         fs::write(&ue4ss_framework_dll, ue4ss_framework_dll_buff)
-            .map_err(|e| format!("Failed to write UE4SSL.Framework.dll: {}", e))?;
+            .context("Failed to write UE4SSL.Framework.dll")?;
     }
     Ok(())
 }
@@ -114,51 +110,60 @@ pub fn install_ue4ss_mod(
     install_path: &PathBuf,
     mod_name: &String,
     mod_data: &mut Box<dyn ReadSeek>,
-) {
+) -> Result<()> {
     let mods_home_path = install_path.join("ue4ss").join("mods");
 
     let sanitized_mod_name = sanitize_dir_name(mod_name);
     let mod_path = mods_home_path.join(&sanitized_mod_name);
 
     if !mod_path.exists() {
-        fs::create_dir(&mod_path).unwrap();
+        fs::create_dir(&mod_path)
+            .with_context(|| format!("Failed to create mod directory {:?}", mod_path))?;
     }
 
     let dll_path = mod_path.join("main.dll");
     let mut content = Vec::new();
-    mod_data.read_to_end(&mut content).unwrap();
+    mod_data
+        .read_to_end(&mut content)
+        .context("Failed to read mod data")?;
+
     let temp_path = dll_path.with_extension("dll.tmp");
     {
-        let mut file = fs::File::create(&temp_path).unwrap();
-        file.write_all(&content).unwrap();
-        file.flush().unwrap();
+        let mut file =
+            fs::File::create(&temp_path).context("Failed to create temp file for mod")?;
+        file.write_all(&content)
+            .context("Failed to write mod content")?;
+        file.flush().context("Failed to flush mod file")?;
     }
+
     if dll_path.exists() {
         let _ = fs::remove_file(&dll_path);
     }
-    fs::rename(&temp_path, &dll_path).unwrap();
+    fs::rename(&temp_path, &dll_path).context("Failed to rename mod file")?;
+
+    Ok(())
 }
 
-pub fn uninstall_ue4ss(install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn uninstall_ue4ss(install_path: &PathBuf) -> Result<()> {
     let ue4ss_path = install_path.join("ue4ss");
-    if fs::exists(&ue4ss_path)? {
-        fs::remove_dir_all(ue4ss_path).unwrap();
+    if ue4ss_path.exists() {
+        fs::remove_dir_all(&ue4ss_path).context("Failed to remove ue4ss directory")?;
     }
 
     //try to delete other ue4ss file
     let ue4ss_dll = install_path.join("UE4SS.dll");
-    if fs::exists(&ue4ss_dll)? {
-        fs::remove_file(&ue4ss_dll).unwrap();
+    if ue4ss_dll.exists() {
+        fs::remove_file(&ue4ss_dll).context("Failed to remove UE4SS.dll")?;
     }
 
     let proxy_dll = install_path.join("dwmapi.dll");
-    if fs::exists(&proxy_dll)? {
-        fs::remove_file(&proxy_dll).unwrap();
+    if proxy_dll.exists() {
+        fs::remove_file(&proxy_dll).context("Failed to remove dwmapi.dll")?;
     }
 
     let ue4ss_mods = install_path.join("mods");
-    if fs::exists(&ue4ss_mods)? {
-        fs::remove_dir_all(&ue4ss_mods).unwrap();
+    if ue4ss_mods.exists() {
+        fs::remove_dir_all(&ue4ss_mods).context("Failed to remove mods directory")?;
     }
 
     Ok(())
@@ -173,35 +178,38 @@ fn is_valid_zip(path: &PathBuf) -> bool {
 }
 
 /// Downloads the .NET runtime ZIP file to the specified path.
-fn download_dotnet_runtime(
-    app: &AppHandle,
-    dest_path: &PathBuf,
-) -> Result<(), Box<dyn Error>> {
+fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
     app.emit("status-bar-log", "Downloading .NET Runtime...")
         .unwrap();
 
     let client = reqwest::blocking::Client::new();
-    let mut response = client.get(DOTNET_RUNTIME_URL).send()?;
+    let mut response = client
+        .get(DOTNET_RUNTIME_URL)
+        .send()
+        .context("Failed to send download request")?;
 
     if !response.status().is_success() {
-        return Err(format!("HTTP error: {}", response.status()).into());
+        anyhow::bail!("HTTP error: {}", response.status());
     }
 
     let total_size = response.content_length().unwrap_or(0);
 
     // Download to a temp file first, then rename on success
     let temp_path = dest_path.with_extension("zip.tmp");
-    let mut file = File::create(&temp_path)?;
+    let mut file = File::create(&temp_path).context("Failed to create temp download file")?;
     let mut downloaded: u64 = 0;
     let mut buffer = [0u8; 1024 * 1024]; // 1MB buffer
 
     loop {
-        let bytes_read = response.read(&mut buffer)?;
+        let bytes_read = response
+            .read(&mut buffer)
+            .context("Failed to read download stream")?;
         if bytes_read == 0 {
             break;
         }
 
-        file.write_all(&buffer[..bytes_read])?;
+        file.write_all(&buffer[..bytes_read])
+            .context("Failed to write download data")?;
         downloaded += bytes_read as u64;
 
         if total_size > 0 {
@@ -211,21 +219,22 @@ fn download_dotnet_runtime(
     }
 
     // Ensure all data is flushed to disk
-    file.flush()?;
-    file.sync_all()?;
+    file.flush().context("Failed to flush download file")?;
+    file.sync_all()
+        .context("Failed to sync download file to disk")?;
     drop(file);
 
     // Validate the downloaded file is a valid ZIP
     if !is_valid_zip(&temp_path) {
         let _ = fs::remove_file(&temp_path);
-        return Err("Downloaded file is not a valid ZIP archive".into());
+        anyhow::bail!("Downloaded file is not a valid ZIP archive");
     }
 
     // Rename temp file to final destination
     if dest_path.exists() {
-        fs::remove_file(dest_path)?;
+        fs::remove_file(dest_path).context("Failed to remove existing download file")?;
     }
-    fs::rename(&temp_path, dest_path)?;
+    fs::rename(&temp_path, dest_path).context("Failed to rename download file")?;
 
     Ok(())
 }
@@ -233,10 +242,7 @@ fn download_dotnet_runtime(
 /// Downloads and extracts the .NET runtime to the UE4SS/dotnet directory.
 /// Skips if runtime is already installed (checks for dotnet directory).
 /// Automatically retries download if cached file is corrupted.
-pub fn install_dotnet_runtime(
-    app: &AppHandle,
-    install_path: &PathBuf,
-) -> Result<bool, Box<dyn Error>> {
+pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result<bool> {
     let ue4ss_path = install_path.join("ue4ss");
     let dotnet_path = ue4ss_path.join("dotnet");
 
@@ -250,13 +256,16 @@ pub fn install_dotnet_runtime(
 
     // Ensure ue4ss/dotnet directory exists
     if !dotnet_path.exists() {
-        fs::create_dir_all(&dotnet_path)?;
+        fs::create_dir_all(&dotnet_path).context("Failed to create dotnet directory")?;
     }
 
     // Get app cache directory for storing the downloaded ZIP
-    let cache_dir = app.path().app_cache_dir()?;
+    let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .context("Failed to get app cache directory")?;
     if !cache_dir.exists() {
-        fs::create_dir_all(&cache_dir)?;
+        fs::create_dir_all(&cache_dir).context("Failed to create cache directory")?;
     }
 
     let zip_path = cache_dir.join("dotnet-runtime-10.0.1-win-x64.zip");
@@ -270,8 +279,11 @@ pub fn install_dotnet_runtime(
             false
         } else {
             // Cached file is corrupted, delete and re-download
-            app.emit("status-bar-log", "Cached file corrupted, re-downloading...")
-                .unwrap();
+            app.emit(
+                "status-bar-log",
+                "Cached file corrupted, re-downloading...",
+            )
+            .unwrap();
             let _ = fs::remove_file(&zip_path);
             true
         }
@@ -287,15 +299,19 @@ pub fn install_dotnet_runtime(
         .unwrap();
 
     // Try to extract, if it fails due to corrupted file, retry download once
-    if let Err(_) = extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap()) {
-        app.emit("status-bar-log", "Extraction failed, retrying download...")
-            .unwrap();
+    if extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap()).is_err() {
+        app.emit(
+            "status-bar-log",
+            "Extraction failed, retrying download...",
+        )
+        .unwrap();
 
         // Delete corrupted file and clean up partial extraction
         let _ = fs::remove_file(&zip_path);
         if dotnet_path.exists() {
             let _ = fs::remove_dir_all(&dotnet_path);
-            fs::create_dir_all(&dotnet_path)?;
+            fs::create_dir_all(&dotnet_path)
+                .context("Failed to recreate dotnet directory after cleanup")?;
         }
 
         // Retry download and extract
@@ -304,7 +320,7 @@ pub fn install_dotnet_runtime(
         app.emit("status-bar-log", "Extracting .NET Runtime...")
             .unwrap();
         extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap())
-            .map_err(|e| format!("Extraction failed after retry: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Extraction failed after retry: {}", e))?;
     }
 
     app.emit("status-bar-log", ".NET Runtime installed")

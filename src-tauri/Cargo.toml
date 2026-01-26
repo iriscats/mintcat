@@ -39,6 +39,7 @@ tauri-plugin-sentry = "0.4"
 tauri-plugin-task-queue = { path = "../../tauri-plugin-task-queue" }
 
 
+anyhow = "1"
 log = "0.4.27"
 tracing = { version = "0.1.41", features = ["attributes"] }
 
