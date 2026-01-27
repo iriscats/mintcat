@@ -289,15 +289,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMultiUpdateClick() {
-        const vm = await IoC.get(TreeViewModel);
+        const mods: CompleteModData[] = [];
 
         for (const key of this.state.selectedKeys) {
             const modId = this.extractModIdFromKey(key);
             if (modId === null) continue;
             const modItem = await this.getModById(modId);
             if (modItem) {
-                await ModUpdateService.updateMod(modItem)
+                mods.push(modItem);
             }
+        }
+
+        if (mods.length > 0) {
+            await ModUpdateService.batchUpdateMods(mods);
         }
     }
 

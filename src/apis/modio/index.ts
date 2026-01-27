@@ -111,15 +111,58 @@ export class ModioApi {
         }
     }
 
-    public static async getModInfoByNameList(nameIds: string[]): Promise<ModInfo[]> {
+    public static async getModInfoByNameList(
+        nameIds: string[],
+        batchSize: number = 20
+    ): Promise<ModInfo[]> {
         try {
             const normalized = nameIds.filter(Boolean);
             if (normalized.length === 0) {
                 return [];
             }
-            const path = `/games/${MODIO_GAME_ID}/mods?name_id-in=${encodeURIComponent(normalized.join(","))}`;
-            const data = await ModioApi.getRequest(path);
-            return data.data as ModInfo[];
+
+            const results: ModInfo[] = [];
+
+            // 分批处理，避免 URL 过长和 API 限制
+            for (let i = 0; i < normalized.length; i += batchSize) {
+                const batch = normalized.slice(i, i + batchSize);
+                const path = `/games/${MODIO_GAME_ID}/mods?name_id-in=${encodeURIComponent(batch.join(","))}`;
+                const data = await ModioApi.getRequest(path);
+                results.push(...(data.data as ModInfo[]));
+            }
+
+            return results;
+        } catch (e) {
+            message.error(`${t("Fetch Mod Info Error")}: ${e}`);
+            throw e;
+        }
+    }
+
+    /**
+     * 通过 platformId（mod.io 的 id）批量获取 mod 信息
+     * @param modIds mod.io 平台 ID 列表
+     * @param batchSize 每批数量，默认 20
+     */
+    public static async getModInfoByIdList(
+        modIds: number[],
+        batchSize: number = 20
+    ): Promise<ModInfo[]> {
+        try {
+            if (modIds.length === 0) {
+                return [];
+            }
+
+            const results: ModInfo[] = [];
+
+            // 分批处理，避免 URL 过长和 API 限制
+            for (let i = 0; i < modIds.length; i += batchSize) {
+                const batch = modIds.slice(i, i + batchSize);
+                const path = `/games/${MODIO_GAME_ID}/mods?id-in=${batch.join(",")}`;
+                const data = await ModioApi.getRequest(path);
+                results.push(...(data.data as ModInfo[]));
+            }
+
+            return results;
         } catch (e) {
             message.error(`${t("Fetch Mod Info Error")}: ${e}`);
             throw e;

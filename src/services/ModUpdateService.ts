@@ -7,6 +7,7 @@ import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
+import type { ModInfo } from "@/apis/modio/ModInfo";
 import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
 
 /**
@@ -51,6 +52,63 @@ export class ModUpdateService {
         await this.updateModFile(mod);
 
         await StatusBar.success(t("Update Finish"));
+    }
+
+    /**
+     * 批量更新 Modio 模组信息
+     * @param mods 模组列表
+     */
+    public static async batchUpdateMods(mods: CompleteModData[]): Promise<void> {
+        // 筛选 Modio 类型的 mod
+        const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
+        if (modioMods.length === 0) return;
+
+        await StatusBar.info(`${t("Batch Update")} (${modioMods.length} mods)`);
+
+        // 批量获取在线信息
+        const platformIds = modioMods.map(m => m.platformId);
+        let modInfoList: ModInfo[] = [];
+        try {
+            modInfoList = await ModioApi.getModInfoByIdList(platformIds);
+        } catch (e) {
+            console.error("批量获取模组信息失败:", e);
+            return;
+        }
+
+        // 创建 id 到 modInfo 的映射
+        const modInfoMap = new Map(modInfoList.map(m => [m.id, m]));
+
+        // 更新数据库
+        for (const mod of modioMods) {
+            const modInfo = modInfoMap.get(mod.platformId);
+            if (modInfo) {
+                await this.updateModInDatabase(mod.modId!, modInfo);
+            } else {
+                // 标记为不可用
+                await this.markModUnavailable(mod.modId!);
+            }
+        }
+
+        await StatusBar.success(`${t("Batch Update Finish")} (${modioMods.length} mods)`);
+    }
+
+    /**
+     * 标记模组为不可用
+     */
+    private static async markModUnavailable(modId: number): Promise<void> {
+        const modsApi = await StorageAPI.getMods();
+        await modsApi.upsertModStatus({
+            modId: modId,
+            isOnlineAvailable: false
+        });
+        // Get updated mod data and emit event
+        const updatedMod = await modsApi.getCompleteModData(modId);
+        if (updatedMod) {
+            await emitEvent("mod-treeview-update", {
+                modId: updatedMod.modId!,
+                data: updatedMod
+            });
+        }
     }
 
     /**
