@@ -2,13 +2,12 @@ import { t } from "i18next";
 import { exists, stat } from "@tauri-apps/plugin-fs";
 import { emitEvent } from "@/events";
 import { ModioApi } from "@/apis/modio";
-import { ProfileViewModel } from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
-import { IoC } from "@/core/IoC.ts";
 import { ModSourceType } from "@/models/mod/types";
 import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
+import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
 
 /**
  * ModUpdateService 服务层
@@ -267,63 +266,20 @@ export class ModUpdateService {
     }
 
     /**
-     * 检查模组更新（在线）
+     * 检查模组更新（在线）- 通过任务系统执行
      */
-    public static async checkModUpdate() {
-        await StatusBar.info(t("Mod Update Check Start"));
+    public static async checkModUpdate(): Promise<void> {
         if (ModUpdateService.loading) {
             return;
         }
 
-        const profileVM = await IoC.get(ProfileViewModel);
-        const lastUpdate = await profileVM.getActiveProfileLastUpdate();
-        const updateTime = lastUpdate || (TimeUtils.nowSeconds() - 60 * 60 * 24 * 30); // 最近 1 一个月的更新
+        const taskId = await taskQueueAPI.addTask({
+            taskType: 'check_mod_update',
+            params: {},
+            priority: TaskPriority.Low
+        });
 
-        const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
-        const modIdList = [];
-        for (const mod of allMods) {
-            if (mod.sourceType === ModSourceType.Modio) {
-                modIdList.push(mod.platformId);
-            }
-        }
-
-        const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
-        for (const event of events) {
-            switch (event.event_type) {
-                case "MODFILE_CHANGED": {
-                    const mod = allMods.find(m => m.platformId === event.mod_id);
-                    if (mod) {
-                        // Update mod status in database
-                        // Note: event.date_added is in seconds, convert to milliseconds
-                        await modsApi.upsertModStatus({
-                            modId: mod.modId!,
-                            onlineUpdateDate: TimeUtils.fromModio(event.date_added),
-                            lastUpdateDate: 0
-                        });
-                    }
-                }
-                    break;
-                case "MOD_UNAVAILABLE":
-                case "MOD_DELETED": {
-                    const mod = allMods.find(m => m.platformId === event.mod_id);
-                    if (mod) {
-                        // Update mod status in database
-                        // Note: event.date_added is in seconds, convert to milliseconds
-                        await modsApi.upsertModStatus({
-                            modId: mod.modId!,
-                            isOnlineAvailable: false,
-                            lastUpdateDate: TimeUtils.fromModio(event.date_added),
-                            onlineUpdateDate: TimeUtils.fromModio(event.date_added)
-                        });
-                    }
-                }
-                    break;
-            }
-        }
-
-        await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
-
-        await StatusBar.success(t("Mod Update Check Finish"));
+        // Wait for task completion to maintain backwards compatibility
+        await taskQueueAPI.waitForTaskCompletion(taskId);
     }
 }
