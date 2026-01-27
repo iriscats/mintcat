@@ -157,15 +157,15 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
         const initData = JSON.parse(initDataStr);
 
-        // Resolve groupId: if it's an enum constant, find the actual folder ID
+        // Resolve groupId based on addModType: always select the matching default group
         let resolvedGroupId = initData.groupId;
         if (groupFolders) {
-            // Check if groupId is an enum constant (1=MODIO, 2=LOCAL)
-            if (initData.groupId === ProfileTreeGroupType.MODIO) {
-                const folder = groupFolders.find(f => f.folderType === "modio");
-                if (folder) resolvedGroupId = folder.id;
-            } else if (initData.groupId === ProfileTreeGroupType.LOCAL) {
+            // Select the default group based on addModType
+            if (initData.addModType === AddModType.LOCAL) {
                 const folder = groupFolders.find(f => f.folderType === "local");
+                if (folder) resolvedGroupId = folder.id;
+            } else if (initData.addModType === AddModType.MODIO) {
+                const folder = groupFolders.find(f => f.folderType === "modio");
                 if (folder) resolvedGroupId = folder.id;
             }
         }
@@ -182,14 +182,15 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             // Reload group options to ensure they're up-to-date
             const groupFolders = await this.loadGroupOptions();
 
-            // Resolve groupId: if it's an enum constant, find the actual folder ID
+            // Resolve groupId based on addModType: always select the matching default group
             let resolvedGroupId = payload.groupId;
             if (groupFolders) {
-                if (payload.groupId === ProfileTreeGroupType.MODIO) {
-                    const folder = groupFolders.find(f => f.folderType === "modio");
-                    if (folder) resolvedGroupId = folder.id;
-                } else if (payload.groupId === ProfileTreeGroupType.LOCAL) {
+                // Select the default group based on addModType
+                if (payload.addModType === AddModType.LOCAL) {
                     const folder = groupFolders.find(f => f.folderType === "local");
+                    if (folder) resolvedGroupId = folder.id;
+                } else if (payload.addModType === AddModType.MODIO) {
+                    const folder = groupFolders.find(f => f.folderType === "modio");
                     if (folder) resolvedGroupId = folder.id;
                 }
             }
