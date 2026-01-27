@@ -176,7 +176,7 @@ class TitleBar extends React.Component<any, any> {
                         placement="bottom"
                         title={""}
                         content={
-                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16}}>
+                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16}}>
                                 {[
                                     {key: 'Light', title: t('Light'), color: "#804bcc"},
                                     {key: 'Blue', title: t('Blue'), color: "#F5F8FF"},

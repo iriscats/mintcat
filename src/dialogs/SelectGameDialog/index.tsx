@@ -140,68 +140,30 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             <div
                 key={game.id}
                 onClick={() => onGameChange(game.id!)}
-                style={{
-                    border: `2px solid ${isSelected ? token.colorPrimary : '#f0f0f0'}`,
-                    borderRadius: '12px',
-                    padding: '16px',
-                    marginBottom: '12px',
-                    cursor: 'pointer',
-                    backgroundColor: isSelected ? token.colorPrimaryBg : '#fff',
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                    overflow: 'hidden'
-                }}
+                className={isSelected ? 'select-game-item-selected' : 'select-game-item'}
             >
                 {isSelected && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        right: 0,
-                        width: 0,
-                        height: 0,
-                        borderStyle: 'solid',
-                        borderWidth: '0 40px 40px 0',
-                        borderColor: `transparent ${token.colorPrimary} transparent transparent`,
-                        zIndex: 1
-                    }}>
-                        <CheckCircleFilled style={{
-                            position: 'absolute',
-                            top: 6,
-                            right: -34,
-                            color: '#fff',
-                            fontSize: '14px'
-                        }}/>
+<div className="select-game-check">
+                        <CheckCircleFilled className="select-game-check-icon"/>
                     </div>
                 )}
 
                 <Flex vertical gap="middle">
                     <Flex justify="space-between" align="start">
                         <Flex gap="middle" align="center">
-                            <div style={{
-                                width: 100,
-                                height: 48,
-                                borderRadius: 8,
-                                background: isSelected ? token.colorPrimary : '#f5f5f5',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: isSelected ? '#fff' : '#8c8c8c',
-                                transition: 'all 0.2s ease',
-                                overflow: 'hidden',
-                                flexShrink: 0
-                            }}>
+                            <div className={isSelected ? 'select-game-icon-selected' : 'select-game-icon'}>
                                 <img
                                     src={game.icon}
                                     alt={game.displayName}
-                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                    className="select-game-icon-img"
                                 />
                             </div>
                             <Flex vertical gap={2}>
-                                <Text strong style={{fontSize: 16}}>{game.displayName}</Text>
+                                <Text strong className="select-game-name">{game.displayName}</Text>
                                 <Flex gap="small" align="center">
-                                    <Text type="secondary" style={{fontSize: 12}}>ID: {game.name}</Text>
+                                    <Text type="secondary" className="select-game-id">ID: {game.name}</Text>
                                     {game.isActive && (
-                                        <Tag color="success" style={{margin: 0, fontSize: 10, lineHeight: '18px', border: 'none'}}>
+                                        <Tag color="success" className="select-game-active-tag">
                                             {t("Active")}
                                         </Tag>
                                     )}
@@ -210,21 +172,16 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                         </Flex>
                     </Flex>
 
-                    <div style={{
-                        background: isSelected ? token.colorPrimaryBg : '#f9fafb',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #f0f0f0'
-                    }} onClick={e => e.stopPropagation()}>
+<div className={isSelected ? 'select-game-path-selected' : 'select-game-path'} onClick={e => e.stopPropagation()}>
                         <Flex vertical gap="small">
-                            <Text type="secondary" style={{fontSize: 12}}>{t("Install Path")}</Text>
+                            <Text type="secondary" className="select-game-path-label">{t("Install Path")}</Text>
                             <Flex gap="small">
                                 <Input
                                     value={currentPath}
                                     placeholder={t("Select game executable path")}
                                     readOnly
-                                    style={{flex: 1, fontSize: 13}}
-                                    prefix={<FolderOpenOutlined style={{color: '#bfbfbf'}}/>}
+                                    className="select-game-path-input"
+                                    prefix={<FolderOpenOutlined className="select-game-path-input-icon"/>}
                                 />
                                 <Tooltip title={t("Browse")}>
                                     <Button
@@ -268,10 +225,10 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                 </Button>
             ]}
         >
-            <Flex vertical gap="large" style={{padding: '20px 0'}}>
-                <div style={{maxHeight: '500px', overflowY: 'auto', padding: '0 4px'}}>
+            <Flex vertical gap="large" className="select-game-modal-body">
+                <div className="select-game-list-container">
                     {loading ? (
-                        <Flex justify="center" align="center" style={{height: '200px'}}>
+                        <Flex justify="center" align="center" className="select-game-empty">
                             <Text type="secondary">{t("Loading games...")}</Text>
                         </Flex>
                     ) : games && games.length > 0 ? (
@@ -279,9 +236,9 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                             {games.map(renderGameItem)}
                         </Flex>
                     ) : (
-                        <Flex justify="center" align="center" style={{height: '200px', background: '#f5f5f5', borderRadius: '8px'}}>
+                        <Flex justify="center" align="center" className="select-game-no-data">
                             <Flex vertical align="center" gap="small">
-                                <RocketOutlined style={{fontSize: 32, color: '#d9d9d9'}}/>
+                                <RocketOutlined className="select-game-no-data-icon"/>
                                 <Text type="secondary">
                                     {t("No games available")}
                                 </Text>

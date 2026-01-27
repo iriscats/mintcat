@@ -7,12 +7,7 @@ interface CountLabelProps {
 
 export const CountLabel = ({ enableCount, totalCount }: CountLabelProps) => {
     return (
-        <span style={{
-            display: 'flex',
-            alignItems: 'center',
-            color: '#888',
-            marginRight: '20px',
-        }}>
+        <span className="count-label">
             {enableCount} / {totalCount}
         </span>
     )

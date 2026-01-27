@@ -238,7 +238,7 @@ function ModTreeViewWarring({nodeData}) {
             {
                 isOnlineUnavailable &&
                 <Tooltip title={t("Mod cannot be retrieved or has been deleted by the author")}>
-                                <span style={{color: "red", marginRight: "4px"}}>
+                                <span className="text-red mr-4">
                                     <ExclamationCircleOutlined/>
                                 </span>
                 </Tooltip>
@@ -247,7 +247,7 @@ function ModTreeViewWarring({nodeData}) {
             {
                 isLocalNoFound &&
                 <Tooltip title={t("File Not Found")}>
-                                <span style={{color: "red", marginRight: "4px"}}>
+                                <span className="text-red mr-4">
                                     <ExclamationCircleOutlined/>
                                 </span>
                 </Tooltip>
@@ -273,12 +273,7 @@ function ModTreeViewProgress({nodeData}) {
     );
 
     return (
-        <span style={{
-            display: "inline-flex",
-            alignItems: "center",
-            verticalAlign: "middle",
-            marginRight: "5px",
-        }}>
+        <span className="inline-flex-center" style={{ marginRight: "5px" }}>
             {
                 (downloadProgress !== 100) &&
                 <Progress
@@ -381,21 +376,21 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate
                     }
 
                     {nodeData.approval === "Verified" ? (
-                            <Tag color="blue" title={t("Verified")} style={{float: "right"}}>V</Tag>) :
+                            <Tag color="blue" title={t("Verified")} className="float-right">V</Tag>) :
                         nodeData.approval === "Approved" ? (
-                                <Tag color="green" title={t("Approved")} style={{float: "right"}}>A</Tag>) :
+                                <Tag color="green" title={t("Approved")} className="float-right">A</Tag>) :
                             nodeData.approval === "Sandbox" ? (
-                                    <Tag color="orange" title={t("Sandbox")} style={{float: "right"}}>S</Tag>) :
+                                    <Tag color="orange" title={t("Sandbox")} className="float-right">S</Tag>) :
                                 null}
 
                     {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
-                        <Tag color="red" style={{float: "right"}}>{nodeData.versions[0]}</Tag>)}
+                        <Tag color="red" className="float-right">{nodeData.versions[0]}</Tag>)}
 
                     {nodeData.required === "RequiredByAll" && (
-                        <Tag color="orange" style={{float: "right"}}>RequiredByAll</Tag>)}
+                        <Tag color="orange" className="float-right">RequiredByAll</Tag>)}
 
                     {nodeData.tags.map(tagName => (
-                        <Tag key={tagName} style={{float: "right"}}>{tagName}</Tag>
+                        <Tag key={tagName} className="float-right">{tagName}</Tag>
                     ))}
 
                 </Flex>

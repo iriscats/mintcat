@@ -153,7 +153,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                                          autoComplete={"off"}
                                   />
                                   <Button type={"text"}
-                                          style={{marginLeft: "8px", marginRight: "20px"}}
+                                          className="ml-8 mr-20"
                                           onClick={this.handleAdd}
                                           icon={<PlusCircleOutlined/>}
                                   />
@@ -162,15 +162,15 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                           renderItem={
                               item =>
                                   <List.Item>
-                                      <Flex style={{width: "100%", display: "block"}}>
-                                            <span style={{lineHeight: "32px"}}>
+                                      <Flex className="full-width-block">
+                                            <span className="lh-32">
                                                 {this.state.editingKey === item ? (
                                                     <Input
                                                         size="small"
                                                         value={this.state.editingValue}
                                                         onChange={(e) => this.setState({editingValue: e.target.value})}
                                                         onPressEnter={() => this.handleRename(item, this.state.editingValue)}
-                                                        style={{width: "200px"}}
+                                                        className="w-200"
                                                         autoFocus
                                                         autoComplete={"off"}
                                                     />
@@ -179,18 +179,18 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                                                 )}
                                             </span>
                                           <Button type={"text"}
-                                                  style={{float: "right"}}
+                                                  className="float-right"
                                                   onClick={() => this.handleDelete(item)}
                                                   icon={<DeleteOutlined/>}
                                           />
                                           <Button type={"text"}
-                                                  style={{float: "right"}}
+                                                  className="float-right"
                                                   onClick={() => this.handleCopy(item)}
                                                   icon={<CopyOutlined/>}
                                           />
                                           <Button
                                               type={"text"}
-                                              style={{float: "right"}}
+                                              className="float-right"
                                               onClick={async () => {
                                                   if (this.state.editingKey === item) {
                                                       await this.handleRename(item, this.state.editingValue);

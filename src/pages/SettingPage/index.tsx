@@ -16,11 +16,8 @@ export class SettingPage extends BasePage<any, any> {
         return (
             <div
                 id="scrollableDiv"
-                style={{
-                    height: window.innerHeight - 81,
-                    overflow: 'auto',
-                    padding: '30px',
-                }}>
+                className="scrollable-div"
+                style={{ height: window.innerHeight - 81 }}>
                 <MintCatSettings/>
             </div>
         );

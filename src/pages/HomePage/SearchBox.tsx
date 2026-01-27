@@ -59,7 +59,7 @@ export const SearchBox = ({ onUpdateTreeView }: SearchBoxProps) => {
                 onSearch={onSearch}
                 onChange={onSearchSelectChange}
                 onBlur={onBlur}
-                style={{width: "300px"}}
+                className="w-300"
                 suffixIcon={<SearchOutlined/>}
                 filterOption={false}
                 notFoundContent={null}
@@ -70,4 +70,3 @@ export const SearchBox = ({ onUpdateTreeView }: SearchBoxProps) => {
         />
     )
 }
-

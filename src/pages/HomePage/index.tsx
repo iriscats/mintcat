@@ -687,11 +687,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                       tip={
                           <Flex gap={"large"}
                                 vertical={false}
-                                style={{
-                                    fontSize: "large",
-                                    marginLeft: "41%",
-                                    lineHeight: "34px",
-                                }}
+                                className="home-loading-tip"
                           >
                               <LoadingOutlined spin/>
                               <span>{t("Loading")}</span>
@@ -708,11 +704,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 >
                     <Flex vertical={true}>
                         <Space separator={<Divider orientation="vertical"/>} size={2}
-                               style={{
-                                   borderBottom: "1px solid #eee",
-                                   paddingBottom: "2px",
-                                   minWidth: "1000px",
-                               }}>
+                               className="home-menu-bar">
                             <Typography.Link>
                                 <Tooltip title={t("Save Changes")}>
                                     <Button icon={<SaveOutlined/>} type={"text"}
@@ -766,7 +758,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                             <Typography.Link>
                                 <Select
                                     size={"small"}
-                                    style={{width: "300px"}}
+                                    className="w-300"
                                     value={this.state.defaultProfile}
                                     options={this.state.profileOptions}
                                     onChange={this.onSelectChange}
@@ -799,19 +791,14 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 }}
                             />
                         </div>
-                        <Flex style={{
-                            borderTop: "1px solid #eee",
-                            padding: "2px 10px 0 10px",
-                            width: "100%",
-                            justifyContent: "space-between",
-                        }}>
+                        <Flex className="home-footer-bar">
                             <Checkbox onChange={this.onMultiCheckboxChange}
                             />
                             {
                                 this.state.isMultiSelect === true &&
-                                <span style={{marginRight: 'auto'}}>
+                                <span className="mr-auto">
                                     <Button type="text" 
-                                            style={{marginLeft: "10px"}}
+                                            className="ml-10"
                                             size={"small"}
                                             icon={<CloseCircleOutlined/>}
                                             onClick={this.onMultiDeleteClick}>

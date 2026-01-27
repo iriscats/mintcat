@@ -123,21 +123,18 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                    width={480}
                    centered
             >
-                <Flex vertical gap={24} style={{ paddingTop: 12 }}>
+                <Flex vertical gap={24} className="user-settings-root">
                     {/* User Profile Section */}
                     <Flex align="center" gap={20}>
                         <Avatar 
                             size={80}
                             icon={<UserOutlined/>}
                             src={this.state.profileUrl}
-                            style={{
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                border: '2px solid #fff'
-                            }}
+                            className="user-settings-avatar"
                         />
                         <Flex vertical gap={4}>
                             <Flex align="center" gap={8}>
-                                <Title level={4} style={{ margin: 0, color: '#1F2937' }}>
+                                <Title level={4} className="user-settings-title">
                                     {this.state.username || t("Guest User")}
                                 </Title>
                                 <Button
@@ -145,16 +142,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                     type="primary"
                                     icon={<CrownOutlined />}
                                     onClick={this.onVIPClick}
-                                    style={{
-                                        backgroundColor: '#FFD700',
-                                        borderColor: '#FFD700',
-                                        color: '#725e0c',
-                                        fontWeight: 'bold',
-                                        fontSize: '12px',
-                                        height: '22px',
-                                        display: 'flex',
-                                        alignItems: 'center'
-                                    }}
+                                    className="user-settings-vip"
                                 >
                                     VIP
                                 </Button>
@@ -165,32 +153,32 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                         </Flex>
                     </Flex>
 
-                    <Divider style={{ margin: 0 }} />
+                    <Divider className="user-settings-divider" />
 
                     {/* Mod.io Configuration Section */}
                     <Flex vertical gap={8}>
                         <Flex justify="space-between" align="center">
-                            <Text strong style={{ fontSize: 15 }}>{t("Mod.io Configuration")}</Text>
+                            <Text strong className="user-settings-config-title">{t("Mod.io Configuration")}</Text>
                             <Button 
                                 color="primary"
                                 variant="link" 
                                 size="small" 
                                 onClick={this.onOpenModioClick}
                                 icon={<LinkOutlined/>}
-                                style={{ padding: 0 }}
+                                className="user-settings-link"
                             >
                                 {t("Get Access Key")}
                             </Button>
                         </Flex>
                         
                         <Input 
-                            prefix={<KeyOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />}
+                            prefix={<KeyOutlined className="user-settings-input-icon" />}
                             onChange={this.onOAuthChange}
                             allowClear
                             value={this.state.modioOAuth}
                             placeholder={t("Enter your mod.io OAuth key")}
                         />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
+                        <Text type="secondary" className="user-settings-desc">
                             {t("Paste your OAuth key here to sync your subscriptions.")}
                         </Text>
                     </Flex>
@@ -199,7 +187,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     <Button type="primary"
                             block
                             onClick={this.handleCancel}
-                            style={{ marginTop: 8 }}
+                            className="user-settings-save"
                     >
                         {t("Save Changes")}
                     </Button>
