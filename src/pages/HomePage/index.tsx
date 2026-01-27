@@ -563,7 +563,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     t("New Group"),
                     async (text) => {
                         await vm.addGroup(0, text);
-                        shouldUpdateTree = true;
+                        await this.updateTreeView();
                     })
                     .show();
             }
@@ -574,7 +574,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     t("New Group"),
                     async (text) => {
                         await vm.addGroup(id, text);
-                        shouldUpdateTree = true;
+                        await this.updateTreeView();
                     }).show();
                 break;
             case "delete_group":
@@ -592,7 +592,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     groupName || "",
                     async (text) => {
                         await vm.setGroupName(id, text);
-                        shouldUpdateTree = true;
+                        await this.updateTreeView();
                     }).show();
                 break;
             case "update": {
@@ -633,7 +633,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     modName,
                     async (text) => {
                         await vm.setDisplayName(id, text);
-                        shouldUpdateTree = true;
+                        await this.updateTreeView();
                     }).show();
                 break;
             case "delete":
