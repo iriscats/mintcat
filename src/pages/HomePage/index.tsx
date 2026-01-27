@@ -301,6 +301,30 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
     }
 
+    @autoBind
+    private async onMultiCopyClick() {
+        if (this.state.selectedKeys.length === 0) {
+            return;
+        }
+
+        const urls: string[] = [];
+        for (const key of this.state.selectedKeys) {
+            const modId = this.extractModIdFromKey(key);
+            if (modId === null) continue;
+            const mod = await this.getModById(modId);
+            if (mod?.url) {
+                urls.push(mod.url);
+            }
+        }
+
+        if (urls.length > 0) {
+            const text = urls.join("\n");
+            ClipboardApi.setLastClipboardText(text);
+            await navigator.clipboard.writeText(text);
+            message.success(t("Copied To Clipboard") + `: ${urls.length} URLs`);
+        }
+    }
+
     // Menu Bar Operations
     @autoBind
     private async onMenuBarCopyListClick() {
@@ -818,6 +842,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                             icon={<SyncOutlined/>}
                                             onClick={this.onMultiUpdateClick}>
                                         {t("Update")}
+                                    </Button>
+                                    <Button type="text" size={"small"}
+                                            icon={<CopyOutlined/>}
+                                            onClick={this.onMultiCopyClick}>
+                                        {t("Copy")}
                                     </Button>
                                 </span>
                             }

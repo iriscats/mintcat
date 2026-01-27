@@ -133,6 +133,9 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                 }
             }),
         });
+
+        // Return the folder list for immediate use (since setState is async)
+        return profileFolderList;
     }
 
     async componentDidMount(): Promise<void> {
@@ -147,8 +150,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
         this.hookWindowResized();
 
-        // Load group options
-        await this.loadGroupOptions();
+        // Load group options and get the folder list immediately
+        const groupFolders = await this.loadGroupOptions();
 
         // Load dialog data
         const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
@@ -156,13 +159,13 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
         // Resolve groupId: if it's an enum constant, find the actual folder ID
         let resolvedGroupId = initData.groupId;
-        if (this.state.groupFolders) {
+        if (groupFolders) {
             // Check if groupId is an enum constant (1=MODIO, 2=LOCAL)
             if (initData.groupId === ProfileTreeGroupType.MODIO) {
-                const folder = this.state.groupFolders.find(f => f.folderType === "modio");
+                const folder = groupFolders.find(f => f.folderType === "modio");
                 if (folder) resolvedGroupId = folder.id;
             } else if (initData.groupId === ProfileTreeGroupType.LOCAL) {
-                const folder = this.state.groupFolders.find(f => f.folderType === "local");
+                const folder = groupFolders.find(f => f.folderType === "local");
                 if (folder) resolvedGroupId = folder.id;
             }
         }
@@ -177,16 +180,16 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         this.unlistenInitData = await listenEvent("add-mod-dialog-init-data", async (payload) => {
             console.log("AddModDialog init event", payload);
             // Reload group options to ensure they're up-to-date
-            await this.loadGroupOptions();
+            const groupFolders = await this.loadGroupOptions();
 
             // Resolve groupId: if it's an enum constant, find the actual folder ID
             let resolvedGroupId = payload.groupId;
-            if (this.state.groupFolders) {
+            if (groupFolders) {
                 if (payload.groupId === ProfileTreeGroupType.MODIO) {
-                    const folder = this.state.groupFolders.find(f => f.folderType === "modio");
+                    const folder = groupFolders.find(f => f.folderType === "modio");
                     if (folder) resolvedGroupId = folder.id;
                 } else if (payload.groupId === ProfileTreeGroupType.LOCAL) {
-                    const folder = this.state.groupFolders.find(f => f.folderType === "local");
+                    const folder = groupFolders.find(f => f.folderType === "local");
                     if (folder) resolvedGroupId = folder.id;
                 }
             }
