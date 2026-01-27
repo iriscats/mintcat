@@ -1,6 +1,7 @@
 import {t} from "i18next";
 import i18n from "@/locales/i18n";
 import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
+import {getVersion} from '@tauri-apps/api/app';
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ModUpdateService} from "@/services/ModUpdateService.ts";
 import {exists} from "@tauri-apps/plugin-fs";
@@ -87,6 +88,11 @@ export class AppViewModel extends BaseViewModel {
         }
     }
 
+    private async saveAppVersion() {
+        const currentVersion = await getVersion();
+        await this.appService.setAppVersion(currentVersion);
+    }
+
     /**
      * Initialize AppViewModel
      * Loads user settings, checks paths, and initializes UI state
@@ -100,6 +106,7 @@ export class AppViewModel extends BaseViewModel {
         await this.checkAppPath();
         await this.checkOauth();
         await IntegrateApi.checkGamePath();
+        await this.saveAppVersion();
 
         await emitVoidEvent("title-bar-load-avatar");
         if (await DeviceApi.isFirstRun()) {

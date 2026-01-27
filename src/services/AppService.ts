@@ -48,6 +48,16 @@ export class AppService {
         await settings.setGuiTheme(guiTheme);
     }
 
+    public async getAppVersion(): Promise<string> {
+        const settings = await StorageAPI.getSettings();
+        return await settings.getAppVersion();
+    }
+
+    public async setAppVersion(version: string): Promise<void> {
+        const settings = await StorageAPI.getSettings();
+        await settings.setAppVersion(version);
+    }
+
     public async getActiveUser() {
         const user = await StorageAPI.getUsers();
         return await user.getActiveUser();

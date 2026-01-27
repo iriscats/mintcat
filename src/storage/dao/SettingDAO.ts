@@ -46,6 +46,14 @@ export class SettingDAO {
         await this.setValue('guiTheme', value);
     }
 
+    public async getAppVersion(): Promise<string> {
+        return this.getValue('appVersion');
+    }
+
+    public async setAppVersion(value: string): Promise<void> {
+        await this.setValue('appVersion', value);
+    }
+
     public async getValue(name: string): Promise<string> {
         try {
             const db = await getDb();
