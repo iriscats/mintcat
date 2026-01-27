@@ -57,7 +57,7 @@ class TitleBar extends React.Component<any, any> {
         try {
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
-                const avatarUrl = await CacheApi.loadAvatar(userInfo.id);
+                const avatarUrl = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
                 if (avatarUrl) {
                     this.setState({ avatarUrl });
                 }
