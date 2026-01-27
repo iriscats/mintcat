@@ -111,7 +111,7 @@ export class HomeViewModel extends BaseViewModel {
      * @returns 是否成功导出
      */
     public async exportModioUrlsToClipboard(): Promise<boolean> {
-        const profileService = new ProfileService();
+        const profileService = await IoC.get(ProfileService);
         const urls = await profileService.getActiveProfileModioUrls();
 
         if (urls.length === 0) {

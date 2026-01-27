@@ -3,6 +3,7 @@ import { AppViewModel } from '@/AppViewModel';
 import { TreeViewModel } from '@/pages/HomePage/TreeViewModel';
 import { HomeViewModel } from '@/pages/HomePage/HomeViewModel';
 import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
+import { ProfileService } from '@/services/ProfileService';
 import { StorageAPI } from '@/storage';
 import { EventDebugger } from '@/events/EventDebugger';
 
@@ -31,6 +32,12 @@ export function registerIoC(): void {
     IoC.register(
         EventDebugger,
         async () => new EventDebugger()
+    );
+
+    // Service layer - shared singleton
+    IoC.register(
+        ProfileService,
+        async () => new ProfileService()
     );
 
     // Core ViewModel - shared across windows

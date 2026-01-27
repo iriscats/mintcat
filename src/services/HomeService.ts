@@ -5,6 +5,7 @@ import { StorageAPI } from "@/storage";
 import { ModService } from "@/services/ModService.ts";
 import { ModUpdateService } from "@/services/ModUpdateService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
+import { IoC } from "@/core/IoC";
 import type { ProfileData } from "@/storage/dao/ProfileDAO";
 
 export type AddModFromUrlResult = {
@@ -18,10 +19,18 @@ export type AddModFromPathResult = {
 };
 
 export class HomeService {
-    private profileService = new ProfileService();
+    private _profileService: ProfileService | null = null;
+
+    private async getProfileService(): Promise<ProfileService> {
+        if (!this._profileService) {
+            this._profileService = await IoC.get(ProfileService);
+        }
+        return this._profileService;
+    }
 
     private async getActiveProfile(): Promise<ProfileData> {
-        return this.profileService.ensureActiveProfile();
+        const profileService = await this.getProfileService();
+        return profileService.ensureActiveProfile();
     }
 
     private async addModDependencies(modId: number, groupId: number, profileId: number): Promise<void> {

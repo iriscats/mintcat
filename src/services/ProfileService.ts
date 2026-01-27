@@ -13,10 +13,15 @@ type ProfileRuntimeState = {
  * ProfileService
  * 负责 Profile 的业务逻辑（不涉及树结构细节）
  * 处理 Profile CRUD 和状态管理
+ *
+ * Note: 此服务通过 IoC 作为单例管理，使用 await IoC.get(ProfileService) 获取实例
  */
 export class ProfileService {
     private runtimeState = new Map<number, ProfileRuntimeState>();
     private treeService: ProfileTreeService;
+
+    // 锁机制：防止并发调用 ensureActiveProfile 导致重复创建 profile
+    private ensureProfileLock: Promise<ProfileData> | null = null;
 
     constructor() {
         this.treeService = new ProfileTreeService();
@@ -29,8 +34,28 @@ export class ProfileService {
     /**
      * 确保有活跃的 profile，如果没有则创建
      * Migrated from ProfileViewModel.ensureActiveProfile
+     *
+     * 使用锁机制防止并发调用导致重复创建 profile
      */
     public async ensureActiveProfile(profileDAO?: ProfileDAO): Promise<ProfileData> {
+        // 如果已有进行中的操作，等待它完成并返回结果
+        if (this.ensureProfileLock) {
+            return this.ensureProfileLock;
+        }
+
+        // 创建新的锁并执行实际逻辑
+        this.ensureProfileLock = this._doEnsureActiveProfile(profileDAO);
+        try {
+            return await this.ensureProfileLock;
+        } finally {
+            this.ensureProfileLock = null;
+        }
+    }
+
+    /**
+     * 实际执行 ensureActiveProfile 逻辑（内部方法）
+     */
+    private async _doEnsureActiveProfile(profileDAO?: ProfileDAO): Promise<ProfileData> {
         const dao = profileDAO ?? await StorageAPI.getProfiles();
         const games = await StorageAPI.getGames();
         const users = await StorageAPI.getUsers();
@@ -70,6 +95,9 @@ export class ProfileService {
      * 获取当前活跃游戏的所有 profile 的名称列表
      */
     public async getProfileList(): Promise<string[]> {
+        // 先确保有活跃的 profile（使用锁机制防止并发创建）
+        await this.ensureActiveProfile();
+
         const profiles = await StorageAPI.getProfiles();
         const games = await StorageAPI.getGames();
         const users = await StorageAPI.getUsers();
@@ -83,11 +111,6 @@ export class ProfileService {
 
         // 只获取当前游戏和用户的 profile
         const profileData = await profiles.getProfilesByUserAndGame(activeUser.id!, activeGame.id!);
-
-        if (profileData.length === 0) {
-            const created = await this.createDefaultProfile(profiles, activeGame.id!, activeUser.id!);
-            return created ? [created.name] : [];
-        }
 
         return profileData.map(p => p.name);
     }
@@ -119,6 +142,9 @@ export class ProfileService {
      * 设置活跃的 profile
      */
     public async setActiveProfile(profileName: string): Promise<void> {
+        // 先确保有活跃的 profile（使用锁机制防止并发创建）
+        await this.ensureActiveProfile();
+
         const profiles = await StorageAPI.getProfiles();
         const games = await StorageAPI.getGames();
         const users = await StorageAPI.getUsers();
@@ -133,11 +159,6 @@ export class ProfileService {
 
         // 只获取当前游戏和用户的 profile
         const profileData = await profiles.getProfilesByUserAndGame(activeUser.id!, activeGame.id!);
-
-        if (profileData.length === 0) {
-            await this.createDefaultProfile(profiles, activeGame.id!, activeUser.id!);
-            return;
-        }
 
         const targetProfile = profileData.find(p => p.name === profileName);
         if (!targetProfile) {

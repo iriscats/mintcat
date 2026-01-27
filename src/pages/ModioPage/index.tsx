@@ -10,6 +10,7 @@ import {TranslateApi} from "@/apis/TranslateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {ProfileService} from "@/services/ProfileService.ts";
+import {IoC} from "@/core/IoC.ts";
 import {BasePage} from "../IBasePage.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {openWindow} from "@/dialogs/AddModDialog/open.ts";
@@ -73,7 +74,7 @@ export class ModioPage extends BasePage<any, ModioPageState> {
 
     private async onAddClick(url: string) {
         // Get current active profile's modio folder ID using ProfileService
-        const profileService = new ProfileService();
+        const profileService = await IoC.get(ProfileService);
         const modioFolderId = await profileService.getActiveProfileFolderId('modio');
 
         if (!modioFolderId) {

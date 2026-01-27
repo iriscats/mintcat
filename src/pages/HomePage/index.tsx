@@ -339,7 +339,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onMenuBarAddModClick() {
         // Get current active profile's Local folder ID using ProfileService
-        const profileService = new ProfileService();
+        const profileService = await IoC.get(ProfileService);
         const localFolderId = await profileService.getActiveProfileFolderId('local');
 
         if (!localFolderId) {
@@ -481,6 +481,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const expandedFolderNames = this.getExpandedFolderNames();
 
         await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
         const profilesApi = await StorageAPI.getProfiles();
 
@@ -488,6 +489,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const basicMods = await modsApi.getAllMods();
         const modIds = basicMods.map(m => m.modId!);
         const allMods = await modsApi.getBatchCompleteModData(modIds);
+
+        // Get active profile tree root
+        const activeRoot = await profileVM.getActiveProfileTreeRoot();
         const activeProfile = await profilesApi.getActiveProfile();
 
         // Get profile-specific mod data (enabled status, used version)
@@ -495,6 +499,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // TreeViewConverter now accepts CompleteModData[] and ProfileModData[]
         const converter = new TreeViewConverter(allMods, profileMods);
+        converter.convertToFromRoot(activeRoot);
 
         // After reload: Reconstruct expandedKeys using folder names
         let newExpandedKeys: any[];

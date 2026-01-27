@@ -109,7 +109,7 @@ async function onClipboardChange(text: string) {
     }
 
     // Get current active profile's modio folder ID using ProfileService
-    const profileService = new ProfileService();
+    const profileService = await IoC.get(ProfileService);
     const modioFolderId = await profileService.getActiveProfileFolderId('modio');
 
     if (!modioFolderId) {

@@ -10,7 +10,7 @@ import { ProfileService } from "@/services/ProfileService";
  */
 export class TreeViewModel extends BaseViewModel {
     private profileViewModel: ProfileViewModel;
-    private profileService = new ProfileService();
+    private profileService: ProfileService;
 
     constructor() {
         super();
@@ -21,11 +21,11 @@ export class TreeViewModel extends BaseViewModel {
      * Delegated to ProfileTreeService
      */
     public async sortMods(order: string): Promise<void> {
-        if (!this.profileViewModel) 
+        if (!this.profileViewModel)
             return;
 
         const activeRoot = await this.profileViewModel.getActiveProfileTreeRoot();
-        const treeService = this.profileViewModel.profileService.getTreeService();
+        const treeService = (await this.profileViewModel.getProfileService()).getTreeService();
 
         await treeService.sortTreeNodes(activeRoot, order);
         await this.profileViewModel.saveProfileTreeToDatabase(activeRoot);
@@ -47,7 +47,7 @@ export class TreeViewModel extends BaseViewModel {
         if (!this.profileViewModel) return undefined;
 
         const activeRoot = await this.profileViewModel.getActiveProfileTreeRoot();
-        const treeService = (this.profileViewModel as any).profileService.getTreeService();
+        const treeService = (await this.profileViewModel.getProfileService()).getTreeService();
 
         return treeService.getGroupName(activeRoot, id);
     }
@@ -79,6 +79,9 @@ export class TreeViewModel extends BaseViewModel {
      */
     async initialize(): Promise<void> {
         try {
+            // Get ProfileService singleton via IoC
+            this.profileService = await IoC.get(ProfileService);
+
             // Get ProfileViewModel instance and load data
             this.profileViewModel = await IoC.get(ProfileViewModel);
             await this.profileViewModel.loadProfilesFromDatabase();
