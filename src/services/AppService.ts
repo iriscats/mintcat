@@ -1,4 +1,5 @@
 import { StorageAPI } from "@/storage";
+import { CacheApi } from "@/apis/CacheApi";
 
 export class AppService {
     public async getModioOAuth() {
@@ -14,6 +15,7 @@ export class AppService {
     public async setCachePath(path: string): Promise<void> {
         const settings = await StorageAPI.getSettings();
         await settings.setCachePath(path);
+        CacheApi.clearCache();
     }
 
     public async getConfigPath(): Promise<string> {

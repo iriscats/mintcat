@@ -8,16 +8,26 @@ import {StorageAPI} from "@/storage";
 
 export class CacheApi {
 
+    private static cachedPath: string | null = null;
+
     public constructor() {
     }
 
     public static async getCacheDir(): Promise<string> {
+        if (this.cachedPath) {
+            return this.cachedPath;
+        }
         const settingDAO = await StorageAPI.getSettings();
         const cachePath = await settingDAO.getCachePath();
         if (!await exists(cachePath)) {
             await mkdir(cachePath)
         }
+        this.cachedPath = cachePath;
         return cachePath;
+    }
+
+    public static clearCache(): void {
+        this.cachedPath = null;
     }
 
     private static sanitizeFileName(name: string): string {

@@ -50,6 +50,7 @@ export function MintCatSettings() {
             setCacheDirectory(result);
             const settings = await StorageAPI.getSettings();
             await settings.setCachePath(result);
+            CacheApi.clearCache();
         }
     }
 
