@@ -143,7 +143,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                                           {item.version}
                                       </Tag>
                                       {
-                                          item.version === "0.4.0" &&
+                                          item.version === "0.5.0" &&
                                           <Tag color="green"
                                                style={{
                                                    height: "20px",

@@ -20,8 +20,9 @@ export class DialogConfigService {
     }
 
     public async importConfig(config: ConfigDataType): Promise<boolean> {
-        if (!config) return false;
-        if (config.version === "0.4.0" || config.version === "0.4") {
+        if (!config) 
+            return false;
+        if (config.version === "0.4") {
             const v4 = new ConfigMigrationV4();
             return await v4.migrate();
         }
