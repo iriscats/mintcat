@@ -9,6 +9,7 @@ import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
 import type { ModInfo } from "@/apis/modio/ModInfo";
 import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
+import { asyncPoolAll } from "@/utils/AsyncPool";
 
 /**
  * ModUpdateService 服务层
@@ -90,6 +91,45 @@ export class ModUpdateService {
         }
 
         await StatusBar.success(`${t("Batch Update Finish")} (${modioMods.length} mods)`);
+    }
+
+    /**
+     * 批量并行下载模组文件
+     * @param mods 需要下载的模组列表
+     * @param concurrency 并发数量，默认 3
+     * @returns 成功数量和错误列表
+     */
+    public static async batchDownloadModFiles(
+        mods: CompleteModData[],
+        concurrency: number = 3
+    ): Promise<{ successCount: number; errors: Array<{ mod: CompleteModData; error: Error }> }> {
+        if (mods.length === 0) {
+            return { successCount: 0, errors: [] };
+        }
+
+        await StatusBar.info(`${t("Batch Download")} (${mods.length} mods, ${concurrency} concurrent)`);
+
+        const { errors } = await asyncPoolAll(
+            mods,
+            async (mod) => {
+                await this.updateModFile(mod);
+                return mod;
+            },
+            concurrency
+        );
+
+        const successCount = mods.length - errors.length;
+
+        if (errors.length > 0) {
+            await StatusBar.error(`${t("Batch Download")} ${successCount}/${mods.length} (${errors.length} failed)`);
+        } else {
+            await StatusBar.success(`${t("Batch Download Finish")} (${mods.length} mods)`);
+        }
+
+        return {
+            successCount,
+            errors: errors.map(e => ({ mod: e.item, error: e.error }))
+        };
     }
 
     /**

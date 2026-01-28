@@ -8,6 +8,8 @@ import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { MessageBox } from '@/components/MessageBox';
 import { t } from 'i18next';
+import { exists } from '@tauri-apps/plugin-fs';
+import { ModSourceType } from '@/models/mod/types';
 
 /**
  * Task: Install mods to game
@@ -82,10 +84,13 @@ export class ModInstallTask implements ITask {
             }
         }
 
-        // Step 3: Check and update mods
+        // Step 3: Check and update mods (parallel download)
         await context.setStep('检查模组更新', 3, TOTAL_STEPS);
         let editTime = await profileVM.getActiveProfileEditTime();
         const totalMods = enabledMods.length;
+
+        // First pass: identify mods that need downloading
+        const modsNeedingDownload: CompleteModData[] = [];
 
         for (let i = 0; i < totalMods; i++) {
             if (context.checkCancelled()) {
@@ -95,17 +100,47 @@ export class ModInstallTask implements ITask {
             const item = enabledMods[i];
             await context.setMessage(`检查模组 (${i + 1}/${totalMods}): ${item.displayName}`);
 
-            // Check for online updates (mod is enabled since we filtered above)
-            await ModUpdateService.checkOnlineModAndUpdate(item, true);
-            const cachePath = item.download?.cachePath || "";
-            if (cachePath === "") {
-                throw new Error(`${t("File Not Found")}: ${item.url}`);
+            // Check if this mod needs downloading (Modio type only)
+            if (item.sourceType === ModSourceType.Modio) {
+                const cachePath = item.download?.cachePath || "";
+                const onlineUpdateDate = item.status?.onlineUpdateDate || 0;
+                const lastUpdateDate = item.status?.lastUpdateDate || 0;
+                const downloadProgress = item.download?.downloadProgress || 0;
+
+                if (!await exists(cachePath) ||
+                    onlineUpdateDate > lastUpdateDate ||
+                    downloadProgress != 100
+                ) {
+                    modsNeedingDownload.push(item);
+                }
             }
 
-            // Check if mod was modified
+            // Check if mod was modified (for local mods)
             if (await ModUpdateService.checkLocalModModify(item, true)) {
                 editTime = TimeUtils.nowSeconds();
                 await profileVM.setActiveProfileEditTime(editTime);
+            }
+        }
+
+        // Parallel download all mods that need updating
+        if (modsNeedingDownload.length > 0) {
+            await context.setMessage(`并行下载 ${modsNeedingDownload.length} 个模组...`);
+
+            const { errors } = await ModUpdateService.batchDownloadModFiles(modsNeedingDownload, 3);
+
+            if (errors.length > 0) {
+                const failedNames = errors.map(e => e.mod.displayName).join(', ');
+                throw new Error(`${t("Download Failed")}: ${failedNames}`);
+            }
+        }
+
+        // Verify all mods have cache paths after download
+        for (const item of enabledMods) {
+            const modsDAO = await StorageAPI.getMods();
+            const updatedMod = await modsDAO.getCompleteModData(item.modId!);
+            const cachePath = updatedMod?.download?.cachePath || "";
+            if (cachePath === "") {
+                throw new Error(`${t("File Not Found")}: ${item.url}`);
             }
         }
 

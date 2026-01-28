@@ -301,7 +301,17 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
 
         if (mods.length > 0) {
+            // First batch update metadata
             await ModUpdateService.batchUpdateMods(mods);
+            // Then parallel download all mod files
+            const { successCount, errors } = await ModUpdateService.batchDownloadModFiles(mods, 3);
+            if (errors.length > 0) {
+                const failedNames = errors.map(e => e.mod.displayName).slice(0, 3).join(', ');
+                const suffix = errors.length > 3 ? ` (+${errors.length - 3} more)` : '';
+                message.error(`${t("Download Failed")}: ${failedNames}${suffix}`);
+            } else if (successCount > 0) {
+                message.success(`${t("Update Finish")} (${successCount} mods)`);
+            }
         }
     }
 
