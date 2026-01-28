@@ -1,6 +1,6 @@
 import {t} from "i18next";
 import React, {useState} from "react";
-import {Dropdown, Flex, MenuProps, Progress, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
+import {Dropdown, MenuProps, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
 import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
@@ -258,8 +258,7 @@ function ModTreeViewWarring({nodeData}) {
 }
 
 
-function ModTreeViewProgress({nodeData}) {
-
+function ModTreeViewProgressBackground({nodeData, children}) {
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
 
     // ✅ 使用 useFilteredEventListener 自动清理监听器
@@ -272,22 +271,52 @@ function ModTreeViewProgress({nodeData}) {
         [nodeData.modId]
     );
 
+    const isDownloading = downloadProgress !== 100;
+
+    // 渐变背景样式：从左到右的进度色块
+    const progressStyle: React.CSSProperties = isDownloading ? {
+        background: `linear-gradient(
+            90deg,
+            rgba(22, 119, 255, 0.35) 0%,
+            rgba(22, 119, 255, 0.2) ${downloadProgress * 0.8}%,
+            rgba(22, 119, 255, 0.05) ${downloadProgress}%,
+            transparent ${downloadProgress}%
+        )`,
+    } : {};
+
     return (
-        <span className="inline-flex-center" style={{ marginRight: "5px" }}>
-            {
-                (downloadProgress !== 100) &&
-                <Progress
-                    type="circle"
-                    railColor="#e6f4ff"
-                    percent={downloadProgress}
-                    strokeWidth={20}
-                    size={14}
-                    format={(number) => `Downloading ${number}%`}
-                />
-            }
-        </span>
+        <div style={{
+            width: "calc(100% - 20px)",
+            display: "flex",
+            alignItems: "center",
+            borderRadius: "4px",
+            padding: "2px 4px",
+            transition: "background 0.3s ease",
+            ...progressStyle
+        }}>
+            {children}
+        </div>
+    );
+}
+
+
+function ModTreeViewProgressPercent({nodeData}) {
+    const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
+
+    useFilteredEventListener(
+        'mod-treeview-update',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setDownloadProgress(payload.data.download?.downloadProgress || 100);
+        },
+        [nodeData.modId]
     );
 
+    if (downloadProgress === 100) return null;
+
+    return (
+        <Tag color="blue">{downloadProgress}%</Tag>
+    );
 }
 
 
@@ -341,14 +370,7 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate
                               onMenuClick(e.key, nodeData.key);
                           }
                       }}>
-                <Flex align="center"
-                      style={{
-                          width: "calc(100% - 20px)",
-                          backgroundColor: "rgba(238,238,238,0.05)",
-                          display: "block"
-                      }}
-                >
-
+                <ModTreeViewProgressBackground nodeData={nodeData}>
                     <ModTreeViewSwitch nodeData={nodeData} onCountLabelUpdate={onCountLabelUpdate}/>
 
                     {nodeData.sourceType === ModSourceType.Modio &&
@@ -358,10 +380,6 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate
                     {
                         //nodeData.sourceType === ModSourceType.Modio &&
                         <ModTreeViewWarring nodeData={nodeData}/>
-                    }
-
-                    {nodeData.sourceType === ModSourceType.Modio &&
-                        <ModTreeViewProgress nodeData={nodeData}/>
                     }
 
                     {
@@ -375,25 +393,31 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate
                         <ModTreeViewTitle nodeData={nodeData}/>
                     }
 
-                    {nodeData.approval === "Verified" ? (
-                            <Tag color="blue" title={t("Verified")} className="float-right">V</Tag>) :
-                        nodeData.approval === "Approved" ? (
-                                <Tag color="green" title={t("Approved")} className="float-right">A</Tag>) :
-                            nodeData.approval === "Sandbox" ? (
-                                    <Tag color="orange" title={t("Sandbox")} className="float-right">S</Tag>) :
-                                null}
+                    {/* 右侧区域：tags 靠右 */}
+                    <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "4px" }}>
+                        {nodeData.tags.map(tagName => (
+                            <Tag key={tagName}>{tagName}</Tag>
+                        ))}
 
-                    {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
-                        <Tag color="red" className="float-right">{nodeData.versions[0]}</Tag>)}
+                        {nodeData.required === "RequiredByAll" && (
+                            <Tag color="orange">RequiredByAll</Tag>)}
 
-                    {nodeData.required === "RequiredByAll" && (
-                        <Tag color="orange" className="float-right">RequiredByAll</Tag>)}
+                        {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
+                            <Tag color="red">{nodeData.versions[0]}</Tag>)}
 
-                    {nodeData.tags.map(tagName => (
-                        <Tag key={tagName} className="float-right">{tagName}</Tag>
-                    ))}
+                        {nodeData.approval === "Verified" ? (
+                                <Tag color="blue" title={t("Verified")}>V</Tag>) :
+                            nodeData.approval === "Approved" ? (
+                                    <Tag color="green" title={t("Approved")}>A</Tag>) :
+                                nodeData.approval === "Sandbox" ? (
+                                        <Tag color="orange" title={t("Sandbox")}>S</Tag>) :
+                                    null}
 
-                </Flex>
+                        {nodeData.sourceType === ModSourceType.Modio &&
+                            <ModTreeViewProgressPercent nodeData={nodeData}/>
+                        }
+                    </span>
+                </ModTreeViewProgressBackground>
             </Dropdown>
         );
     } else {
