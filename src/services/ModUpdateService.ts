@@ -52,7 +52,7 @@ export class ModUpdateService {
         await this.updateModInDatabase(mod.modId!, resp);
         await this.updateModFile(mod);
 
-        await StatusBar.success(t("Update Finish"));
+        await StatusBar.success(`${t("Update Finish")}: ${mod.displayName}`);
     }
 
     /**
@@ -259,7 +259,7 @@ export class ModUpdateService {
             });
         }
 
-        await StatusBar.success(t("Update Finish"));
+        await StatusBar.success(`${t("Update Finish")}: ${mod.displayName}`);
     }
 
     /**

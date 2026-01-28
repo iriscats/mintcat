@@ -315,7 +315,7 @@ function ModTreeViewProgressPercent({nodeData}) {
     if (downloadProgress === 100) return null;
 
     return (
-        <Tag color="blue">{downloadProgress}%</Tag>
+        <Tag color="blue">{downloadProgress.toFixed(2)}%</Tag>
     );
 }
 
