@@ -607,20 +607,34 @@ export class HomePage extends BasePage<any, ModListPageState> {
             }
                 break;
             case "add_mod": {
+                const profileService = await IoC.get(ProfileService);
                 switch (id) {
-                    case ProfileTreeGroupType.LOCAL:
-                        await openWindow(AddModType.LOCAL, id, "", async () => {
+                    case ProfileTreeGroupType.LOCAL: {
+                        const localFolderId = await profileService.getActiveProfileFolderId('local');
+                        if (!localFolderId) {
+                            message.error(t("Local Folder Not Found"));
+                            break;
+                        }
+                        await openWindow(AddModType.LOCAL, localFolderId, "", async () => {
                             await this.updateTreeView();
                             await this.updateCountLabel();
                         });
                         break;
-                    case ProfileTreeGroupType.MODIO:
-                        await openWindow(AddModType.MODIO, id, "", async () => {
+                    }
+                    case ProfileTreeGroupType.MODIO: {
+                        const modioFolderId = await profileService.getActiveProfileFolderId('modio');
+                        if (!modioFolderId) {
+                            message.error(t("Modio Folder Not Found"));
+                            break;
+                        }
+                        await openWindow(AddModType.MODIO, modioFolderId, "", async () => {
                             await this.updateTreeView();
                             await this.updateCountLabel();
                         });
                         break;
+                    }
                     default:
+                        // 对于自定义 folder，id 本身就是 folder ID，直接使用
                         await openWindow(AddModType.MODIO, id, "", async () => {
                             await this.updateTreeView();
                             await this.updateCountLabel();
