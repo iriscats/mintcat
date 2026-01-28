@@ -1,3 +1,8 @@
 {
-  "Import Failed": "Import Failed"
+  "Import Failed": "Import Failed",
+  "Sort": "Sort",
+  "Name A → Z": "Name A → Z",
+  "Name Z → A": "Name Z → A",
+  "Time New → Old": "Time New → Old",
+  "Time Old → New": "Time Old → New"
 }

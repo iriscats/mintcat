@@ -337,6 +337,8 @@ export class ProfileTreeService {
 
     /**
      * 递归排序节点及其所有子文件夹
+     * Supports new format: name_asc, name_desc, time_asc, time_desc
+     * Also supports legacy format: asc, desc, time
      */
     private async sortNodeRecursive(node: ProfileTreeItem, order: string, allMods: CompleteModData[]): Promise<void> {
         // 如果是文件夹，排序其子项
@@ -349,15 +351,27 @@ export class ProfileTreeService {
                     // If mods not found, keep original order
                     if (!modAData || !modBData) return 0;
 
-                    if (order === "asc") {
-                        return modAData.displayName.localeCompare(modBData.displayName) * -1;
-                    } else if (order === "desc") {
-                        return modAData.displayName.localeCompare(modBData.displayName);
-                    } else if (order === "time") {
-                        // 按更新时间排序
+                    // Parse sort field and direction
+                    // New format: name_asc, name_desc, time_asc, time_desc
+                    // Legacy format: asc, desc, time
+                    let field: string;
+                    let direction: string;
+
+                    if (order.includes('_')) {
+                        [field, direction] = order.split('_');
+                    } else {
+                        // Legacy format compatibility
+                        field = order === 'time' ? 'time' : 'name';
+                        direction = order === 'asc' ? 'asc' : 'desc';
+                    }
+
+                    if (field === 'name') {
+                        const result = modAData.displayName.localeCompare(modBData.displayName);
+                        return direction === 'asc' ? result : -result;
+                    } else if (field === 'time') {
                         const timeA = modAData.status?.lastUpdateDate || 0;
                         const timeB = modBData.status?.lastUpdateDate || 0;
-                        return timeB - timeA;
+                        return direction === 'asc' ? timeA - timeB : timeB - timeA;
                     }
                 } else if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.FOLDER) {
                     return -1;

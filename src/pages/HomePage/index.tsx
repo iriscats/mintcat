@@ -3,7 +3,7 @@ import {t} from "i18next";
 import {save} from "@tauri-apps/plugin-dialog";
 import {copyFile, exists} from "@tauri-apps/plugin-fs";
 import {
-    Button, Checkbox, Divider,
+    Button, Checkbox, Divider, Dropdown,
     Flex, MenuProps, message, Select,
     SelectProps, Space, Spin, Tooltip, TreeProps, Typography,
 } from 'antd';
@@ -58,6 +58,7 @@ interface ModListPageState {
     virtual?: boolean;
     enableCount?: number;
     totalCount?: number;
+    sortOrder?: string;
 }
 
 
@@ -83,6 +84,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             virtual: true,
             enableCount: 0,
             totalCount: 0,
+            sortOrder: "name_asc",
         }
 
     }
@@ -413,9 +415,15 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarSortClick(order: string) {
+        this.setState({ sortOrder: order });
         const vm = await IoC.get(TreeViewModel);
         await vm.sortMods(order);
         await this.updateTreeView();
+    }
+
+    @autoBind
+    private onSortMenuClick({ key }: { key: string }) {
+        this.onMenuBarSortClick(key);
     }
 
     @autoBind
@@ -789,23 +797,39 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 </Typography.Link>
                             }
                             <Typography.Link>
-                                <Tooltip title={t("Sort Ascending")}>
-                                    <Button icon={<SortAscendingOutlined/>}
-                                            type={"text"}
-                                            onClick={() => this.onMenuBarSortClick("asc")}
-                                    />
-                                </Tooltip>
-                                <Tooltip title={t("Sort Descending")}>
-                                    <Button icon={<SortDescendingOutlined/>}
-                                            type={"text"}
-                                            onClick={() => this.onMenuBarSortClick("desc")}
-                                    />
-                                </Tooltip>
-                                <Tooltip title={t("Sort By Time")}>
-                                    <Button icon={<FieldTimeOutlined/>}
-                                            type={"text"}
-                                            onClick={() => this.onMenuBarSortClick("time")}/>
-                                </Tooltip>
+                                <Dropdown
+                                    menu={{
+                                        items: [
+                                            {
+                                                key: 'name_asc',
+                                                label: t('Name A → Z'),
+                                                icon: <SortAscendingOutlined />,
+                                            },
+                                            {
+                                                key: 'name_desc',
+                                                label: t('Name Z → A'),
+                                                icon: <SortDescendingOutlined />,
+                                            },
+                                            { type: 'divider' },
+                                            {
+                                                key: 'time_desc',
+                                                label: t('Time New → Old'),
+                                                icon: <FieldTimeOutlined />,
+                                            },
+                                            {
+                                                key: 'time_asc',
+                                                label: t('Time Old → New'),
+                                                icon: <FieldTimeOutlined />,
+                                            },
+                                        ],
+                                        onClick: this.onSortMenuClick,
+                                        selectedKeys: [this.state.sortOrder || 'name_asc'],
+                                    }}
+                                >
+                                    <Tooltip title={t("Sort")}>
+                                        <Button icon={<SortAscendingOutlined/>} type={"text"} />
+                                    </Tooltip>
+                                </Dropdown>
                             </Typography.Link>
                             <Typography.Link>
                                 <Select
