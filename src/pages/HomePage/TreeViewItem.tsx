@@ -57,20 +57,47 @@ function ModTreeViewFolder({nodeData, onMenuClick}) {
 
 
 function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
-    // 乐观更新：使用本地 state 立即响应用户操作
-    const [checked, setChecked] = useState(nodeData.enabled);
+    const viewModelRef = React.useRef<HomeViewModel | null>(null);
+
+    // 获取初始状态：优先从 ViewModel 缓存读取
+    const getInitialChecked = () => {
+        if (viewModelRef.current) {
+            return viewModelRef.current.getModEnabled(nodeData.modId, nodeData.enabled);
+        }
+        return nodeData.enabled;
+    };
+
+    const [checked, setChecked] = useState(getInitialChecked);
+
+    // 初始化时获取 ViewModel 并同步状态
+    React.useEffect(() => {
+        let mounted = true;
+        IoC.get(HomeViewModel).then(vm => {
+            if (mounted) {
+                viewModelRef.current = vm;
+                // 从缓存恢复状态（如果有）
+                setChecked(vm.getModEnabled(nodeData.modId, nodeData.enabled));
+            }
+        });
+        return () => { mounted = false; };
+    }, []);
 
     // 同步外部 prop 变化（当 Tree 完整刷新时）
     React.useEffect(() => {
-        setChecked(nodeData.enabled);
-    }, [nodeData.enabled]);
+        if (viewModelRef.current) {
+            setChecked(viewModelRef.current.getModEnabled(nodeData.modId, nodeData.enabled));
+        } else {
+            setChecked(nodeData.enabled);
+        }
+    }, [nodeData.enabled, nodeData.modId]);
 
     const onSwitchChange = async (newChecked: boolean) => {
         // 1. 立即更新本地状态（乐观更新）
         setChecked(newChecked);
 
-        // 2. 异步更新数据库（不触发 Tree 完整刷新）
-        const viewModel = await IoC.get(HomeViewModel);
+        // 2. 异步更新数据库（ViewModel 会同时缓存状态）
+        const viewModel = viewModelRef.current || await IoC.get(HomeViewModel);
+        viewModelRef.current = viewModel;
         await viewModel.setModEnabled(nodeData.modId, newChecked);
 
         // 3. 只更新计数标签

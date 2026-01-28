@@ -16,8 +16,33 @@ import {HomeService} from "@/services/HomeService.ts";
 export class HomeViewModel extends BaseViewModel {
     private homeService = new HomeService();
 
+    // 缓存用户切换的 enabled 状态，防止虚拟列表滚动时状态丢失
+    private pendingEnabledChanges = new Map<number, boolean>();
+
     constructor() {
         super();
+    }
+
+    /**
+     * 获取 mod 的 enabled 状态（优先返回 pending 值）
+     * 用于虚拟列表组件重新挂载时恢复正确状态
+     */
+    public getModEnabled(modId: number, defaultValue: boolean): boolean {
+        return this.pendingEnabledChanges.has(modId)
+            ? this.pendingEnabledChanges.get(modId)!
+            : defaultValue;
+    }
+
+    /**
+     * 清除指定 mod 的 pending 状态
+     * 在 Tree 完整刷新后调用
+     */
+    public clearPendingEnabled(modId?: number): void {
+        if (modId !== undefined) {
+            this.pendingEnabledChanges.delete(modId);
+        } else {
+            this.pendingEnabledChanges.clear();
+        }
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<boolean> {
@@ -67,9 +92,14 @@ export class HomeViewModel extends BaseViewModel {
         await this.homeService.updateModDisplayName(id, name);
     }
     public async setModEnabled(modId: number, enable: boolean): Promise<void> {
+        // 1. 立即写入缓存（防止滚动时状态丢失）
+        this.pendingEnabledChanges.set(modId, enable);
+
+        // 2. 异步写入数据库
         await this.homeService.setModEnabled(modId, enable);
 
-        //局部刷新可以不更新树
+        // 3. 写入成功后清除缓存（Tree 刷新后会从数据库读取正确值）
+        this.pendingEnabledChanges.delete(modId);
     }
 
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
