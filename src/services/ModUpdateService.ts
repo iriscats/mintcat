@@ -139,12 +139,11 @@ export class ModUpdateService {
             availableVersions: []
         });
 
-        // Update download info
+        // Update download info (only URL and fileSize, preserve downloadProgress)
         await modsApi.upsertModDownload({
             modId: modId,
             downloadUrl: modInfo.modfile?.download?.binary_url || "",
-            fileSize: modInfo.modfile?.filesize || 0,
-            downloadProgress: 0
+            fileSize: modInfo.modfile?.filesize || 0
         });
 
         // Update status info with current online update date
@@ -155,6 +154,15 @@ export class ModUpdateService {
             onlineUpdateDate: onlineUpdateDate,
             isOnlineAvailable: true
         });
+
+        // Emit event to refresh UI (show "new version" indicator if needed)
+        const updatedMod = await modsApi.getCompleteModData(modId);
+        if (updatedMod) {
+            await emitEvent("mod-treeview-update", {
+                modId: updatedMod.modId!,
+                data: updatedMod
+            });
+        }
     }
 
     /**
@@ -199,6 +207,15 @@ export class ModUpdateService {
             await modsApi.upsertModStatus({
                 modId: mod.modId!,
                 lastUpdateDate: currentStatus.onlineUpdateDate || TimeUtils.now()
+            });
+        }
+
+        // Get updated mod data and emit event to refresh UI (clear "new version" indicator)
+        const updatedMod = await modsApi.getCompleteModData(mod.modId!);
+        if (updatedMod) {
+            await emitEvent("mod-treeview-update", {
+                modId: updatedMod.modId!,
+                data: updatedMod
             });
         }
 
