@@ -4,16 +4,33 @@ import {SearchOutlined} from "@ant-design/icons";
 import {TreeViewConverter} from "@/pages/HomePage/TreeViewConverter.ts";
 
 const defaultFilterOptions: SelectProps['options'] = [
-    {value: 'Verified', label: 'Verified'},
-    {value: 'Approved', label: 'Approved'},
-    {value: 'Sandbox', label: 'Sandbox'},
-    {value: 'RequiredByAll', label: 'RequiredByAll'},
-    {value: 'Optional', label: 'Optional'},
-    {value: 'Audio', label: 'Audio'},
-    {value: 'Framework', label: 'Framework'},
-    {value: 'Tools', label: 'Tools'},
-    {value: 'QoL', label: 'QoL'},
-    {value: 'Visual', label: 'Visual'},
+    {
+        label: 'Source',
+        options: [
+            {value: 'source:Local', label: 'Local'},
+            {value: 'source:Modio', label: 'Modio'},
+        ]
+    },
+    {
+        label: 'Status',
+        options: [
+            {value: 'Verified', label: 'Verified'},
+            {value: 'Approved', label: 'Approved'},
+            {value: 'Sandbox', label: 'Sandbox'},
+        ]
+    },
+    {
+        label: 'Tags',
+        options: [
+            {value: 'RequiredByAll', label: 'RequiredByAll'},
+            {value: 'Optional', label: 'Optional'},
+            {value: 'Audio', label: 'Audio'},
+            {value: 'Framework', label: 'Framework'},
+            {value: 'Tools', label: 'Tools'},
+            {value: 'QoL', label: 'QoL'},
+            {value: 'Visual', label: 'Visual'},
+        ]
+    },
 ]
 
 interface SearchBoxProps {
@@ -56,15 +73,13 @@ export const SearchBox = ({ onUpdateTreeView }: SearchBoxProps) => {
         <Select size={"small"}
                 value={searchValue}
                 options={searchOptions}
-                onSearch={onSearch}
                 onChange={onSearchSelectChange}
                 onBlur={onBlur}
                 className="w-300"
                 suffixIcon={<SearchOutlined/>}
-                filterOption={false}
                 notFoundContent={null}
                 defaultActiveFirstOption={false}
-                showSearch={true}
+                showSearch={{ onSearch, filterOption: false }}
                 allowClear={true}
                 mode={"multiple"}
         />

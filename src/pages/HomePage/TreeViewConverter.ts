@@ -43,6 +43,14 @@ export class TreeViewConverter {
             if (filter === "All") {
                 return true;
             }
+            // 处理来源类型筛选
+            if (filter.startsWith("source:")) {
+                const sourceType = filter.substring(7); // 去掉 "source:" 前缀
+                if (modItem.sourceType === sourceType) {
+                    return true;
+                }
+                continue;
+            }
             if (modItem.displayName?.toLocaleLowerCase().indexOf(filter.toLocaleLowerCase()) > -1) {
                 return true;
             }
