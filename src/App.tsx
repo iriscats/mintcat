@@ -2,6 +2,8 @@ import React from 'react';
 import {Layout} from 'antd';
 import {Route, Routes, useLocation, useNavigate} from 'react-router-dom';
 import {useAppError} from '@/hooks/useAppError';
+import {useDeepLinkHandler} from '@/hooks/useDeepLinkHandler';
+import {useOAuthCallback} from '@/hooks/useOAuthCallback';
 
 import TitleBar from "@/components/TitleBar.tsx";
 import StatusBar from "@/components/StatusBar.tsx";
@@ -59,6 +61,8 @@ const AppContent = () => {
     }, [location.pathname]);
 
     useAppError();
+    useDeepLinkHandler();
+    useOAuthCallback();
     useKeyboardListener((event) => {
         if (event.ctrlKey && event.key === 'f') {
             event.preventDefault();

@@ -169,6 +169,31 @@ export interface EventPayloads {
   'frontend-task-start': TaskData;
 
   // ========================================
+  // OAuth 事件
+  // ========================================
+
+  /** OAuth 回调接收 */
+  'oauth-callback-received': {
+    platform: string;
+    code?: string;
+    accessToken?: string;
+    state?: string;
+    error?: string;
+    errorDescription?: string;
+  };
+
+  /** OAuth 成功 */
+  'oauth-success': {
+    platform: string;
+  };
+
+  /** OAuth 失败 */
+  'oauth-error': {
+    platform: string;
+    error: string;
+  };
+
+  // ========================================
   // Tauri 内部事件
   // ========================================
 
