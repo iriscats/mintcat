@@ -17,6 +17,27 @@ import {TimeUtils} from "@/utils/TimeUtils.ts";
 
 const {useToken} = theme;
 
+// 模块级别的缓存，用于在虚拟列表滚动时保持 Switch 状态
+const pendingEnabledChanges = new Map<number, boolean>();
+
+export function getPendingEnabled(modId: number, defaultValue: boolean): boolean {
+    return pendingEnabledChanges.has(modId)
+        ? pendingEnabledChanges.get(modId)!
+        : defaultValue;
+}
+
+export function setPendingEnabled(modId: number, value: boolean): void {
+    pendingEnabledChanges.set(modId, value);
+}
+
+export function clearPendingEnabled(modId?: number): void {
+    if (modId !== undefined) {
+        pendingEnabledChanges.delete(modId);
+    } else {
+        pendingEnabledChanges.clear();
+    }
+}
+
 /**
  * Helper method to get a mod from database by ID
  */
@@ -57,47 +78,29 @@ function ModTreeViewFolder({nodeData, onMenuClick}) {
 
 
 function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
-    const viewModelRef = React.useRef<HomeViewModel | null>(null);
-
-    // 获取初始状态：优先从 ViewModel 缓存读取
-    const getInitialChecked = () => {
-        if (viewModelRef.current) {
-            return viewModelRef.current.getModEnabled(nodeData.modId, nodeData.enabled);
-        }
-        return nodeData.enabled;
-    };
-
-    const [checked, setChecked] = useState(getInitialChecked);
-
-    // 初始化时获取 ViewModel 并同步状态
-    React.useEffect(() => {
-        let mounted = true;
-        IoC.get(HomeViewModel).then(vm => {
-            if (mounted) {
-                viewModelRef.current = vm;
-                // 从缓存恢复状态（如果有）
-                setChecked(vm.getModEnabled(nodeData.modId, nodeData.enabled));
-            }
-        });
-        return () => { mounted = false; };
-    }, []);
+    // 使用模块级别缓存获取初始状态（同步，不会因滚动丢失）
+    const [checked, setChecked] = useState(() =>
+        getPendingEnabled(nodeData.modId, nodeData.enabled)
+    );
 
     // 同步外部 prop 变化（当 Tree 完整刷新时）
     React.useEffect(() => {
-        if (viewModelRef.current) {
-            setChecked(viewModelRef.current.getModEnabled(nodeData.modId, nodeData.enabled));
-        } else {
-            setChecked(nodeData.enabled);
+        const cachedValue = getPendingEnabled(nodeData.modId, nodeData.enabled);
+        setChecked(cachedValue);
+
+        // 当数据库值与缓存值同步后，清除缓存
+        if (nodeData.enabled === cachedValue) {
+            clearPendingEnabled(nodeData.modId);
         }
     }, [nodeData.enabled, nodeData.modId]);
 
     const onSwitchChange = async (newChecked: boolean) => {
-        // 1. 立即更新本地状态（乐观更新）
+        // 1. 立即更新本地状态和模块缓存（乐观更新）
         setChecked(newChecked);
+        setPendingEnabled(nodeData.modId, newChecked);
 
-        // 2. 异步更新数据库（ViewModel 会同时缓存状态）
-        const viewModel = viewModelRef.current || await IoC.get(HomeViewModel);
-        viewModelRef.current = viewModel;
+        // 2. 异步更新数据库（不清除缓存，等 treeData 刷新后自动清除）
+        const viewModel = await IoC.get(HomeViewModel);
         await viewModel.setModEnabled(nodeData.modId, newChecked);
 
         // 3. 只更新计数标签
