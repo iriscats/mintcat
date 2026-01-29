@@ -9,6 +9,8 @@ import {ConfigDataType} from '@/storage/DataType';
 import {exists, readTextFile, stat} from '@tauri-apps/plugin-fs';
 import {path} from '@tauri-apps/api';
 import {configDir} from '@tauri-apps/api/path';
+import {getDb} from '@/storage/db/Client';
+import {mods, modVersions, modDownloads, modStatus, profiles, profileFolders, profileMods, oauths} from '@/storage/db/Schema';
 
 export class ConfigMigrationV4 {
 
@@ -65,6 +67,9 @@ export class ConfigMigrationV4 {
     public async migrate(): Promise<boolean> {
         try {
             console.log(`开始迁移v${this.version}配置...`);
+
+            // 清空所有相关表数据，避免重复迁移时数据重复
+            await this.clearAllData();
 
             // 创建默认游戏和用户
             const existingGame = await this.gameDAO.getGameByName('drg');
@@ -521,6 +526,50 @@ export class ConfigMigrationV4 {
             console.log(`[Migration] Profile创建成功: ${name}, ID: ${createdProfile?.id}`);
         } catch (error) {
             console.error('创建配置文件失败:', error);
+        }
+    }
+
+    /**
+     * 清空所有相关表数据
+     * 按照外键依赖关系的顺序删除，避免约束冲突
+     */
+    private async clearAllData(): Promise<void> {
+        try {
+            const db = await getDb();
+            console.log('[Migration] 开始清空已有数据...');
+
+            // 按外键依赖顺序删除：先删除依赖表，再删除被依赖表
+            // 1. 删除 profile 相关数据
+            await db.delete(profileMods);
+            console.log('[Migration] 已清空 profileMods 表');
+
+            await db.delete(profileFolders);
+            console.log('[Migration] 已清空 profileFolders 表');
+
+            await db.delete(profiles);
+            console.log('[Migration] 已清空 profiles 表');
+
+            // 2. 删除 mod 相关数据
+            await db.delete(modStatus);
+            console.log('[Migration] 已清空 modStatus 表');
+
+            await db.delete(modDownloads);
+            console.log('[Migration] 已清空 modDownloads 表');
+
+            await db.delete(modVersions);
+            console.log('[Migration] 已清空 modVersions 表');
+
+            await db.delete(mods);
+            console.log('[Migration] 已清空 mods 表');
+
+            // 3. 删除 oauth 数据
+            await db.delete(oauths);
+            console.log('[Migration] 已清空 oauths 表');
+
+            console.log('[Migration] 所有数据清空完成');
+        } catch (error) {
+            console.error('[Migration] 清空数据失败:', error);
+            throw error;
         }
     }
 

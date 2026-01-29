@@ -451,7 +451,7 @@ export class ProfileDAO {
     }
 
     /**
-     * 添加模组到配置文件
+     * 添加模组到配置文件（如果已存在则更新）
      */
     public async addModToProfile(modData: Omit<ProfileModData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileModData | null> {
         try {
@@ -463,6 +463,15 @@ export class ProfileDAO {
                 sortOrder: modData.sortOrder || 0,
                 isEnabled: modData.isEnabled ?? true,
                 usedVersion: modData.usedVersion || "",
+            }).onConflictDoUpdate({
+                target: [profileMods.profileId, profileMods.modId],
+                set: {
+                    parentFolderId: modData.parentFolderId || null,
+                    sortOrder: modData.sortOrder || 0,
+                    isEnabled: modData.isEnabled ?? true,
+                    usedVersion: modData.usedVersion || "",
+                    updatedAt: new Date(),
+                }
             }).returning();
 
             return result.length > 0 ? this.mapToProfileModData(result[0]) : null;

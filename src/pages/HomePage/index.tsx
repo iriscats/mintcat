@@ -422,8 +422,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     @autoBind
-    private onSortMenuClick({ key }: { key: string }) {
-        this.onMenuBarSortClick(key);
+    private async onSortMenuClick({ key }: { key: string }) {
+        await this.onMenuBarSortClick(key);
     }
 
     @autoBind

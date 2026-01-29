@@ -152,6 +152,10 @@ html, body {
     margin-right: 4px;
 }
 
+.text-red {
+    color: #ff4d4f;
+}
+
 .ml-8 {
     margin-left: 8px;
 }
