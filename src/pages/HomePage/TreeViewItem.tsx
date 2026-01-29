@@ -1,7 +1,20 @@
 import {t} from "i18next";
 import React, {useState} from "react";
 import {Dropdown, MenuProps, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
-import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined, DragOutlined} from "@ant-design/icons";
+import {
+    ClockCircleOutlined,
+    CopyOutlined,
+    DeleteOutlined,
+    DragOutlined,
+    EditOutlined,
+    ExclamationCircleOutlined,
+    ExportOutlined,
+    FolderAddOutlined,
+    FolderOutlined,
+    LinkOutlined,
+    PlusCircleOutlined,
+    SyncOutlined,
+} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
@@ -74,10 +87,10 @@ function ModTreeViewFolder({nodeData, onMenuClick, folders, onMoveToFolder}: {
     const isDefaultFolder = currentFolderId === 1 || currentFolderId === 2;
 
     const contextMenusGroup: MenuProps['items'] = [
-        {label: t('Add Mod'), key: 'add_mod'},
-        {label: t('Add New Group'), key: 'add_new_group'},
-        {label: t('Add Sub Group'), key: 'add_sub_group'},
-        {label: t('Rename Group'), key: 'rename_group'},
+        {label: t('Add Mod'), key: 'add_mod', icon: <PlusCircleOutlined />},
+        {label: t('Add New Group'), key: 'add_new_group', icon: <FolderAddOutlined />},
+        {label: t('Add Sub Group'), key: 'add_sub_group', icon: <FolderAddOutlined />},
+        {label: t('Rename Group'), key: 'rename_group', icon: <EditOutlined />},
         // 只有非默认文件夹才显示 "移动到" 和 "删除" 选项
         ...(!isDefaultFolder && moveToChildren.length > 0 ? [{
             label: t('Move To'),
@@ -85,7 +98,7 @@ function ModTreeViewFolder({nodeData, onMenuClick, folders, onMoveToFolder}: {
             icon: <DragOutlined />,
             children: moveToChildren,
         }] : []),
-        ...(!isDefaultFolder ? [{label: t('Delete Group'), key: 'delete_group'}] : [])
+        ...(!isDefaultFolder ? [{label: t('Delete Group'), key: 'delete_group', icon: <DeleteOutlined />}] : [])
     ];
     
     return (
@@ -441,17 +454,17 @@ export function TreeViewItem(
         })) || [];
 
     const contextMenus: MenuProps['items'] = [
-        {label: t('Rename'), key: 'rename'},
-        {label: t('Update'), key: 'update'},
+        {label: t('Rename'), key: 'rename', icon: <EditOutlined />},
+        {label: t('Update'), key: 'update', icon: <SyncOutlined />},
         ...(moveToChildren.length > 0 ? [{
             label: t('Move To'),
             key: 'move_to',
             icon: <DragOutlined />,
             children: moveToChildren,
         }] : []),
-        {label: t('Delete'), key: 'delete'},
-        {label: t('Copy Link'), key: 'copy_link'},
-        {label: t('Export'), key: 'export'}
+        {label: t('Delete'), key: 'delete', icon: <DeleteOutlined />},
+        {label: t('Copy Link'), key: 'copy_link', icon: <LinkOutlined />},
+        {label: t('Export'), key: 'export', icon: <ExportOutlined />}
     ];
 
     if (nodeData.isLeaf) {

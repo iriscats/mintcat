@@ -8,7 +8,7 @@ import {
     SelectProps, Space, Spin, Tooltip, TreeProps, Typography,
 } from 'antd';
 import {
-    CloseCircleOutlined, CloseOutlined, CopyOutlined,
+    CheckSquareOutlined, CloseCircleOutlined, CloseOutlined, CopyOutlined,
     DeleteOutlined,
     EditOutlined, FieldTimeOutlined, LoadingOutlined, PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined, SaveOutlined, SortAscendingOutlined, SortDescendingOutlined, SyncOutlined,
@@ -236,6 +236,30 @@ export class HomePage extends BasePage<any, ModListPageState> {
             console.error(`[HomePage] Copy link failed for id=${id}:`, err);
             message.error(t("Copy Failed"));
         }
+    }
+
+    /**
+     * 从 treeData 中递归收集所有叶子节点（mod）的 key
+     */
+    private getAllLeafKeys(nodes: DataNode[] | undefined): string[] {
+        if (!nodes || !Array.isArray(nodes)) return [];
+        const keys: string[] = [];
+        for (const node of nodes) {
+            if (node.isLeaf) {
+                keys.push(String(node.key));
+            }
+            if (node.children?.length) {
+                keys.push(...this.getAllLeafKeys(node.children as DataNode[]));
+            }
+        }
+        return keys;
+    }
+
+    @autoBind
+    private onMultiSelectAllClick() {
+        const treeData = this.state.treeData as DataNode[] | undefined;
+        const allKeys = this.getAllLeafKeys(treeData);
+        this.setState({ selectedKeys: allKeys });
     }
 
     // Multi Operations
@@ -867,18 +891,23 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 }}
                             />
                         </div>
-                        <Flex className="home-footer-bar">
+                        <Flex className="home-footer-bar" gap={4} align="center">
                             <Checkbox onChange={this.onMultiCheckboxChange}
                             />
                             {
                                 this.state.isMultiSelect === true &&
-                                <span className="mr-auto">
-                                    <Button type="text" 
-                                            className="ml-10"
+                                <Space size={4} className="mr-auto">
+                                    <Button type="text"
+                                            size={"small"}
+                                            icon={<CheckSquareOutlined/>}
+                                            onClick={this.onMultiSelectAllClick}>
+                                        {t("All")}
+                                    </Button>
+                                    <Button type="text"
                                             size={"small"}
                                             icon={<CloseCircleOutlined/>}
                                             onClick={this.onMultiDeleteClick}>
-                                    {t("Delete")}
+                                        {t("Delete")}
                                     </Button>
                                     <Button type="text" size={"small"}
                                             icon={<PlayCircleOutlined/>}
@@ -900,7 +929,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                             onClick={this.onMultiCopyClick}>
                                         {t("Copy")}
                                     </Button>
-                                </span>
+                                </Space>
                             }
                             <CountLabel enableCount={this.state.enableCount} totalCount={this.state.totalCount}/>
                         </Flex>

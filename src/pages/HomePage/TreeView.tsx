@@ -254,6 +254,7 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
                 checkable={this.props.isMultiSelect}
                 expandedKeys={this.props.expandedKeys}
                 selectedKeys={this.props.selectedKeys}
+                checkedKeys={this.props.isMultiSelect ? this.props.selectedKeys : undefined}
                 treeData={this.props.treeData}
                 onCheck={this.onTreeNodeSelect}
                 onSelect={this.onTreeNodeSelect}
