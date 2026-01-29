@@ -288,7 +288,7 @@ function ModTreeViewWarring({nodeData}) {
 }
 
 
-function ModTreeViewProgressBackground({nodeData, children}) {
+function ModTreeViewProgressBackground({nodeData, children, ...restProps}) {
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
 
     // ✅ 使用 useFilteredEventListener 自动清理监听器
@@ -323,7 +323,7 @@ function ModTreeViewProgressBackground({nodeData, children}) {
             padding: "2px 4px",
             transition: "background 0.3s ease",
             ...progressStyle
-        }}>
+        }} {...restProps}>
             {children}
         </div>
     );
