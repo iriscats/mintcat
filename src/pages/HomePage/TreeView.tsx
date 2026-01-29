@@ -11,6 +11,11 @@ import {dragAndDrop} from "./DragAndDropTree";
 import { IoC } from "@/core/IoC";
 
 
+export interface FolderInfo {
+    key: string;
+    title: string;
+}
+
 export interface TreeViewProps {
     treeData?: TreeProps['treeData'];
     isMultiSelect?: boolean;
@@ -34,6 +39,107 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
     state: TreeViewState = {
         isDragging: false
     };
+
+    /**
+     * 从 treeData 中提取所有文件夹信息
+     */
+    private getFolderList(): FolderInfo[] {
+        const folders: FolderInfo[] = [];
+        
+        const collectFolders = (nodes: any[]) => {
+            for (const node of nodes) {
+                if (!node.isLeaf && node.key !== 'root') {
+                    folders.push({
+                        key: node.key,
+                        title: node.title
+                    });
+                }
+                if (node.children) {
+                    collectFolders(node.children);
+                }
+            }
+        };
+
+        if (this.props.treeData) {
+            collectFolders(this.props.treeData as any[]);
+        }
+
+        return folders;
+    }
+
+    /**
+     * 移动节点到指定文件夹（复用拖放逻辑）
+     */
+    @autoBind
+    private async onMoveToFolder(sourceKey: string, targetFolderKey: string) {
+        await IoC.get(TreeViewModel);
+        const profileVM = await IoC.get(ProfileViewModel);
+        const activeRoot = await profileVM.getActiveProfileTreeRoot();
+        let treeData: any[];
+        const modList = await this.getAllModsAsList();
+        const converter = new TreeViewConverter(modList);
+
+        if (TreeViewConverter.filterList.length > 0) {
+            const filterList = TreeViewConverter.filterList;
+            TreeViewConverter.filterList = [];
+            treeData = converter.convertToFromRoot(activeRoot);
+            TreeViewConverter.filterList = filterList;
+        } else {
+            treeData = this.props.treeData ? [...this.props.treeData as any[]] : [];
+        }
+
+        // 查找源节点和目标文件夹节点
+        const findNode = (nodes: any[], key: string): any | null => {
+            for (const node of nodes) {
+                if (node.key === key) {
+                    return node;
+                }
+                if (node.children) {
+                    const found = findNode(node.children, key);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        const targetNode = findNode(treeData, targetFolderKey);
+        if (!targetNode) {
+            console.error(`[TreeView] Target folder not found: ${targetFolderKey}`);
+            return;
+        }
+
+        // 构造一个模拟的拖放事件信息
+        const mockInfo = {
+            node: {
+                key: targetFolderKey,
+                pos: '0-0', // 简化的位置
+                isLeaf: false
+            },
+            dragNode: {
+                key: sourceKey
+            },
+            dropToGap: false, // 拖入文件夹内部
+            dropPosition: 0
+        };
+
+        const dragTreeData = dragAndDrop(mockInfo, treeData);
+
+        try {
+            const profileTreeItem = converter.convertFrom(dragTreeData);
+
+            if (!profileTreeItem || profileTreeItem.children.length === 0) {
+                return;
+            }
+
+            await profileVM.saveProfileTreeToDatabase(profileTreeItem);
+
+            if (this.props.onUpdateTreeView) {
+                await this.props.onUpdateTreeView();
+            }
+        } catch (error) {
+            console.error(`[TreeView] Error during move to folder:`, error);
+        }
+    }
 
     @autoBind
     private async onDrop(info: any) {
@@ -116,7 +222,14 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
 
     @autoBind
     private onCustomTitleRender(nodeData: any) {
-        return TreeViewItem(nodeData, this.props.onMenuClick, this.props.onCountLabelUpdate);
+        const folders = this.getFolderList();
+        return TreeViewItem(
+            nodeData, 
+            this.props.onMenuClick, 
+            this.props.onCountLabelUpdate,
+            folders,
+            this.onMoveToFolder
+        );
     }
     /**
      * Helper method to get all mods from database as CompleteModData array

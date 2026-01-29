@@ -1,7 +1,7 @@
 import {t} from "i18next";
 import React, {useState} from "react";
 import {Dropdown, MenuProps, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
-import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined} from "@ant-design/icons";
+import {ClockCircleOutlined, ExclamationCircleOutlined, FolderOutlined, DragOutlined} from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
@@ -14,6 +14,7 @@ import {StorageAPI} from "@/storage";
 import StatusBar from "@/components/StatusBar.tsx";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
+import type {FolderInfo} from "./TreeView";
 
 const {useToken} = theme;
 
@@ -47,20 +48,58 @@ async function getModById(modId: number): Promise<CompleteModData | null> {
 }
 
 
-function ModTreeViewFolder({nodeData, onMenuClick}) {
+function ModTreeViewFolder({nodeData, onMenuClick, folders, onMoveToFolder}: {
+    nodeData: any;
+    onMenuClick: any;
+    folders?: FolderInfo[];
+    onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void;
+}) {
+    // 过滤掉当前文件夹和默认文件夹(folder-1, folder-2)，避免移动到自身或默认文件夹
+    const moveToChildren: MenuProps['items'] = folders
+        ?.filter(f => {
+            if (f.key === nodeData.key) return false;
+            // 不能移动到默认文件夹
+            const folderId = parseInt(f.key.split('-')[1]);
+            if (folderId === 1 || folderId === 2) return false;
+            return true;
+        })
+        .map(f => ({
+            key: `move_to_${f.key}`,
+            label: f.title,
+            icon: <FolderOutlined />,
+        })) || [];
+
+    // 检查当前文件夹是否是默认文件夹
+    const currentFolderId = parseInt(nodeData.key.split('-')[1]);
+    const isDefaultFolder = currentFolderId === 1 || currentFolderId === 2;
+
     const contextMenusGroup: MenuProps['items'] = [
         {label: t('Add Mod'), key: 'add_mod'},
         {label: t('Add New Group'), key: 'add_new_group'},
         {label: t('Add Sub Group'), key: 'add_sub_group'},
         {label: t('Rename Group'), key: 'rename_group'},
-        {label: t('Delete Group'), key: 'delete_group'}
+        // 只有非默认文件夹才显示 "移动到" 和 "删除" 选项
+        ...(!isDefaultFolder && moveToChildren.length > 0 ? [{
+            label: t('Move To'),
+            key: 'move_to',
+            icon: <DragOutlined />,
+            children: moveToChildren,
+        }] : []),
+        ...(!isDefaultFolder ? [{label: t('Delete Group'), key: 'delete_group'}] : [])
     ];
+    
     return (
         <Dropdown trigger={['contextMenu']}
                   menu={{
                       items: contextMenusGroup,
                       onClick: (e) => {
-                          onMenuClick(e.key, nodeData.key);
+                          // 处理 "移动到" 子菜单点击
+                          if (e.key.startsWith('move_to_folder-')) {
+                              const targetFolderKey = e.key.replace('move_to_', '');
+                              onMoveToFolder?.(nodeData.key, targetFolderKey);
+                          } else {
+                              onMenuClick(e.key, nodeData.key);
+                          }
                       }
                   }}>
                     <span style={{
@@ -381,11 +420,35 @@ function ModTreeViewTitle({nodeData}) {
 }
 
 
-export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate?: () => Promise<void>) {
+export function TreeViewItem(
+    nodeData: any, 
+    onMenuClick: any, 
+    onCountLabelUpdate?: () => Promise<void>,
+    folders?: FolderInfo[],
+    onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void
+) {
+    // 构建"移动到"子菜单，过滤掉默认文件夹(folder-1, folder-2)
+    const moveToChildren: MenuProps['items'] = folders
+        ?.filter(f => {
+            const folderId = parseInt(f.key.split('-')[1]);
+            // 不能移动到默认文件夹
+            return folderId !== 1 && folderId !== 2;
+        })
+        .map(f => ({
+            key: `move_to_${f.key}`,
+            label: f.title,
+            icon: <FolderOutlined />,
+        })) || [];
 
     const contextMenus: MenuProps['items'] = [
         {label: t('Rename'), key: 'rename'},
         {label: t('Update'), key: 'update'},
+        ...(moveToChildren.length > 0 ? [{
+            label: t('Move To'),
+            key: 'move_to',
+            icon: <DragOutlined />,
+            children: moveToChildren,
+        }] : []),
         {label: t('Delete'), key: 'delete'},
         {label: t('Copy Link'), key: 'copy_link'},
         {label: t('Export'), key: 'export'}
@@ -397,7 +460,13 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate
                       menu={{
                           items: contextMenus,
                           onClick: (e) => {
-                              onMenuClick(e.key, nodeData.key);
+                              // 处理 "移动到" 子菜单点击
+                              if (e.key.startsWith('move_to_folder-')) {
+                                  const targetFolderKey = e.key.replace('move_to_', '');
+                                  onMoveToFolder?.(nodeData.key, targetFolderKey);
+                              } else {
+                                  onMenuClick(e.key, nodeData.key);
+                              }
                           }
                       }}>
                 <ModTreeViewProgressBackground nodeData={nodeData}>
@@ -452,7 +521,12 @@ export function TreeViewItem(nodeData: any, onMenuClick: any, onCountLabelUpdate
         );
     } else {
         return (
-            <ModTreeViewFolder nodeData={nodeData} onMenuClick={onMenuClick}/>
+            <ModTreeViewFolder 
+                nodeData={nodeData} 
+                onMenuClick={onMenuClick}
+                folders={folders}
+                onMoveToFolder={onMoveToFolder}
+            />
         );
     }
 }
