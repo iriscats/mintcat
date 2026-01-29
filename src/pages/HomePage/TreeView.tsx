@@ -53,6 +53,26 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
             treeData = this.props.treeData || [];
         }
 
+        // 修复：对于第一个文件夹的特殊处理
+        // 当目标是文件夹（非叶子节点）且拖放到间隙但位置是0时，
+        // 如果该节点是其父级中的第一个节点，应该视为拖入文件夹内部
+        const dropNode = info.node;
+        const dropPos = dropNode.pos.split('-');
+        const nodeIndex = Number(dropPos[dropPos.length - 1]);
+        
+        // 如果目标是文件夹，且是第一个节点，且 dropPosition 在节点上方（0）
+        // 则修正 dropToGap 为 false，视为拖入文件夹内部
+        if (dropNode.isLeaf === false && 
+            nodeIndex === 0 && 
+            info.dropToGap && 
+            info.dropPosition === 0) {
+            // 创建修正后的 info 对象
+            info = {
+                ...info,
+                dropToGap: false,
+            };
+        }
+
         const dragTreeData = dragAndDrop(info, treeData);
 
         try {
