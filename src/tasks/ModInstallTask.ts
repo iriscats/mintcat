@@ -195,6 +195,8 @@ export class ModInstallTask implements ITask {
         }
 
         const ue4ss = await settings.getValue('ue4ss');
+        // Custom mode: user manages UE4SS themselves, skip install/uninstall
+        const isCustomMode = ue4ss === "Custom";
 
         const installType = await IntegrateApi.checkInstalled(drgPakPath, installTime);
 
@@ -218,11 +220,8 @@ export class ModInstallTask implements ITask {
         await context.setStep('卸载旧版本', 6, TOTAL_STEPS);
         await context.setMessage('正在卸载旧版本模组...');
 
-        if (ue4ss === "UE4SS-Lite") {
-            await IntegrateApi.uninstall(drgPakPath);
-        } else {
-            await IntegrateApi.uninstall(drgPakPath, false);
-        }
+        // In Custom mode, don't delete UE4SS; otherwise delete it
+        await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
         // Step 7: Install .NET runtime
         await context.setStep('安装运行时环境', 7, TOTAL_STEPS);
@@ -250,7 +249,8 @@ export class ModInstallTask implements ITask {
         }
 
         await context.setMessage('正在写入模组文件...');
-        const result = await IntegrateApi.install(drgPakPath, JSON.stringify(installModList));
+        // In Custom mode, skip UE4SS installation (user manages it themselves)
+        const result = await IntegrateApi.install(drgPakPath, JSON.stringify(installModList), isCustomMode);
 
         if (!result) {
             throw new Error(t("Installation Failed"));

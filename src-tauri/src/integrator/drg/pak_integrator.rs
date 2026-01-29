@@ -131,9 +131,15 @@ impl PakIntegrator {
         Ok(())
     }
 
-    pub fn install(mut self, app: AppHandle, mods: &mut Vec<ModInfo>) -> Result<()> {
+    pub fn install(mut self, app: AppHandle, mods: &mut Vec<ModInfo>, skip_ue4ss: bool) -> Result<()> {
         let total_percent = 70.0;
         let mods_size = mods.len();
+
+        // Install UE4SS once before processing mods (unless skipped)
+        if !skip_ue4ss {
+            app.emit("status-bar-log", "Installing UE4SS...").unwrap();
+            install_ue4ss(&self.installation.binaries_directory())?;
+        }
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
             app.emit(
@@ -144,9 +150,6 @@ impl PakIntegrator {
 
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             app.emit("status-bar-percent", current_percent).unwrap();
-
-            // install ue4ssl
-            install_ue4ss(&self.installation.binaries_directory())?;
 
             let result = self.process_mod(mod_info);
             match result {

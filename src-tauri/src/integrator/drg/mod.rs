@@ -13,7 +13,7 @@ pub mod pak_integrator;
 mod raw_asset;
 pub mod unpacked_mod;
 
-fn do_install_mods(app: &AppHandle, game_path: &str, mod_list_json: &str) -> anyhow::Result<()> {
+fn do_install_mods(app: &AppHandle, game_path: &str, mod_list_json: &str, skip_ue4ss: bool) -> anyhow::Result<()> {
     let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
 
     app.emit("status-bar-log", "Start Install...").unwrap();
@@ -25,15 +25,15 @@ fn do_install_mods(app: &AppHandle, game_path: &str, mod_list_json: &str) -> any
     app.emit("status-bar-log", "Load Mods ...").unwrap();
     app.emit("status-bar-percent", 10).unwrap();
 
-    integrator.install(app.clone(), &mut mods)?;
+    integrator.install(app.clone(), &mut mods, skip_ue4ss)?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>) {
+pub fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>, skip_ue4ss: bool) {
     std::thread::spawn(move || {
-        if let Err(e) = do_install_mods(&app, &game_path, &mod_list_json) {
+        if let Err(e) = do_install_mods(&app, &game_path, &mod_list_json, skip_ue4ss) {
             let error_msg = format!("{:#}", e);
             eprintln!("{}", error_msg);
             app.emit("install-error", error_msg).unwrap();
