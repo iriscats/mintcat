@@ -1,27 +1,55 @@
 import {open} from "@tauri-apps/plugin-dialog";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
+import {invoke} from "@tauri-apps/api/core";
 import {useEventListener} from "@/events";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import React, {useEffect, useState} from "react";
 import {Button, Flex, Form, List} from "antd";
 import {t} from "i18next";
-import {CloseOutlined, FilePptOutlined, FileZipOutlined, FolderOutlined, InboxOutlined} from "@ant-design/icons";
+import {CloseOutlined, FilePptOutlined, FileZipOutlined, FolderOutlined, FolderOpenOutlined, InboxOutlined} from "@ant-design/icons";
 
 
 interface FileItem {
     name: string;
     path: string;
-    type: string;
+    type: string;  // "folder" | ".pak" | ".zip"
+    isUnpackedMod?: boolean;  // true if folder is a valid unpacked mod directory
 }
 
-async function makeFileItem(filePath: string) {
+/**
+ * Check if a directory is a valid unpacked mod directory
+ * A valid unpacked mod directory contains a Content folder with uasset/uexp files
+ */
+async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
+    try {
+        return await invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
+    } catch (e) {
+        console.error('Failed to check unpacked mod:', e);
+        return false;
+    }
+}
+
+async function makeFileItem(filePath: string): Promise<FileItem> {
     const fileInfo = await stat(filePath);
+    const fileName = await path.basename(filePath);
+
+    if (fileInfo.isDirectory) {
+        // Check if it's a valid unpacked mod directory
+        const isUnpacked = await isValidUnpackedMod(filePath);
+        return {
+            path: filePath,
+            name: fileName,
+            type: "folder",
+            isUnpackedMod: isUnpacked
+        };
+    }
+
     return {
         path: filePath,
-        name: await path.basename(filePath),
-        type: fileInfo.isDirectory ? "folder" : await path.extname(filePath)
-    }
+        name: fileName,
+        type: await path.extname(filePath)
+    };
 }
 
 export const LocalTab = React.forwardRef(({}: any, ref) => {
@@ -41,11 +69,21 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
         }
 
         const fileInfo = await stat(filePath);
-        if (!fileInfo.isDirectory && !(filePath.endsWith(".zip") || filePath.endsWith(".pak"))) {
-            return;
-        }
-  
         const fileItem = await makeFileItem(filePath);
+
+        // Accept: .pak files, .zip files, or valid unpacked mod directories
+        if (fileInfo.isDirectory) {
+            // For directories, only accept if it's a valid unpacked mod
+            if (!fileItem.isUnpackedMod) {
+                return;
+            }
+        } else {
+            // For files, only accept .pak or .zip
+            if (!(filePath.endsWith(".zip") || filePath.endsWith(".pak"))) {
+                return;
+            }
+        }
+
         setFileList(prevList => {
             if (prevList.find(file => file.path === filePath)) {
                 return prevList;
@@ -158,11 +196,14 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
                                   >
                                       <Flex gap={"small"}>
                                           {
-                                              item.type === "folder" ? <FolderOutlined/> :
+                                              item.type === "folder" ? (
+                                                  item.isUnpackedMod ? <FolderOpenOutlined style={{color: '#52c41a'}}/> : <FolderOutlined/>
+                                              ) :
                                               item.type === ".pak" ? <FilePptOutlined/> : <FileZipOutlined/>
                                           }
                                           <span>
                                               {item.name}
+                                              {item.isUnpackedMod && <span style={{color: '#52c41a', marginLeft: 8, fontSize: 12}}>(Unpacked)</span>}
                                           </span>
                                       </Flex>
                                       <Button variant={"text"}

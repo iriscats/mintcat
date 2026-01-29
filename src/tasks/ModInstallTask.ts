@@ -8,8 +8,25 @@ import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { MessageBox } from '@/components/MessageBox';
 import { t } from 'i18next';
-import { exists } from '@tauri-apps/plugin-fs';
+import { exists, stat } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 import { ModSourceType } from '@/models/mod/types';
+
+/**
+ * Check if a path is a valid unpacked mod directory
+ */
+async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
+    try {
+        // First check if it's a directory
+        const fileInfo = await stat(dirPath);
+        if (!fileInfo.isDirectory) {
+            return false;
+        }
+        return await invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
+    } catch (e) {
+        return false;
+    }
+}
 
 /**
  * Task: Install mods to game
@@ -178,6 +195,8 @@ export class ModInstallTask implements ITask {
         }
 
         const ue4ss = await settings.getValue('ue4ss');
+        // Custom mode: user manages UE4SS themselves, skip install/uninstall
+        const isCustomMode = ue4ss === "Custom";
 
         const installType = await IntegrateApi.checkInstalled(drgPakPath, installTime);
 
@@ -201,11 +220,8 @@ export class ModInstallTask implements ITask {
         await context.setStep('卸载旧版本', 6, TOTAL_STEPS);
         await context.setMessage('正在卸载旧版本模组...');
 
-        if (ue4ss === "UE4SS-Lite") {
-            await IntegrateApi.uninstall(drgPakPath);
-        } else {
-            await IntegrateApi.uninstall(drgPakPath, false);
-        }
+        // In Custom mode, don't delete UE4SS; otherwise delete it
+        await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
         // Step 7: Install .NET runtime
         await context.setStep('安装运行时环境', 7, TOTAL_STEPS);
@@ -219,15 +235,22 @@ export class ModInstallTask implements ITask {
         const installModList = [];
         for (const item of enabledMods) {
             const modName = item.nameId === "" ? item.displayName : item.nameId;
+            const cachePath = item.download?.cachePath || "";
+            
+            // Check if this is an unpacked mod directory
+            const isUnpacked = await isValidUnpackedMod(cachePath);
+            
             installModList.push({
                 name: modName,
                 modio_id: item.platformId,
-                pak_path: item.download?.cachePath || "",
+                pak_path: cachePath,
+                is_unpacked: isUnpacked,
             });
         }
 
         await context.setMessage('正在写入模组文件...');
-        const result = await IntegrateApi.install(drgPakPath, JSON.stringify(installModList));
+        // In Custom mode, skip UE4SS installation (user manages it themselves)
+        const result = await IntegrateApi.install(drgPakPath, JSON.stringify(installModList), isCustomMode);
 
         if (!result) {
             throw new Error(t("Installation Failed"));

@@ -10,6 +10,9 @@ pub struct ModInfo {
     pub modio_id: Option<u32>,
     pub name: String,
     pub pak_path: String,
+    /// Whether this mod is an unpacked directory (contains Content folder with uasset/uexp files)
+    #[serde(default)]
+    pub is_unpacked: bool,
 }
 
 pub trait ReadSeek: Read + Seek + Send {}

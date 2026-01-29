@@ -67,11 +67,12 @@ export class IntegrateApi  {
         return true;
     }
 
-    public static async install(gamePath: string, modListJson: string) {
+    public static async install(gamePath: string, modListJson: string, skipUe4ss: boolean = false) {
         return new Promise<boolean>(async (resolve, reject) => {
             await invoke('install_mods', {
                 gamePath: gamePath,
                 modListJson: modListJson,
+                skipUe4ss: skipUe4ss,
             });
 
             await onceEvent('install-success', async (installTime) => {

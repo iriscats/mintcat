@@ -5,6 +5,7 @@
 .DS_Store
 Cargo.lock
 pnpm-lock.yaml
+package-lock.json
 
 # Logs
 logs
