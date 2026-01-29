@@ -2,6 +2,7 @@ import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { MigrationBase } from '@/storage/migration';
+import { CloudBackupApi } from '@/apis/CloudBackupApi';
 
 /**
  * Application initialization phases
@@ -60,6 +61,10 @@ export class AppInitializer {
         }
 
         try {
+            const restored = await CloudBackupApi.applyPendingRestore();
+            if (restored) {
+                console.log('[AppInitializer] Applied pending cloud restore');
+            }
             // Phase 1: Database
             this.currentPhase = InitPhase.Database;
             console.log('[AppInitializer] Initializing database...');

@@ -1,0 +1,314 @@
+import { t } from "i18next";
+import React from "react";
+import { Button, Card, Flex, Form, Input, List, message, Space, Tag, Typography } from "antd";
+import {
+    CloudUploadOutlined,
+    DeleteOutlined,
+    DownloadOutlined,
+    ReloadOutlined,
+    RollbackOutlined,
+    SaveOutlined,
+} from "@ant-design/icons";
+import { save } from "@tauri-apps/plugin-dialog";
+
+import { CloudBackupApi, type CloudBackupConfig, type CloudBackupRecord } from "@/apis/CloudBackupApi";
+import { MessageBox } from "@/components/MessageBox";
+import { SettingLayout } from "@/pages/SettingPage/Layout";
+
+const { Text } = Typography;
+
+function formatBytes(bytes?: number): string {
+    if (bytes === undefined || Number.isNaN(bytes)) {
+        return "-";
+    }
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    }
+    const units = ["KB", "MB", "GB", "TB"];
+    let value = bytes / 1024;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+    return `${value.toFixed(2)} ${units[unitIndex]}`;
+}
+
+function formatDate(value?: string): string {
+    if (!value) {
+        return "-";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+    return date.toLocaleString();
+}
+
+function buildDefaultFileName(createdAt?: string): string {
+    const stamp = createdAt ? new Date(createdAt).toISOString() : new Date().toISOString();
+    const safeStamp = stamp.replace(/[:.]/g, "-");
+    return `mintcat-backup-${safeStamp}.sqlite`;
+}
+
+function formatError(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    return String(error);
+}
+
+export function CloudBackupSettings() {
+    const [config, setConfig] = React.useState<CloudBackupConfig>({
+        baseUrl: "",
+        accessToken: "",
+    });
+    const [note, setNote] = React.useState<string>("");
+    const [backups, setBackups] = React.useState<CloudBackupRecord[]>([]);
+    const [loading, setLoading] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [backingUp, setBackingUp] = React.useState(false);
+    const [downloadId, setDownloadId] = React.useState<string | null>(null);
+    const [restoreId, setRestoreId] = React.useState<string | null>(null);
+    const [deleteId, setDeleteId] = React.useState<string | null>(null);
+
+    const loadConfig = async () => {
+        try {
+            const stored = await CloudBackupApi.getConfig();
+            setConfig(stored);
+        } catch (error) {
+            console.error("[CloudBackup] Failed to load config:", error);
+        }
+    };
+
+    const loadBackups = async () => {
+        setLoading(true);
+        try {
+            const list = await CloudBackupApi.listBackups();
+            setBackups(list);
+        } catch (error) {
+            console.error("[CloudBackup] Failed to load backups:", error);
+            message.error(`${t("Backup List Failed")}: ${formatError(error)}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadConfig().then();
+        loadBackups().then();
+    }, []);
+
+    const hasEndpoint = (): boolean => {
+        if (!config.baseUrl?.trim()) {
+            message.error(t("Cloud Backup Endpoint Required"));
+            return false;
+        }
+        return true;
+    };
+
+    const onSaveConfig = async () => {
+        setSaving(true);
+        try {
+            await CloudBackupApi.saveConfig(config);
+            message.success(t("Saved"));
+        } catch (error) {
+            console.error("[CloudBackup] Failed to save config:", error);
+            message.error(`${t("Save Failed")}: ${formatError(error)}`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const onBackupNow = async () => {
+        if (!hasEndpoint()) {
+            return;
+        }
+        setBackingUp(true);
+        try {
+            await CloudBackupApi.createBackup(note);
+            message.success(t("Backup Created"));
+            setNote("");
+            await loadBackups();
+        } catch (error) {
+            console.error("[CloudBackup] Backup failed:", error);
+            message.error(`${t("Backup Failed")}: ${formatError(error)}`);
+        } finally {
+            setBackingUp(false);
+        }
+    };
+
+    const onDownload = async (item: CloudBackupRecord) => {
+        if (!hasEndpoint()) {
+            return;
+        }
+        const target = await save({
+            defaultPath: buildDefaultFileName(item.createdAt),
+            filters: [
+                { name: "SQLite", extensions: ["sqlite"] },
+            ],
+        });
+        if (!target) {
+            return;
+        }
+        setDownloadId(item.id);
+        try {
+            await CloudBackupApi.downloadBackupToPath(item.id, target);
+            message.success(t("Backup Downloaded"));
+        } catch (error) {
+            console.error("[CloudBackup] Download failed:", error);
+            message.error(`${t("Backup Download Failed")}: ${formatError(error)}`);
+        } finally {
+            setDownloadId(null);
+        }
+    };
+
+    const onRestore = async (item: CloudBackupRecord) => {
+        if (!hasEndpoint()) {
+            return;
+        }
+        const confirmed = await MessageBox.confirm({
+            title: t("Restore"),
+            content: t("Restore will replace local data after restart. Continue?"),
+        });
+        if (!confirmed) {
+            return;
+        }
+        setRestoreId(item.id);
+        try {
+            await CloudBackupApi.prepareRestore(item.id);
+            message.success(t("Backup Restore Prepared"));
+        } catch (error) {
+            console.error("[CloudBackup] Restore failed:", error);
+            message.error(`${t("Backup Restore Failed")}: ${formatError(error)}`);
+        } finally {
+            setRestoreId(null);
+        }
+    };
+
+    const onDelete = async (item: CloudBackupRecord) => {
+        const confirmed = await MessageBox.confirm({
+            title: t("Delete"),
+            content: t("Delete Backup Confirm"),
+        });
+        if (!confirmed) {
+            return;
+        }
+        setDeleteId(item.id);
+        try {
+            await CloudBackupApi.deleteBackup(item.id);
+            message.success(t("Backup Deleted"));
+            await loadBackups();
+        } catch (error) {
+            console.error("[CloudBackup] Delete failed:", error);
+            message.error(`${t("Backup Delete Failed")}: ${formatError(error)}`);
+        } finally {
+            setDeleteId(null);
+        }
+    };
+
+    return (
+        <Card title={t("Cloud Backup")} style={{ marginBottom: "10px" }}>
+            <Form {...SettingLayout}>
+                <Form.Item label={t("Cloud Backup Endpoint")}>
+                    <Input
+                        value={config.baseUrl}
+                        onChange={(event) => setConfig({ ...config, baseUrl: event.target.value })}
+                        placeholder="https://backup.example.com"
+                    />
+                </Form.Item>
+                <Form.Item label={t("Cloud Backup Token")}>
+                    <Input.Password
+                        value={config.accessToken}
+                        onChange={(event) => setConfig({ ...config, accessToken: event.target.value })}
+                        placeholder={t("Optional")}
+                    />
+                </Form.Item>
+                <Form.Item label={t("Backup Note")}>
+                    <Input
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        placeholder={t("Optional note for this backup")}
+                    />
+                </Form.Item>
+                <Form.Item label={t("Actions")}>
+                    <Space wrap>
+                        <Button
+                            type="primary"
+                            icon={<CloudUploadOutlined />}
+                            loading={backingUp}
+                            onClick={onBackupNow}
+                        >
+                            {t("Backup Now")}
+                        </Button>
+                        <Button
+                            icon={<ReloadOutlined />}
+                            loading={loading}
+                            onClick={loadBackups}
+                        >
+                            {t("Refresh")}
+                        </Button>
+                        <Button
+                            icon={<SaveOutlined />}
+                            loading={saving}
+                            onClick={onSaveConfig}
+                        >
+                            {t("Save")}
+                        </Button>
+                    </Space>
+                </Form.Item>
+            </Form>
+
+            <Flex vertical gap={12}>
+                <Text strong>{t("Backup History")}</Text>
+                <List
+                    loading={loading}
+                    dataSource={backups}
+                    locale={{ emptyText: t("No backups yet") }}
+                    renderItem={(item) => (
+                        <List.Item
+                            actions={[
+                                <Button
+                                    key="download"
+                                    type="text"
+                                    icon={<DownloadOutlined />}
+                                    loading={downloadId === item.id}
+                                    onClick={() => onDownload(item)}
+                                >
+                                    {t("Download")}
+                                </Button>,
+                                <Button
+                                    key="restore"
+                                    type="text"
+                                    icon={<RollbackOutlined />}
+                                    loading={restoreId === item.id}
+                                    onClick={() => onRestore(item)}
+                                >
+                                    {t("Restore")}
+                                </Button>,
+                                <Button
+                                    key="delete"
+                                    type="text"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    loading={deleteId === item.id}
+                                    onClick={() => onDelete(item)}
+                                >
+                                    {t("Delete")}
+                                </Button>,
+                            ]}
+                        >
+                            <Flex vertical gap={4}>
+                                <Text>{item.note ? `${formatDate(item.createdAt)} - ${item.note}` : formatDate(item.createdAt)}</Text>
+                                <Space size={8}>
+                                    <Text type="secondary">{formatBytes(item.size)}</Text>
+                                    {item.appVersion && <Tag color="blue">{item.appVersion}</Tag>}
+                                </Space>
+                            </Flex>
+                        </List.Item>
+                    )}
+                />
+            </Flex>
+        </Card>
+    );
+}
