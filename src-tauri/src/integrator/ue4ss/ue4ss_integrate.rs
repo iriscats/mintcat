@@ -4,12 +4,24 @@ use anyhow::{Context, Result};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use zip::ZipArchive;
 
 const DOTNET_RUNTIME_URL: &str =
     "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
 
+/// v1st proxy API for improved download reliability
+const V1ST_PROXY_API: &str = "https://api.v1st.net/";
+
+/// Maximum number of retry attempts for downloading
+const MAX_DOWNLOAD_RETRIES: u32 = 3;
+
+/// Download timeout in seconds (5 minutes for large files)
+const DOWNLOAD_TIMEOUT_SECS: u64 = 300;
+
+/// Connect timeout in seconds
+const CONNECT_TIMEOUT_SECS: u64 = 30;
 
 fn sanitize_dir_name(input: &str) -> String {
     let mut s: String = input
@@ -177,14 +189,41 @@ fn is_valid_zip(path: &PathBuf) -> bool {
     }
 }
 
-/// Downloads the .NET runtime ZIP file to the specified path.
-fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
-    app.emit("status-bar-log", "Downloading .NET Runtime...")
-        .unwrap();
+/// Transforms a URL to use v1st proxy
+fn get_proxied_url(url: &str) -> String {
+    format!("{}{}", V1ST_PROXY_API, url)
+}
 
-    let client = reqwest::blocking::Client::new();
+/// Downloads the .NET runtime ZIP file from a single URL attempt.
+fn try_download_dotnet_runtime(
+    app: &AppHandle,
+    url: &str,
+    dest_path: &PathBuf,
+    use_proxy: bool,
+) -> Result<()> {
+    let download_url = if use_proxy {
+        get_proxied_url(url)
+    } else {
+        url.to_string()
+    };
+
+    let proxy_label = if use_proxy { " (via proxy)" } else { "" };
+    app.emit(
+        "status-bar-log",
+        format!("Downloading .NET Runtime{}...", proxy_label),
+    )
+    .unwrap();
+
+    log::info!("Downloading .NET runtime from: {}", download_url);
+
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(DOWNLOAD_TIMEOUT_SECS))
+        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
+        .build()
+        .context("Failed to create HTTP client")?;
+
     let mut response = client
-        .get(DOTNET_RUNTIME_URL)
+        .get(&download_url)
         .send()
         .context("Failed to send download request")?;
 
@@ -239,6 +278,52 @@ fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
+/// Downloads the .NET runtime ZIP file to the specified path with retry and proxy fallback.
+fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
+    let mut last_error: Option<anyhow::Error> = None;
+    let mut use_proxy = false;
+
+    for attempt in 0..MAX_DOWNLOAD_RETRIES {
+        if attempt > 0 {
+            // Wait before retry with exponential backoff
+            let delay_secs = 2u64.pow(attempt);
+            log::info!(
+                "Retry attempt {} after {} seconds delay...",
+                attempt + 1,
+                delay_secs
+            );
+            app.emit(
+                "status-bar-log",
+                format!("Retrying download in {} seconds...", delay_secs),
+            )
+            .unwrap();
+            std::thread::sleep(Duration::from_secs(delay_secs));
+        }
+
+        match try_download_dotnet_runtime(app, DOTNET_RUNTIME_URL, dest_path, use_proxy) {
+            Ok(_) => {
+                log::info!(".NET runtime downloaded successfully");
+                return Ok(());
+            }
+            Err(e) => {
+                log::warn!("Download attempt {} failed: {}", attempt + 1, e);
+                last_error = Some(e);
+
+                // Switch to proxy on first failure
+                if !use_proxy {
+                    log::info!("Switching to v1st proxy for next attempt");
+                    app.emit("status-bar-log", "Switching to proxy server...")
+                        .unwrap();
+                    use_proxy = true;
+                }
+            }
+        }
+    }
+
+    // All retries failed
+    Err(last_error.unwrap_or_else(|| anyhow::anyhow!("Download failed after all retries")))
+}
+
 /// Downloads and extracts the .NET runtime to the UE4SS/dotnet directory.
 /// Skips if runtime is already installed (checks for dotnet directory).
 /// Automatically retries download if cached file is corrupted.
@@ -279,11 +364,8 @@ pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result
             false
         } else {
             // Cached file is corrupted, delete and re-download
-            app.emit(
-                "status-bar-log",
-                "Cached file corrupted, re-downloading...",
-            )
-            .unwrap();
+            app.emit("status-bar-log", "Cached file corrupted, re-downloading...")
+                .unwrap();
             let _ = fs::remove_file(&zip_path);
             true
         }
@@ -300,11 +382,8 @@ pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result
 
     // Try to extract, if it fails due to corrupted file, retry download once
     if extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap()).is_err() {
-        app.emit(
-            "status-bar-log",
-            "Extraction failed, retrying download...",
-        )
-        .unwrap();
+        app.emit("status-bar-log", "Extraction failed, retrying download...")
+            .unwrap();
 
         // Delete corrupted file and clean up partial extraction
         let _ = fs::remove_file(&zip_path);
