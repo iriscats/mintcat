@@ -13,7 +13,8 @@ import {CloseOutlined, FilePptOutlined, FileZipOutlined, FolderOutlined, FolderO
 interface FileItem {
     name: string;
     path: string;
-    type: string;  // "folder" | ".pak" | ".zip" | "unpacked_mod"
+    type: string;  // "folder" | ".pak" | ".zip"
+    isUnpackedMod?: boolean;  // true if folder is a valid unpacked mod directory
 }
 
 /**
@@ -39,7 +40,8 @@ async function makeFileItem(filePath: string): Promise<FileItem> {
         return {
             path: filePath,
             name: fileName,
-            type: isUnpacked ? "unpacked_mod" : "folder"
+            type: "folder",
+            isUnpackedMod: isUnpacked
         };
     }
 
@@ -72,7 +74,7 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
         // Accept: .pak files, .zip files, or valid unpacked mod directories
         if (fileInfo.isDirectory) {
             // For directories, only accept if it's a valid unpacked mod
-            if (fileItem.type !== "unpacked_mod") {
+            if (!fileItem.isUnpackedMod) {
                 return;
             }
         } else {
@@ -194,13 +196,14 @@ export const LocalTab = React.forwardRef(({}: any, ref) => {
                                   >
                                       <Flex gap={"small"}>
                                           {
-                                              item.type === "unpacked_mod" ? <FolderOpenOutlined style={{color: '#52c41a'}}/> :
-                                              item.type === "folder" ? <FolderOutlined/> :
+                                              item.type === "folder" ? (
+                                                  item.isUnpackedMod ? <FolderOpenOutlined style={{color: '#52c41a'}}/> : <FolderOutlined/>
+                                              ) :
                                               item.type === ".pak" ? <FilePptOutlined/> : <FileZipOutlined/>
                                           }
                                           <span>
                                               {item.name}
-                                              {item.type === "unpacked_mod" && <span style={{color: '#52c41a', marginLeft: 8, fontSize: 12}}>(Unpacked)</span>}
+                                              {item.isUnpackedMod && <span style={{color: '#52c41a', marginLeft: 8, fontSize: 12}}>(Unpacked)</span>}
                                           </span>
                                       </Flex>
                                       <Button variant={"text"}
