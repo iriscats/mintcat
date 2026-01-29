@@ -1,5 +1,6 @@
 use crate::integrator::drg::installation::DRGInstallation;
 use crate::integrator::drg::pak_integrator::PakIntegrator;
+use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::ue4ss::ue4ss_integrate;
 use crate::integrator::ModInfo;
 use anyhow::Context;
@@ -10,6 +11,7 @@ pub(crate) mod installation;
 mod mod_bundle_writer;
 pub mod pak_integrator;
 mod raw_asset;
+pub mod unpacked_mod;
 
 fn do_install_mods(app: &AppHandle, game_path: &str, mod_list_json: &str) -> anyhow::Result<()> {
     let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
@@ -71,4 +73,11 @@ pub async fn install_dotnet_runtime(app: AppHandle, game_path: String) -> Result
     })
     .await
     .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Check if a directory is a valid unpacked mod directory
+/// Returns true if the directory contains a Content folder with uasset/uexp files
+#[tauri::command]
+pub fn is_valid_unpacked_mod(path: String) -> bool {
+    UnpackedMod::is_valid_unpacked_mod(&path)
 }

@@ -7,6 +7,7 @@ use crate::integrator::drg::game_pak_patch::{
 use crate::integrator::drg::installation::DRGInstallation;
 use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
 use crate::integrator::drg::raw_asset::RawAsset;
+use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::ue4ss::ue4ss_integrate::{
     install_ue4ss, install_ue4ss_mod, uninstall_ue4ss,
 };
@@ -219,6 +220,14 @@ impl PakIntegrator {
 
     fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
         let pak_path = mod_info.pak_path.as_ref();
+
+        // Check if this is an unpacked mod directory
+        if mod_info.is_unpacked {
+            return self
+                .process_unpacked_mod(pak_path)
+                .with_context(|| format!("Failed to process unpacked mod: {}", mod_info.name));
+        }
+
         let (mut pak_buf, mut dll_buf) = self
             .load_mod_files(pak_path)
             .with_context(|| format!("Failed to load mod files: {:?}", pak_path))?;
@@ -230,6 +239,64 @@ impl PakIntegrator {
             self.process_dll_files(mod_info, dll)
                 .with_context(|| format!("Failed to process dll for mod: {}", mod_info.name))?;
         }
+        Ok(())
+    }
+
+    /// Process an unpacked mod directory (contains Content folder with uasset/uexp files)
+    fn process_unpacked_mod(&mut self, mod_path: &Path) -> Result<()> {
+        let mut unpacked_mod = UnpackedMod::new(mod_path)
+            .with_context(|| format!("Failed to create unpacked mod: {:?}", mod_path))?;
+
+        unpacked_mod
+            .load_files()
+            .with_context(|| format!("Failed to load unpacked mod files: {:?}", mod_path))?;
+
+        // Process init assets (InitSpaceRig.uasset, InitCave.uasset)
+        let files = unpacked_mod.files();
+        let pak_files: HashMap<PathBuf, String> = files
+            .keys()
+            .map(|p| (PathBuf::from(p), p.clone()))
+            .collect();
+
+        self.process_init_asset(&pak_files)?;
+
+        // Process asset registry for each uasset/uexp pair
+        for asset_base in unpacked_mod.get_asset_names() {
+            if let Some((uasset_data, uexp_data)) = unpacked_mod.get_asset_pair(&asset_base) {
+                let normalized_path = PathBuf::from(&asset_base);
+
+                // Build asset for registry population
+                let asset = AssetBuilder::new(Cursor::new(uasset_data.clone()), EngineVersion::VER_UE4_27)
+                    .bulk(Cursor::new(uexp_data.clone()))
+                    .skip_data(true)
+                    .build()
+                    .with_context(|| format!("Failed to build asset: {}", asset_base))?;
+
+                self.asset_registry
+                    .populate(normalized_path.to_str().unwrap(), &asset)
+                    .with_context(|| format!("Failed to populate asset registry for: {:?}", normalized_path))?;
+            }
+        }
+
+        // Write all files to the bundle
+        for (pak_path, data) in unpacked_mod.iter() {
+            let lowercase = pak_path.to_lowercase();
+            if self.added_paths.contains(&lowercase) {
+                continue;
+            }
+
+            // Skip AssetRegistry.bin and shader bytecode files
+            if pak_path.ends_with("AssetRegistry.bin") || pak_path.ends_with(".ushaderbytecode") {
+                continue;
+            }
+
+            self.bundle
+                .write_file(data, pak_path)
+                .with_context(|| format!("Failed to write unpacked mod file: {}", pak_path))?;
+
+            self.added_paths.insert(lowercase);
+        }
+
         Ok(())
     }
 
