@@ -11,6 +11,7 @@ import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {emitEvent, emitVoidEvent, useEventListener} from "@/events";
+import {CloudBackupSettings} from "@/pages/SettingPage/CloudBackupSettings.tsx";
 
 
 export function MintCatSettings() {
@@ -112,86 +113,89 @@ export function MintCatSettings() {
     }, []);
 
     return (
-        <Card title={t("MintCat Settings")}
-              style={{marginBottom: "10px"}}
-        >
-            <Form {...SettingLayout}
+        <>
+            <Card title={t("MintCat Settings")}
+                  style={{marginBottom: "10px"}}
             >
-                <Form.Item label={t("Language")} name="language">
-                    <Flex>
-                        <Select value={language}
-                                options={languageOptions}
-                                onChange={onLanguageChange}
-                        />
-                    </Flex>
-                </Form.Item>
-                <Form.Item label={t("Theme")} name="theme">
-                    <Flex>
-                        <Select value={theme}
-                                options={themeOptions}
-                                onChange={onThemeChange}/>
-                    </Flex>
-                </Form.Item>
-                <Form.Item label={t("Config Directory")}>
-                    <Flex>
-                        <Input value={configDirectory}
-                               disabled/>
-                        <Button type="default"
-                                onClick={onOpenConfigDirClick}
-                        >
+                <Form {...SettingLayout}
+                >
+                    <Form.Item label={t("Language")} name="language">
+                        <Flex>
+                            <Select value={language}
+                                    options={languageOptions}
+                                    onChange={onLanguageChange}
+                            />
+                        </Flex>
+                    </Form.Item>
+                    <Form.Item label={t("Theme")} name="theme">
+                        <Flex>
+                            <Select value={theme}
+                                    options={themeOptions}
+                                    onChange={onThemeChange}/>
+                        </Flex>
+                    </Form.Item>
+                    <Form.Item label={t("Config Directory")}>
+                        <Flex>
+                            <Input value={configDirectory}
+                                   disabled/>
+                            <Button type="default"
+                                    onClick={onOpenConfigDirClick}
+                            >
+                                {t("Open")}
+                            </Button>
+                        </Flex>
+                    </Form.Item>
+                    <Form.Item label={t("Import Config")}>
+                        <Button type="dashed"
+                                {...ButtonLayout}
+                                onClick={onImportConfigClick}>
                             {t("Open")}
                         </Button>
-                    </Flex>
-                </Form.Item>
-                <Form.Item label={t("Import Config")}>
-                    <Button type="dashed"
-                            {...ButtonLayout}
-                            onClick={onImportConfigClick}>
-                        {t("Open")}
-                    </Button>
-                </Form.Item>
-                <Form.Item label={t("Cache Directory")}>
-                    <Flex>
-                        <Search value={cacheDirectory}
-                                enterButton={<FolderAddOutlined/>}
-                                onSearch={onSelectCacheDirClick}
-                        />
-                        <Button type="default"
-                                onClick={onOpenCacheDirClick}
-                        >
-                            {t("Open")}
+                    </Form.Item>
+                    <Form.Item label={t("Cache Directory")}>
+                        <Flex>
+                            <Search value={cacheDirectory}
+                                    enterButton={<FolderAddOutlined/>}
+                                    onSearch={onSelectCacheDirClick}
+                            />
+                            <Button type="default"
+                                    onClick={onOpenCacheDirClick}
+                            >
+                                {t("Open")}
+                            </Button>
+                        </Flex>
+                    </Form.Item>
+                    <Form.Item label={t("Old Version Mint Cache")}>
+                        <Button type="dashed"
+                                {...ButtonLayout}
+                                onClick={onClearCacheClick}>
+                            {t("Clean")}
                         </Button>
-                    </Flex>
-                </Form.Item>
-                <Form.Item label={t("Old Version Mint Cache")}>
-                    <Button type="dashed"
-                            {...ButtonLayout}
-                            onClick={onClearCacheClick}>
-                        {t("Clean")}
-                    </Button>
-                </Form.Item>
-                <Form.Item label={t("Dev Tools")}>
-                    <Button type="dashed"
-                            {...ButtonLayout}
-                            onClick={onDevToolsClick}>
-                        {t("Open Dev Tools")}
-                    </Button>
-                </Form.Item>
-                <Form.Item label={t("UE4SS")}>
-                    <Select onChange={onUe4ssChange}
-                            value={ue4ss}
-                            options={[
-                                {
-                                    value: "UE4SS-Lite",
-                                    label: "UE4SS-Lite",
-                                },
-                                {
-                                    value: "Custom",
-                                    label: "Custom",
-                                },
-                            ]}/>
-                </Form.Item>
-            </Form>
-        </Card>
+                    </Form.Item>
+                    <Form.Item label={t("Dev Tools")}>
+                        <Button type="dashed"
+                                {...ButtonLayout}
+                                onClick={onDevToolsClick}>
+                            {t("Open Dev Tools")}
+                        </Button>
+                    </Form.Item>
+                    <Form.Item label={t("UE4SS")}>
+                        <Select onChange={onUe4ssChange}
+                                value={ue4ss}
+                                options={[
+                                    {
+                                        value: "UE4SS-Lite",
+                                        label: "UE4SS-Lite",
+                                    },
+                                    {
+                                        value: "Custom",
+                                        label: "Custom",
+                                    },
+                                ]}/>
+                    </Form.Item>
+                </Form>
+            </Card>
+            <CloudBackupSettings/>
+        </>
     )
 }
