@@ -10,7 +10,7 @@ import {
 import {
     CheckSquareOutlined, CloseCircleOutlined, CloseOutlined, CopyOutlined,
     DeleteOutlined,
-    EditOutlined, FieldTimeOutlined, LoadingOutlined, PauseCircleOutlined, PlayCircleOutlined,
+    EditOutlined, FieldTimeOutlined, LoadingOutlined, MinusSquareOutlined, PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined, SaveOutlined, SortAscendingOutlined, SortDescendingOutlined, SyncOutlined,
     UnorderedListOutlined
 } from "@ant-design/icons";
@@ -255,11 +255,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
         return keys;
     }
 
+    private isAllSelected(): boolean {
+        const treeData = this.state.treeData as DataNode[] | undefined;
+        const allKeys = this.getAllLeafKeys(treeData);
+        const { selectedKeys } = this.state;
+        return allKeys.length > 0 && selectedKeys.length === allKeys.length;
+    }
+
     @autoBind
     private onMultiSelectAllClick() {
         const treeData = this.state.treeData as DataNode[] | undefined;
         const allKeys = this.getAllLeafKeys(treeData);
-        this.setState({ selectedKeys: allKeys });
+        const isAllSelected = this.isAllSelected();
+        this.setState({ selectedKeys: isAllSelected ? [] : allKeys });
     }
 
     // Multi Operations
@@ -899,9 +907,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 <Space size={4} className="mr-auto">
                                     <Button type="text"
                                             size={"small"}
-                                            icon={<CheckSquareOutlined/>}
+                                            icon={this.isAllSelected() ? <MinusSquareOutlined/> : <CheckSquareOutlined/>}
                                             onClick={this.onMultiSelectAllClick}>
-                                        {t("All")}
+                                        {this.isAllSelected() ? t("Deselect All") : t("All")}
                                     </Button>
                                     <Button type="text"
                                             size={"small"}
