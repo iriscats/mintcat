@@ -20,8 +20,12 @@
   "Cloud Backup Token": "Cloud Backup Token",
   "Delete Backup Confirm": "Delete this backup from cloud?",
   "Download": "Download",
+  "Home": "Home",
   "Import Failed": "Import Failed",
+  "Modio Folder Not Found": "Modio Folder Not Found",
   "No backups yet": "No backups yet",
+  "No more results": "No more results",
+  "No results found": "No results found",
   "Optional": "Optional",
   "Optional note for this backup": "Optional note for this backup",
   "Refresh": "Refresh",
@@ -30,9 +34,14 @@
   "Save": "Save",
   "Save Failed": "Save Failed",
   "Saved": "Saved",
+  "Search": "Search",
+  "Search on mod.io": "Search on mod.io",
+  "Search on Nexus Mods": "Search on Nexus Mods",
+  "Search on Thunderstore": "Search on Thunderstore",
   "Sort": "Sort",
   "Name A → Z": "Name A → Z",
   "Name Z → A": "Name Z → A",
   "Time New → Old": "Time New → Old",
-  "Time Old → New": "Time Old → New"
+  "Time Old → New": "Time Old → New",
+  "Translate Into Current Language": "Translate Into Current Language"
 }
