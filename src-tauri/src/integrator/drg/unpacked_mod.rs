@@ -7,7 +7,6 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs;
-use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 

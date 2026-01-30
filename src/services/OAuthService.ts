@@ -1,5 +1,6 @@
 import { StorageAPI } from "@/storage";
 import { emitEvent } from "@/events";
+import { CloudBackupApi } from "@/apis/CloudBackupApi";
 
 /**
  * OAuth 回调参数
@@ -32,9 +33,15 @@ export class OAuthService {
             const parsedUrl = new URL(url);
 
             // 检查是否为 OAuth 回调路径
-            // 支持 mintcat://oauth/callback 和 mintcat:oauth/callback (不带 //)
-            const pathname = parsedUrl.pathname || parsedUrl.host;
-            if (!pathname?.includes('oauth/callback') && !pathname?.startsWith('oauth/callback')) {
+            // 对于 mintcat://oauth/callback:
+            //   - host = 'oauth'
+            //   - pathname = '/callback'
+            // 需要合并检查
+            const host = parsedUrl.host || '';
+            const pathname = parsedUrl.pathname || '';
+            const fullPath = host + pathname;
+            
+            if (!fullPath.includes('oauth/callback') && !fullPath.startsWith('oauth/callback')) {
                 return null;
             }
 
@@ -199,10 +206,25 @@ export class OAuthService {
 
         // 获取当前活跃用户
         const activeUser = await userDAO.getActiveUser();
+        
+        if (!activeUser) {
+            throw new Error('No active user found. Please ensure the application is properly initialized.');
+        }
 
         // 根据平台存储 token
         if (platform === 'mod.io') {
             await oauthDAO.setModioOAuth(activeUser.id, token);
+        } else if (platform === 'modcat') {
+            // MintCat 云服务 token - 同步到云备份设置
+            await oauthDAO.upsertOAuth(activeUser.id, platform, token);
+            // 同时保存到云备份配置
+            const config = await CloudBackupApi.getConfig();
+            await CloudBackupApi.saveConfig({
+                ...config,
+                baseUrl: config.baseUrl || 'https://api.mintcat.work',
+                accessToken: token,
+            });
+            console.log('[OAuthService] MintCat token synced to cloud backup config');
         } else {
             // 通用存储
             await oauthDAO.upsertOAuth(activeUser.id, platform, token);

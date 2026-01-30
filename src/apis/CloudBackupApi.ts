@@ -28,6 +28,8 @@ const SETTINGS_KEYS = {
     accessToken: "cloudBackupAccessToken",
 };
 
+const DEFAULT_BASE_URL = "https://api.mintcat.work";
+
 const DB_FILE_NAME = "mintcat.sqlite";
 const RESTORE_SUFFIX = ".restore";
 const BACKUP_SUFFIX = ".bak";
@@ -100,8 +102,9 @@ async function fetchBytes(url: string, headers?: HeadersInit): Promise<Uint8Arra
 export class CloudBackupApi {
     public static async getConfig(): Promise<CloudBackupConfig> {
         const settings = await StorageAPI.getSettings();
+        const storedBaseUrl = await settings.getValue(SETTINGS_KEYS.baseUrl);
         return {
-            baseUrl: await settings.getValue(SETTINGS_KEYS.baseUrl),
+            baseUrl: storedBaseUrl || DEFAULT_BASE_URL,
             accessToken: await settings.getValue(SETTINGS_KEYS.accessToken),
         };
     }
@@ -196,6 +199,7 @@ export class CloudBackupApi {
         const response = await fetch(`${baseUrl}/v1/backups/${backupId}/download`, {
             headers: {
                 ...buildAuthHeaders(config.accessToken),
+                "Accept": "application/octet-stream",
             },
         });
         await throwIfNotOk(response);
