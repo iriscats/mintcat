@@ -3,10 +3,12 @@ import {Avatar, Badge, Button, Flex, Image, Popover, Space, Tooltip, message} fr
 import {t} from "i18next";
 import {
     BellOutlined,
+    CloudOutlined,
     EllipsisOutlined,
     PlayCircleOutlined,
     QuestionCircleOutlined,
     SkinOutlined,
+    SyncOutlined,
     UserOutlined
 } from '@ant-design/icons';
 import {open} from "@tauri-apps/plugin-shell";
@@ -19,6 +21,8 @@ import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ModioApi} from "@/apis/modio";
+import {CloudBackupApi} from "@/apis/CloudBackupApi.ts";
+import StatusBar from "./StatusBar.tsx";
 
 
 class TitleBar extends React.Component<any, any> {
@@ -35,10 +39,12 @@ class TitleBar extends React.Component<any, any> {
 
         this.state = {
             gameName: "未选择",
-            avatarUrl: null
+            avatarUrl: null,
+            cloudBackupLoading: false
         };
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
+        this.onCloudBackupClick = this.onCloudBackupClick.bind(this);
     }
 
     private async loadActiveGame() {
@@ -88,6 +94,37 @@ class TitleBar extends React.Component<any, any> {
         } catch (error) {
             console.error('[TitleBar] Installation failed:', error);
             message.error(t("Installation Failed"));
+        }
+    }
+
+    private async onCloudBackupClick() {
+        // 检查是否已配置云备份
+        try {
+            const config = await CloudBackupApi.getConfig();
+            if (!config.baseUrl) {
+                message.warning(t("Please configure cloud backup settings first"));
+                return;
+            }
+
+            // 开始旋转动画
+            this.setState({ cloudBackupLoading: true });
+            
+            // 在状态栏输出开始提示
+            await StatusBar.info(t("Cloud backup syncing..."));
+
+            // 执行云备份
+            await CloudBackupApi.createBackup();
+
+            // 在状态栏输出完成提示
+            await StatusBar.success(t("Cloud backup completed"));
+            message.success(t("Cloud backup completed"));
+        } catch (error) {
+            console.error("[TitleBar] Cloud backup failed:", error);
+            await StatusBar.error(t("Cloud backup failed") + `: ${error}`);
+            message.error(t("Cloud backup failed"));
+        } finally {
+            // 停止旋转动画
+            this.setState({ cloudBackupLoading: false });
         }
     }
 
@@ -161,6 +198,15 @@ class TitleBar extends React.Component<any, any> {
                                 />
                             </Tooltip>
                         </Space.Compact>
+                    </span>
+                    <span>
+                        <Tooltip title={t("Cloud Backup")}>
+                            <Button type={"text"}
+                                    icon={this.state.cloudBackupLoading ? <SyncOutlined spin /> : <CloudOutlined />}
+                                    onClick={this.onCloudBackupClick}
+                                    disabled={this.state.cloudBackupLoading}
+                            />
+                        </Tooltip>
                     </span>
                     <span>
                         <Badge size={"small"}
