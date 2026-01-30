@@ -188,4 +188,31 @@ export class HomeService {
         const profiles = await StorageAPI.getProfiles();
         await profiles.deleteFolder(groupId);
     }
+
+    /**
+     * 清理本地文件不存在的 Local 类型 mod
+     * @returns 清理的 mod 数量
+     */
+    public async cleanMissingLocalMods(): Promise<number> {
+        const profile = await this.getActiveProfile();
+        const modsApi = await StorageAPI.getMods();
+        const profiles = await StorageAPI.getProfiles();
+
+        // 获取所有 mod 的完整数据
+        const allMods = await modsApi.getAllMods();
+        const modIds = allMods.map(m => m.modId!);
+        const completeMods = await modsApi.getBatchCompleteModData(modIds);
+
+        // 筛选出 sourceType === "Local" 且 isLocalNotFound === true 的 mod
+        const missingLocalMods = completeMods.filter(mod => 
+            mod.sourceType === "Local" && mod.status?.isLocalNotFound === true
+        );
+
+        // 从当前 profile 中移除这些 mod
+        for (const mod of missingLocalMods) {
+            await profiles.removeModFromProfile(profile.id!, mod.modId!);
+        }
+
+        return missingLocalMods.length;
+    }
 }
