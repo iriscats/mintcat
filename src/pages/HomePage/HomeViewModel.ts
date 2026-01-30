@@ -105,6 +105,14 @@ export class HomeViewModel extends BaseViewModel {
     }
 
     /**
+     * 清理本地文件不存在的 Local 类型 mod
+     * @returns 清理的 mod 数量
+     */
+    public async cleanMissingLocalMods(): Promise<number> {
+        return await this.homeService.cleanMissingLocalMods();
+    }
+
+    /**
      * 导出当前 profile 的 mod.io URL 列表到剪贴板
      * @returns 是否成功导出
      */

@@ -8,7 +8,7 @@ import {
     SelectProps, Space, Spin, Tooltip, TreeProps, Typography,
 } from 'antd';
 import {
-    CheckSquareOutlined, CloseCircleOutlined, CloseOutlined, CopyOutlined,
+    CheckSquareOutlined, ClearOutlined, CloseCircleOutlined, CloseOutlined, CopyOutlined,
     DeleteOutlined,
     EditOutlined, FieldTimeOutlined, LoadingOutlined, MinusSquareOutlined, PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined, SaveOutlined, SortAscendingOutlined, SortDescendingOutlined, SyncOutlined,
@@ -429,6 +429,29 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     @autoBind
+    private async onMenuBarCleanMissingLocalModsClick() {
+        const confirm = await MessageBox.confirm({
+            title: t("Clean Missing Local Mods"),
+            content: t("Are you sure you want to clean local mods with missing files?"),
+        });
+
+        if (!confirm) {
+            return;
+        }
+
+        const vm = await IoC.get(HomeViewModel);
+        const cleanedCount = await vm.cleanMissingLocalMods();
+        
+        if (cleanedCount > 0) {
+            await this.updateTreeView();
+            await this.updateCountLabel();
+            message.success(`${t("Clean Complete")}: ${cleanedCount} ${t("mods removed")}`);
+        } else {
+            message.info(t("No missing local mods found"));
+        }
+    }
+
+    @autoBind
     private async onMenuBarUninstallModsClick() {
         try {
             const confirm = await MessageBox.confirm({
@@ -815,6 +838,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 </Tooltip>
                                 <Tooltip title={t("Copy List")}>
                                     <Button icon={<CopyOutlined/>} type={"text"} onClick={this.onMenuBarCopyListClick}/>
+                                </Tooltip>
+                                <Tooltip title={t("Clean Missing Local Mods")}>
+                                    <Button icon={<ClearOutlined/>} type={"text"} onClick={this.onMenuBarCleanMissingLocalModsClick}/>
                                 </Tooltip>
                             </Typography.Link>
                             {
