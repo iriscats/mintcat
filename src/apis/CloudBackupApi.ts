@@ -61,7 +61,8 @@ async function sha256Hex(data: Uint8Array): Promise<string | undefined> {
     if (!globalThis.crypto?.subtle) {
         return undefined;
     }
-    const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    const buffer = new ArrayBuffer(data.byteLength);
+    new Uint8Array(buffer).set(data);
     const digest = await globalThis.crypto.subtle.digest("SHA-256", buffer);
     return Array.from(new Uint8Array(digest))
         .map((b) => b.toString(16).padStart(2, "0"))
@@ -175,7 +176,7 @@ export class CloudBackupApi {
         await throwIfNotOk(response);
         const data = await parseResponseJson<{ backup?: CloudBackupRecord; data?: CloudBackupRecord } | CloudBackupRecord>(response);
         if (!data) {
-            return metadata;
+            return { ...metadata, id: "" };
         }
         if ("backup" in data && data.backup) {
             return data.backup;
