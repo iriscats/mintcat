@@ -24,6 +24,7 @@ export class ConfigManageDialogViewModel {
 export const ConfigManageDialog = forwardRef((_props, ref) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [dataSource, setDataSource] = useState<ListDataType[]>([]);
+    const [isImporting, setIsImporting] = useState(false);
     const dialogConfigService = new DialogConfigService();
 
     useImperativeHandle(ref, () => ({
@@ -31,6 +32,11 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     }));
 
     const handleOk = async () => {
+        // 防止重复点击
+        if (isImporting) {
+            return;
+        }
+
         const result = dataSource.find((data) => {
             if (data.checked) {
                 return data;
@@ -41,14 +47,19 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
             return;
         }
 
-        const success = await dialogConfigService.importConfig(result);
-        if (!success) {
-            message.error(t("Import Failed"));
-            return;
-        }
+        setIsImporting(true);
+        try {
+            const success = await dialogConfigService.importConfig(result);
+            if (!success) {
+                message.error(t("Import Failed"));
+                return;
+            }
 
-        setIsModalOpen(false);
-        window.location.reload();
+            setIsModalOpen(false);
+            window.location.reload();
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     const handleCancel = () => {
@@ -104,6 +115,10 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
             cancelText={t("Import Cancel")}
             onOk={handleOk}
             onCancel={handleCancel}
+            confirmLoading={isImporting}
+            cancelButtonProps={{ disabled: isImporting }}
+            closable={!isImporting}
+            maskClosable={!isImporting}
             width={600}
         >
             <Space orientation="vertical"
@@ -126,6 +141,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                               >
                                   <Flex gap={"small"}>
                                       <Checkbox checked={item.checked}
+                                                disabled={isImporting}
                                                 onChange={
                                                     (event) =>
                                                         onCheckedChange(event.target.checked, item)
@@ -157,6 +173,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                                   <Flex>
                                       <Button type={"text"}
                                               icon={<FolderOpenOutlined/>}
+                                              disabled={isImporting}
                                               onClick={async () => {
                                                   await onOpenClick(item.path);
                                               }}
@@ -164,6 +181,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                                       <Button variant={"text"}
                                               color={"red"}
                                               icon={<CloseOutlined/>}
+                                              disabled={isImporting}
                                               onClick={async () => {
                                                   await onDeleteClick(item.path);
                                               }}
