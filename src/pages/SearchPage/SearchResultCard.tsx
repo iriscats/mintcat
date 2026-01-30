@@ -54,9 +54,9 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
         await open(item.profileUrl);
     }, [item.profileUrl]);
 
-    // 获取显示的图片 URL
-    const displayThumbnail = item.cachedThumbnailUrl || item.thumbnailUrl;
-    const displayAvatar = item.author.cachedAvatarUrl || item.author.avatarUrl;
+    // 获取显示的图片 URL（只使用缓存的本地图片，外部 URL 在 Tauri 中可能无法加载）
+    const displayThumbnail = item.cachedThumbnailUrl;
+    const displayAvatar = item.author.cachedAvatarUrl;
 
     // 显示的名称和摘要
     const displayName = item.nameTrans || item.name;
@@ -73,24 +73,26 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
             <div className="search-result-card">
                 <div className="search-result-card-content">
                     <div className="search-result-card-avatar">
-                        {!avatarLoaded && (
+                        {(!displayAvatar || !avatarLoaded) && (
                             <Skeleton.Avatar active size={60} />
                         )}
-                        <Avatar
-                            style={{
-                                width: 60,
-                                height: 60,
-                                display: avatarLoaded ? 'block' : 'none',
-                            }}
-                            src={
-                                <img
-                                    src={displayAvatar}
-                                    alt={item.author.name}
-                                    onLoad={() => setAvatarLoaded(true)}
-                                    onError={() => setAvatarLoaded(true)}
-                                />
-                            }
-                        />
+                        {displayAvatar && (
+                            <Avatar
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    display: avatarLoaded ? 'block' : 'none',
+                                }}
+                                src={
+                                    <img
+                                        src={displayAvatar}
+                                        alt={item.author.name}
+                                        onLoad={() => setAvatarLoaded(true)}
+                                        onError={() => setAvatarLoaded(true)}
+                                    />
+                                }
+                            />
+                        )}
                     </div>
 
                     <div className="search-result-card-info">
@@ -124,26 +126,27 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                     </div>
 
                     <div className="search-result-card-thumbnail">
-                        {!imageLoaded && (
+                        {(!displayThumbnail || !imageLoaded) && (
                             <Skeleton.Image
                                 active
                                 style={{width: 180, height: 101}}
                             />
                         )}
-                        <img
-                            src={displayThumbnail}
-                            alt={item.name}
-                            style={{
-                                width: 180,
-                                height: 'auto',
-                                border: '1px solid #eee',
-                                borderRadius: 4,
-                                display: imageLoaded ? 'block' : 'none',
-                            }}
-                            loading="lazy"
-                            onLoad={() => setImageLoaded(true)}
-                            onError={() => setImageLoaded(true)}
-                        />
+                        {displayThumbnail && (
+                            <img
+                                src={displayThumbnail}
+                                alt={item.name}
+                                style={{
+                                    width: 180,
+                                    height: 'auto',
+                                    border: '1px solid #eee',
+                                    borderRadius: 4,
+                                    display: imageLoaded ? 'block' : 'none',
+                                }}
+                                onLoad={() => setImageLoaded(true)}
+                                onError={() => setImageLoaded(true)}
+                            />
+                        )}
                     </div>
                 </div>
             </div>

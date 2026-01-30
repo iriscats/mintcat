@@ -198,9 +198,11 @@ export class HomeService {
         const modsApi = await StorageAPI.getMods();
         const profiles = await StorageAPI.getProfiles();
 
-        // 获取所有 mod 的完整数据
-        const allMods = await modsApi.getAllMods();
-        const modIds = allMods.map(m => m.modId!);
+        // 获取当前 profile 中的 mod 列表
+        const profileMods = await profiles.getProfileMods(profile.id!);
+        const modIds = profileMods.map(pm => pm.modId!);
+        
+        // 获取这些 mod 的完整数据
         const completeMods = await modsApi.getBatchCompleteModData(modIds);
 
         // 筛选出 sourceType === "Local" 且 isLocalNotFound === true 的 mod

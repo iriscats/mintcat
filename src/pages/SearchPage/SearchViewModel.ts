@@ -275,24 +275,36 @@ export class SearchViewModel {
 
         const processItem = async (item: SearchResultItem): Promise<void> => {
             try {
+                let cachedThumbnail: string | undefined;
+                let cachedAvatar: string | undefined;
+
                 // 缓存缩略图
                 if (item.thumbnailUrl && !item.cachedThumbnailUrl) {
-                    const cached = await this.cacheImageWithQueue(item.thumbnailUrl);
-                    if (cached) {
-                        item.cachedThumbnailUrl = cached;
-                    }
+                    cachedThumbnail = await this.cacheImageWithQueue(item.thumbnailUrl);
                 }
 
                 // 缓存头像
                 if (item.author.avatarUrl && !item.author.cachedAvatarUrl) {
-                    const cached = await this.cacheImageWithQueue(item.author.avatarUrl);
-                    if (cached) {
-                        item.author.cachedAvatarUrl = cached;
-                    }
+                    cachedAvatar = await this.cacheImageWithQueue(item.author.avatarUrl);
                 }
 
-                // 更新状态以触发重新渲染
-                this.notifyListeners();
+                // 如果有更新，创建新的 item 对象以触发 memo 更新
+                if (cachedThumbnail || cachedAvatar) {
+                    const itemIndex = this.state.items.findIndex(i => i.id === item.id);
+                    if (itemIndex !== -1) {
+                        const updatedItem = {
+                            ...this.state.items[itemIndex],
+                            cachedThumbnailUrl: cachedThumbnail || this.state.items[itemIndex].cachedThumbnailUrl,
+                            author: {
+                                ...this.state.items[itemIndex].author,
+                                cachedAvatarUrl: cachedAvatar || this.state.items[itemIndex].author.cachedAvatarUrl,
+                            },
+                        };
+                        const newItems = [...this.state.items];
+                        newItems[itemIndex] = updatedItem;
+                        this.setState({items: newItems});
+                    }
+                }
             } catch (error) {
                 // 忽略单个图片加载错误
                 console.debug('Failed to cache image:', error);

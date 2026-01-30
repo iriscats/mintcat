@@ -61,6 +61,7 @@ export class CacheApi {
             }
             return convertFileSrc(imgPath);
         } catch (error) {
+            console.error(`Failed to cache image ${url}:`, error);
         }
     }
 
