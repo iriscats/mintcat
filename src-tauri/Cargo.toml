@@ -68,3 +68,4 @@ uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
 
 steamlocate = "2.0.1"
 tauri-plugin-deep-link = "2"
+tauri-plugin-single-instance = "2"

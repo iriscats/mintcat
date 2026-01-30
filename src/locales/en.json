@@ -39,9 +39,18 @@
   "Search on Nexus Mods": "Search on Nexus Mods",
   "Search on Thunderstore": "Search on Thunderstore",
   "Sort": "Sort",
+  "Clean Missing Local Mods": "Clean Missing Local Mods",
+  "Are you sure you want to clean local mods with missing files?": "Are you sure you want to clean local mods with missing files?",
+  "Clean Complete": "Clean Complete",
+  "mods removed": "mods removed",
+  "No missing local mods found": "No missing local mods found",
   "Name A → Z": "Name A → Z",
   "Name Z → A": "Name Z → A",
   "Time New → Old": "Time New → Old",
   "Time Old → New": "Time Old → New",
   "Translate Into Current Language": "Translate Into Current Language"
+  "Clear Current Cache": "Clear Current Cache",
+  "Clear Cache Warning": "This will delete all cache files in the current cache directory, including downloaded Mod files, image cache, and avatar cache. These files will need to be re-downloaded. Please proceed with caution!",
+  "Clean Cache Success": "Cache cleared successfully",
+  "Clean Cache Failed": "Failed to clear cache"
 }

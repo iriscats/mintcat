@@ -142,5 +142,26 @@ export class CacheApi {
         }
     }
 
+    /**
+     * 清除当前设置的缓存目录
+     * 包括 mod 缓存文件、图片缓存和头像缓存
+     */
+    public static async cleanCurrentCache(): Promise<boolean> {
+        try {
+            const currentCachePath = await this.getCacheDir();
+            if (await exists(currentCachePath)) {
+                await remove(currentCachePath, {recursive: true});
+                // 重新创建缓存目录
+                await mkdir(currentCachePath);
+                // 清除缓存路径的内存缓存
+                this.clearCache();
+            }
+            return true;
+        } catch (error) {
+            console.error(`Failed to clean current cache: ${error}`);
+            return false;
+        }
+    }
+
 }
 

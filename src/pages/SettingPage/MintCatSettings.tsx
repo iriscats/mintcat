@@ -6,7 +6,8 @@ import i18n from "@/locales/i18n.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {StorageAPI} from "@/storage";
-import {Button, Card, Flex, Form, Input, message, Select} from "antd";
+import {Button, Card, Flex, Form, Input, message, Modal, Select} from "antd";
+import {ExclamationCircleFilled} from "@ant-design/icons";
 import {FolderAddOutlined} from "@ant-design/icons";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
@@ -85,9 +86,21 @@ export function MintCatSettings() {
     }
 
     const onClearCacheClick = async () => {
-        if (await CacheApi.cleanOldCacheFiles()) {
-            message.success(t("Clean Cache Success"));
-        }
+        Modal.confirm({
+            title: t("Clear Current Cache"),
+            icon: <ExclamationCircleFilled />,
+            content: t("Clear Cache Warning"),
+            okText: t("Clean"),
+            okType: 'danger',
+            cancelText: t("Cancel"),
+            onOk: async () => {
+                if (await CacheApi.cleanCurrentCache()) {
+                    message.success(t("Clean Cache Success"));
+                } else {
+                    message.error(t("Clean Cache Failed"));
+                }
+            }
+        });
     }
 
     const onImportConfigClick = async () => {
@@ -165,8 +178,9 @@ export function MintCatSettings() {
                             </Button>
                         </Flex>
                     </Form.Item>
-                    <Form.Item label={t("Old Version Mint Cache")}>
+                    <Form.Item label={t("Clear Current Cache")}>
                         <Button type="dashed"
+                                danger
                                 {...ButtonLayout}
                                 onClick={onClearCacheClick}>
                             {t("Clean")}

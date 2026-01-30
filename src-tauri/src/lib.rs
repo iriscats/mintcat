@@ -32,6 +32,13 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 当第二个实例尝试启动时，聚焦到已有窗口
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(|app| {
             // Initialize download manager
             app.manage(capability::download::init_download_manager());
