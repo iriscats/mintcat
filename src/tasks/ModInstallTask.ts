@@ -106,7 +106,7 @@ export class ModInstallTask implements ITask {
         let editTime = await profileVM.getActiveProfileEditTime();
         const totalMods = enabledMods.length;
 
-        // First pass: identify mods that need downloading
+        // First pass: check mod path existence and identify mods that need re-download
         const modsNeedingDownload: CompleteModData[] = [];
 
         for (let i = 0; i < totalMods; i++) {
@@ -117,14 +117,29 @@ export class ModInstallTask implements ITask {
             const item = enabledMods[i];
             await context.setMessage(`检查模组 (${i + 1}/${totalMods}): ${item.displayName}`);
 
-            // Check if this mod needs downloading (Modio type only)
-            if (item.sourceType === ModSourceType.Modio) {
-                const cachePath = item.download?.cachePath || "";
+            const cachePath = item.download?.cachePath || "";
+            const pathExists = cachePath ? await exists(cachePath) : false;
+
+            // Check if mod path exists: non-existent or empty path needs re-download (Modio) or error (Local)
+            if (!cachePath || !pathExists) {
+                if (item.sourceType === ModSourceType.Modio) {
+                    modsNeedingDownload.push(item);
+                } else if (cachePath) {
+                    throw new Error(
+                        `${t("File Not Found")}: ${item.displayName}\n${t("Local mod path does not exist, please re-add the mod")}: ${cachePath}`
+                    );
+                } else {
+                    throw new Error(`${t("File Not Found")}: ${item.displayName}`);
+                }
+            }
+
+            // Check if this mod needs downloading (Modio type only): path exists but outdated
+            if (item.sourceType === ModSourceType.Modio && pathExists) {
                 const onlineUpdateDate = item.status?.onlineUpdateDate || 0;
                 const lastUpdateDate = item.status?.lastUpdateDate || 0;
                 const downloadProgress = item.download?.downloadProgress || 0;
 
-                if (!await exists(cachePath) ||
+                if (
                     onlineUpdateDate > lastUpdateDate ||
                     downloadProgress != 100
                 ) {
@@ -148,6 +163,15 @@ export class ModInstallTask implements ITask {
             if (errors.length > 0) {
                 const failedNames = errors.map(e => e.mod.displayName).join(', ');
                 throw new Error(`${t("Download Failed")}: ${failedNames}`);
+            }
+
+            // Refresh enabledMods from DB so subsequent steps use updated cache paths
+            for (let i = 0; i < enabledMods.length; i++) {
+                const modsDAO = await StorageAPI.getMods();
+                const updated = await modsDAO.getCompleteModData(enabledMods[i].modId!);
+                if (updated) {
+                    enabledMods[i] = updated;
+                }
             }
         }
 

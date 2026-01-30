@@ -140,7 +140,7 @@ function StatusBar() {
             <Progress
                 strokeColor={ProgressColors}
                 showInfo={false}
-                size={1}
+                strokeWidth={1}
                 percent={percent}
                 style={{
                     width: "100%",

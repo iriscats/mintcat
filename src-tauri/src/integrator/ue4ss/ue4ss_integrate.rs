@@ -239,6 +239,13 @@ fn try_download_dotnet_runtime(
     let mut downloaded: u64 = 0;
     let mut buffer = [0u8; 1024 * 1024]; // 1MB buffer
 
+    // 让前端进度条可见：一开始就发 0
+    app.emit("status-bar-percent", 0i32).unwrap();
+
+    // 当服务器不返回 Content-Length 时，用“已下载量”推算伪进度，避免进度条一直不动
+    const UNKNOWN_TOTAL_MB: u64 = 15; // 约 15MB 时显示到 95%
+    let mut last_emitted_pseudo = 0u64;
+
     loop {
         let bytes_read = response
             .read(&mut buffer)
@@ -254,8 +261,20 @@ fn try_download_dotnet_runtime(
         if total_size > 0 {
             let percent = (downloaded as f64 / total_size as f64 * 100.0) as i32;
             app.emit("status-bar-percent", percent).unwrap();
+        } else {
+            // 无 Content-Length：按已下载量显示伪进度，每约 1MB 更新一次
+            let mb = downloaded / (1024 * 1024);
+            if mb > last_emitted_pseudo {
+                last_emitted_pseudo = mb;
+                let percent = ((downloaded as f64 / (UNKNOWN_TOTAL_MB * 1024 * 1024) as f64) * 95.0)
+                    .min(95.0) as i32;
+                app.emit("status-bar-percent", percent).unwrap();
+            }
         }
     }
+
+    // 下载结束，进度条到 100%
+    app.emit("status-bar-percent", 100i32).unwrap();
 
     // Ensure all data is flushed to disk
     file.flush().context("Failed to flush download file")?;
