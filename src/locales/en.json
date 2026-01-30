@@ -34,5 +34,9 @@
   "Name A → Z": "Name A → Z",
   "Name Z → A": "Name Z → A",
   "Time New → Old": "Time New → Old",
-  "Time Old → New": "Time Old → New"
+  "Time Old → New": "Time Old → New",
+  "Clear Current Cache": "Clear Current Cache",
+  "Clear Cache Warning": "This will delete all cache files in the current cache directory, including downloaded Mod files, image cache, and avatar cache. These files will need to be re-downloaded. Please proceed with caution!",
+  "Clean Cache Success": "Cache cleared successfully",
+  "Clean Cache Failed": "Failed to clear cache"
 }
