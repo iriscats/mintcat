@@ -43,6 +43,7 @@ import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
 import { taskQueueAPI } from "tauri-plugin-task-queue-api";
 import type {DataNode} from "antd/es/tree";
+import {clearPendingEnabled} from "./TreeViewItem.tsx";
 
 
 interface ModListPageState {
@@ -500,6 +501,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.setState({
             defaultProfile: value as string,
         })
+        
+        // 清除 mod 启用状态缓存，确保新 profile 使用自己的启用状态
+        clearPendingEnabled();
+        
         await ModUpdateService.checkModUpdate();
         await ModUpdateService.checkModList((loading) => {
             this.setState({ loading });
@@ -761,12 +766,18 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await IoC.get(TreeViewModel);
         await IoC.get(HomeViewModel);
 
+        // 清除 mod 启用状态缓存，确保使用当前 profile 的状态
+        clearPendingEnabled();
+
         // Setup window resize hook
         this.hookWindowResized();
 
         // Setup event listeners
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
+            // 清除 mod 启用状态缓存，确保新 profile 使用自己的启用状态
+            clearPendingEnabled();
+            
             await this.updateProfileSelect();
             await this.updateTreeView();
             await this.updateCountLabel();

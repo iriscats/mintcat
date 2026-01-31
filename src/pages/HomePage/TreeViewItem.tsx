@@ -175,6 +175,15 @@ function ModTreeViewVersionSelect({nodeData}) {
 
     const [fetching, setFetching] = useState(false);
     const [options, setOptions] = useState<any[]>([]);
+    // 使用本地状态追踪当前选中的版本，解决选择后下拉框显示不更新的问题
+    const [selectedVersion, setSelectedVersion] = useState<string>(
+        nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion
+    );
+
+    // 同步外部 prop 变化（当 Tree 完整刷新时）
+    React.useEffect(() => {
+        setSelectedVersion(nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion);
+    }, [nodeData.usedVersion, nodeData.fileVersion]);
 
     let fileInfos: ModFile[] = [];
     const onDropdownVisibleChange = async (visible: boolean) => {
@@ -198,7 +207,12 @@ function ModTreeViewVersionSelect({nodeData}) {
 
     const onChange = async (value: string) => {
         const fileInfo = JSON.parse(value);
-        await StatusBar.info(`${t("Switch Version")}: ${nodeData.title} ${fileInfo.version}`);
+        const newVersion = fileInfo.version || fileInfo.filename;
+        
+        // 立即更新本地状态（乐观更新），让下拉框立即显示新选中的版本
+        setSelectedVersion(newVersion);
+        
+        await StatusBar.info(`${t("Switch Version")}: ${nodeData.title} ${newVersion}`);
 
         const viewModel = await IoC.get(HomeViewModel);
         // Use profileModId (profile_mods.id) instead of key
@@ -214,7 +228,7 @@ function ModTreeViewVersionSelect({nodeData}) {
             ...modItem,
             version: {
                 ...modItem.version!,
-                currentVersion: fileInfo.version || fileInfo.filename
+                currentVersion: newVersion
             },
             download: {
                 ...modItem.download!,
@@ -236,7 +250,7 @@ function ModTreeViewVersionSelect({nodeData}) {
                 suffixIcon={null}
                 popupMatchSelectWidth={false}
                 style={{marginRight: "8px", width: "80px"}}
-                value={nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion}
+                value={selectedVersion}
                 notFoundContent={fetching ? <Spin size="small"/> : null}
                 options={options}
                 onChange={onChange}
