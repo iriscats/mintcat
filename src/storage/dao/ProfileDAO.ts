@@ -503,6 +503,26 @@ export class ProfileDAO {
         }
     }
 
+    /**
+     * 通过 profile_mods.id 设置模组启用状态
+     * 这种方式可以避免切换 profile 时的竞态条件问题
+     */
+    public async setModEnabledById(profileModId: number, enabled: boolean): Promise<boolean> {
+        try {
+            const db = await getDb();
+            await db.update(profileMods)
+                .set({
+                    isEnabled: enabled,
+                    updatedAt: new Date()
+                })
+                .where(eq(profileMods.id, profileModId));
+            return true;
+        } catch (error) {
+            console.error(`设置配置文件模组启用状态失败 [ProfileModID: ${profileModId}]:`, error);
+            return false;
+        }
+    }
+
 
     /**
      * 更新配置文件中的模组设置

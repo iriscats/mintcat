@@ -66,8 +66,14 @@ export class HomeViewModel extends BaseViewModel {
     public async setDisplayName(id: number, name: string): Promise<void> {
         await this.homeService.updateModDisplayName(id, name);
     }
-    public async setModEnabled(modId: number, enable: boolean): Promise<void> {
-        await this.homeService.setModEnabled(modId, enable);
+    /**
+     * 设置 mod 启用状态
+     * @param modId mod 的 ID
+     * @param enable 是否启用
+     * @param profileModId 可选的 profile_mods 表主键 ID，用于避免切换 profile 时的竞态条件
+     */
+    public async setModEnabled(modId: number, enable: boolean, profileModId?: number): Promise<void> {
+        await this.homeService.setModEnabled(modId, enable, profileModId);
     }
 
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {

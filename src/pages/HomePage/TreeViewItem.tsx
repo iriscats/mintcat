@@ -152,8 +152,9 @@ function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
         setPendingEnabled(nodeData.modId, newChecked);
 
         // 2. 异步更新数据库（不清除缓存，等 treeData 刷新后自动清除）
+        // 使用 profileModId 来避免切换 profile 时的竞态条件
         const viewModel = await IoC.get(HomeViewModel);
-        await viewModel.setModEnabled(nodeData.modId, newChecked);
+        await viewModel.setModEnabled(nodeData.modId, newChecked, nodeData.profileModId);
 
         // 3. 只更新计数标签
         if (onCountLabelUpdate) {
