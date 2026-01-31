@@ -121,6 +121,10 @@ export class CloudBackupApi {
         if (!baseUrl) {
             return [];
         }
+        // 如果没有设置 token，直接返回空列表，避免请求失败
+        if (!config.accessToken) {
+            return [];
+        }
         const response = await fetch(`${baseUrl}/v1/backups`, {
             headers: {
                 ...buildAuthHeaders(config.accessToken),

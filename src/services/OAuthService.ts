@@ -126,8 +126,6 @@ export class OAuthService {
      * @param params OAuth 回调参数
      */
     static async processOAuthCallback(params: OAuthCallbackParams): Promise<void> {
-        console.log('[OAuthService] Processing OAuth callback:', params.platform);
-
         // 发出回调接收事件
         await emitEvent('oauth-callback-received', params);
 
@@ -184,8 +182,6 @@ export class OAuthService {
             await emitEvent('oauth-success', {
                 platform: params.platform,
             });
-
-            console.log('[OAuthService] OAuth token stored successfully for:', params.platform);
         } catch (error) {
             console.error('[OAuthService] Failed to process OAuth callback:', error);
             await emitEvent('oauth-error', {
@@ -224,7 +220,6 @@ export class OAuthService {
                 baseUrl: config.baseUrl || 'https://api.mintcat.work',
                 accessToken: token,
             });
-            console.log('[OAuthService] MintCat token synced to cloud backup config');
         } else {
             // 通用存储
             await oauthDAO.upsertOAuth(activeUser.id, platform, token);

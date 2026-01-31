@@ -12,7 +12,6 @@ export function useDeepLinkHandler() {
         getCurrent()
             .then((urls) => {
                 if (urls && urls.length > 0) {
-                    console.log('[DeepLink] Startup URLs:', urls);
                     urls.forEach(handleDeepLink);
                 }
             })
@@ -24,7 +23,6 @@ export function useDeepLinkHandler() {
         let cleanup: (() => void) | null = null;
 
         onOpenUrl((urls) => {
-            console.log('[DeepLink] Received URLs:', urls);
             urls.forEach(handleDeepLink);
         })
             .then((unlisten) => {
@@ -47,8 +45,6 @@ export function useDeepLinkHandler() {
  * @param url The deep link URL to process
  */
 async function handleDeepLink(url: string) {
-    console.log('[DeepLink] Handling URL:', url);
-
     // Check if this is an OAuth callback
     if (url.includes('oauth/callback')) {
         const params = OAuthService.parseOAuthUrl(url);

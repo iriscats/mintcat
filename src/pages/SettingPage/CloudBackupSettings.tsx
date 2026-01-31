@@ -1,6 +1,6 @@
 import { t } from "i18next";
 import React from "react";
-import { Button, Card, Flex, Form, Input, List, message, Space, Tag, Typography } from "antd";
+import { Button, Card, Divider, Flex, Form, Input, message, Space, Table, Tag, Typography } from "antd";
 import {
     CloudUploadOutlined,
     DeleteOutlined,
@@ -258,55 +258,83 @@ export function CloudBackupSettings() {
                     </Space>
                 </Form.Item>
             </Form>
-
+            <Divider />
             <Flex vertical gap={12}>
                 <Text strong>{t("Backup History")}</Text>
-                <List
+                <Table
                     loading={loading}
                     dataSource={backups}
+                    rowKey="id"
+                    size="small"
+                    pagination={false}
                     locale={{ emptyText: t("No backups yet") }}
-                    renderItem={(item) => (
-                        <List.Item
-                            actions={[
-                                <Button
-                                    key="download"
-                                    type="text"
-                                    icon={<DownloadOutlined />}
-                                    loading={downloadId === item.id}
-                                    onClick={() => onDownload(item)}
-                                >
-                                    {t("Download")}
-                                </Button>,
-                                <Button
-                                    key="restore"
-                                    type="text"
-                                    icon={<RollbackOutlined />}
-                                    loading={restoreId === item.id}
-                                    onClick={() => onRestore(item)}
-                                >
-                                    {t("Restore")}
-                                </Button>,
-                                <Button
-                                    key="delete"
-                                    type="text"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    loading={deleteId === item.id}
-                                    onClick={() => onDelete(item)}
-                                >
-                                    {t("Delete")}
-                                </Button>,
-                            ]}
-                        >
-                            <Flex vertical gap={4}>
-                                <Text>{item.note ? `${formatDate(item.createdAt)} - ${item.note}` : formatDate(item.createdAt)}</Text>
-                                <Space size={8}>
-                                    <Text type="secondary">{formatBytes(item.size)}</Text>
-                                    {item.appVersion && <Tag color="blue">{item.appVersion}</Tag>}
+                    columns={[
+                        {
+                            title: t("Time"),
+                            dataIndex: "createdAt",
+                            key: "createdAt",
+                            width: 180,
+                            render: (value: string) => formatDate(value),
+                        },
+                        {
+                            title: t("Size"),
+                            dataIndex: "size",
+                            key: "size",
+                            width: 100,
+                            render: (value: number) => formatBytes(value),
+                        },
+                        {
+                            title: t("Version"),
+                            dataIndex: "appVersion",
+                            key: "appVersion",
+                            width: 80,
+                            render: (value: string) => value ? <Tag color="purple">{value}</Tag> : "-",
+                        },
+                        {
+                            title: t("Note"),
+                            dataIndex: "note",
+                            key: "note",
+                            ellipsis: true,
+                            render: (value: string) => value || "-",
+                        },
+                        {
+                            title: t("Actions"),
+                            key: "actions",
+                            width: 200,
+                            render: (_: unknown, item: CloudBackupRecord) => (
+                                <Space size={0}>
+                                    <Button
+                                        type="text"
+                                        size="small"
+                                        icon={<DownloadOutlined />}
+                                        loading={downloadId === item.id}
+                                        onClick={() => onDownload(item)}
+                                    >
+                                        {t("Download")}
+                                    </Button>
+                                    <Button
+                                        type="text"
+                                        size="small"
+                                        icon={<RollbackOutlined />}
+                                        loading={restoreId === item.id}
+                                        onClick={() => onRestore(item)}
+                                    >
+                                        {t("Restore")}
+                                    </Button>
+                                    <Button
+                                        type="text"
+                                        size="small"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        loading={deleteId === item.id}
+                                        onClick={() => onDelete(item)}
+                                    >
+                                        {t("Delete")}
+                                    </Button>
                                 </Space>
-                            </Flex>
-                        </List.Item>
-                    )}
+                            ),
+                        },
+                    ]}
                 />
             </Flex>
         </Card>
