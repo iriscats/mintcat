@@ -150,6 +150,25 @@ export class ModDAO {
     }
 
     /**
+     * 根据 nameId 和来源类型获取模组
+     * @param nameId 模组名称标识符（如从 mod.io URL 解析出的名称）
+     * @param sourceType 模组来源类型: Local, Modio, Unknown
+     */
+    public async getModByNameId(nameId: string, sourceType: string): Promise<ModData | null> {
+        try {
+            if (!nameId) return null;
+            const db = await getDb();
+            const result = await db.select().from(mods)
+                .where(and(eq(mods.nameId, nameId), eq(mods.sourceType, sourceType)))
+                .limit(1);
+            return result.length > 0 ? this.mapToModData(result[0]) : null;
+        } catch (error) {
+            console.error(`获取模组失败 [Name ID: ${nameId}, Source: ${sourceType}]:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * 添加模组
      */
     public async addMod(modData: ModData): Promise<ModData | null> {
