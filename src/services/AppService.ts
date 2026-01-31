@@ -68,6 +68,16 @@ export class AppService {
         await oauths.setModioOAuth(userId, oauth);
     }
 
+    public async getMintcatOAuth() {
+        const auths = await StorageAPI.getOAuths();
+        return await auths.getMintcatOAuth();
+    }
+
+    public async setMintcatOAuth(userId: number, oauth: string): Promise<void> {
+        const oauths = await StorageAPI.getOAuths();
+        await oauths.setMintcatOAuth(userId, oauth);
+    }
+
     public async getActiveGame() {
         const game = await StorageAPI.getGames();
         return await game.getActiveGame();

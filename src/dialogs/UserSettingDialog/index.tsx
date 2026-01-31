@@ -20,6 +20,7 @@ interface UserSettingDialogStates {
     modioId?: number;
     userEmail?: string;
     modioOAuth?: string;
+    mintcatOAuth?: string;
 }
 
 class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
@@ -33,7 +34,8 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             username: "",
             modioId: 0,
             userEmail: "",
-            modioOAuth: ""
+            modioOAuth: "",
+            mintcatOAuth: ""
         }
 
     }
@@ -53,6 +55,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             // 检查OAuth是否有效
             await vm.checkOauth();
 
+            // 加载 MintCat OAuth
+            const mintcatOAuth = await this.appService.getMintcatOAuth();
+            
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
                 const url = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
@@ -63,7 +68,13 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     username: userInfo.username,
                     modioId: userInfo.id,
                     userEmail: "",
-                    modioOAuth: modioOAuth?.oauth || ""
+                    modioOAuth: modioOAuth?.oauth || "",
+                    mintcatOAuth: mintcatOAuth?.oauth || ""
+                })
+            } else {
+                // 即使没有 mod.io 用户信息，也要加载 MintCat OAuth 状态
+                this.setState({
+                    mintcatOAuth: mintcatOAuth?.oauth || ""
                 })
             }
         } catch (error) {
@@ -114,6 +125,37 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         }
     }
 
+    @autoBind
+    private async onMintcatOAuthChange(e: any) {
+        const value = e.target.value;
+        this.setState({
+            mintcatOAuth: value
+        });
+
+        if (value.length !== 0 && value.length < 20) {
+            message.error({
+                content: t("Invalid OAuth"),
+                key: "mintcat-oauth-invalid"
+            });
+            return;
+        }
+
+        try {
+            const activeUser = await this.appService.getActiveUser();
+            if (activeUser) {
+                await this.appService.setMintcatOAuth(activeUser.id, value);
+            }
+        } catch (error) {
+            console.error('Failed to save MintCat OAuth:', error);
+            message.error(t("Failed to save OAuth"));
+        }
+    }
+
+    @autoBind
+    private async onOpenMintcatClick() {
+        await openShell("https://vip.mintcat.work");
+    }
+
     render() {
         return (
             <Modal title={t("User Settings")}
@@ -137,15 +179,17 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                 <Title level={4} className="user-settings-title">
                                     {this.state.username || t("Guest User")}
                                 </Title>
-                                <Button
-                                    size="small"
-                                    type="primary"
-                                    icon={<CrownOutlined />}
-                                    onClick={this.onVIPClick}
-                                    className="user-settings-vip"
-                                >
-                                    VIP
-                                </Button>
+                                {this.state.mintcatOAuth && (
+                                    <Button
+                                        size="small"
+                                        type="primary"
+                                        icon={<CrownOutlined />}
+                                        onClick={this.onVIPClick}
+                                        className="user-settings-vip"
+                                    >
+                                        VIP
+                                    </Button>
+                                )}
                             </Flex>
                             <Text type="secondary">
                                 ID: {this.state.modioId || "N/A"}
@@ -154,6 +198,34 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     </Flex>
 
                     <Divider className="user-settings-divider" />
+
+                    {/* MintCat Configuration Section */}
+                    <Flex vertical gap={8}>
+                        <Flex justify="space-between" align="center">
+                            <Text strong className="user-settings-config-title">{t("MintCat Configuration")}</Text>
+                            <Button 
+                                color="primary"
+                                variant="link" 
+                                size="small" 
+                                onClick={this.onOpenMintcatClick}
+                                icon={<LinkOutlined/>}
+                                className="user-settings-link"
+                            >
+                                {t("Get Access Key")}
+                            </Button>
+                        </Flex>
+                        
+                        <Input 
+                            prefix={<KeyOutlined className="user-settings-input-icon" />}
+                            onChange={this.onMintcatOAuthChange}
+                            allowClear
+                            value={this.state.mintcatOAuth}
+                            placeholder={t("Enter your MintCat OAuth key")}
+                        />
+                        <Text type="secondary" className="user-settings-desc">
+                            {t("Paste your MintCat OAuth key to unlock VIP features.")}
+                        </Text>
+                    </Flex>
 
                     {/* Mod.io Configuration Section */}
                     <Flex vertical gap={8}>
