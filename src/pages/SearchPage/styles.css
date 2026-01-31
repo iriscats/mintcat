@@ -2,7 +2,7 @@
 .search-page-container {
     overflow: auto;
     background-color: #fff;
-    padding: 12px;
+    padding: 0 12px 12px 12px;
 }
 
 /* 搜索栏头部 */
@@ -11,7 +11,7 @@
     top: 0;
     z-index: 10;
     background-color: #fff;
-    padding-bottom: 8px;
+    padding: 12px 0 8px 0;
 }
 
 /* 搜索结果列表 */
@@ -23,7 +23,7 @@
 
 /* 搜索结果卡片 */
 .search-result-card {
-    padding: 12px;
+    padding: 10px 12px;
     border: 1px solid #f0f0f0;
     border-radius: 8px;
     background-color: #fff;
@@ -39,7 +39,7 @@
 .search-result-card-content {
     display: flex;
     gap: 12px;
-    align-items: flex-start;
+    align-items: center;
 }
 
 /* 头像区域 */
@@ -120,8 +120,8 @@
 /* 缩略图区域 */
 .search-result-card-thumbnail {
     flex-shrink: 0;
-    width: 180px;
-    min-height: 101px;
+    width: 160px;
+    min-height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;

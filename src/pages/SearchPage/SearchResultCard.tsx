@@ -74,7 +74,7 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                 <div className="search-result-card-content">
                     <div className="search-result-card-avatar">
                         {(!displayAvatar || !avatarLoaded) && (
-                            <Skeleton.Avatar active size={60} />
+                            <Skeleton.Avatar active size={48} />
                         )}
                         {displayAvatar && (
                             <Avatar
@@ -129,7 +129,7 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                         {(!displayThumbnail || !imageLoaded) && (
                             <Skeleton.Image
                                 active
-                                style={{width: 180, height: 101}}
+                                style={{width: 160, height: 90}}
                             />
                         )}
                         {displayThumbnail && (
@@ -137,9 +137,8 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                                 src={displayThumbnail}
                                 alt={item.name}
                                 style={{
-                                    width: 180,
+                                    width: 160,
                                     height: 'auto',
-                                    border: '1px solid #eee',
                                     borderRadius: 4,
                                     display: imageLoaded ? 'block' : 'none',
                                 }}
