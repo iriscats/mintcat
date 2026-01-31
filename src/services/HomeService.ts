@@ -161,9 +161,23 @@ export class HomeService {
         await modsApi.updateMod(modId, { displayName: name });
     }
 
-    public async setModEnabled(modId: number, enable: boolean): Promise<void> {
-        const profile = await this.getActiveProfile();
+    /**
+     * 设置 mod 启用状态
+     * @param modId mod 的 ID
+     * @param enable 是否启用
+     * @param profileModId 可选的 profile_mods 表主键 ID，用于避免切换 profile 时的竞态条件
+     */
+    public async setModEnabled(modId: number, enable: boolean, profileModId?: number): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
+        
+        // 如果提供了 profileModId，直接通过 ID 更新（避免竞态条件）
+        if (profileModId !== undefined) {
+            await profiles.setModEnabledById(profileModId, enable);
+            return;
+        }
+        
+        // 兼容旧调用方式：通过 profileId + modId 更新
+        const profile = await this.getActiveProfile();
         await profiles.setModEnabled(profile.id!, modId, enable);
     }
 
