@@ -66,8 +66,9 @@ export class HomeService {
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
-        const modInfoResp = await ModioApi.getModInfoByLink(url);
-        if (modInfoResp === undefined) {
+        // 先从 URL 解析 nameId，检查数据库是否已存在该 mod
+        const nameId = ModioApi.parseModLinks(url);
+        if (!nameId) {
             return { status: "invalid" };
         }
 
@@ -75,6 +76,42 @@ export class HomeService {
         const modsApi = await StorageAPI.getMods();
         const profiles = await StorageAPI.getProfiles();
 
+        // 先通过 nameId 检查数据库是否已存在（避免不必要的网络请求）
+        const existingModByName = await modsApi.getModByNameId(nameId, "Modio");
+        if (existingModByName) {
+            const existingProfileMod = await profiles.getProfileMod(profile.id!, existingModByName.modId!);
+            if (existingProfileMod) {
+                return { status: "exists", modName: existingModByName.displayName };
+            }
+
+            const modVersion = await modsApi.getModVersion(existingModByName.modId!);
+            await this.addModToProfile({
+                profileId: profile.id!,
+                modId: existingModByName.modId!,
+                groupId,
+                usedVersion: modVersion?.currentVersion || "",
+            });
+
+            const completeData = await modsApi.getCompleteModData(existingModByName.modId!);
+            if (completeData) {
+                await ModUpdateService.updateMod(completeData);
+            }
+
+            // 检查依赖：需要获取 platformId 来查询依赖
+            if (existingModByName.platformId) {
+                await this.addModDependencies(existingModByName.platformId, groupId, profile.id!);
+            }
+
+            return { status: "added" };
+        }
+
+        // 数据库中不存在，才调用网络 API 获取 mod 信息
+        const modInfoResp = await ModioApi.getModInfoByLink(url);
+        if (modInfoResp === undefined) {
+            return { status: "invalid" };
+        }
+
+        // 再通过 platformId 检查一次（防止 nameId 不匹配但 platformId 匹配的情况）
         const existingMod = await modsApi.getModByPlatformId(modInfoResp.id, "Modio");
         if (existingMod) {
             const existingProfileMod = await profiles.getProfileMod(profile.id!, existingMod.modId!);
