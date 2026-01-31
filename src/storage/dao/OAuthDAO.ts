@@ -275,6 +275,39 @@ export class OAuthDAO {
     }
 
     /**
+     * 获取当前活跃用户的 MintCat 平台 OAuth 记录
+     */
+    public async getMintcatOAuth(): Promise<OAuthData | null> {
+        try {
+            const userDAO = await StorageAPI.getUsers();
+            const activeUserData = await userDAO.getActiveUser();
+
+            const db = await getDb();
+            const result = await db.select()
+                .from(oauths)
+                .where(and(eq(oauths.platform, 'modcat'), eq(oauths.uid, activeUserData.id)))
+                .limit(1);
+
+            return result.length > 0 ? this.mapToOAuthData(result[0]) : null;
+        } catch (error) {
+            console.error('获取当前活跃用户的MintCat OAuth记录失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 设置MintCat OAuth令牌
+     */
+    public async setMintcatOAuth(uid: number, oauth: string): Promise<OAuthData | null> {
+        try {
+            return await this.upsertOAuth(uid, 'modcat', oauth);
+        } catch (error) {
+            console.error('设置MintCat OAuth令牌失败:', error);
+            return null;
+        }
+    }
+
+    /**
      * 获取OAuth统计信息
      */
     public async getOAuthStats(): Promise<{ total: number, byPlatform: Record<string, number> }> {
