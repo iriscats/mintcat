@@ -6,6 +6,7 @@ import { StorageAPI } from "@/storage";
 
 export interface CloudBackupConfig {
     baseUrl: string;
+    /** accessToken 来自 oauths 表中的 mintcat 记录，只读 */
     accessToken: string;
 }
 
@@ -23,12 +24,7 @@ export interface CloudBackupRecord extends CloudBackupMetadata {
     id: string;
 }
 
-const SETTINGS_KEYS = {
-    baseUrl: "cloudBackupBaseUrl",
-    accessToken: "cloudBackupAccessToken",
-};
-
-const DEFAULT_BASE_URL = "https://api.mintcat.work";
+const BASE_URL = "https://api.mintcat.work";
 
 const DB_FILE_NAME = "mintcat.sqlite";
 const RESTORE_SUFFIX = ".restore";
@@ -100,19 +96,18 @@ async function fetchBytes(url: string, headers?: HeadersInit): Promise<Uint8Arra
 }
 
 export class CloudBackupApi {
+    /**
+     * 获取云备份配置
+     * accessToken 来自 oauths 表中的 mintcat 记录
+     */
     public static async getConfig(): Promise<CloudBackupConfig> {
-        const settings = await StorageAPI.getSettings();
-        const storedBaseUrl = await settings.getValue(SETTINGS_KEYS.baseUrl);
+        const oauthDAO = await StorageAPI.getOAuths();
+        const mintcatOAuth = await oauthDAO.getMintcatOAuth();
+        
         return {
-            baseUrl: storedBaseUrl || DEFAULT_BASE_URL,
-            accessToken: await settings.getValue(SETTINGS_KEYS.accessToken),
+            baseUrl: BASE_URL,
+            accessToken: mintcatOAuth?.oauth || "",
         };
-    }
-
-    public static async saveConfig(config: CloudBackupConfig): Promise<void> {
-        const settings = await StorageAPI.getSettings();
-        await settings.setValue(SETTINGS_KEYS.baseUrl, config.baseUrl ?? "");
-        await settings.setValue(SETTINGS_KEYS.accessToken, config.accessToken ?? "");
     }
 
     public static async listBackups(): Promise<CloudBackupRecord[]> {

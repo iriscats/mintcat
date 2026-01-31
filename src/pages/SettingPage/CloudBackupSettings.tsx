@@ -1,19 +1,17 @@
 import { t } from "i18next";
 import React from "react";
-import { Button, Card, Divider, Flex, Form, Input, message, Space, Table, Tag, Typography } from "antd";
+import { Button, Card, Divider, Flex, Input, message, Space, Table, Tag, Typography } from "antd";
 import {
     CloudUploadOutlined,
     DeleteOutlined,
     DownloadOutlined,
     ReloadOutlined,
     RollbackOutlined,
-    SaveOutlined,
 } from "@ant-design/icons";
 import { save } from "@tauri-apps/plugin-dialog";
 
-import { CloudBackupApi, type CloudBackupConfig, type CloudBackupRecord } from "@/apis/CloudBackupApi";
+import { CloudBackupApi, type CloudBackupRecord } from "@/apis/CloudBackupApi";
 import { MessageBox } from "@/components/MessageBox";
-import { SettingLayout } from "@/pages/SettingPage/Layout";
 
 const { Text } = Typography;
 
@@ -59,27 +57,13 @@ function formatError(error: unknown): string {
 }
 
 export function CloudBackupSettings() {
-    const [config, setConfig] = React.useState<CloudBackupConfig>({
-        baseUrl: "",
-        accessToken: "",
-    });
     const [note, setNote] = React.useState<string>("");
     const [backups, setBackups] = React.useState<CloudBackupRecord[]>([]);
     const [loading, setLoading] = React.useState(false);
-    const [saving, setSaving] = React.useState(false);
     const [backingUp, setBackingUp] = React.useState(false);
     const [downloadId, setDownloadId] = React.useState<string | null>(null);
     const [restoreId, setRestoreId] = React.useState<string | null>(null);
     const [deleteId, setDeleteId] = React.useState<string | null>(null);
-
-    const loadConfig = async () => {
-        try {
-            const stored = await CloudBackupApi.getConfig();
-            setConfig(stored);
-        } catch (error) {
-            console.error("[CloudBackup] Failed to load config:", error);
-        }
-    };
 
     const loadBackups = async () => {
         setLoading(true);
@@ -95,35 +79,10 @@ export function CloudBackupSettings() {
     };
 
     React.useEffect(() => {
-        loadConfig().then();
         loadBackups().then();
     }, []);
 
-    const hasEndpoint = (): boolean => {
-        if (!config.baseUrl?.trim()) {
-            message.error(t("Cloud Backup Endpoint Required"));
-            return false;
-        }
-        return true;
-    };
-
-    const onSaveConfig = async () => {
-        setSaving(true);
-        try {
-            await CloudBackupApi.saveConfig(config);
-            message.success(t("Saved"));
-        } catch (error) {
-            console.error("[CloudBackup] Failed to save config:", error);
-            message.error(`${t("Save Failed")}: ${formatError(error)}`);
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const onBackupNow = async () => {
-        if (!hasEndpoint()) {
-            return;
-        }
         setBackingUp(true);
         try {
             await CloudBackupApi.createBackup(note);
@@ -139,9 +98,6 @@ export function CloudBackupSettings() {
     };
 
     const onDownload = async (item: CloudBackupRecord) => {
-        if (!hasEndpoint()) {
-            return;
-        }
         const target = await save({
             defaultPath: buildDefaultFileName(item.createdAt),
             filters: [
@@ -164,9 +120,6 @@ export function CloudBackupSettings() {
     };
 
     const onRestore = async (item: CloudBackupRecord) => {
-        if (!hasEndpoint()) {
-            return;
-        }
         const confirmed = await MessageBox.confirm({
             title: t("Restore"),
             content: t("Restore will replace local data after restart. Continue?"),
@@ -209,55 +162,29 @@ export function CloudBackupSettings() {
 
     return (
         <Card title={t("Cloud Backup")} style={{ marginBottom: "10px" }}>
-            <Form {...SettingLayout}>
-                <Form.Item label={t("Cloud Backup Endpoint")}>
-                    <Input
-                        value={config.baseUrl}
-                        onChange={(event) => setConfig({ ...config, baseUrl: event.target.value })}
-                        placeholder="https://backup.example.com"
-                    />
-                </Form.Item>
-                <Form.Item label={t("Cloud Backup Token")}>
-                    <Input.Password
-                        value={config.accessToken}
-                        onChange={(event) => setConfig({ ...config, accessToken: event.target.value })}
-                        placeholder={t("Optional")}
-                    />
-                </Form.Item>
-                <Form.Item label={t("Backup Note")}>
-                    <Input
-                        value={note}
-                        onChange={(event) => setNote(event.target.value)}
-                        placeholder={t("Optional note for this backup")}
-                    />
-                </Form.Item>
-                <Form.Item label={t("Actions")}>
-                    <Space wrap>
-                        <Button
-                            type="primary"
-                            icon={<CloudUploadOutlined />}
-                            loading={backingUp}
-                            onClick={onBackupNow}
-                        >
-                            {t("Backup Now")}
-                        </Button>
-                        <Button
-                            icon={<ReloadOutlined />}
-                            loading={loading}
-                            onClick={loadBackups}
-                        >
-                            {t("Refresh")}
-                        </Button>
-                        <Button
-                            icon={<SaveOutlined />}
-                            loading={saving}
-                            onClick={onSaveConfig}
-                        >
-                            {t("Save")}
-                        </Button>
-                    </Space>
-                </Form.Item>
-            </Form>
+            <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
+                <Input
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    placeholder={t("Optional note for this backup")}
+                    style={{ flex: 1 }}
+                />
+                <Button
+                    type="primary"
+                    icon={<CloudUploadOutlined />}
+                    loading={backingUp}
+                    onClick={onBackupNow}
+                >
+                    {t("Backup Now")}
+                </Button>
+                <Button
+                    icon={<ReloadOutlined />}
+                    loading={loading}
+                    onClick={loadBackups}
+                >
+                    {t("Refresh")}
+                </Button>
+            </Space.Compact>
             <Divider />
             <Flex vertical gap={12}>
                 <Text strong>{t("Backup History")}</Text>
