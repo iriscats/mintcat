@@ -18,6 +18,15 @@ export class CheckModUpdateTask implements ITask {
     async run(context: ITaskContext): Promise<void> {
         const TOTAL_STEPS = 3;
 
+        // Step 0: Check modio OAuth
+        const oAuthDAO = await StorageAPI.getOAuths();
+        const modioOAuth = await oAuthDAO.getModioOAuth();
+        if (!modioOAuth || !modioOAuth.oauth) {
+            await context.setMessage(t("No mod.io OAuth, skip update check"));
+            await context.updateProgress(100);
+            return;
+        }
+
         // Step 1: Load mod list
         await context.setStep('加载模组列表', 1, TOTAL_STEPS);
         await context.setMessage(t("Mod Update Check Start"));
