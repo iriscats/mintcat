@@ -52,5 +52,7 @@
   "Clear Current Cache": "Clear Current Cache",
   "Clear Cache Warning": "This will delete all cache files in the current cache directory, including downloaded Mod files, image cache, and avatar cache. These files will need to be re-downloaded. Please proceed with caution!",
   "Clean Cache Success": "Cache cleared successfully",
-  "Clean Cache Failed": "Failed to clear cache"
+  "Clean Cache Failed": "Failed to clear cache",
+  "Version switch in progress": "Version switch in progress",
+  "Version switch failed": "Version switch failed"
 }

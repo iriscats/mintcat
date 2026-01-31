@@ -34,6 +34,22 @@ const {useToken} = theme;
 // 模块级别的缓存，用于在虚拟列表滚动时保持 Switch 状态
 const pendingEnabledChanges = new Map<number, boolean>();
 
+// 模块级别的版本切换锁定，防止快速重复点击导致下载冲突
+// key: modId, value: { isProcessing: boolean, abortController?: AbortController }
+const versionSwitchLocks = new Map<number, { isProcessing: boolean; currentVersion?: string }>();
+
+export function getVersionSwitchLock(modId: number): { isProcessing: boolean; currentVersion?: string } {
+    return versionSwitchLocks.get(modId) || { isProcessing: false };
+}
+
+export function setVersionSwitchLock(modId: number, lock: { isProcessing: boolean; currentVersion?: string }): void {
+    versionSwitchLocks.set(modId, lock);
+}
+
+export function clearVersionSwitchLock(modId: number): void {
+    versionSwitchLocks.delete(modId);
+}
+
 export function getPendingEnabled(modId: number, defaultValue: boolean): boolean {
     return pendingEnabledChanges.has(modId)
         ? pendingEnabledChanges.get(modId)!
@@ -179,11 +195,19 @@ function ModTreeViewVersionSelect({nodeData}) {
     const [selectedVersion, setSelectedVersion] = useState<string>(
         nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion
     );
+    // 追踪是否正在处理版本切换（下载中）
+    const [isProcessing, setIsProcessing] = useState(() => getVersionSwitchLock(nodeData.modId).isProcessing);
 
     // 同步外部 prop 变化（当 Tree 完整刷新时）
     React.useEffect(() => {
         setSelectedVersion(nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion);
     }, [nodeData.usedVersion, nodeData.fileVersion]);
+
+    // 同步锁定状态
+    React.useEffect(() => {
+        const lock = getVersionSwitchLock(nodeData.modId);
+        setIsProcessing(lock.isProcessing);
+    }, [nodeData.modId]);
 
     let fileInfos: ModFile[] = [];
     const onDropdownVisibleChange = async (visible: boolean) => {
@@ -209,40 +233,69 @@ function ModTreeViewVersionSelect({nodeData}) {
         const fileInfo = JSON.parse(value);
         const newVersion = fileInfo.version || fileInfo.filename;
         
+        // 检查是否有正在进行的版本切换
+        const currentLock = getVersionSwitchLock(nodeData.modId);
+        if (currentLock.isProcessing) {
+            // 如果选择的版本与正在处理的版本相同，忽略此次点击
+            if (currentLock.currentVersion === newVersion) {
+                return;
+            }
+            // 如果选择了不同的版本，仍然阻止，但更新显示
+            await StatusBar.warning(`${t("Version switch in progress")}: ${nodeData.title}`);
+            return;
+        }
+        
+        // 设置锁定状态
+        setVersionSwitchLock(nodeData.modId, { isProcessing: true, currentVersion: newVersion });
+        setIsProcessing(true);
+        
         // 立即更新本地状态（乐观更新），让下拉框立即显示新选中的版本
         setSelectedVersion(newVersion);
         
         await StatusBar.info(`${t("Switch Version")}: ${nodeData.title} ${newVersion}`);
 
-        const viewModel = await IoC.get(HomeViewModel);
-        // Use profileModId (profile_mods.id) instead of key
-        if (nodeData.profileModId) {
-            await viewModel.setModUsedVersion(nodeData.profileModId, fileInfo.version);
-        }
-
-        const modItem = await getModById(nodeData.modId);
-        if (!modItem) return;
-
-        // Update modItem with new version and download info
-        const updatedModItem: CompleteModData = {
-            ...modItem,
-            version: {
-                ...modItem.version!,
-                currentVersion: newVersion
-            },
-            download: {
-                ...modItem.download!,
-                downloadUrl: fileInfo.download.binary_url,
-                downloadProgress: 0,
-                fileSize: fileInfo.filesize,
+        try {
+            const viewModel = await IoC.get(HomeViewModel);
+            // Use profileModId (profile_mods.id) instead of key
+            if (nodeData.profileModId) {
+                await viewModel.setModUsedVersion(nodeData.profileModId, fileInfo.version);
             }
-        };
 
-        await emitEvent("mod-treeview-update", {
-            modId: updatedModItem.modId!,
-            data: updatedModItem
-        });
-        await ModUpdateService.updateModFile(updatedModItem);
+            const modItem = await getModById(nodeData.modId);
+            if (!modItem) {
+                clearVersionSwitchLock(nodeData.modId);
+                setIsProcessing(false);
+                return;
+            }
+
+            // Update modItem with new version and download info
+            const updatedModItem: CompleteModData = {
+                ...modItem,
+                version: {
+                    ...modItem.version!,
+                    currentVersion: newVersion
+                },
+                download: {
+                    ...modItem.download!,
+                    downloadUrl: fileInfo.download.binary_url,
+                    downloadProgress: 0,
+                    fileSize: fileInfo.filesize,
+                }
+            };
+
+            await emitEvent("mod-treeview-update", {
+                modId: updatedModItem.modId!,
+                data: updatedModItem
+            });
+            await ModUpdateService.updateModFile(updatedModItem);
+        } catch (error) {
+            console.error("版本切换失败:", error);
+            await StatusBar.error(`${t("Version switch failed")}: ${nodeData.title}`);
+        } finally {
+            // 清除锁定状态
+            clearVersionSwitchLock(nodeData.modId);
+            setIsProcessing(false);
+        }
     }
 
     return (
@@ -255,6 +308,8 @@ function ModTreeViewVersionSelect({nodeData}) {
                 options={options}
                 onChange={onChange}
                 onOpenChange={onDropdownVisibleChange}
+                disabled={isProcessing}
+                loading={isProcessing}
         />
     );
 }
