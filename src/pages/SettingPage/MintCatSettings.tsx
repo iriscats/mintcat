@@ -13,6 +13,7 @@ import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {emitEvent, emitVoidEvent, useEventListener} from "@/events";
 import {CloudBackupSettings} from "@/pages/SettingPage/CloudBackupSettings.tsx";
+import {exists} from "@tauri-apps/plugin-fs";
 
 
 export function MintCatSettings() {
@@ -49,10 +50,42 @@ export function MintCatSettings() {
             directory: true
         });
         if (result) {
-            setCacheDirectory(result);
+            // 检查是否与当前缓存目录相同
             const settings = await StorageAPI.getSettings();
-            await settings.setCachePath(result);
-            CacheApi.clearCache();
+            const currentCachePath = await settings.getCachePath();
+            
+            if (result === currentCachePath) {
+                message.info(t("Same as current cache directory"));
+                return;
+            }
+            
+            // 显示确认对话框
+            Modal.confirm({
+                title: t("Change Cache Directory"),
+                icon: <ExclamationCircleFilled />,
+                content: t("Changing the cache directory will require re-downloading all mods from mod.io. Continue?"),
+                okText: t("Confirm"),
+                cancelText: t("Cancel"),
+                onOk: async () => {
+                    try {
+                        // 更新设置
+                        setCacheDirectory(result);
+                        await settings.setCachePath(result);
+                        
+                        // 清除内存缓存
+                        CacheApi.clearCache();
+                        
+                        // 清除所有 Modio mod 的缓存路径
+                        const modsDAO = await StorageAPI.getMods();
+                        await modsDAO.clearAllModioCachePaths();
+                        
+                        message.success(t("Cache directory changed successfully"));
+                    } catch (error) {
+                        console.error("Failed to change cache directory:", error);
+                        message.error(t("Failed to change cache directory"));
+                    }
+                }
+            });
         }
     }
 

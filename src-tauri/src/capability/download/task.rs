@@ -145,6 +145,13 @@ impl DownloadTask {
         let part_path = self.file_path.with_extension("part");
         let resume_enabled = self.options.resume.unwrap_or(true);
         
+        // Ensure parent directory exists before downloading
+        if let Some(parent) = self.file_path.parent() {
+            if !parent.exists() {
+                tokio::fs::create_dir_all(parent).await?;
+            }
+        }
+        
         let start_byte = if resume_enabled {
             self.get_partial_file_size().await?
         } else {

@@ -54,5 +54,11 @@
   "Clean Cache Success": "Cache cleared successfully",
   "Clean Cache Failed": "Failed to clear cache",
   "Version switch in progress": "Version switch in progress",
-  "Version switch failed": "Version switch failed"
+  "Version switch failed": "Version switch failed",
+  "Same as current cache directory": "Same as current cache directory",
+  "Change Cache Directory": "Change Cache Directory",
+  "Changing the cache directory will require re-downloading all mods from mod.io. Continue?": "Changing the cache directory will require re-downloading all mods from mod.io. Continue?",
+  "Confirm": "Confirm",
+  "Cache directory changed successfully": "Cache directory changed successfully",
+  "Failed to change cache directory": "Failed to change cache directory"
 }

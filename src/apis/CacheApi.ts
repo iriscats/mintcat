@@ -20,7 +20,8 @@ export class CacheApi {
         const settingDAO = await StorageAPI.getSettings();
         const cachePath = await settingDAO.getCachePath();
         if (!await exists(cachePath)) {
-            await mkdir(cachePath)
+            // 使用 recursive: true 确保可以创建多级目录
+            await mkdir(cachePath, { recursive: true });
         }
         this.cachedPath = cachePath;
         return cachePath;
@@ -45,7 +46,7 @@ export class CacheApi {
         const appCachePath = await this.getCacheDir();
         const imageCachePath = await path.join(appCachePath, "images");
         if (!await exists(imageCachePath)) {
-            await mkdir(imageCachePath)
+            await mkdir(imageCachePath, { recursive: true });
         }
         return await path.join(imageCachePath, `${md5(url)}.png`);
     }
@@ -69,7 +70,7 @@ export class CacheApi {
         const appCachePath = await this.getCacheDir();
         const avatarCachePath = await path.join(appCachePath, "avatars");
         if (!await exists(avatarCachePath)) {
-            await mkdir(avatarCachePath)
+            await mkdir(avatarCachePath, { recursive: true });
         }
         return await path.join(avatarCachePath, `avatar_${userId}.png`);
     }

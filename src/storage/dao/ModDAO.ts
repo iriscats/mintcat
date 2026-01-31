@@ -387,6 +387,39 @@ export class ModDAO {
     }
 
     /**
+     * 清除所有 Modio 类型模组的缓存路径
+     * 当用户更改缓存目录时调用，让系统重新下载
+     */
+    public async clearAllModioCachePaths(): Promise<boolean> {
+        try {
+            const db = await getDb();
+            
+            // 获取所有 Modio 类型的 mod ID
+            const modioMods = await db.select({ modId: mods.modId })
+                .from(mods)
+                .where(eq(mods.sourceType, 'Modio'));
+            
+            // 批量更新这些 mod 的 cachePath 和 downloadProgress
+            for (const mod of modioMods) {
+                await db.update(modDownloads)
+                    .set({
+                        cachePath: '',
+                        downloadProgress: 0,
+                        downloadStatus: 'pending',
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(modDownloads.modId, mod.modId));
+            }
+            
+            console.log(`已清除 ${modioMods.length} 个 Modio 模组的缓存路径`);
+            return true;
+        } catch (error) {
+            console.error('清除 Modio 模组缓存路径失败:', error);
+            return false;
+        }
+    }
+
+    /**
      * =============================
      * 模组状态操作
      * =============================
