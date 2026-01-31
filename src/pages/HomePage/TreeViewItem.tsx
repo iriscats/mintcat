@@ -167,12 +167,18 @@ function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
         setChecked(newChecked);
         setPendingEnabled(nodeData.modId, newChecked);
 
-        // 2. 异步更新数据库（不清除缓存，等 treeData 刷新后自动清除）
+        // 2. 立即发射事件通知标题组件更新（同步，不等待数据库）
+        await emitEvent("mod-enabled-change", {
+            modId: nodeData.modId,
+            enabled: newChecked
+        });
+
+        // 3. 异步更新数据库（不清除缓存，等 treeData 刷新后自动清除）
         // 使用 profileModId 来避免切换 profile 时的竞态条件
         const viewModel = await IoC.get(HomeViewModel);
         await viewModel.setModEnabled(nodeData.modId, newChecked, nodeData.profileModId);
 
-        // 3. 只更新计数标签
+        // 4. 只更新计数标签
         if (onCountLabelUpdate) {
             await onCountLabelUpdate();
         }
@@ -472,10 +478,50 @@ function ModTreeViewProgressPercent({nodeData}) {
 }
 
 
+function ModTreeViewLocalTitle({nodeData}) {
+    // 使用模块级别缓存获取初始 enabled 状态，与 Switch 保持同步
+    const [enabled, setEnabled] = useState(() =>
+        getPendingEnabled(nodeData.modId, nodeData.enabled)
+    );
+
+    // 同步外部 prop 变化（当 Tree 完整刷新时）
+    React.useEffect(() => {
+        const cachedValue = getPendingEnabled(nodeData.modId, nodeData.enabled);
+        setEnabled(cachedValue);
+    }, [nodeData.enabled, nodeData.modId]);
+
+    // 监听 enabled 状态变化事件
+    useFilteredEventListener(
+        'mod-enabled-change',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setEnabled(payload.enabled);
+        },
+        [nodeData.modId]
+    );
+
+    return (
+        <a style={{color: enabled ? "#403c3c" : "gray"}}>
+            {nodeData.title}
+        </a>
+    );
+}
+
+
 function ModTreeViewTitle({nodeData}) {
 
     const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
+    // 使用模块级别缓存获取初始 enabled 状态，与 Switch 保持同步
+    const [enabled, setEnabled] = useState(() =>
+        getPendingEnabled(nodeData.modId, nodeData.enabled)
+    );
     const {token} = useToken();
+
+    // 同步外部 prop 变化（当 Tree 完整刷新时）
+    React.useEffect(() => {
+        const cachedValue = getPendingEnabled(nodeData.modId, nodeData.enabled);
+        setEnabled(cachedValue);
+    }, [nodeData.enabled, nodeData.modId]);
 
     // ✅ 使用 useFilteredEventListener 自动清理监听器
     useFilteredEventListener(
@@ -487,9 +533,19 @@ function ModTreeViewTitle({nodeData}) {
         [nodeData.modId]
     );
 
+    // 监听 enabled 状态变化事件
+    useFilteredEventListener(
+        'mod-enabled-change',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setEnabled(payload.enabled);
+        },
+        [nodeData.modId]
+    );
+
     return (
         <a style={{
-            color: nodeData.enabled &&
+            color: enabled &&
             downloadProgress === 100 ? token.colorPrimary : token.colorTextDisabled
         }}
            onClick={async () => {
@@ -566,9 +622,7 @@ export function TreeViewItem(
 
                     {
                         nodeData.sourceType === ModSourceType.Local &&
-                        <a style={{color: nodeData.enabled ? "#403c3c" : "gray"}}>
-                            {nodeData.title}
-                        </a>
+                        <ModTreeViewLocalTitle nodeData={nodeData} />
                     }
                     {
                         nodeData.sourceType === ModSourceType.Modio &&

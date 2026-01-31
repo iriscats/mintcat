@@ -124,6 +124,15 @@ export interface EventPayloads {
     data: CompleteModData;
   };
 
+  /**
+   * Mod 启用状态变更
+   * 用于在 Switch 点击后立即通知标题组件更新样式
+   */
+  'mod-enabled-change': {
+    modId: number;
+    enabled: boolean;
+  };
+
   // ========================================
   // 安装/集成事件
   // ========================================
