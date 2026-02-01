@@ -139,7 +139,8 @@ export class ProfileService {
     }
 
     /**
-     * 设置活跃的 profile
+     * 设置活跃的 profile（优化版本）
+     * 使用 ProfileDAO.activateProfile 批量更新，只需 2 次 SQL 操作
      */
     public async setActiveProfile(profileName: string): Promise<void> {
         // 先确保有活跃的 profile（使用锁机制防止并发创建）
@@ -166,12 +167,10 @@ export class ProfileService {
             return;
         }
 
-        for (const profile of profileData) {
-            const isTarget = profile.id === targetProfile.id;
-            if (profile.isActive !== isTarget) {
-                await profiles.updateProfile(profile.id!, { isActive: isTarget });
-            }
-        }
+        // 使用优化的 activateProfile 方法：只需 2 次 SQL 操作
+        // 1. 批量将同一 user/game 的所有 profile 设为非活跃
+        // 2. 将目标 profile 设为活跃
+        await profiles.activateProfile(targetProfile.id!);
     }
 
     /**

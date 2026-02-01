@@ -1,5 +1,5 @@
 import {mods, modVersions, modDownloads, modStatus} from '@/storage/db/Schema';
-import {eq, desc, and} from 'drizzle-orm';
+import {eq, desc, and, inArray} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
 
 /**
@@ -511,16 +511,85 @@ export class ModDAO {
 
     /**
      * 批量获取完整的模组信息
+     * @deprecated 使用 getBatchCompleteModDataOptimized 代替，性能更好
      */
     public async getBatchCompleteModData(modIds: number[]): Promise<CompleteModData[]> {
-        try {
-            const results = await Promise.all(
-                modIds.map(modId => this.getCompleteModData(modId))
-            );
+        // 直接调用优化版本
+        return this.getBatchCompleteModDataOptimized(modIds);
+    }
 
-            return results.filter(result => result !== null) as CompleteModData[];
+    /**
+     * 批量获取完整的模组信息（优化版本）
+     * 使用单次查询 + 内存关联，避免 N+1 查询问题
+     */
+    public async getBatchCompleteModDataOptimized(modIds: number[]): Promise<CompleteModData[]> {
+        if (modIds.length === 0) return [];
+
+        try {
+            const db = await getDb();
+
+            // 并行执行 4 个批量查询，而不是 N×4 次单独查询
+            const [modsData, versionsData, downloadsData, statusData] = await Promise.all([
+                db.select().from(mods).where(inArray(mods.modId, modIds)),
+                db.select().from(modVersions).where(inArray(modVersions.modId, modIds)),
+                db.select().from(modDownloads).where(inArray(modDownloads.modId, modIds)),
+                db.select().from(modStatus).where(inArray(modStatus.modId, modIds))
+            ]);
+
+            // 创建查找映射表
+            const versionMap = new Map(versionsData.map(v => [v.modId, this.mapToModVersionData(v)]));
+            const downloadMap = new Map(downloadsData.map(d => [d.modId, this.mapToModDownloadData(d)]));
+            const statusMap = new Map(statusData.map(s => [s.modId, this.mapToModStatusData(s)]));
+
+            // 组装完整的模组数据
+            return modsData.map(mod => {
+                const modData = this.mapToModData(mod);
+                return {
+                    ...modData,
+                    version: versionMap.get(mod.modId) || undefined,
+                    download: downloadMap.get(mod.modId) || undefined,
+                    status: statusMap.get(mod.modId) || undefined
+                };
+            });
         } catch (error) {
             console.error('批量获取完整模组信息失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 获取所有模组的完整信息（优化版本）
+     * 一次性获取所有数据，避免多次查询
+     */
+    public async getAllCompleteModData(): Promise<CompleteModData[]> {
+        try {
+            const db = await getDb();
+
+            // 并行执行 4 个查询获取所有数据
+            const [modsData, versionsData, downloadsData, statusData] = await Promise.all([
+                db.select().from(mods).orderBy(desc(mods.createdAt)),
+                db.select().from(modVersions),
+                db.select().from(modDownloads),
+                db.select().from(modStatus)
+            ]);
+
+            // 创建查找映射表
+            const versionMap = new Map(versionsData.map(v => [v.modId, this.mapToModVersionData(v)]));
+            const downloadMap = new Map(downloadsData.map(d => [d.modId, this.mapToModDownloadData(d)]));
+            const statusMap = new Map(statusData.map(s => [s.modId, this.mapToModStatusData(s)]));
+
+            // 组装完整的模组数据
+            return modsData.map(mod => {
+                const modData = this.mapToModData(mod);
+                return {
+                    ...modData,
+                    version: versionMap.get(mod.modId) || undefined,
+                    download: downloadMap.get(mod.modId) || undefined,
+                    status: statusMap.get(mod.modId) || undefined
+                };
+            });
+        } catch (error) {
+            console.error('获取所有完整模组信息失败:', error);
             return [];
         }
     }

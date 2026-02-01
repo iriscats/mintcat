@@ -38,6 +38,8 @@ import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
 import {StorageAPI} from "@/storage";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
+import type {ProfileData, ProfileModData} from "@/storage/dao/ProfileDAO";
+import type {ProfileTreeItem} from "@/models/profile/ProfileTreeItem";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
@@ -494,24 +496,101 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onSelectChange(value: string) {
+        // 立即更新 UI 状态，让用户感知到切换
+        this.setState({
+            defaultProfile: value as string,
+            loading: true,
+        });
+
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
 
+        // 设置活跃 profile（已优化为 2 次 SQL）
         await profileVM.setActiveProfile(value);
-        this.setState({
-            defaultProfile: value as string,
-        })
         
         // 清除 mod 启用状态缓存，确保新 profile 使用自己的启用状态
         clearPendingEnabled();
         
-        await ModUpdateService.checkModUpdate();
-        await ModUpdateService.checkModList((loading) => {
+        // 后台执行在线更新检查，不阻塞 UI
+        ModUpdateService.checkModUpdate().catch(err => {
+            console.warn('[HomePage] Background mod update check failed:', err);
+        });
+        
+        // 一次性加载所有数据，复用于后续操作
+        await this.loadProfileDataOptimized();
+    };
+
+    /**
+     * 优化后的 profile 数据加载
+     * 合并多个查询，避免重复获取数据
+     */
+    @autoBind
+    private async loadProfileDataOptimized() {
+        const profileVM = await IoC.get(ProfileViewModel);
+        const modsApi = await StorageAPI.getMods();
+        const profilesApi = await StorageAPI.getProfiles();
+
+        // 并行获取所有需要的数据
+        const [allMods, activeRoot, activeProfile] = await Promise.all([
+            modsApi.getAllCompleteModData(),  // 优化：一次查询获取所有完整数据
+            profileVM.getActiveProfileTreeRoot(),
+            profilesApi.getActiveProfile(),
+        ]);
+
+        // 获取 profile mods（需要 activeProfile.id）
+        const profileMods = activeProfile ? await profilesApi.getProfileMods(activeProfile.id!) : [];
+
+        // 使用预加载的数据检查本地缓存（不再重复查询）
+        await ModUpdateService.checkModListWithData(allMods, (loading) => {
             this.setState({ loading });
         });
-        await this.updateTreeView();
-        await this.updateCountLabel();
-    };
+
+        // 使用预加载的数据更新树视图
+        await this.updateTreeViewWithData(allMods, activeRoot, activeProfile, profileMods);
+
+        // 更新计数（使用已有的 profileMods）
+        this.setState({
+            enableCount: profileMods.filter(mod => mod.isEnabled).length,
+            totalCount: profileMods.length,
+            loading: false,
+        });
+    }
+
+    /**
+     * 使用预加载数据更新树视图
+     */
+    @autoBind
+    private async updateTreeViewWithData(
+        allMods: CompleteModData[],
+        activeRoot: ProfileTreeItem,
+        activeProfile: ProfileData | null,
+        profileMods: ProfileModData[]
+    ) {
+        // Before reload: Save expanded folder names to preserve expanded state
+        const expandedFolderNames = this.getExpandedFolderNames();
+
+        // TreeViewConverter now accepts CompleteModData[] and ProfileModData[]
+        const converter = new TreeViewConverter(allMods, profileMods);
+        converter.convertToFromRoot(activeRoot);
+
+        // After reload: Reconstruct expandedKeys using folder names
+        let newExpandedKeys: any[];
+        if (expandedFolderNames.length > 0) {
+            // Reconstruct expandedKeys from folder names (handles ID changes)
+            newExpandedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
+        } else if (this.state.expandedKeys.length === 0) {
+            // First load: use default expanded keys from converter
+            newExpandedKeys = converter.expandedKeys;
+        } else {
+            // Keep existing expandedKeys (shouldn't normally reach here)
+            newExpandedKeys = this.state.expandedKeys;
+        }
+
+        this.setState({
+            treeData: converter.treeData,
+            expandedKeys: newExpandedKeys,
+        });
+    }
 
     @autoBind
     private onTreeNodeSelect(keys) {

@@ -323,6 +323,53 @@ export class ModUpdateService {
     }
 
     /**
+     * 批量检查本地模组缓存（优化版本）
+     * 只检查本地类型的模组，减少不必要的操作
+     */
+    public static async batchCheckLocalModCache(allMods: CompleteModData[]): Promise<void> {
+        const localMods = allMods.filter(m => m.sourceType === ModSourceType.Local);
+        if (localMods.length === 0) return;
+
+        const modsApi = await StorageAPI.getMods();
+        const updatePromises: Promise<void>[] = [];
+
+        for (const modItem of localMods) {
+            const cachePath = modItem.download?.cachePath || "";
+            
+            // 使用并行检查文件是否存在
+            updatePromises.push((async () => {
+                const fileExists = await exists(cachePath);
+                const currentNotFound = modItem.status?.isLocalNotFound ?? false;
+                
+                // 只有状态变化时才更新数据库和发送事件
+                if (fileExists === currentNotFound) {
+                    await modsApi.upsertModStatus({
+                        modId: modItem.modId!,
+                        isLocalNotFound: !fileExists
+                    });
+                    
+                    // 更新内存中的状态并发送事件
+                    const updatedMod = { 
+                        ...modItem, 
+                        status: { 
+                            ...modItem.status, 
+                            modId: modItem.modId!,
+                            isLocalNotFound: !fileExists 
+                        } 
+                    };
+                    await emitEvent("mod-treeview-update", {
+                        modId: updatedMod.modId!,
+                        data: updatedMod
+                    });
+                }
+            })());
+        }
+
+        // 并行执行所有检查
+        await Promise.all(updatePromises);
+    }
+
+    /**
      * 检查本地模组是否被修改
      */
     public static async checkLocalModModify(modItem: CompleteModData, isEnabled: boolean) {
@@ -358,22 +405,39 @@ export class ModUpdateService {
     }
 
     /**
-     * 检查模组列表（本地缓存）
+     * 检查模组列表（本地缓存）- 优化版本
+     * 使用批量查询代替 N+1 查询
      */
     public static async checkModList(onLoadingChange?: (loading: boolean) => void) {
         onLoadingChange?.(true);
         ModUpdateService.loading = true;
 
         const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
+        
+        // 使用优化的批量查询，一次获取所有完整数据
+        const allCompleteMods = await modsApi.getAllCompleteModData();
 
-        for (const mod of allMods) {
-            // Get complete mod data
-            const completeModData = await modsApi.getCompleteModData(mod.modId!);
-            if (completeModData) {
-                await this.checkLocalModCache(completeModData);
-            }
-        }
+        // 使用批量检查方法
+        await this.batchCheckLocalModCache(allCompleteMods);
+
+        ModUpdateService.loading = false;
+        onLoadingChange?.(false);
+        return true;
+    }
+
+    /**
+     * 检查模组列表（使用预加载的数据）
+     * 当调用方已有完整的 mod 数据时使用，避免重复查询
+     */
+    public static async checkModListWithData(
+        allMods: CompleteModData[], 
+        onLoadingChange?: (loading: boolean) => void
+    ) {
+        onLoadingChange?.(true);
+        ModUpdateService.loading = true;
+
+        // 使用批量检查方法
+        await this.batchCheckLocalModCache(allMods);
 
         ModUpdateService.loading = false;
         onLoadingChange?.(false);
