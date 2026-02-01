@@ -196,25 +196,35 @@ export class OAuthService {
      * @param token OAuth token
      */
     private static async storeOAuthToken(platform: string, token: string): Promise<void> {
+        console.log('[OAuthService] Storing token for platform:', platform);
+        
         const oauthDAO = await StorageAPI.getOAuths();
         const userDAO = await StorageAPI.getUsers();
 
         // 获取当前活跃用户
         const activeUser = await userDAO.getActiveUser();
+        console.log('[OAuthService] Active user:', activeUser);
         
         if (!activeUser) {
             throw new Error('No active user found. Please ensure the application is properly initialized.');
         }
 
         // 根据平台存储 token
+        let result;
         if (platform === 'mod.io') {
-            await oauthDAO.setModioOAuth(activeUser.id, token);
+            result = await oauthDAO.setModioOAuth(activeUser.id, token);
         } else if (platform === 'mintcat') {
             // MintCat 云服务 token 写入 oauths 表，CloudBackupApi.getConfig() 会从此表读取
-            await oauthDAO.upsertOAuth(activeUser.id, platform, token);
+            result = await oauthDAO.upsertOAuth(activeUser.id, platform, token);
         } else {
             // 通用存储
-            await oauthDAO.upsertOAuth(activeUser.id, platform, token);
+            result = await oauthDAO.upsertOAuth(activeUser.id, platform, token);
+        }
+        
+        console.log('[OAuthService] Token storage result:', result);
+        
+        if (!result) {
+            throw new Error(`Failed to store OAuth token for platform: ${platform}`);
         }
     }
 }

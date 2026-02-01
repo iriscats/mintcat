@@ -1,7 +1,7 @@
 pub mod capability;
 pub mod integrator;
 
-use tauri::{AppHandle, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 //use tauri_plugin_mcp;
 use tauri_plugin_sentry::{minidump, sentry};
 
@@ -32,11 +32,22 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 当第二个实例尝试启动时，聚焦到已有窗口
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
+            }
+            
+            // 处理从第二个实例传递过来的 deep link URL
+            // 当应用已运行时，通过 deep link 启动的第二个实例会被阻止，
+            // 其 URL 参数会传递到这里
+            for arg in args {
+                if arg.starts_with("mintcat://") {
+                    log::info!("[SingleInstance] Received deep link: {}", arg);
+                    // 发送事件给前端处理
+                    let _ = app.emit("single-instance-deep-link", &arg);
+                }
             }
         }))
         .setup(|app| {

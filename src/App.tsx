@@ -60,7 +60,7 @@ const AppContent = () => {
     }, [location.pathname]);
 
     useAppError();
-    useDeepLinkHandler();
+    useDeepLinkHandler(isAppViewModelReady);
     useOAuthCallback();
     useKeyboardListener((event) => {
         if (event.ctrlKey && event.key === 'f') {
