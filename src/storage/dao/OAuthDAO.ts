@@ -139,10 +139,11 @@ export class OAuthDAO {
 
     /**
      * 更新或创建OAuth记录（Upsert）
+     * 根据 uid + platform 组合进行唯一性判断
      */
     public async upsertOAuth(uid: number, platform: string, oauth: string): Promise<OAuthData | null> {
         try {
-            // 先尝试获取现有记录
+            // 查找 (uid, platform) 组合的现有记录
             const existing = await this.getOAuthByUidAndPlatform(uid, platform);
 
             if (existing) {
@@ -151,20 +152,9 @@ export class OAuthDAO {
                 return success ? await this.getOAuthById(existing.id!) : null;
             }
 
-            const platformRecords = await this.getOAuthsByPlatform(platform);
-            const platformRecord = platformRecords[0];
-            if (platformRecord?.id) {
-                const success = await this.updateOAuth(platformRecord.id, {oauth, uid});
-                return success ? await this.getOAuthById(platformRecord.id) : null;
-            }
-
-            const uidRecord = await this.getOAuthByUid(uid);
-            if (uidRecord?.id) {
-                const success = await this.updateOAuth(uidRecord.id, {oauth, platform});
-                return success ? await this.getOAuthById(uidRecord.id) : null;
-            }
-
-            // 创建新记录
+            // 不存在则创建新记录
+            // 注意：不再查找相同 uid 或相同 platform 的其他记录进行覆盖
+            // 每个 (uid, platform) 组合应该是独立的
             return await this.createOAuth({uid, platform, oauth});
         } catch (error) {
             console.error(`更新或创建OAuth记录失败 [UID: ${uid}, 平台: ${platform}]:`, error);
