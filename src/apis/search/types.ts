@@ -49,6 +49,7 @@ export interface SearchResultItem {
  */
 export enum SearchSource {
     MODIO = 'modio',
+    MODCAT = 'modcat',
     NEXUSMODS = 'nexusmods',
     THUNDERSTORE = 'thunderstore',
     LOCAL = 'local',

@@ -5,6 +5,7 @@ import {UserOutlined, LinkOutlined, KeyOutlined, CrownOutlined} from "@ant-desig
 import {open as openShell} from "@tauri-apps/plugin-shell";
 
 import {ModioApi} from "@/apis/modio";
+import {MODCAT_PLATFORM} from "@/apis/modcat";
 import {CacheApi} from "@/apis/CacheApi";
 import {AppViewModel} from "@/AppViewModel";
 import {IoC} from "@/core/IoC.ts";
@@ -21,6 +22,7 @@ interface UserSettingDialogStates {
     userEmail?: string;
     modioOAuth?: string;
     mintcatOAuth?: string;
+    modcatOAuth?: string;
 }
 
 class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
@@ -35,7 +37,8 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             modioId: 0,
             userEmail: "",
             modioOAuth: "",
-            mintcatOAuth: ""
+            mintcatOAuth: "",
+            modcatOAuth: "",
         }
 
     }
@@ -55,8 +58,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             // 检查OAuth是否有效
             await vm.checkOauth();
 
-            // 加载 MintCat OAuth
+            // 加载各平台 OAuth
             const mintcatOAuth = await this.appService.getOAuthByPlatform('mintcat');
+            const modcatOAuth = await this.appService.getOAuthByPlatform(MODCAT_PLATFORM);
             
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
@@ -69,12 +73,14 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     modioId: userInfo.id,
                     userEmail: "",
                     modioOAuth: modioOAuth?.oauth || "",
-                    mintcatOAuth: mintcatOAuth?.oauth || ""
+                    mintcatOAuth: mintcatOAuth?.oauth || "",
+                    modcatOAuth: modcatOAuth?.oauth || "",
                 })
             } else {
-                // 即使没有 mod.io 用户信息，也要加载 MintCat OAuth 状态
+                // 即使没有 mod.io 用户信息，也要加载其他平台 OAuth 状态
                 this.setState({
-                    mintcatOAuth: mintcatOAuth?.oauth || ""
+                    mintcatOAuth: mintcatOAuth?.oauth || "",
+                    modcatOAuth: modcatOAuth?.oauth || "",
                 })
             }
         } catch (error) {
@@ -156,6 +162,37 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         await openShell("https://vip.mintcat.work");
     }
 
+    @autoBind
+    private async onModcatOAuthChange(e: any) {
+        const value = e.target.value;
+        this.setState({
+            modcatOAuth: value
+        });
+
+        if (value.length !== 0 && value.length < 20) {
+            message.error({
+                content: t("Invalid OAuth"),
+                key: "modcat-oauth-invalid"
+            });
+            return;
+        }
+
+        try {
+            const activeUser = await this.appService.getActiveUser();
+            if (activeUser) {
+                await this.appService.setOAuth(activeUser.id, MODCAT_PLATFORM, value);
+            }
+        } catch (error) {
+            console.error('Failed to save ModCat OAuth:', error);
+            message.error(t("Failed to save OAuth"));
+        }
+    }
+
+    @autoBind
+    private async onOpenModcatClick() {
+        await openShell("https://modcat.top");
+    }
+
     render() {
         return (
             <Modal title={t("User Settings")}
@@ -199,10 +236,38 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
                     <Divider className="user-settings-divider" />
 
+                    {/* ModCat Configuration Section */}
+                    <Flex vertical gap={8}>
+                        <Flex justify="space-between" align="center">
+                            <Text strong className="user-settings-config-title">{t("ModCat")}</Text>
+                            <Button 
+                                color="primary"
+                                variant="link" 
+                                size="small" 
+                                onClick={this.onOpenModcatClick}
+                                icon={<LinkOutlined/>}
+                                className="user-settings-link"
+                            >
+                                {t("Get Access Key")}
+                            </Button>
+                        </Flex>
+                        
+                        <Input 
+                            prefix={<KeyOutlined className="user-settings-input-icon" />}
+                            onChange={this.onModcatOAuthChange}
+                            allowClear
+                            value={this.state.modcatOAuth}
+                            placeholder={t("Enter your ModCat OAuth key")}
+                        />
+                        <Text type="secondary" className="user-settings-desc">
+                            {t("Paste your ModCat OAuth key to search and download mods from modcat.top")}
+                        </Text>
+                    </Flex>
+
                     {/* MintCat Configuration Section */}
                     <Flex vertical gap={8}>
                         <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("MintCat Configuration")}</Text>
+                            <Text strong className="user-settings-config-title">{t("MintCat VIP")}</Text>
                             <Button 
                                 color="primary"
                                 variant="link" 

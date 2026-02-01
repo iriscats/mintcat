@@ -92,6 +92,11 @@ export function useSearchViewModel() {
         return viewModelRef.current?.getSearchPlaceholder() || 'Search...';
     }, []);
 
+    // 刷新可用的搜索源
+    const refreshAvailableSources = useCallback(() => {
+        viewModelRef.current?.refreshAvailableSources();
+    }, []);
+
     // 清理
     useEffect(() => {
         return () => {
@@ -114,6 +119,7 @@ export function useSearchViewModel() {
         translateItem,
         restoreItem,
         getSearchPlaceholder,
+        refreshAvailableSources,
     };
 }
 

@@ -74,6 +74,20 @@ export class SearchViewModel {
     }
 
     /**
+     * 刷新可用的搜索源（用于提供者注册后更新）
+     */
+    public refreshAvailableSources(): void {
+        const registry = SearchProviderRegistry.getInstance();
+        const newSources = registry.getSources();
+        
+        if (JSON.stringify(newSources) !== JSON.stringify(this.state.availableSources)) {
+            this.setState({
+                availableSources: newSources,
+            });
+        }
+    }
+
+    /**
      * 获取当前搜索提供者
      */
     private getCurrentProvider(): ISearchProvider | undefined {

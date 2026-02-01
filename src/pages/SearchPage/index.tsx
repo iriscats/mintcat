@@ -25,6 +25,7 @@ import './styles.css';
 // 搜索源显示名称映射
 const sourceDisplayNames: Record<SearchSource, string> = {
     [SearchSource.MODIO]: 'mod.io',
+    [SearchSource.MODCAT]: 'ModCat',
     [SearchSource.NEXUSMODS]: 'Nexus Mods',
     [SearchSource.THUNDERSTORE]: 'Thunderstore',
     [SearchSource.LOCAL]: 'Local',
@@ -47,6 +48,7 @@ export function SearchPage() {
         translateItem,
         restoreItem,
         getSearchPlaceholder,
+        refreshAvailableSources,
     } = useSearchViewModel();
 
     const [searchValue, setSearchValue] = useState('');
@@ -57,7 +59,9 @@ export function SearchPage() {
     // 初始化搜索提供者
     useEffect(() => {
         initializeSearchProviders();
-    }, []);
+        // 刷新可用的搜索源（确保所有提供者都已注册）
+        refreshAvailableSources();
+    }, [refreshAvailableSources]);
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -162,7 +166,7 @@ export function SearchPage() {
         [restoreItem]
     );
 
-    // 搜索源选项
+    // 搜索源选项（用于下拉框）
     const sourceOptions = useMemo(() => {
         return (state?.availableSources || [SearchSource.MODIO]).map((source) => ({
             value: source,
@@ -217,14 +221,14 @@ export function SearchPage() {
                         title={t('Home')}
                     />
 
-                    {/* 搜索源选择器 */}
+                    {/* 网站选择下拉框 */}
                     {sourceOptions.length > 1 && (
                         <Select
                             value={state?.currentSource}
                             options={sourceOptions}
                             onChange={handleSourceChange}
                             disabled={isLoading}
-                            style={{width: 120}}
+                            style={{width: 110}}
                         />
                     )}
 
