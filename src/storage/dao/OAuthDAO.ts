@@ -232,9 +232,10 @@ export class OAuthDAO {
     }
 
     /**
-     * 获取当前活跃用户的 mod.io 平台 OAuth 记录
+     * 获取当前活跃用户指定平台的 OAuth 记录
+     * @param platform 平台名称 (如 'mod.io', 'mintcat' 等)
      */
-    public async getModioOAuth(): Promise<OAuthData | null> {
+    public async getActiveUserOAuthByPlatform(platform: string): Promise<OAuthData | null> {
         try {
             const userDAO = await StorageAPI.getUsers();
             const activeUserData = await userDAO.getActiveUser();
@@ -242,57 +243,12 @@ export class OAuthDAO {
             const db = await getDb();
             const result = await db.select()
                 .from(oauths)
-                .where(and(eq(oauths.platform, 'mod.io'), eq(oauths.uid, activeUserData.id)))
-                .limit(1);
-
-            return this.mapToOAuthData(result[0]);
-        } catch (error) {
-            console.error('获取当前活跃用户的mod.io OAuth记录失败:', error);
-            return null;
-        }
-    }
-
-    /**
-     * 设置mod.io OAuth令牌
-     */
-    public async setModioOAuth(uid: number, oauth: string): Promise<OAuthData | null> {
-        try {
-            return await this.upsertOAuth(uid, 'mod.io', oauth);
-        } catch (error) {
-            console.error('设置mod.io OAuth令牌失败:', error);
-            return null;
-        }
-    }
-
-    /**
-     * 获取当前活跃用户的 MintCat 平台 OAuth 记录
-     */
-    public async getMintcatOAuth(): Promise<OAuthData | null> {
-        try {
-            const userDAO = await StorageAPI.getUsers();
-            const activeUserData = await userDAO.getActiveUser();
-
-            const db = await getDb();
-            const result = await db.select()
-                .from(oauths)
-                .where(and(eq(oauths.platform, 'mintcat'), eq(oauths.uid, activeUserData.id)))
+                .where(and(eq(oauths.platform, platform), eq(oauths.uid, activeUserData.id)))
                 .limit(1);
 
             return result.length > 0 ? this.mapToOAuthData(result[0]) : null;
         } catch (error) {
-            console.error('获取当前活跃用户的MintCat OAuth记录失败:', error);
-            return null;
-        }
-    }
-
-    /**
-     * 设置MintCat OAuth令牌
-     */
-    public async setMintcatOAuth(uid: number, oauth: string): Promise<OAuthData | null> {
-        try {
-            return await this.upsertOAuth(uid, 'mintcat', oauth);
-        } catch (error) {
-            console.error('设置MintCat OAuth令牌失败:', error);
+            console.error(`获取当前活跃用户的 ${platform} OAuth记录失败:`, error);
             return null;
         }
     }

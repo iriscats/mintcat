@@ -103,7 +103,7 @@ export class CloudBackupApi {
      */
     public static async getConfig(): Promise<CloudBackupConfig> {
         const oauthDAO = await StorageAPI.getOAuths();
-        const mintcatOAuth = await oauthDAO.getMintcatOAuth();
+        const mintcatOAuth = await oauthDAO.getActiveUserOAuthByPlatform('mintcat');
         
         return {
             baseUrl: BASE_URL,

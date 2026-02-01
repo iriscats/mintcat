@@ -209,17 +209,8 @@ export class OAuthService {
             throw new Error('No active user found. Please ensure the application is properly initialized.');
         }
 
-        // 根据平台存储 token
-        let result;
-        if (platform === 'mod.io') {
-            result = await oauthDAO.setModioOAuth(activeUser.id, token);
-        } else if (platform === 'mintcat') {
-            // MintCat 云服务 token 写入 oauths 表，CloudBackupApi.getConfig() 会从此表读取
-            result = await oauthDAO.upsertOAuth(activeUser.id, platform, token);
-        } else {
-            // 通用存储
-            result = await oauthDAO.upsertOAuth(activeUser.id, platform, token);
-        }
+        // 统一使用通用方法存储 token
+        const result = await oauthDAO.upsertOAuth(activeUser.id, platform, token);
         
         console.log('[OAuthService] Token storage result:', result);
         

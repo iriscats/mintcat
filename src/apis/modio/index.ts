@@ -18,14 +18,14 @@ export class ModioApi {
 
     private static async getHost() {
         const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getModioOAuth();
+        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
         const modioUid = oAuthData?.uid ?? MODIO_UID;
         return `https://u-${modioUid}.modapi.io/v1`;
     }
 
     private static async getHeaders() {
         const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getModioOAuth();
+        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
         return {
             Authorization: `Bearer ${oAuthData?.oauth ?? ""}`,
         }

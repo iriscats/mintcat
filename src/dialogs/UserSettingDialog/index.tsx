@@ -56,12 +56,12 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             await vm.checkOauth();
 
             // 加载 MintCat OAuth
-            const mintcatOAuth = await this.appService.getMintcatOAuth();
+            const mintcatOAuth = await this.appService.getOAuthByPlatform('mintcat');
             
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
                 const url = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
-                const modioOAuth = await this.appService.getModioOAuth();
+                const modioOAuth = await this.appService.getOAuthByPlatform('mod.io');
 
                 this.setState({
                     profileUrl: url,
@@ -117,7 +117,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         try {
             const activeUser = await this.appService.getActiveUser();
             if (activeUser) {
-                await this.appService.setModioOAuth(activeUser.id, value);
+                await this.appService.setOAuth(activeUser.id, 'mod.io', value);
             }
         } catch (error) {
             console.error('Failed to save OAuth:', error);
@@ -143,7 +143,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         try {
             const activeUser = await this.appService.getActiveUser();
             if (activeUser) {
-                await this.appService.setMintcatOAuth(activeUser.id, value);
+                await this.appService.setOAuth(activeUser.id, 'mintcat', value);
             }
         } catch (error) {
             console.error('Failed to save MintCat OAuth:', error);

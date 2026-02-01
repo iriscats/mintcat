@@ -20,7 +20,7 @@ export class CheckModUpdateTask implements ITask {
 
         // Step 0: Check modio OAuth
         const oAuthDAO = await StorageAPI.getOAuths();
-        const modioOAuth = await oAuthDAO.getModioOAuth();
+        const modioOAuth = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
         if (!modioOAuth || !modioOAuth.oauth) {
             await context.setMessage(t("No mod.io OAuth, skip update check"));
             await context.updateProgress(100);

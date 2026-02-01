@@ -22,7 +22,7 @@ export class AppViewModel extends BaseViewModel {
     }
 
     public async checkOauth() {
-        const modioOAuth = await this.appService.getModioOAuth();
+        const modioOAuth = await this.appService.getOAuthByPlatform('mod.io');
 
         if (modioOAuth?.oauth !== "") {
             this.appStartAutoCheckModUpdate();

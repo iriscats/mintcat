@@ -2,9 +2,24 @@ import { StorageAPI } from "@/storage";
 import { CacheApi } from "@/apis/CacheApi";
 
 export class AppService {
-    public async getModioOAuth() {
+    /**
+     * 获取当前活跃用户指定平台的 OAuth
+     * @param platform 平台名称 (如 'mod.io', 'mintcat' 等)
+     */
+    public async getOAuthByPlatform(platform: string) {
         const auths = await StorageAPI.getOAuths();
-        return await auths.getModioOAuth();
+        return await auths.getActiveUserOAuthByPlatform(platform);
+    }
+
+    /**
+     * 设置指定用户指定平台的 OAuth
+     * @param userId 用户ID
+     * @param platform 平台名称
+     * @param oauth OAuth令牌
+     */
+    public async setOAuth(userId: number, platform: string, oauth: string): Promise<void> {
+        const oauths = await StorageAPI.getOAuths();
+        await oauths.upsertOAuth(userId, platform, oauth);
     }
 
     public async getCachePath(): Promise<string> {
@@ -61,21 +76,6 @@ export class AppService {
     public async getActiveUser() {
         const user = await StorageAPI.getUsers();
         return await user.getActiveUser();
-    }
-
-    public async setModioOAuth(userId: number, oauth: string): Promise<void> {
-        const oauths = await StorageAPI.getOAuths();
-        await oauths.setModioOAuth(userId, oauth);
-    }
-
-    public async getMintcatOAuth() {
-        const auths = await StorageAPI.getOAuths();
-        return await auths.getMintcatOAuth();
-    }
-
-    public async setMintcatOAuth(userId: number, oauth: string): Promise<void> {
-        const oauths = await StorageAPI.getOAuths();
-        await oauths.setMintcatOAuth(userId, oauth);
     }
 
     public async getActiveGame() {
