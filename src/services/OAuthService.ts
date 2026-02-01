@@ -209,7 +209,7 @@ export class OAuthService {
         // 根据平台存储 token
         if (platform === 'mod.io') {
             await oauthDAO.setModioOAuth(activeUser.id, token);
-        } else if (platform === 'modcat') {
+        } else if (platform === 'mintcat') {
             // MintCat 云服务 token 写入 oauths 表，CloudBackupApi.getConfig() 会从此表读取
             await oauthDAO.upsertOAuth(activeUser.id, platform, token);
         } else {

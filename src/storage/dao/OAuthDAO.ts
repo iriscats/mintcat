@@ -285,7 +285,7 @@ export class OAuthDAO {
             const db = await getDb();
             const result = await db.select()
                 .from(oauths)
-                .where(and(eq(oauths.platform, 'modcat'), eq(oauths.uid, activeUserData.id)))
+                .where(and(eq(oauths.platform, 'mintcat'), eq(oauths.uid, activeUserData.id)))
                 .limit(1);
 
             return result.length > 0 ? this.mapToOAuthData(result[0]) : null;
@@ -300,7 +300,7 @@ export class OAuthDAO {
      */
     public async setMintcatOAuth(uid: number, oauth: string): Promise<OAuthData | null> {
         try {
-            return await this.upsertOAuth(uid, 'modcat', oauth);
+            return await this.upsertOAuth(uid, 'mintcat', oauth);
         } catch (error) {
             console.error('设置MintCat OAuth令牌失败:', error);
             return null;
