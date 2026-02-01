@@ -1,6 +1,5 @@
 import { StorageAPI } from "@/storage";
 import { emitEvent } from "@/events";
-import { CloudBackupApi } from "@/apis/CloudBackupApi";
 
 /**
  * OAuth 回调参数
@@ -211,15 +210,8 @@ export class OAuthService {
         if (platform === 'mod.io') {
             await oauthDAO.setModioOAuth(activeUser.id, token);
         } else if (platform === 'modcat') {
-            // MintCat 云服务 token - 同步到云备份设置
+            // MintCat 云服务 token 写入 oauths 表，CloudBackupApi.getConfig() 会从此表读取
             await oauthDAO.upsertOAuth(activeUser.id, platform, token);
-            // 同时保存到云备份配置
-            const config = await CloudBackupApi.getConfig();
-            await CloudBackupApi.saveConfig({
-                ...config,
-                baseUrl: config.baseUrl || 'https://api.mintcat.work',
-                accessToken: token,
-            });
         } else {
             // 通用存储
             await oauthDAO.upsertOAuth(activeUser.id, platform, token);
