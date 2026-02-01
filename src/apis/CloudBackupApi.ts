@@ -2,6 +2,7 @@ import { readFile, writeFile, exists, stat, remove, copyFile } from "@tauri-apps
 import { path } from "@tauri-apps/api";
 import { configDir } from "@tauri-apps/api/path";
 import { getVersion } from "@tauri-apps/api/app";
+import { message } from "antd";
 import { StorageAPI } from "@/storage";
 
 export interface CloudBackupConfig {
@@ -135,6 +136,9 @@ export class CloudBackupApi {
 
     public static async createBackup(note?: string): Promise<CloudBackupRecord> {
         const config = await CloudBackupApi.getConfig();
+        if (!config.accessToken?.trim()) {
+            throw new Error("云备份功能需要 vip 授权，请前往 vip.mintcat.work 获取");
+        }
         const baseUrl = normalizeBaseUrl(config.baseUrl);
         if (!baseUrl) {
             throw new Error("Cloud backup endpoint is empty");
