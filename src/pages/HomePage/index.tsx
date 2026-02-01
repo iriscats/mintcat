@@ -517,15 +517,17 @@ export class HomePage extends BasePage<any, ModListPageState> {
         });
         
         // 一次性加载所有数据，复用于后续操作
-        await this.loadProfileDataOptimized();
+        // resetExpandedKeys=true: 切换 profile 时使用新 profile 的默认展开状态
+        await this.loadProfileDataOptimized(true);
     };
 
     /**
      * 优化后的 profile 数据加载
      * 合并多个查询，避免重复获取数据
+     * @param resetExpandedKeys 是否重置展开状态（切换 profile 时为 true）
      */
     @autoBind
-    private async loadProfileDataOptimized() {
+    private async loadProfileDataOptimized(resetExpandedKeys: boolean = false) {
         const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
         const profilesApi = await StorageAPI.getProfiles();
@@ -546,7 +548,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         });
 
         // 使用预加载的数据更新树视图
-        await this.updateTreeViewWithData(allMods, activeRoot, activeProfile, profileMods);
+        await this.updateTreeViewWithData(allMods, activeRoot, activeProfile, profileMods, resetExpandedKeys);
 
         // 更新计数（使用已有的 profileMods）
         this.setState({
@@ -558,32 +560,41 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     /**
      * 使用预加载数据更新树视图
+     * @param resetExpandedKeys 是否重置展开状态（切换 profile 时为 true，使用新 profile 的默认展开状态）
      */
     @autoBind
     private async updateTreeViewWithData(
         allMods: CompleteModData[],
         activeRoot: ProfileTreeItem,
         activeProfile: ProfileData | null,
-        profileMods: ProfileModData[]
+        profileMods: ProfileModData[],
+        resetExpandedKeys: boolean = false
     ) {
-        // Before reload: Save expanded folder names to preserve expanded state
-        const expandedFolderNames = this.getExpandedFolderNames();
-
         // TreeViewConverter now accepts CompleteModData[] and ProfileModData[]
         const converter = new TreeViewConverter(allMods, profileMods);
         converter.convertToFromRoot(activeRoot);
 
-        // After reload: Reconstruct expandedKeys using folder names
         let newExpandedKeys: any[];
-        if (expandedFolderNames.length > 0) {
-            // Reconstruct expandedKeys from folder names (handles ID changes)
-            newExpandedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
-        } else if (this.state.expandedKeys.length === 0) {
-            // First load: use default expanded keys from converter
+        
+        if (resetExpandedKeys) {
+            // 切换 profile 时：使用新 profile 的默认展开状态（全部展开）
             newExpandedKeys = converter.expandedKeys;
         } else {
-            // Keep existing expandedKeys (shouldn't normally reach here)
-            newExpandedKeys = this.state.expandedKeys;
+            // 普通刷新：尝试保留当前展开状态
+            const expandedFolderNames = this.getExpandedFolderNames();
+            
+            if (expandedFolderNames.length > 0) {
+                // Reconstruct expandedKeys from folder names (handles ID changes)
+                const reconstructedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
+                // If reconstruction found matching folders, use them; otherwise fallback to default expanded keys
+                newExpandedKeys = reconstructedKeys.length > 0 ? reconstructedKeys : converter.expandedKeys;
+            } else if (this.state.expandedKeys.length === 0) {
+                // First load: use default expanded keys from converter
+                newExpandedKeys = converter.expandedKeys;
+            } else {
+                // Keep existing expandedKeys (shouldn't normally reach here)
+                newExpandedKeys = this.state.expandedKeys;
+            }
         }
 
         this.setState({
@@ -632,11 +643,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await this.updateCountLabel();
     }
 
+    /**
+     * 更新树视图
+     * @param resetExpandedKeys 是否重置展开状态（切换 profile/游戏时为 true）
+     */
     @autoBind
-    private async updateTreeView() {
-        // Before reload: Save expanded folder names to preserve expanded state
-        const expandedFolderNames = this.getExpandedFolderNames();
-
+    private async updateTreeView(resetExpandedKeys: boolean = false) {
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
         const modsApi = await StorageAPI.getMods();
@@ -658,17 +670,27 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const converter = new TreeViewConverter(allMods, profileMods);
         converter.convertToFromRoot(activeRoot);
 
-        // After reload: Reconstruct expandedKeys using folder names
         let newExpandedKeys: any[];
-        if (expandedFolderNames.length > 0) {
-            // Reconstruct expandedKeys from folder names (handles ID changes)
-            newExpandedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
-        } else if (this.state.expandedKeys.length === 0) {
-            // First load: use default expanded keys from converter
+        
+        if (resetExpandedKeys) {
+            // 切换 profile/游戏时：使用新 profile 的默认展开状态（全部展开）
             newExpandedKeys = converter.expandedKeys;
         } else {
-            // Keep existing expandedKeys (shouldn't normally reach here)
-            newExpandedKeys = this.state.expandedKeys;
+            // 普通刷新：尝试保留当前展开状态
+            const expandedFolderNames = this.getExpandedFolderNames();
+            
+            if (expandedFolderNames.length > 0) {
+                // Reconstruct expandedKeys from folder names (handles ID changes)
+                const reconstructedKeys = this.reconstructExpandedKeys(expandedFolderNames, converter.treeData as DataNode[]);
+                // If reconstruction found matching folders, use them; otherwise fallback to default expanded keys
+                newExpandedKeys = reconstructedKeys.length > 0 ? reconstructedKeys : converter.expandedKeys;
+            } else if (this.state.expandedKeys.length === 0) {
+                // First load: use default expanded keys from converter
+                newExpandedKeys = converter.expandedKeys;
+            } else {
+                // Keep existing expandedKeys (shouldn't normally reach here)
+                newExpandedKeys = this.state.expandedKeys;
+            }
         }
 
         this.setState({
@@ -858,7 +880,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
             clearPendingEnabled();
             
             await this.updateProfileSelect();
-            await this.updateTreeView();
+            // 切换游戏时重置展开状态，使用新 profile 的默认展开状态
+            await this.updateTreeView(true);
             await this.updateCountLabel();
         });
 
