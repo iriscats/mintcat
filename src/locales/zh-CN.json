@@ -193,7 +193,7 @@
   "Download": "下载",
   "No backups yet": "暂无备份",
   "Optional": "可选",
-  "Optional note for this backup": "可选：为本次备份添加备注",
+  "Optional note for this backup": "可选：为本次备份添加标题",
   "Refresh": "刷新",
   "Restore will replace local data after restart. Continue?": "恢复将在重启后覆盖本地数据，是否继续？",
   "Save": "保存",

@@ -14,7 +14,6 @@ import {initClipboardWatcher} from "@/dialogs/AddModDialog/open.ts";
 import {HomePage} from "@/pages/HomePage";
 import {ModioPage} from "@/pages/ModioPage";
 import {SettingPage} from "@/pages/SettingPage";
-import ChatPage from "@/pages/ChatPage.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 
 import './App.css';
@@ -108,7 +107,6 @@ const AppContent = () => {
                             <Route path="/home" element={<HomePage/>}/>
                             <Route path="/home/modio" element={<ModioPage/>}/>
                             <Route path="/home/setting" element={<SettingPage/>}/>
-                            <Route path="/home/chat" element={<ChatPage/>}/>
                             <Route path="*" element={<HomePage/>}/>
                         </Routes>
                     )}

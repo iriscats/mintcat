@@ -13,7 +13,7 @@ import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {emitEvent, emitVoidEvent, useEventListener} from "@/events";
 import {CloudBackupSettings} from "@/pages/SettingPage/CloudBackupSettings.tsx";
-import {exists} from "@tauri-apps/plugin-fs";
+
 
 
 export function MintCatSettings() {
