@@ -4,6 +4,7 @@ import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { ModioApi } from '@/apis/modio';
+import { ModcatApi, MODCAT_PLATFORM } from '@/apis/modcat';
 import { ModSourceType } from '@/models/mod/types';
 import { t } from 'i18next';
 
@@ -16,16 +17,7 @@ import { t } from 'i18next';
 })
 export class CheckModUpdateTask implements ITask {
     async run(context: ITaskContext): Promise<void> {
-        const TOTAL_STEPS = 3;
-
-        // Step 0: Check modio OAuth
-        const oAuthDAO = await StorageAPI.getOAuths();
-        const modioOAuth = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
-        if (!modioOAuth || !modioOAuth.oauth) {
-            await context.setMessage(t("No mod.io OAuth, skip update check"));
-            await context.updateProgress(100);
-            return;
-        }
+        const TOTAL_STEPS = 4;
 
         // Step 1: Load mod list
         await context.setStep('加载模组列表', 1, TOTAL_STEPS);
@@ -36,67 +28,135 @@ export class CheckModUpdateTask implements ITask {
         const updateTime = lastUpdate || (TimeUtils.nowSeconds() - 60 * 60 * 24 * 30);
 
         const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllMods();
-        const modIdList = [];
-        for (const mod of allMods) {
-            if (mod.sourceType === ModSourceType.Modio) {
-                modIdList.push(mod.platformId);
-            }
-        }
+        const allMods = await modsApi.getAllCompleteModData();
+        
+        // 分类 mod
+        const modioMods = allMods.filter(m => m.sourceType === ModSourceType.Modio);
+        const modcatMods = allMods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
 
-        if (modIdList.length === 0) {
+        if (modioMods.length === 0 && modcatMods.length === 0) {
             await context.setMessage('没有需要检查的模组');
             await context.updateProgress(100);
             return;
         }
 
-        // Step 2: Fetch events from mod.io
-        await context.setStep('获取更新信息', 2, TOTAL_STEPS);
-        await context.setMessage(`正在检查 ${modIdList.length} 个模组...`);
+        // Step 2: Check Modio mods via events API
+        await context.setStep('检查 Modio 更新', 2, TOTAL_STEPS);
+        
+        if (modioMods.length > 0) {
+            // Check modio OAuth
+            const oAuthDAO = await StorageAPI.getOAuths();
+            const modioOAuth = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
+            
+            if (modioOAuth?.oauth) {
+                const modIdList = modioMods.map(m => m.platformId);
+                await context.setMessage(`正在检查 ${modIdList.length} 个 Modio 模组...`);
 
-        const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
+                const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
 
-        // Step 3: Process events
-        await context.setStep('处理更新信息', 3, TOTAL_STEPS);
-        const totalEvents = events.length;
-
-        for (let i = 0; i < totalEvents; i++) {
-            if (context.checkCancelled()) {
-                throw new Error('Task cancelled');
-            }
-
-            const event = events[i];
-            await context.setMessage(`处理事件 (${i + 1}/${totalEvents})`);
-            await context.updateProgress(Math.floor((i / totalEvents) * 100));
-
-            switch (event.event_type) {
-                case "MODFILE_CHANGED": {
-                    const mod = allMods.find(m => m.platformId === event.mod_id);
-                    if (mod) {
-                        await modsApi.upsertModStatus({
-                            modId: mod.modId!,
-                            onlineUpdateDate: TimeUtils.fromModio(event.date_added),
-                            lastUpdateDate: 0
-                        });
+                for (const event of events) {
+                    if (context.checkCancelled()) {
+                        throw new Error('Task cancelled');
                     }
-                    break;
+
+                    switch (event.event_type) {
+                        case "MODFILE_CHANGED": {
+                            const mod = modioMods.find(m => m.platformId === event.mod_id);
+                            if (mod) {
+                                await modsApi.upsertModStatus({
+                                    modId: mod.modId!,
+                                    onlineUpdateDate: TimeUtils.fromModio(event.date_added),
+                                    lastUpdateDate: 0
+                                });
+                            }
+                            break;
+                        }
+                        case "MOD_UNAVAILABLE":
+                        case "MOD_DELETED": {
+                            const mod = modioMods.find(m => m.platformId === event.mod_id);
+                            if (mod) {
+                                await modsApi.upsertModStatus({
+                                    modId: mod.modId!,
+                                    isOnlineAvailable: false,
+                                    lastUpdateDate: TimeUtils.fromModio(event.date_added),
+                                    onlineUpdateDate: TimeUtils.fromModio(event.date_added)
+                                });
+                            }
+                            break;
+                        }
+                    }
                 }
-                case "MOD_UNAVAILABLE":
-                case "MOD_DELETED": {
-                    const mod = allMods.find(m => m.platformId === event.mod_id);
-                    if (mod) {
+            } else {
+                await context.setMessage(t("No mod.io OAuth, skip Modio update check"));
+            }
+        }
+
+        // Step 3: Check ModCat mods by fetching latest version
+        await context.setStep('检查 ModCat 更新', 3, TOTAL_STEPS);
+        
+        if (modcatMods.length > 0) {
+            await context.setMessage(`正在检查 ${modcatMods.length} 个 ModCat 模组...`);
+            
+            for (let i = 0; i < modcatMods.length; i++) {
+                if (context.checkCancelled()) {
+                    throw new Error('Task cancelled');
+                }
+
+                const mod = modcatMods[i];
+                await context.setMessage(`检查 ModCat 模组 (${i + 1}/${modcatMods.length}): ${mod.displayName}`);
+                await context.updateProgress(Math.floor((i / modcatMods.length) * 50) + 50);
+
+                try {
+                    const modId = mod.nameId;
+                    if (!modId) continue;
+
+                    // 获取在线详情
+                    const modDetail = await ModcatApi.getModDetail(modId);
+                    if (!modDetail) {
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
-                            isOnlineAvailable: false,
-                            lastUpdateDate: TimeUtils.fromModio(event.date_added),
-                            onlineUpdateDate: TimeUtils.fromModio(event.date_added)
+                            isOnlineAvailable: false
                         });
+                        continue;
                     }
-                    break;
+
+                    // 获取最新版本
+                    const latestVersion = modDetail.ModVersionEntities
+                        ?.filter(v => v.Status === "Approved" && v.FilesId)
+                        .sort((a, b) => {
+                            const dateA = new Date(a.CreatedAt || 0).getTime();
+                            const dateB = new Date(b.CreatedAt || 0).getTime();
+                            return dateB - dateA;
+                        })[0];
+
+                    if (latestVersion) {
+                        const onlineUpdateDate = latestVersion.UpdatedAt
+                            ? new Date(latestVersion.UpdatedAt).getTime()
+                            : TimeUtils.now();
+                        const currentLastUpdate = mod.status?.lastUpdateDate || 0;
+
+                        // 如果在线更新时间比本地更新时间新，标记为有更新
+                        if (onlineUpdateDate > currentLastUpdate) {
+                            await modsApi.upsertModStatus({
+                                modId: mod.modId!,
+                                onlineUpdateDate: onlineUpdateDate,
+                                isOnlineAvailable: true
+                            });
+                        } else {
+                            await modsApi.upsertModStatus({
+                                modId: mod.modId!,
+                                isOnlineAvailable: true
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error(`检查 ModCat 模组更新失败: ${mod.displayName}`, e);
                 }
             }
         }
 
+        // Step 4: Complete
+        await context.setStep('完成', 4, TOTAL_STEPS);
         await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
 
         await context.setMessage(t("Mod Update Check Finish"));

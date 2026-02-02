@@ -97,7 +97,7 @@ export class ModcatSearchProvider implements ISearchProvider {
             nameTrans: undefined,
             summary: '', // ListView 不包含描述
             summaryTrans: undefined,
-            profileUrl: `https://modcat.top/mod/${mod.ModId}`,
+            profileUrl: ModcatApi.getModUrl(mod.ModId || ""),
             thumbnailUrl: mod.PicUrl || '',
             author: {
                 id: 0,
@@ -127,7 +127,7 @@ export class ModcatSearchProvider implements ISearchProvider {
             nameTrans: undefined,
             summary: mod.Description || '',
             summaryTrans: undefined,
-            profileUrl: `https://modcat.top/mod/${mod.ModId}`,
+            profileUrl: ModcatApi.getModUrl(mod.ModId || ""),
             thumbnailUrl: mod.PicUrl || '',
             author: {
                 id: 0,

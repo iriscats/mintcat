@@ -11,6 +11,7 @@ import { t } from 'i18next';
 import { exists, stat } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { ModSourceType } from '@/models/mod/types';
+import { MODCAT_PLATFORM } from '@/apis/modcat';
 
 /**
  * Check if a path is a valid unpacked mod directory
@@ -120,9 +121,11 @@ export class ModInstallTask implements ITask {
             const cachePath = item.download?.cachePath || "";
             const pathExists = cachePath ? await exists(cachePath) : false;
 
-            // Check if mod path exists: non-existent or empty path needs re-download (Modio) or error (Local)
+            // Check if mod path exists: non-existent or empty path needs re-download (Modio/ModCat) or error (Local)
+            const isOnlineMod = item.sourceType === ModSourceType.Modio || item.sourceType === MODCAT_PLATFORM;
+            
             if (!cachePath || !pathExists) {
-                if (item.sourceType === ModSourceType.Modio) {
+                if (isOnlineMod) {
                     modsNeedingDownload.push(item);
                 } else if (cachePath) {
                     throw new Error(
@@ -133,8 +136,8 @@ export class ModInstallTask implements ITask {
                 }
             }
 
-            // Check if this mod needs downloading (Modio type only): path exists but outdated
-            if (item.sourceType === ModSourceType.Modio && pathExists) {
+            // Check if this mod needs downloading (online mods only): path exists but outdated
+            if (isOnlineMod && pathExists) {
                 const onlineUpdateDate = item.status?.onlineUpdateDate || 0;
                 const lastUpdateDate = item.status?.lastUpdateDate || 0;
                 const downloadProgress = item.download?.downloadProgress || 0;

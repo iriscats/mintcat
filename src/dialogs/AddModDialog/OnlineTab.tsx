@@ -1,15 +1,22 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import {Flex, Form} from "antd";
 import {t} from "i18next";
 import TextArea from "antd/es/input/TextArea";
 
-export const ModioTab = React.forwardRef(({text}: any, ref) => {
+export const OnlineTab = React.forwardRef(({text}: any, ref) => {
 
     const [url, setUrl] = useState<string>(text);
 
+    // 当 text prop 变化时更新 url state
+    useEffect(() => {
+        if (text !== undefined) {
+            setUrl(text);
+        }
+    }, [text]);
+
     React.useImperativeHandle(ref, () => ({
         submit: () => {
-            const result = [];
+            const result: string[] = [];
             if (!url) {
                 return result;
             }
@@ -17,8 +24,9 @@ export const ModioTab = React.forwardRef(({text}: any, ref) => {
             const mods = url.trim();
             const list = mods.split("\n");
             for (const item of list) {
-                if (result.indexOf(item) === -1) {
-                    result.push(item);
+                const trimmedItem = item.trim();
+                if (trimmedItem && result.indexOf(trimmedItem) === -1) {
+                    result.push(trimmedItem);
                 }
             }
             return result;
@@ -38,6 +46,7 @@ export const ModioTab = React.forwardRef(({text}: any, ref) => {
                 <Flex>
                     <TextArea value={url}
                               onChange={onTextChange}
+                              placeholder="https://mod.io/g/drg/m/xxx&#10;https://modcat.top/#/modDetail?ModId=xxx"
                               rows={6}
                     />
                 </Flex>

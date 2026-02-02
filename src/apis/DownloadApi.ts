@@ -30,7 +30,8 @@ export type DownloadOptions = {
     checksumType?: 'md5' | 'sha256',
     timeoutSecs?: number,
     retryCount?: number,
-    resume?: boolean
+    resume?: boolean,
+    headers?: Record<string, string>
 }
 
 export class DownloadApi {

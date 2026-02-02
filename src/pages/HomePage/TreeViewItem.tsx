@@ -18,6 +18,7 @@ import {
 import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
+import {MODCAT_PLATFORM} from "@/apis/modcat";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {ModioApi} from "@/apis/modio";
@@ -329,7 +330,8 @@ function ModTreeViewWarring({nodeData}) {
 
     const checkExpired = () => {
         const data = nodeDataRef.current;
-        if (data.sourceType !== ModSourceType.Modio) {
+        // 支持 Modio 和 ModCat 类型的在线 mod
+        if (data.sourceType !== ModSourceType.Modio && data.sourceType !== MODCAT_PLATFORM) {
             return false;
         }
 
@@ -359,7 +361,8 @@ function ModTreeViewWarring({nodeData}) {
 
     const checkOnlineUnavailable = () => {
         const data = nodeDataRef.current;
-        return data.sourceType === ModSourceType.Modio &&
+        // 支持 Modio 和 ModCat 类型的在线 mod
+        return (data.sourceType === ModSourceType.Modio || data.sourceType === MODCAT_PLATFORM) &&
             data.onlineAvailable === false;
     }
 
@@ -625,7 +628,7 @@ export function TreeViewItem(
                         <ModTreeViewLocalTitle nodeData={nodeData} />
                     }
                     {
-                        nodeData.sourceType === ModSourceType.Modio &&
+                        (nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
                         <ModTreeViewTitle nodeData={nodeData}/>
                     }
 
@@ -649,7 +652,7 @@ export function TreeViewItem(
                                         <Tag color="orange" title={t("Sandbox")}>S</Tag>) :
                                     null}
 
-                        {nodeData.sourceType === ModSourceType.Modio &&
+                        {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
                             <ModTreeViewProgressPercent nodeData={nodeData}/>
                         }
                     </span>

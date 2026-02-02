@@ -296,6 +296,58 @@ export class ModcatApi {
         }
     }
 
+    // ==================== 链接解析 API ====================
+
+    /**
+     * 解析 ModCat 链接，提取 modId
+     * 支持格式: 
+     * - https://modcat.top/#/modDetail?ModId=xxx-xxx-xxx
+     * - https://modcat.top/#/modDetail?ModId=xxx-xxx-xxx&other=params
+     */
+    public static parseModLinks(link: string): string | undefined {
+        if (!link) return undefined;
+        
+        const trimmedLink = link.trim();
+        
+        // 匹配 modcat.top 链接，从 URL 中提取 ModId 参数
+        // 支持 ModId 在任意位置
+        if (trimmedLink.includes('modcat.top') && trimmedLink.includes('ModId=')) {
+            const modIdMatch = trimmedLink.match(/ModId=([a-zA-Z0-9-]+)/);
+            if (modIdMatch) {
+                return modIdMatch[1];
+            }
+        }
+        
+        return undefined;
+    }
+
+    /**
+     * 检查链接是否为 ModCat 链接
+     */
+    public static isModcatLink(link: string): boolean {
+        if (!link) return false;
+        const trimmedLink = link.trim();
+        return trimmedLink.includes('modcat.top') && trimmedLink.includes('ModId=');
+    }
+
+    /**
+     * 生成 ModCat mod 链接
+     */
+    public static getModUrl(modId: string): string {
+        return `https://modcat.top/#/modDetail?ModId=${modId}`;
+    }
+
+    /**
+     * 通过链接获取 Mod 信息
+     */
+    public static async getModInfoByLink(url: string): Promise<ModcatModEntity | null> {
+        const modId = ModcatApi.parseModLinks(url);
+        if (!modId) {
+            return null;
+        }
+        return await ModcatApi.getModDetail(modId);
+    }
+
     // ==================== 用户相关 API ====================
 
     /**
@@ -518,7 +570,7 @@ export class ModcatApi {
      * 获取文件下载 URL
      */
     public static getDownloadUrl(fileId: string, noCount: boolean = true): string {
-        return `${ModcatApi.getBaseUrl()}/api/Files/DownloadFileGet?fileId=${encodeURIComponent(fileId)}&noCount=${noCount}`;
+        return `${ModcatApi.getBaseUrl()}/api/Files/DownloadFileGet?FileId=${encodeURIComponent(fileId)}&NoCount=${noCount}`;
     }
 
     /**
@@ -528,9 +580,9 @@ export class ModcatApi {
         mod: ModcatModEntity,
         onProgress?: ModcatDownloadProgressCallback
     ): Promise<ModcatModEntity & { cachePath?: string }> {
-        // 获取最新版本
+        // 获取最新版本 - 放宽过滤条件，只要有 FilesId 就可以下载
         const latestVersion = mod.ModVersionEntities
-            ?.filter(v => v.Status === "Approved" && v.FilesId)
+            ?.filter(v => v.FilesId) // 只要有文件 ID 就可以
             .sort((a, b) => {
                 const dateA = new Date(a.CreatedAt || 0).getTime();
                 const dateB = new Date(b.CreatedAt || 0).getTime();
@@ -556,10 +608,17 @@ export class ModcatApi {
         const downloadUrl = ModcatApi.getDownloadUrl(latestVersion.FilesId);
         const cachePath = await CacheApi.getModCachePath(fileName, version);
         
+        // 获取认证token
+        const token = await ModcatApi.getToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+        
         await DownloadApi.downloadFile(
             downloadUrl,
             cachePath,
-            { resume: true, retryCount: 3 },
+            { resume: true, retryCount: 3, headers },
             (downloaded, total) => {
                 onProgress?.(downloaded, total);
             }
@@ -608,7 +667,7 @@ export class ModcatApi {
             nameId: mod.ModId || "",
             displayName: mod.Name || "",
             originalName: mod.Name,
-            url: `https://modcat.top/mod/${mod.ModId}`,
+            url: ModcatApi.getModUrl(mod.ModId || ""),
             sourceType: MODCAT_PLATFORM,
             platformId: 0, // modcat 使用字符串 ID
             tags: mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || [],

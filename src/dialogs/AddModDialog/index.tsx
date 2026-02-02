@@ -3,7 +3,7 @@ import {t} from "i18next";
 import {Button, Flex, Form, message, Select, Tabs} from 'antd';
 import {emitEvent, emitVoidEvent, listenEvent, type UnlistenFn} from "@/events";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
-import {ModioTab} from "@/dialogs/AddModDialog/ModioTab.tsx";
+import {OnlineTab} from "@/dialogs/AddModDialog/OnlineTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
 import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
@@ -12,7 +12,7 @@ import {AppInitializer} from "@/core/AppInitializer";
 import {registerIoC} from "@/core/IoCRegistration.ts";
 
 export enum AddModType {
-    MODIO = "mod.io",
+    ONLINE = "online",
     LOCAL = "local"
 }
 
@@ -34,7 +34,7 @@ export interface AddModDialogResult {
 export class AddModDialog extends BasePage<any, AddModDialogStates> {
     private dialogProfileService = new DialogProfileService();
 
-    private readonly modioFormRef: any = React.createRef();
+    private readonly onlineFormRef: any = React.createRef();
     private readonly localFormRef: any = React.createRef();
     private unlistenInitData?: UnlistenFn;
 
@@ -54,10 +54,10 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
     private async handleOk() {
         let list = [];
         switch (this.state.addModType) {
-            case AddModType.MODIO: {
-                list = this.modioFormRef.current?.submit();
-            }
+            case AddModType.ONLINE: {
+                list = this.onlineFormRef.current?.submit();
                 break;
+            }
             case AddModType.LOCAL: {
                 list = this.localFormRef.current?.submit();
             }
@@ -89,8 +89,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         let targetFolderType = "";
 
         switch (key) {
-            case AddModType.MODIO:
-                targetFolderType = "modio";
+            case AddModType.ONLINE:
+                targetFolderType = "modio";  // 在线 mod 默认使用 modio 文件夹
                 break;
             case AddModType.LOCAL:
                 targetFolderType = "local";
@@ -164,7 +164,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             if (initData.addModType === AddModType.LOCAL) {
                 const folder = groupFolders.find(f => f.folderType === "local");
                 if (folder) resolvedGroupId = folder.id;
-            } else if (initData.addModType === AddModType.MODIO) {
+            } else if (initData.addModType === AddModType.ONLINE) {
                 const folder = groupFolders.find(f => f.folderType === "modio");
                 if (folder) resolvedGroupId = folder.id;
             }
@@ -189,7 +189,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                 if (payload.addModType === AddModType.LOCAL) {
                     const folder = groupFolders.find(f => f.folderType === "local");
                     if (folder) resolvedGroupId = folder.id;
-                } else if (payload.addModType === AddModType.MODIO) {
+                } else if (payload.addModType === AddModType.ONLINE) {
                     const folder = groupFolders.find(f => f.folderType === "modio");
                     if (folder) resolvedGroupId = folder.id;
                 }
@@ -226,10 +226,10 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                                   children: <LocalTab ref={this.localFormRef}/>,
                               },
                               {
-                                  key: AddModType.MODIO,
-                                  label: 'mod.io',
-                                  children: <ModioTab ref={this.modioFormRef}
-                                                      text={this.state.text}/>,
+                                  key: AddModType.ONLINE,
+                                  label: t("Online"),
+                                  children: <OnlineTab ref={this.onlineFormRef}
+                                                       text={this.state.text}/>,
                               }
                           ]
                       }>

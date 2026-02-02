@@ -2,6 +2,7 @@ import { t } from "i18next";
 import { exists, stat } from "@tauri-apps/plugin-fs";
 import { emitEvent } from "@/events";
 import { ModioApi } from "@/apis/modio";
+import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
 import { ModSourceType } from "@/models/mod/types";
 import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
@@ -26,9 +27,19 @@ export class ModUpdateService {
 
     /**
      * 更新单个模组
+     * 支持 Modio 和 ModCat 两种在线来源
      */
     public static async updateMod(mod: CompleteModData) {
         await StatusBar.info(`${t("Update Mod")} [${mod.displayName}]`);
+        
+        // 根据 sourceType 决定更新方式
+        if (mod.sourceType === MODCAT_PLATFORM || mod.sourceType === "modcat") {
+            // ModCat 类型的 mod
+            await this.updateModcatMod(mod);
+            return;
+        }
+        
+        // mod.io 类型的 mod
         const resp = await ModioApi.getModInfoByLink(mod.url || "");
         if (!resp) {
             // Update status to mark as unavailable
@@ -56,41 +67,197 @@ export class ModUpdateService {
     }
 
     /**
-     * 批量更新 Modio 模组信息
-     * @param mods 模组列表
+     * 更新 ModCat 类型的模组
+     * 获取在线信息并下载文件
      */
-    public static async batchUpdateMods(mods: CompleteModData[]): Promise<void> {
-        // 筛选 Modio 类型的 mod
-        const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
-        if (modioMods.length === 0) return;
-
-        await StatusBar.info(`${t("Batch Update")} (${modioMods.length} mods)`);
-
-        // 批量获取在线信息
-        const platformIds = modioMods.map(m => m.platformId);
-        let modInfoList: ModInfo[] = [];
-        try {
-            modInfoList = await ModioApi.getModInfoByIdList(platformIds);
-        } catch (e) {
-            console.error("批量获取模组信息失败:", e);
+    private static async updateModcatMod(mod: CompleteModData): Promise<void> {
+        const modsApi = await StorageAPI.getMods();
+        const modId = mod.nameId;
+        
+        if (!modId) {
+            await modsApi.upsertModStatus({
+                modId: mod.modId!,
+                isOnlineAvailable: false
+            });
             return;
         }
 
-        // 创建 id 到 modInfo 的映射
-        const modInfoMap = new Map(modInfoList.map(m => [m.id, m]));
+        // 获取 mod 详情
+        const modDetail = await ModcatApi.getModDetail(modId);
+        if (!modDetail) {
+            // 标记为不可用
+            await modsApi.upsertModStatus({
+                modId: mod.modId!,
+                isOnlineAvailable: false
+            });
+            const updatedMod = await modsApi.getCompleteModData(mod.modId!);
+            if (updatedMod) {
+                await emitEvent("mod-treeview-update", {
+                    modId: updatedMod.modId!,
+                    data: updatedMod
+                });
+            }
+            return;
+        }
 
-        // 更新数据库
-        for (const mod of modioMods) {
-            const modInfo = modInfoMap.get(mod.platformId);
-            if (modInfo) {
-                await this.updateModInDatabase(mod.modId!, modInfo);
-            } else {
-                // 标记为不可用
-                await this.markModUnavailable(mod.modId!);
+        // 获取最新版本信息
+        const latestVersion = modDetail.ModVersionEntities
+            ?.filter(v => v.Status === "Approved" && v.FilesId)
+            .sort((a, b) => {
+                const dateA = new Date(a.CreatedAt || 0).getTime();
+                const dateB = new Date(b.CreatedAt || 0).getTime();
+                return dateB - dateA;
+            })[0];
+
+        // 更新数据库中的模组信息
+        await modsApi.upsertModVersion({
+            modId: mod.modId!,
+            currentVersion: latestVersion?.VersionNumber || mod.version?.currentVersion || "-",
+            availableVersions: []
+        });
+
+        // 更新下载信息
+        if (latestVersion?.FilesId) {
+            await modsApi.upsertModDownload({
+                modId: mod.modId!,
+                downloadUrl: ModcatApi.getDownloadUrl(latestVersion.FilesId),
+                fileSize: parseInt(latestVersion.Files?.Size || "0", 10)
+            });
+        }
+
+        // 更新状态：设置在线更新时间
+        const onlineUpdateDate = latestVersion?.UpdatedAt 
+            ? new Date(latestVersion.UpdatedAt).getTime() 
+            : TimeUtils.now();
+        await modsApi.upsertModStatus({
+            modId: mod.modId!,
+            onlineUpdateDate: onlineUpdateDate,
+            isOnlineAvailable: true
+        });
+
+        // 下载文件
+        await this.updateModFile(mod);
+
+        await StatusBar.success(`${t("Update Finish")}: ${mod.displayName}`);
+    }
+
+    /**
+     * 批量更新模组信息
+     * 支持 Modio 和 ModCat 两种在线来源
+     * @param mods 模组列表
+     */
+    public static async batchUpdateMods(mods: CompleteModData[]): Promise<void> {
+        // 筛选在线类型的 mod
+        const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
+        const modcatMods = mods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
+        
+        const totalOnlineMods = modioMods.length + modcatMods.length;
+        if (totalOnlineMods === 0) return;
+
+        await StatusBar.info(`${t("Batch Update")} (${totalOnlineMods} mods)`);
+
+        // 批量更新 Modio 类型的 mod
+        if (modioMods.length > 0) {
+            const platformIds = modioMods.map(m => m.platformId);
+            let modInfoList: ModInfo[] = [];
+            try {
+                modInfoList = await ModioApi.getModInfoByIdList(platformIds);
+            } catch (e) {
+                console.error("批量获取 Modio 模组信息失败:", e);
+            }
+
+            // 创建 id 到 modInfo 的映射
+            const modInfoMap = new Map(modInfoList.map(m => [m.id, m]));
+
+            // 更新数据库
+            for (const mod of modioMods) {
+                const modInfo = modInfoMap.get(mod.platformId);
+                if (modInfo) {
+                    await this.updateModInDatabase(mod.modId!, modInfo);
+                } else {
+                    // 标记为不可用
+                    await this.markModUnavailable(mod.modId!);
+                }
             }
         }
 
-        await StatusBar.success(`${t("Batch Update Finish")} (${modioMods.length} mods)`);
+        // 批量更新 ModCat 类型的 mod（逐个获取详情）
+        if (modcatMods.length > 0) {
+            for (const mod of modcatMods) {
+                try {
+                    await this.updateModcatModInfo(mod);
+                } catch (e) {
+                    console.error(`更新 ModCat 模组信息失败: ${mod.displayName}`, e);
+                    await this.markModUnavailable(mod.modId!);
+                }
+            }
+        }
+
+        await StatusBar.success(`${t("Batch Update Finish")} (${totalOnlineMods} mods)`);
+    }
+
+    /**
+     * 更新 ModCat 模组的在线信息（不下载文件）
+     */
+    private static async updateModcatModInfo(mod: CompleteModData): Promise<void> {
+        const modsApi = await StorageAPI.getMods();
+        const modId = mod.nameId;
+        
+        if (!modId) {
+            await this.markModUnavailable(mod.modId!);
+            return;
+        }
+
+        // 获取 mod 详情
+        const modDetail = await ModcatApi.getModDetail(modId);
+        if (!modDetail) {
+            await this.markModUnavailable(mod.modId!);
+            return;
+        }
+
+        // 获取最新版本信息
+        const latestVersion = modDetail.ModVersionEntities
+            ?.filter(v => v.Status === "Approved" && v.FilesId)
+            .sort((a, b) => {
+                const dateA = new Date(a.CreatedAt || 0).getTime();
+                const dateB = new Date(b.CreatedAt || 0).getTime();
+                return dateB - dateA;
+            })[0];
+
+        // 更新版本信息
+        await modsApi.upsertModVersion({
+            modId: mod.modId!,
+            currentVersion: latestVersion?.VersionNumber || mod.version?.currentVersion || "-",
+            availableVersions: []
+        });
+
+        // 更新下载信息
+        if (latestVersion?.FilesId) {
+            await modsApi.upsertModDownload({
+                modId: mod.modId!,
+                downloadUrl: ModcatApi.getDownloadUrl(latestVersion.FilesId),
+                fileSize: parseInt(latestVersion.Files?.Size || "0", 10)
+            });
+        }
+
+        // 更新状态
+        const onlineUpdateDate = latestVersion?.UpdatedAt 
+            ? new Date(latestVersion.UpdatedAt).getTime() 
+            : TimeUtils.now();
+        await modsApi.upsertModStatus({
+            modId: mod.modId!,
+            onlineUpdateDate: onlineUpdateDate,
+            isOnlineAvailable: true
+        });
+
+        // 发送更新事件
+        const updatedMod = await modsApi.getCompleteModData(mod.modId!);
+        if (updatedMod) {
+            await emitEvent("mod-treeview-update", {
+                modId: updatedMod.modId!,
+                data: updatedMod
+            });
+        }
     }
 
     /**
@@ -207,27 +374,38 @@ export class ModUpdateService {
 
     /**
      * 更新模组文件（下载）
+     * 支持 Modio 和 ModCat 两种在线来源
      */
     public static async updateModFile(mod: CompleteModData) {
-        const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
-            await StatusBar.info(`${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
-            const downloadProgress = (loaded / total) * 100;
-            // Update mod download progress and emit event
-            const updatedMod = { ...mod };
-            if (updatedMod.download) {
-                updatedMod.download = { ...updatedMod.download, downloadProgress };
-            }
-            await emitEvent("mod-treeview-update", {
-                modId: updatedMod.modId!,
-                data: updatedMod
+        let cachePath = "";
+        
+        // 根据 sourceType 选择不同的下载方式
+        if (mod.sourceType === MODCAT_PLATFORM || mod.sourceType === "modcat") {
+            // ModCat 类型的 mod
+            cachePath = await this.downloadModcatFile(mod);
+        } else {
+            // Modio 类型的 mod (默认)
+            const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
+                await StatusBar.info(`${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
+                const downloadProgress = (loaded / total) * 100;
+                // Update mod download progress and emit event
+                const updatedMod = { ...mod };
+                if (updatedMod.download) {
+                    updatedMod.download = { ...updatedMod.download, downloadProgress };
+                }
+                await emitEvent("mod-treeview-update", {
+                    modId: updatedMod.modId!,
+                    data: updatedMod
+                });
             });
-        });
+            cachePath = newItem.download?.cachePath || "";
+        }
 
         // Update download information in database (cachePath, progress, status)
         const modsApi = await StorageAPI.getMods();
         await modsApi.upsertModDownload({
             modId: mod.modId!,
-            cachePath: newItem.download?.cachePath || "",
+            cachePath: cachePath,
             downloadProgress: 100,
             downloadStatus: "completed"
         });
@@ -263,10 +441,53 @@ export class ModUpdateService {
     }
 
     /**
+     * 下载 ModCat 类型的 mod 文件
+     * @param mod 模组数据
+     * @returns 下载后的缓存路径
+     */
+    private static async downloadModcatFile(mod: CompleteModData): Promise<string> {
+        // 通过 nameId (modcat 的 ModId) 获取 mod 详情
+        const modId = mod.nameId;
+        
+        if (!modId) {
+            throw new Error(`ModCat mod missing nameId: ${mod.displayName}`);
+        }
+
+        // 获取 mod 详情以获取最新的下载信息
+        const modDetail = await ModcatApi.getModDetail(modId);
+        
+        if (!modDetail) {
+            throw new Error(`${t("Fetch Mod Info Error")}: ${mod.displayName}`);
+        }
+
+        // 下载文件
+        const result = await ModcatApi.downloadModFile(modDetail, async (loaded: number, total: number) => {
+            await StatusBar.info(`${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
+            const downloadProgress = total > 0 ? (loaded / total) * 100 : 0;
+            // Update mod download progress and emit event
+            const updatedMod = { ...mod };
+            if (updatedMod.download) {
+                updatedMod.download = { ...updatedMod.download, downloadProgress };
+            }
+            await emitEvent("mod-treeview-update", {
+                modId: updatedMod.modId!,
+                data: updatedMod
+            });
+        });
+
+        return result.cachePath || "";
+    }
+
+    /**
      * 检查在线模组并更新
+     * 支持 Modio 和 ModCat 两种在线来源
      */
     public static async checkOnlineModAndUpdate(modItem: CompleteModData, isEnabled: boolean) {
-        if (modItem.sourceType === ModSourceType.Modio && isEnabled) {
+        const isOnlineMod = modItem.sourceType === ModSourceType.Modio || 
+                           modItem.sourceType === MODCAT_PLATFORM || 
+                           modItem.sourceType === "modcat";
+        
+        if (isOnlineMod && isEnabled) {
             const cachePath = modItem.download?.cachePath || "";
             const onlineUpdateDate = modItem.status?.onlineUpdateDate || 0;
             const lastUpdateDate = modItem.status?.lastUpdateDate || 0;

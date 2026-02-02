@@ -23,6 +23,7 @@ pub struct DownloadOptionsDto {
     pub timeout_secs: Option<u64>,
     pub retry_count: Option<u32>,
     pub resume: Option<bool>,
+    pub headers: Option<std::collections::HashMap<String, String>>,
 }
 
 impl From<DownloadOptionsDto> for DownloadOptions {
@@ -37,6 +38,7 @@ impl From<DownloadOptionsDto> for DownloadOptions {
             timeout_secs: dto.timeout_secs,
             retry_count: dto.retry_count,
             resume: dto.resume,
+            headers: dto.headers,
         }
     }
 }

@@ -1,6 +1,8 @@
 import { ModMapper } from '@/mappers/ModMapper';
 import { StorageAPI } from '@/storage';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
+import type { ModcatModEntity } from '@/apis/modcat/types';
+import { MODCAT_PLATFORM } from '@/apis/modcat';
 
 /**
  * ModService 服务层
@@ -79,6 +81,83 @@ export class ModService {
                 savedMod = await modsDAO.addMod(dto);
             } catch (error) {
                 savedMod = await modsDAO.getModByPlatformId(dto.platformId, 'Modio');
+                if (!savedMod && dto.url) {
+                    savedMod = await modsDAO.getModByUrl(dto.url);
+                }
+                if (!savedMod) {
+                    throw error;
+                }
+            }
+        }
+
+        if (!savedMod) {
+            throw new Error("Failed to save mod to database");
+        }
+
+        await modsDAO.updateMod(savedMod.modId!, {
+            platformId: dto.platformId,
+            gameId: dto.gameId,
+            nameId: dto.nameId,
+            displayName: dto.displayName,
+            originalName: dto.originalName,
+            url: dto.url,
+            sourceType: dto.sourceType,
+            tags: dto.tags,
+            approvalStatus: dto.approvalStatus,
+            dependModId: dto.dependModId,
+        });
+
+        await ModService.ensureProfileModAssociation({
+            profileId,
+            modId: savedMod.modId!,
+            folderId,
+            usedVersion: dto.version?.currentVersion || "",
+        });
+
+        // 保存版本、下载、状态信息
+        if (dto.version) {
+            await modsDAO.upsertModVersion({ ...dto.version, modId: savedMod.modId! });
+        }
+        if (dto.download) {
+            await modsDAO.upsertModDownload({ ...dto.download, modId: savedMod.modId! });
+        }
+        if (dto.status) {
+            await modsDAO.upsertModStatus({ ...dto.status, modId: savedMod.modId! });
+        }
+
+        // 获取并返回完整数据
+        const completeData = await modsDAO.getCompleteModData(savedMod.modId!);
+        if (!completeData) {
+            throw new Error("Failed to fetch saved mod");
+        }
+
+        return completeData;
+    }
+
+    /**
+     * 从 ModCat API 响应添加模组
+     */
+    static async addModFromModcat(
+        modInfo: ModcatModEntity,
+        profileId: number,
+        folderId: number
+    ): Promise<CompleteModData> {
+        const modsDAO = await StorageAPI.getMods();
+
+        // 转换 API 响应到 DTO
+        const dto = ModMapper.fromModcatResponse(modInfo);
+
+        // 通过 nameId（modcat 的 modId）检查是否已存在
+        let savedMod = await modsDAO.getModByNameId(dto.nameId, MODCAT_PLATFORM);
+        if (!savedMod && dto.url) {
+            savedMod = await modsDAO.getModByUrl(dto.url);
+        }
+
+        if (!savedMod) {
+            try {
+                savedMod = await modsDAO.addMod(dto);
+            } catch (error) {
+                savedMod = await modsDAO.getModByNameId(dto.nameId, MODCAT_PLATFORM);
                 if (!savedMod && dto.url) {
                     savedMod = await modsDAO.getModByUrl(dto.url);
                 }

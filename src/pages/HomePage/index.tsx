@@ -806,7 +806,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                             message.error(t("Modio Folder Not Found"));
                             break;
                         }
-                        await openWindow(AddModType.MODIO, modioFolderId, "", async () => {
+                        await openWindow(AddModType.ONLINE, modioFolderId, "", async () => {
                             await this.updateTreeView();
                             await this.updateCountLabel();
                         });
@@ -814,7 +814,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     }
                     default:
                         // 对于自定义 folder，id 本身就是 folder ID，直接使用
-                        await openWindow(AddModType.MODIO, id, "", async () => {
+                        await openWindow(AddModType.ONLINE, id, "", async () => {
                             await this.updateTreeView();
                             await this.updateCountLabel();
                         });

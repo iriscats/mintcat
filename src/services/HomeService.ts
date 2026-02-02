@@ -1,6 +1,7 @@
 import { exists, stat } from "@tauri-apps/plugin-fs";
 import { path } from "@tauri-apps/api";
 import { ModioApi } from "@/apis/modio";
+import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
 import { StorageAPI } from "@/storage";
 import { ModService } from "@/services/ModService.ts";
 import { ModUpdateService } from "@/services/ModUpdateService.ts";
@@ -66,6 +67,93 @@ export class HomeService {
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
+        // 检查是否为 ModCat 链接
+        if (ModcatApi.isModcatLink(url)) {
+            return await this.addModFromModcatUrl(url, groupId);
+        }
+
+        // 处理 mod.io 链接
+        return await this.addModFromModioUrl(url, groupId);
+    }
+
+    /**
+     * 从 ModCat 链接添加 Mod
+     */
+    private async addModFromModcatUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
+        const nameId = ModcatApi.parseModLinks(url);
+        if (!nameId) {
+            return { status: "invalid" };
+        }
+
+        const profile = await this.getActiveProfile();
+        const modsApi = await StorageAPI.getMods();
+        const profiles = await StorageAPI.getProfiles();
+
+        // 先通过 nameId 检查数据库是否已存在
+        const existingModByName = await modsApi.getModByNameId(nameId, MODCAT_PLATFORM);
+        if (existingModByName) {
+            const existingProfileMod = await profiles.getProfileMod(profile.id!, existingModByName.modId!);
+            if (existingProfileMod) {
+                return { status: "exists", modName: existingModByName.displayName };
+            }
+
+            const modVersion = await modsApi.getModVersion(existingModByName.modId!);
+            await this.addModToProfile({
+                profileId: profile.id!,
+                modId: existingModByName.modId!,
+                groupId,
+                usedVersion: modVersion?.currentVersion || "",
+            });
+
+            const completeData = await modsApi.getCompleteModData(existingModByName.modId!);
+            if (completeData) {
+                await ModUpdateService.updateMod(completeData);
+            }
+
+            return { status: "added" };
+        }
+
+        // 数据库中不存在，调用 ModCat API 获取 mod 信息
+        const modInfoResp = await ModcatApi.getModInfoByLink(url);
+        if (!modInfoResp) {
+            return { status: "invalid" };
+        }
+
+        // 通过 URL 再检查一次
+        const existingMod = await modsApi.getModByUrl(url);
+        if (existingMod) {
+            const existingProfileMod = await profiles.getProfileMod(profile.id!, existingMod.modId!);
+            if (existingProfileMod) {
+                return { status: "exists", modName: modInfoResp.Name || "" };
+            }
+
+            const modVersion = await modsApi.getModVersion(existingMod.modId!);
+            await this.addModToProfile({
+                profileId: profile.id!,
+                modId: existingMod.modId!,
+                groupId,
+                usedVersion: modVersion?.currentVersion || "",
+            });
+
+            const completeData = await modsApi.getCompleteModData(existingMod.modId!);
+            if (completeData) {
+                await ModUpdateService.updateMod(completeData);
+            }
+
+            return { status: "added" };
+        }
+
+        // 添加新 mod
+        const addedMod = await ModService.addModFromModcat(modInfoResp, profile.id!, groupId);
+        await ModUpdateService.updateMod(addedMod);
+
+        return { status: "added" };
+    }
+
+    /**
+     * 从 mod.io 链接添加 Mod
+     */
+    private async addModFromModioUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
         // 先从 URL 解析 nameId，检查数据库是否已存在该 mod
         const nameId = ModioApi.parseModLinks(url);
         if (!nameId) {

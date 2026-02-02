@@ -37,6 +37,7 @@ pub struct DownloadOptions {
     pub timeout_secs: Option<u64>,
     pub retry_count: Option<u32>,
     pub resume: Option<bool>,
+    pub headers: Option<std::collections::HashMap<String, String>>,
 }
 
 impl Default for DownloadOptions {
@@ -47,6 +48,7 @@ impl Default for DownloadOptions {
             timeout_secs: Some(300),
             retry_count: Some(3),
             resume: Some(true),
+            headers: None,
         }
     }
 }
@@ -161,6 +163,13 @@ impl DownloadTask {
         // Build request
         let mut request = self.client.get(&self.url);
         
+        // Add custom headers
+        if let Some(headers) = &self.options.headers {
+            for (key, value) in headers {
+                request = request.header(key, value);
+            }
+        }
+        
         if start_byte > 0 {
             request = request.header("Range", format!("bytes={}-", start_byte));
         }
@@ -172,10 +181,12 @@ impl DownloadTask {
         // Send request
         let response = request.send().await?;
         
-        if !response.status().is_success() && response.status().as_u16() != 206 {
+        let status = response.status();
+        
+        if !status.is_success() && status.as_u16() != 206 {
             return Err(DownloadError::HttpError(
-                response.status().as_u16(),
-                response.status().to_string(),
+                status.as_u16(),
+                status.to_string(),
             ));
         }
 

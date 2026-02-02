@@ -1,6 +1,8 @@
 import { ModSourceType, ModApprovalStatus } from '@/models/mod/types';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { TimeUtils } from '@/utils/TimeUtils';
+import type { ModcatModEntity } from '@/apis/modcat/types';
+import { MODCAT_PLATFORM, ModcatApi } from '@/apis/modcat';
 
 /**
  * ModMapper 映射器
@@ -54,6 +56,68 @@ export class ModMapper {
                 modId: 0,
                 lastUpdateDate: TimeUtils.now(),
                 onlineUpdateDate: TimeUtils.now(),
+                isOnlineAvailable: true,
+                isLocalNotFound: false
+            }
+        };
+
+        return dto;
+    }
+
+    /**
+     * 从 ModCat API 响应转换到 CompleteModData
+     */
+    static fromModcatResponse(mod: ModcatModEntity): CompleteModData {
+        // 提取标签
+        const tags = mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || [];
+
+        // 获取最新版本 - 放宽过滤条件，因为 Status 可能是 null 或其他值
+        const latestVersion = mod.ModVersionEntities
+            ?.filter(v => v.FilesId) // 只要有文件 ID 就可以
+            .sort((a, b) => {
+                const dateA = new Date(a.CreatedAt || 0).getTime();
+                const dateB = new Date(b.CreatedAt || 0).getTime();
+                return dateB - dateA;
+            })[0];
+
+        const modName = mod.Name || "";
+        const modId = mod.ModId || "";
+
+        const dto: CompleteModData = {
+            modId: undefined,  // 尚未存入数据库
+            platformId: 0,     // ModCat 使用字符串 ID，这里用 0
+            gameId: 1,         // DRG 游戏 ID
+            nameId: modId,
+            displayName: modName,
+            originalName: modName,
+            url: ModcatApi.getModUrl(modId),
+            sourceType: MODCAT_PLATFORM as any,
+            tags: tags,
+            approvalStatus: ModApprovalStatus.Approved,  // ModCat 上的 mod 默认为已批准
+            version: {
+                modId: 0,
+                currentVersion: latestVersion?.VersionNumber || "-",
+                availableVersions: mod.ModVersionEntities
+                    ?.filter(v => v.Status === "Approved")
+                    .map(v => v.VersionNumber || "")
+                    .filter(Boolean) || []
+            },
+            download: {
+                modId: 0,
+                downloadUrl: latestVersion?.FilesId 
+                    ? `https://modcat.top:8089/api/Files/DownloadFileGet?FileId=${encodeURIComponent(latestVersion.FilesId)}&NoCount=true`
+                    : "",
+                cachePath: "",
+                fileSize: parseInt(latestVersion?.Files?.Size || "0", 10),
+                downloadProgress: 0,
+                downloadStatus: "pending"
+            },
+            status: {
+                modId: 0,
+                lastUpdateDate: TimeUtils.now(),
+                onlineUpdateDate: latestVersion?.UpdatedAt 
+                    ? new Date(latestVersion.UpdatedAt).getTime() 
+                    : TimeUtils.now(),
                 isOnlineAvailable: true,
                 isLocalNotFound: false
             }

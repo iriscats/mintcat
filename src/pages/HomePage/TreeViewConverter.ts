@@ -112,7 +112,7 @@ export class TreeViewConverter {
         // Find profile-specific data (enabled status, used version)
         const profileMod = this.profileModList?.find(pm => pm.modId === modItem.modId);
 
-        const title = modItem.displayName === "" ? modItem.url : modItem.displayName;
+        const title = modItem.displayName || modItem.originalName || modItem.url || modItem.nameId || "Unknown";
         const key = `mod-${item.id}`;
 
         parent.children.push({

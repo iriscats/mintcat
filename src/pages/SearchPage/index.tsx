@@ -143,7 +143,7 @@ export function SearchPage() {
                 return;
             }
 
-            await openWindow(AddModType.MODIO, modioFolderId, profileUrl);
+            await openWindow(AddModType.ONLINE, modioFolderId, profileUrl);
         } catch (error) {
             console.error('Failed to open add mod dialog:', error);
             message.error(t('Add Mod Error'));

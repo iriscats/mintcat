@@ -1,6 +1,7 @@
 import {t} from "i18next";
 import {emitEvent, onceEvent} from "@/events";
 import {ModioApi} from "@/apis/modio";
+import {ModcatApi} from "@/apis/modcat";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
@@ -63,7 +64,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         result.list = [...new Set(result.list)];
 
         switch (result.addModType) {
-            case AddModType.MODIO: {
+            case AddModType.ONLINE: {
                 const list = result.list;
                 for (const item of list) {
                     await vm.addModFromUrl(item, result.groupId);
@@ -101,11 +102,27 @@ async function onClipboardChange(text: string) {
     if (!text) {
         return;
     }
-    const links = text.split("\n");
+    const links = text.split("\n").map(l => l.trim()).filter(l => l);
+    
+    // 检查是否所有链接都是有效的 mod 链接（mod.io 或 modcat）
+    let hasModioLinks = false;
+    let hasModcatLinks = false;
+    
     for (const link of links) {
-        if (!ModioApi.parseModLinks(link)) {
-            return;
+        const isModio = !!ModioApi.parseModLinks(link);
+        const isModcat = ModcatApi.isModcatLink(link);
+        
+        if (!isModio && !isModcat) {
+            return; // 存在无效链接，不处理
         }
+        
+        if (isModio) hasModioLinks = true;
+        if (isModcat) hasModcatLinks = true;
+    }
+
+    // 如果没有任何有效链接，不处理
+    if (!hasModioLinks && !hasModcatLinks) {
+        return;
     }
 
     // Get current active profile's modio folder ID using ProfileService
@@ -117,7 +134,7 @@ async function onClipboardChange(text: string) {
         return;
     }
 
-    openWindow(AddModType.MODIO, modioFolderId, text).then();
+    openWindow(AddModType.ONLINE, modioFolderId, text).then();
 }
 
 
