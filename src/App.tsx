@@ -12,7 +12,7 @@ import UpdateDialog from "@/dialogs/UpdateDialog.tsx";
 import {initClipboardWatcher} from "@/dialogs/AddModDialog/open.ts";
 
 import {HomePage} from "@/pages/HomePage";
-import {ModioPage} from "@/pages/ModioPage";
+import {SearchPage} from "@/pages/SearchPage";
 import {SettingPage} from "@/pages/SettingPage";
 import {AppInitializer} from "@/core/AppInitializer";
 
@@ -105,7 +105,7 @@ const AppContent = () => {
                     {isAppViewModelReady && (
                         <Routes>
                             <Route path="/home" element={<HomePage/>}/>
-                            <Route path="/home/modio" element={<ModioPage/>}/>
+                            <Route path="/home/modio" element={<SearchPage/>}/>
                             <Route path="/home/setting" element={<SettingPage/>}/>
                             <Route path="*" element={<HomePage/>}/>
                         </Routes>

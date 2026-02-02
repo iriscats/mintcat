@@ -3,6 +3,8 @@
  * 
  * 基于 modcat.top 网站 API 的数据结构定义
  * API 文档: https://modcat.top:8100/swagger/index.html
+ * 
+ * 注意：API 返回字段使用 Pascal Case
  */
 
 // ==================== 通用响应类型 ====================
@@ -11,9 +13,9 @@
  * API 通用响应结构
  */
 export interface ModcatResultEntity<T> {
-    resultCode: number;
-    resultMsg?: string;
-    resultData?: T;
+    ResultCode: number;
+    ResultMsg?: string;
+    ResultData?: T;
 }
 
 // ==================== 用户相关类型 ====================
@@ -22,13 +24,13 @@ export interface ModcatResultEntity<T> {
  * 用户实体
  */
 export interface ModcatUserEntity {
-    userId?: string;
-    nickName?: string;
-    mail?: string;
-    headPic?: string;
-    createdAt?: string;
-    feedBackMail?: string;
-    userRoleID?: string[];
+    UserId?: string;
+    NickName?: string;
+    Mail?: string;
+    HeadPic?: string;
+    CreatedAt?: string;
+    FeedBackMail?: string;
+    UserRoleID?: string[];
 }
 
 /**
@@ -36,15 +38,15 @@ export interface ModcatUserEntity {
  */
 export interface ModcatResponseToken {
     /** JWT Token */
-    token?: string;
+    Token?: string;
     /** 用于刷新 token 的刷新令牌 */
-    refresh_Token?: string;
+    Refresh_Token?: string;
     /** 昵称 */
-    nickName?: string;
+    NickName?: string;
     /** 角色 */
-    role?: string;
+    Role?: string;
     /** 头像 url */
-    headPic?: string;
+    HeadPic?: string;
 }
 
 /**
@@ -78,12 +80,12 @@ export interface ModcatRefreshTokenRequest {
  * 游戏实体
  */
 export interface ModcatGameEntity {
-    gameId?: string;
-    gameName?: string;
-    picture?: string;
-    icon?: string;
-    downLoadCount?: number;
-    subscribeCount?: number;
+    GameId?: string;
+    GameName?: string;
+    Picture?: string;
+    Icon?: string;
+    DownLoadCount?: number;
+    SubscribeCount?: number;
 }
 
 // ==================== Mod 相关类型 ====================
@@ -92,128 +94,128 @@ export interface ModcatGameEntity {
  * Mod 类型实体
  */
 export interface ModcatTypesEntity {
-    typesId?: string;
-    typeName?: string;
-    sort?: number;
-    gameId?: string;
+    TypesId?: string;
+    TypeName?: string;
+    Sort?: number;
+    GameId?: string;
 }
 
 /**
  * Mod 类型列表视图实体
  */
 export interface ModcatModTypesListViewEntity {
-    typesId?: string;
-    typeName?: string;
+    TypesId?: string;
+    TypeName?: string;
 }
 
 /**
  * Mod 版本实体
  */
 export interface ModcatModVersionEntity {
-    versionId?: string;
-    modId?: string;
-    versionNumber?: string;
-    description?: string;
-    filesId?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    status?: string;
-    files?: ModcatFilesEntity;
+    VersionId?: string;
+    ModId?: string;
+    VersionNumber?: string;
+    Description?: string;
+    FilesId?: string;
+    CreatedAt?: string;
+    UpdatedAt?: string;
+    Status?: string;
+    Files?: ModcatFilesEntity;
 }
 
 /**
  * 文件实体
  */
 export interface ModcatFilesEntity {
-    filesId?: string;
-    filesType?: string;
-    filesName?: string;
-    size?: string;
-    path?: string;
-    userId?: string;
-    createdAt?: string;
-    softDeleted?: boolean;
+    FilesId?: string;
+    FilesType?: string;
+    FilesName?: string;
+    Size?: string;
+    Path?: string;
+    UserId?: string;
+    CreatedAt?: string;
+    SoftDeleted?: boolean;
 }
 
 /**
  * Mod 依赖实体
  */
 export interface ModcatModDependenceEntity {
-    modDependenceId?: string;
-    modId?: string;
-    dependenceModVersionId?: string;
-    modIOURL?: string;
-    dependenceModVersion?: ModcatModVersionEntity;
+    ModDependenceId?: string;
+    ModId?: string;
+    DependenceModVersionId?: string;
+    ModIOURL?: string;
+    DependenceModVersion?: ModcatModVersionEntity;
 }
 
 /**
  * Mod 图片实体
  */
 export interface ModcatModPictureEntity {
-    pictureId?: string;
-    modId?: string;
-    url?: string;
-    description?: string;
+    PictureId?: string;
+    ModId?: string;
+    Url?: string;
+    Description?: string;
 }
 
 /**
  * Mod 评分实体
  */
 export interface ModcatModPointEntity {
-    modPointId?: string;
-    modId?: string;
-    userId?: string;
-    point?: number;
-    reason?: string;
-    createdAt?: string;
+    ModPointId?: string;
+    ModId?: string;
+    UserId?: string;
+    Point?: number;
+    Reason?: string;
+    CreatedAt?: string;
 }
 
 /**
  * Mod 实体（完整）
  */
 export interface ModcatModEntity {
-    modId?: string;
-    name?: string;
-    description?: string;
-    creatorUserId?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    videoUrl?: string;
-    downloadCount?: number;
-    softDeleted?: boolean;
-    picUrl?: string;
-    gameId?: string;
-    modPictureEntities?: ModcatModPictureEntity[];
-    modTypeEntities?: ModcatModTypeEntity[];
-    modVersionEntities?: ModcatModVersionEntity[];
-    creatorEntity?: ModcatUserEntity;
-    modPointEntities?: ModcatModPointEntity[];
-    modDependenceEntities?: ModcatModDependenceEntity[];
-    gameEntity?: ModcatGameEntity;
-    isMySubscribe?: boolean;
-    avgPoint?: number;
+    ModId?: string;
+    Name?: string;
+    Description?: string;
+    CreatorUserId?: string;
+    CreatedAt?: string;
+    UpdatedAt?: string;
+    VideoUrl?: string;
+    DownloadCount?: number;
+    SoftDeleted?: boolean;
+    PicUrl?: string;
+    GameId?: string;
+    ModPictureEntities?: ModcatModPictureEntity[];
+    ModTypeEntities?: ModcatModTypeEntity[];
+    ModVersionEntities?: ModcatModVersionEntity[];
+    CreatorEntity?: ModcatUserEntity;
+    ModPointEntities?: ModcatModPointEntity[];
+    ModDependenceEntities?: ModcatModDependenceEntity[];
+    GameEntity?: ModcatGameEntity;
+    IsMySubscribe?: boolean;
+    AVGPoint?: number;
 }
 
 /**
  * Mod 类型关联实体
  */
 export interface ModcatModTypeEntity {
-    modTypeId?: string;
-    modId?: string;
-    typesId?: string;
-    types?: ModcatTypesEntity;
+    ModTypeId?: string;
+    ModId?: string;
+    TypesId?: string;
+    Types?: ModcatTypesEntity;
 }
 
 /**
  * Mod 列表视图实体（精简）
  */
 export interface ModcatModListViewEntity {
-    modId?: string;
-    name?: string;
-    picUrl?: string;
-    modTypeEntities?: ModcatModTypesListViewEntity[];
-    isMySubscribe?: boolean;
-    avgPoint?: number;
+    ModId?: string;
+    Name?: string;
+    PicUrl?: string;
+    ModTypeEntities?: ModcatModTypesListViewEntity[];
+    IsMySubscribe?: boolean | null;
+    AVGPoint?: number | null;
 }
 
 // ==================== 请求参数类型 ====================

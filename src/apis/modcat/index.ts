@@ -144,7 +144,7 @@ export class ModcatApi {
      * 检查响应是否成功
      */
     private static isSuccess<T>(result: ModcatResultEntity<T>): boolean {
-        return result.resultCode === 200;
+        return result.ResultCode === 200;
     }
 
     // ==================== 登录相关 API ====================
@@ -168,14 +168,14 @@ export class ModcatApi {
             );
             
             if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.resultMsg || "Login failed");
+                throw new Error(result.ResultMsg || "Login failed");
             }
             
-            if (result.resultData?.token) {
-                await ModcatApi.storeToken(result.resultData.token);
+            if (result.ResultData?.Token) {
+                await ModcatApi.storeToken(result.ResultData.Token);
             }
             
-            return result.resultData || null;
+            return result.ResultData || null;
         } catch (error) {
             console.error("[ModcatApi] Login failed:", error);
             throw error;
@@ -207,14 +207,14 @@ export class ModcatApi {
             );
             
             if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.resultMsg || "Register failed");
+                throw new Error(result.ResultMsg || "Register failed");
             }
             
-            if (result.resultData?.token) {
-                await ModcatApi.storeToken(result.resultData.token);
+            if (result.ResultData?.Token) {
+                await ModcatApi.storeToken(result.ResultData.Token);
             }
             
-            return result.resultData || null;
+            return result.ResultData || null;
         } catch (error) {
             console.error("[ModcatApi] Register failed:", error);
             throw error;
@@ -238,14 +238,14 @@ export class ModcatApi {
             );
             
             if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.resultMsg || "Refresh token failed");
+                throw new Error(result.ResultMsg || "Refresh token failed");
             }
             
-            if (result.resultData?.token) {
-                await ModcatApi.storeToken(result.resultData.token);
+            if (result.ResultData?.Token) {
+                await ModcatApi.storeToken(result.ResultData.Token);
             }
             
-            return result.resultData || null;
+            return result.ResultData || null;
         } catch (error) {
             console.error("[ModcatApi] Refresh token failed:", error);
             throw error;
@@ -269,14 +269,14 @@ export class ModcatApi {
             );
             
             if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.resultMsg || "Create token failed");
+                throw new Error(result.ResultMsg || "Create token failed");
             }
             
-            if (result.resultData?.token) {
-                await ModcatApi.storeToken(result.resultData.token);
+            if (result.ResultData?.Token) {
+                await ModcatApi.storeToken(result.ResultData.Token);
             }
             
-            return result.resultData || null;
+            return result.ResultData || null;
         } catch (error) {
             console.error("[ModcatApi] Create long-lived token failed:", error);
             throw error;
@@ -306,10 +306,10 @@ export class ModcatApi {
             const result = await ModcatApi.postRequest<ModcatUserEntity>("/api/User/GetUserByUserId");
             
             if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.resultMsg || "Get user info failed");
+                throw new Error(result.ResultMsg || "Get user info failed");
             }
             
-            return result.resultData || null;
+            return result.ResultData || null;
         } catch (error) {
             console.error("[ModcatApi] Get user info failed:", error);
             return null;
@@ -333,7 +333,7 @@ export class ModcatApi {
                 return [];
             }
             
-            return result.resultData || [];
+            return result.ResultData || [];
         } catch (error) {
             console.error("[ModcatApi] Get game list failed:", error);
             return [];
@@ -343,34 +343,8 @@ export class ModcatApi {
     /**
      * 获取 Deep Rock Galactic 游戏 ID
      */
-    public static async getDrgGameId(): Promise<string | null> {
-        if (cachedDrgGameId) {
-            return cachedDrgGameId;
-        }
-        
-        try {
-            const games = await ModcatApi.getGameList();
-            const drg = games.find(g => 
-                g.gameName?.toLowerCase().includes("deep rock") ||
-                g.gameName?.toLowerCase().includes("drg")
-            );
-            
-            if (drg?.gameId) {
-                cachedDrgGameId = drg.gameId;
-                return cachedDrgGameId;
-            }
-            
-            // 如果没找到，返回第一个游戏
-            if (games.length > 0) {
-                cachedDrgGameId = games[0].gameId || null;
-                return cachedDrgGameId;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error("[ModcatApi] Get DRG game ID failed:", error);
-            return null;
-        }
+    public static async getDrgGameId(): Promise<string> {
+        return "drg";
     }
 
     // ==================== Mod 相关 API ====================
@@ -390,7 +364,7 @@ export class ModcatApi {
                 return [];
             }
             
-            return result.resultData || [];
+            return result.ResultData || [];
         } catch (error) {
             console.error("[ModcatApi] Get mod types failed:", error);
             return [];
@@ -431,7 +405,7 @@ export class ModcatApi {
                 return [];
             }
             
-            return result.resultData || [];
+            return result.ResultData || [];
         } catch (error) {
             console.error("[ModcatApi] Get mod list failed:", error);
             return [];
@@ -439,55 +413,14 @@ export class ModcatApi {
     }
 
     /**
-     * 搜索 Mod（专用搜索接口）
-     */
-    public static async searchMods(
-        search: string,
-        skip: number = 0,
-        take: number = 20
-    ): Promise<ModcatModEntity[]> {
-        try {
-            const result = await ModcatApi.postRequest<ModcatModEntity[]>(
-                "/api/Mod/ModListPageSearch",
-                { Skip: String(skip), Take: String(take), Search: search }
-            );
-            
-            if (!ModcatApi.isSuccess(result)) {
-                return [];
-            }
-            
-            return result.resultData || [];
-        } catch (error) {
-            console.error("[ModcatApi] Search mods failed:", error);
-            return [];
-        }
-    }
-
-    /**
-     * 获取 Mod 列表（兼容旧接口）
+     * 获取 Mod 列表（统一使用 /api/Mod/ModListPage 接口）
      */
     public static async getModList(
         page: number = 0,
         pageSize: number = 20,
         query?: string
     ): Promise<ModcatModListViewEntity[]> {
-        if (query) {
-            // 搜索时使用专用搜索接口
-            const mods = await ModcatApi.searchMods(query, page * pageSize, pageSize);
-            // 转换为 ListView 格式
-            return mods.map(mod => ({
-                modId: mod.modId,
-                name: mod.name,
-                picUrl: mod.picUrl,
-                modTypeEntities: mod.modTypeEntities?.map(t => ({
-                    typesId: t.typesId,
-                    typeName: t.types?.typeName,
-                })),
-                isMySubscribe: mod.isMySubscribe,
-                avgPoint: mod.avgPoint,
-            }));
-        }
-        return await ModcatApi.getModListPage(page * pageSize, pageSize);
+        return await ModcatApi.getModListPage(page * pageSize, pageSize, query);
     }
 
     /**
@@ -501,10 +434,10 @@ export class ModcatApi {
             );
             
             if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.resultMsg || "Get mod detail failed");
+                throw new Error(result.ResultMsg || "Get mod detail failed");
             }
             
-            return result.resultData || null;
+            return result.ResultData || null;
         } catch (error) {
             console.error("[ModcatApi] Get mod detail failed:", error);
             message.error(`${t("Fetch Mod Info Error")}: ${error}`);
@@ -524,7 +457,7 @@ export class ModcatApi {
                 { ModId: modId }
             );
             
-            return ModcatApi.isSuccess(result) && result.resultData === true;
+            return ModcatApi.isSuccess(result) && result.ResultData === true;
         } catch (error) {
             console.error("[ModcatApi] Subscribe mod failed:", error);
             return false;
@@ -541,7 +474,7 @@ export class ModcatApi {
                 { ModId: modId }
             );
             
-            return ModcatApi.isSuccess(result) && result.resultData === true;
+            return ModcatApi.isSuccess(result) && result.ResultData === true;
         } catch (error) {
             console.error("[ModcatApi] Unsubscribe mod failed:", error);
             return false;
@@ -572,7 +505,7 @@ export class ModcatApi {
                 return [];
             }
             
-            return result.resultData || [];
+            return result.ResultData || [];
         } catch (error) {
             console.error("[ModcatApi] Get subscribed mods failed:", error);
             return [];
@@ -596,21 +529,21 @@ export class ModcatApi {
         onProgress?: ModcatDownloadProgressCallback
     ): Promise<ModcatModEntity & { cachePath?: string }> {
         // 获取最新版本
-        const latestVersion = mod.modVersionEntities
-            ?.filter(v => v.status === "Approved" && v.filesId)
+        const latestVersion = mod.ModVersionEntities
+            ?.filter(v => v.Status === "Approved" && v.FilesId)
             .sort((a, b) => {
-                const dateA = new Date(a.createdAt || 0).getTime();
-                const dateB = new Date(b.createdAt || 0).getTime();
+                const dateA = new Date(a.CreatedAt || 0).getTime();
+                const dateB = new Date(b.CreatedAt || 0).getTime();
                 return dateB - dateA;
             })[0];
         
-        if (!latestVersion?.filesId) {
+        if (!latestVersion?.FilesId) {
             throw new Error(t("No downloadable version available") || "No downloadable version available");
         }
         
-        const fileName = mod.name || mod.modId || "unknown";
-        const version = latestVersion.versionNumber || "latest";
-        const fileSize = parseInt(latestVersion.files?.size || "0", 10);
+        const fileName = mod.Name || mod.ModId || "unknown";
+        const version = latestVersion.VersionNumber || "latest";
+        const fileSize = parseInt(latestVersion.Files?.Size || "0", 10);
         
         // 检查缓存
         if (await CacheApi.checkCacheFile(fileName, version, fileSize)) {
@@ -620,7 +553,7 @@ export class ModcatApi {
         }
         
         // 下载文件
-        const downloadUrl = ModcatApi.getDownloadUrl(latestVersion.filesId);
+        const downloadUrl = ModcatApi.getDownloadUrl(latestVersion.FilesId);
         const cachePath = await CacheApi.getModCachePath(fileName, version);
         
         await DownloadApi.downloadFile(
@@ -641,15 +574,15 @@ export class ModcatApi {
      */
     public static listViewToModEntity(view: ModcatModListViewEntity): ModcatModEntity {
         return {
-            modId: view.modId,
-            name: view.name,
-            picUrl: view.picUrl,
-            modTypeEntities: view.modTypeEntities?.map(t => ({
-                typesId: t.typesId,
-                types: { typesId: t.typesId, typeName: t.typeName },
+            ModId: view.ModId,
+            Name: view.Name,
+            PicUrl: view.PicUrl,
+            ModTypeEntities: view.ModTypeEntities?.map(t => ({
+                TypesId: t.TypesId,
+                Types: { TypesId: t.TypesId, TypeName: t.TypeName },
             })),
-            isMySubscribe: view.isMySubscribe,
-            avgPoint: view.avgPoint,
+            IsMySubscribe: view.IsMySubscribe ?? undefined,
+            AVGPoint: view.AVGPoint ?? undefined,
         };
     }
 
@@ -659,11 +592,11 @@ export class ModcatApi {
      */
     public static toCompleteModData(mod: ModcatModEntity): Partial<CompleteModData> {
         // 获取最新版本
-        const latestVersion = mod.modVersionEntities
-            ?.filter(v => v.status === "Approved" && v.filesId)
+        const latestVersion = mod.ModVersionEntities
+            ?.filter(v => v.Status === "Approved" && v.FilesId)
             .sort((a, b) => {
-                const dateA = new Date(a.createdAt || 0).getTime();
-                const dateB = new Date(b.createdAt || 0).getTime();
+                const dateA = new Date(a.CreatedAt || 0).getTime();
+                const dateB = new Date(b.CreatedAt || 0).getTime();
                 return dateB - dateA;
             })[0];
         
@@ -672,21 +605,21 @@ export class ModcatApi {
         const placeholderModId = 0;
         
         return {
-            nameId: mod.modId || "",
-            displayName: mod.name || "",
-            originalName: mod.name,
-            url: `https://modcat.top/mod/${mod.modId}`,
+            nameId: mod.ModId || "",
+            displayName: mod.Name || "",
+            originalName: mod.Name,
+            url: `https://modcat.top/mod/${mod.ModId}`,
             sourceType: MODCAT_PLATFORM,
             platformId: 0, // modcat 使用字符串 ID
-            tags: mod.modTypeEntities?.map(t => t.types?.typeName).filter(Boolean) as string[] || [],
-            download: latestVersion?.filesId ? {
+            tags: mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || [],
+            download: latestVersion?.FilesId ? {
                 modId: placeholderModId,
-                downloadUrl: ModcatApi.getDownloadUrl(latestVersion.filesId),
-                fileSize: parseInt(latestVersion.files?.size || "0", 10),
+                downloadUrl: ModcatApi.getDownloadUrl(latestVersion.FilesId),
+                fileSize: parseInt(latestVersion.Files?.Size || "0", 10),
             } : undefined,
             version: latestVersion ? {
                 modId: placeholderModId,
-                currentVersion: latestVersion.versionNumber || "",
+                currentVersion: latestVersion.VersionNumber || "",
             } : undefined,
         };
     }

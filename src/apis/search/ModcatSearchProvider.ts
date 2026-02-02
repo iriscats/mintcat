@@ -90,15 +90,15 @@ export class ModcatSearchProvider implements ISearchProvider {
      */
     private mapModToSearchResult(mod: ModcatModListViewEntity): SearchResultItem {
         return {
-            id: `modcat_${mod.modId}`,
+            id: `modcat_${mod.ModId}`,
             platformId: undefined, // modcat 使用字符串 ID
-            nameId: mod.modId || '',
-            name: mod.name || '',
+            nameId: mod.ModId || '',
+            name: mod.Name || '',
             nameTrans: undefined,
             summary: '', // ListView 不包含描述
             summaryTrans: undefined,
-            profileUrl: `https://modcat.top/mod/${mod.modId}`,
-            thumbnailUrl: mod.picUrl || '',
+            profileUrl: `https://modcat.top/mod/${mod.ModId}`,
+            thumbnailUrl: mod.PicUrl || '',
             author: {
                 id: 0,
                 name: 'Unknown', // ListView 不包含作者信息
@@ -107,9 +107,9 @@ export class ModcatSearchProvider implements ISearchProvider {
             stats: {
                 downloads: 0, // ListView 不包含下载数
                 subscribers: 0,
-                rating: mod.avgPoint ? mod.avgPoint * 20 : undefined, // 转换为百分比
+                rating: mod.AVGPoint ? mod.AVGPoint * 20 : undefined, // 转换为百分比
             },
-            tags: mod.modTypeEntities?.map((t) => t.typeName).filter(Boolean) as string[] || [],
+            tags: mod.ModTypeEntities?.map((t) => t.TypeName).filter(Boolean) as string[] || [],
             source: SearchSource.MODCAT,
             rawData: mod,
         };
@@ -120,26 +120,26 @@ export class ModcatSearchProvider implements ISearchProvider {
      */
     public mapFullModToSearchResult(mod: ModcatModEntity): SearchResultItem {
         return {
-            id: `modcat_${mod.modId}`,
+            id: `modcat_${mod.ModId}`,
             platformId: undefined,
-            nameId: mod.modId || '',
-            name: mod.name || '',
+            nameId: mod.ModId || '',
+            name: mod.Name || '',
             nameTrans: undefined,
-            summary: mod.description || '',
+            summary: mod.Description || '',
             summaryTrans: undefined,
-            profileUrl: `https://modcat.top/mod/${mod.modId}`,
-            thumbnailUrl: mod.picUrl || '',
+            profileUrl: `https://modcat.top/mod/${mod.ModId}`,
+            thumbnailUrl: mod.PicUrl || '',
             author: {
                 id: 0,
-                name: mod.creatorEntity?.nickName || 'Unknown',
-                avatarUrl: mod.creatorEntity?.headPic || '',
+                name: mod.CreatorEntity?.NickName || 'Unknown',
+                avatarUrl: mod.CreatorEntity?.HeadPic || '',
             },
             stats: {
-                downloads: mod.downloadCount || 0,
+                downloads: mod.DownloadCount || 0,
                 subscribers: 0,
-                rating: mod.avgPoint ? mod.avgPoint * 20 : undefined,
+                rating: mod.AVGPoint ? mod.AVGPoint * 20 : undefined,
             },
-            tags: mod.modTypeEntities?.map((t) => t.types?.typeName).filter(Boolean) as string[] || [],
+            tags: mod.ModTypeEntities?.map((t) => t.Types?.TypeName).filter(Boolean) as string[] || [],
             source: SearchSource.MODCAT,
             rawData: mod,
         };
