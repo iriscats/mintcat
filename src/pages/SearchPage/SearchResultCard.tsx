@@ -138,8 +138,9 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                                 alt={item.name}
                                 style={{
                                     width: 160,
-                                    height: 'auto',
+                                    height: 90,
                                     borderRadius: 4,
+                                    objectFit: 'cover',
                                     display: imageLoaded ? 'block' : 'none',
                                 }}
                                 onLoad={() => setImageLoaded(true)}

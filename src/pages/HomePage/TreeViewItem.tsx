@@ -18,7 +18,7 @@ import {
 import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
-import {MODCAT_PLATFORM} from "@/apis/modcat";
+import {MODCAT_PLATFORM, ModcatApi} from "@/apis/modcat";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {ModioApi} from "@/apis/modio";
@@ -218,28 +218,57 @@ function ModTreeViewVersionSelect({nodeData}) {
     }, [nodeData.modId]);
 
     let fileInfos: ModFile[] = [];
+    let modcatVersions: any[] = [];
+    
     const onDropdownVisibleChange = async (visible: boolean) => {
         if (visible) {
             setFetching(true);
-
-            // Use platformId for mod.io API calls
-            fileInfos = await ModioApi.getModFiles(nodeData.platformId);
             const optionList = [];
-            for (const fileInfo of fileInfos) {
-                optionList.push({
-                    value: JSON.stringify(fileInfo),
-                    label: fileInfo.version ? fileInfo.version : fileInfo.filename
-                });
+
+            if (nodeData.sourceType === MODCAT_PLATFORM) {
+                // ModCat: 通过 getModDetail 获取版本信息
+                const modDetail = await ModcatApi.getModDetail(nodeData.nameId);
+                if (modDetail?.ModVersionEntities) {
+                    modcatVersions = modDetail.ModVersionEntities
+                        .filter(v => v.FilesId) // 只要有文件 ID 就可以
+                        .sort((a, b) => {
+                            const dateA = new Date(a.CreatedAt || 0).getTime();
+                            const dateB = new Date(b.CreatedAt || 0).getTime();
+                            return dateB - dateA; // 最新版本在前
+                        });
+                    
+                    for (const version of modcatVersions) {
+                        optionList.push({
+                            value: JSON.stringify(version),
+                            label: version.VersionNumber || version.VersionId
+                        });
+                    }
+                }
+            } else {
+                // mod.io: 使用 platformId 获取版本信息
+                fileInfos = await ModioApi.getModFiles(nodeData.platformId);
+                for (const fileInfo of fileInfos) {
+                    optionList.push({
+                        value: JSON.stringify(fileInfo),
+                        label: fileInfo.version ? fileInfo.version : fileInfo.filename
+                    });
+                }
+                optionList.reverse();
             }
 
             setFetching(false);
-            setOptions(optionList.reverse());
+            setOptions(optionList);
         }
     }
 
     const onChange = async (value: string) => {
-        const fileInfo = JSON.parse(value);
-        const newVersion = fileInfo.version || fileInfo.filename;
+        const parsedValue = JSON.parse(value);
+        
+        // 根据 sourceType 提取版本号
+        const isModcat = nodeData.sourceType === MODCAT_PLATFORM;
+        const newVersion = isModcat 
+            ? (parsedValue.VersionNumber || parsedValue.VersionId)
+            : (parsedValue.version || parsedValue.filename);
         
         // 检查是否有正在进行的版本切换
         const currentLock = getVersionSwitchLock(nodeData.modId);
@@ -266,7 +295,7 @@ function ModTreeViewVersionSelect({nodeData}) {
             const viewModel = await IoC.get(HomeViewModel);
             // Use profileModId (profile_mods.id) instead of key
             if (nodeData.profileModId) {
-                await viewModel.setModUsedVersion(nodeData.profileModId, fileInfo.version);
+                await viewModel.setModUsedVersion(nodeData.profileModId, newVersion);
             }
 
             const modItem = await getModById(nodeData.modId);
@@ -274,6 +303,22 @@ function ModTreeViewVersionSelect({nodeData}) {
                 clearVersionSwitchLock(nodeData.modId);
                 setIsProcessing(false);
                 return;
+            }
+
+            // 根据 sourceType 构建下载 URL 和文件大小
+            let downloadUrl: string;
+            let fileSize: number;
+            
+            if (isModcat) {
+                // ModCat: 使用 FilesId 构建下载 URL
+                downloadUrl = parsedValue.FilesId 
+                    ? `https://modcat.top:8089/api/Files/DownloadFileGet?FileId=${encodeURIComponent(parsedValue.FilesId)}&NoCount=true`
+                    : "";
+                fileSize = parseInt(parsedValue.Files?.Size || "0", 10);
+            } else {
+                // mod.io: 使用原有的下载信息
+                downloadUrl = parsedValue.download?.binary_url || "";
+                fileSize = parsedValue.filesize || 0;
             }
 
             // Update modItem with new version and download info
@@ -285,9 +330,9 @@ function ModTreeViewVersionSelect({nodeData}) {
                 },
                 download: {
                     ...modItem.download!,
-                    downloadUrl: fileInfo.download.binary_url,
+                    downloadUrl: downloadUrl,
                     downloadProgress: 0,
-                    fileSize: fileInfo.filesize,
+                    fileSize: fileSize,
                 }
             };
 
@@ -614,7 +659,7 @@ export function TreeViewItem(
                 <ModTreeViewProgressBackground nodeData={nodeData}>
                     <ModTreeViewSwitch nodeData={nodeData} onCountLabelUpdate={onCountLabelUpdate}/>
 
-                    {nodeData.sourceType === ModSourceType.Modio &&
+                    {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
                         <ModTreeViewVersionSelect nodeData={nodeData}/>
                     }
 

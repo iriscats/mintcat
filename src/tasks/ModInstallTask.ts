@@ -251,9 +251,9 @@ export class ModInstallTask implements ITask {
         await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
         // Step 7: Install .NET runtime
-        await context.setStep('安装运行时环境', 7, TOTAL_STEPS);
-        await context.setMessage('正在安装 .NET Runtime...');
-        await IntegrateApi.installDotnetRuntime(drgPakPath);
+        // await context.setStep('安装运行时环境', 7, TOTAL_STEPS);
+        // await context.setMessage('正在安装 .NET Runtime...');
+        // await IntegrateApi.installDotnetRuntime(drgPakPath);
 
         // Step 8: Install mods
         await context.setStep('安装模组', 8, TOTAL_STEPS);

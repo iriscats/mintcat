@@ -119,6 +119,7 @@ export class TreeViewConverter {
             key,
             modId: modItem.modId,
             platformId: modItem.platformId,  // Add platformId for mod.io API calls
+            nameId: modItem.nameId || "",  // Add nameId for ModCat API calls
             profileModId: profileMod?.id,  // Add profile_mods.id for updates
             isLeaf: true,
             title,

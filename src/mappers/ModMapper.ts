@@ -97,8 +97,9 @@ export class ModMapper {
             version: {
                 modId: 0,
                 currentVersion: latestVersion?.VersionNumber || "-",
+                // 放宽过滤条件，只要有 FilesId 就可以（与获取最新版本逻辑一致）
                 availableVersions: mod.ModVersionEntities
-                    ?.filter(v => v.Status === "Approved")
+                    ?.filter(v => v.FilesId)
                     .map(v => v.VersionNumber || "")
                     .filter(Boolean) || []
             },

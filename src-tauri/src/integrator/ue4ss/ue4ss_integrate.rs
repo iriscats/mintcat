@@ -76,21 +76,27 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<()> {
         let ue4ss_dll = include_bytes!("../../../assets/UE4SSL.dll");
         fs::write(&dll_path, ue4ss_dll).context("Failed to write UE4SSL.dll")?;
 
-        let ue4ss_runtime_dll = ue4ss_path.join("UE4SSL.Runtime.dll");
-        let ue4ss_runtime_dll_buff = include_bytes!("../../../assets/UE4SSL.Runtime.dll");
-        fs::write(&ue4ss_runtime_dll, ue4ss_runtime_dll_buff)
-            .context("Failed to write UE4SSL.Runtime.dll")?;
+        // let ue4ss_runtime_dll = ue4ss_path.join("UE4SSL.Runtime.dll");
+        // let ue4ss_runtime_dll_buff = include_bytes!("../../../assets/UE4SSL.Runtime.dll");
+        // fs::write(&ue4ss_runtime_dll, ue4ss_runtime_dll_buff)
+        //     .context("Failed to write UE4SSL.Runtime.dll")?;
 
-        let ue4ss_csharp_dll = ue4ss_path.join("UE4SSL.CSharp.dll");
-        let ue4ss_csharp_dll_buff = include_bytes!("../../../assets/UE4SSL.CSharp.dll");
+        // let ue4ss_csharp_dll = ue4ss_path.join("UE4SSL.CSharp.dll");
+        // let ue4ss_csharp_dll_buff = include_bytes!("../../../assets/UE4SSL.CSharp.dll");
+        // fs::write(&ue4ss_csharp_dll, ue4ss_csharp_dll_buff)
+        //     .context("Failed to write UE4SSL.CSharp.dll")?;
+
+        // let ue4ss_runtime_json = ue4ss_path.join("UE4SSL.Runtime.runtimeconfig.json");
+        // let ue4ss_runtime_json_buff =
+        //     include_bytes!("../../../assets/UE4SSL.Runtime.runtimeconfig.json");
+        // fs::write(&ue4ss_runtime_json, ue4ss_runtime_json_buff)
+        //     .context("Failed to write UE4SSL.Runtime.runtimeconfig.json")?;
+
+
+        let ue4ss_csharp_dll = ue4ss_path.join("UE4SSL.JavaScript.dll");
+        let ue4ss_csharp_dll_buff = include_bytes!("../../../assets/UE4SSL.JavaScript.dll");
         fs::write(&ue4ss_csharp_dll, ue4ss_csharp_dll_buff)
-            .context("Failed to write UE4SSL.CSharp.dll")?;
-
-        let ue4ss_runtime_json = ue4ss_path.join("UE4SSL.Runtime.runtimeconfig.json");
-        let ue4ss_runtime_json_buff =
-            include_bytes!("../../../assets/UE4SSL.Runtime.runtimeconfig.json");
-        fs::write(&ue4ss_runtime_json, ue4ss_runtime_json_buff)
-            .context("Failed to write UE4SSL.Runtime.runtimeconfig.json")?;
+            .context("Failed to write UE4SSL.JavaScript.dll")?;
 
         let proxy_dll_path = install_path.join("dwmapi.dll");
         let proxy_dll = include_bytes!("../../../assets/dwmapi.dll");
@@ -104,16 +110,16 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<()> {
         fs::create_dir(&mods_path).context("Failed to create mods directory")?;
 
         // 清除旧的 csmods 目录
-        let csmods_path = ue4ss_path.join("csmods");
-        if csmods_path.exists() {
-            fs::remove_dir_all(&csmods_path)?;
-        }
-        fs::create_dir(&csmods_path).context("Failed to create csmods directory")?;
+        // let csmods_path = ue4ss_path.join("csmods");
+        // if csmods_path.exists() {
+        //     fs::remove_dir_all(&csmods_path)?;
+        // }
+        // fs::create_dir(&csmods_path).context("Failed to create csmods directory")?;
 
-        let ue4ss_framework_dll = csmods_path.join("UE4SSL.Framework.dll");
-        let ue4ss_framework_dll_buff = include_bytes!("../../../assets/UE4SSL.Framework.dll");
-        fs::write(&ue4ss_framework_dll, ue4ss_framework_dll_buff)
-            .context("Failed to write UE4SSL.Framework.dll")?;
+        // let ue4ss_framework_dll = csmods_path.join("UE4SSL.Framework.dll");
+        // let ue4ss_framework_dll_buff = include_bytes!("../../../assets/UE4SSL.Framework.dll");
+        // fs::write(&ue4ss_framework_dll, ue4ss_framework_dll_buff)
+        //     .context("Failed to write UE4SSL.Framework.dll")?;
     }
     Ok(())
 }
