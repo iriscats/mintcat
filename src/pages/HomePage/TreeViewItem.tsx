@@ -14,6 +14,7 @@ import {
     LinkOutlined,
     PlusCircleOutlined,
     SyncOutlined,
+    WarningOutlined,
 } from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
@@ -29,6 +30,7 @@ import StatusBar from "@/components/StatusBar.tsx";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import type {FolderInfo} from "./TreeView";
+import {ConflictService} from "@/services/ConflictService";
 
 const {useToken} = theme;
 
@@ -411,9 +413,14 @@ function ModTreeViewWarring({nodeData}) {
             data.onlineAvailable === false;
     }
 
+    const checkConflict = () => {
+        return ConflictService.hasConflict(nodeDataRef.current.modId);
+    }
+
     const [isExpired, setIsExpired] = useState(checkExpired());
     const [isLocalNoFound, setIsLocalNoFound] = useState(checkLocalNoFound());
     const [isOnlineUnavailable, setIsOnlineUnavailable] = useState(checkOnlineUnavailable());
+    const [hasConflict, setHasConflict] = useState(checkConflict());
 
     // ✅ 使用 useFilteredEventListener 自动清理监听器
     useFilteredEventListener(
@@ -430,8 +437,37 @@ function ModTreeViewWarring({nodeData}) {
         [nodeData.modId]
     );
 
+    // 监听冲突更新事件
+    useFilteredEventListener(
+        'mod-conflict-update',
+        (payload) => payload.modId === nodeData.modId,
+        () => {
+            setHasConflict(checkConflict());
+        },
+        [nodeData.modId]
+    );
+
+    // 生成冲突提示信息
+    const getConflictTooltip = () => {
+        const conflict = ConflictService.getConflict(nodeData.modId);
+        if (!conflict) return t("File conflict with other mods");
+        
+        const fileCount = conflict.conflictingFiles.length;
+        const modCount = conflict.conflictingMods.length;
+        return `${t("File conflict")}: ${fileCount} ${t("files conflict with")} ${modCount} ${t("other mods")}`;
+    };
+
     return (
         <>
+            {
+                hasConflict &&
+                <Tooltip title={getConflictTooltip()}>
+                                <span style={{color: "#faad14", marginRight: "4px"}}>
+                                    <WarningOutlined/>
+                                </span>
+                </Tooltip>
+            }
+
             {
                 isExpired &&
                 <Tooltip title={t("Discovered New Version")}>

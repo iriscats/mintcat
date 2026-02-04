@@ -133,6 +133,24 @@ export interface EventPayloads {
     enabled: boolean;
   };
 
+  /**
+   * Mod 冲突状态更新
+   * 用于在冲突检测完成后通知单个 mod 更新显示
+   */
+  'mod-conflict-update': {
+    modId: number;
+    hasConflict: boolean;
+  };
+
+  /**
+   * Mod 冲突检测完成
+   * 用于在冲突检测任务完成后通知 UI
+   */
+  'mod-conflict-check-complete': {
+    hasConflicts: boolean;
+    count: number;
+  };
+
   // ========================================
   // 安装/集成事件
   // ========================================

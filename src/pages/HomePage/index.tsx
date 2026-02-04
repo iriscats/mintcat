@@ -12,7 +12,7 @@ import {
     DeleteOutlined,
     EditOutlined, FieldTimeOutlined, LoadingOutlined, MinusSquareOutlined, PauseCircleOutlined, PlayCircleOutlined,
     PlusCircleOutlined, SaveOutlined, SortAscendingOutlined, SortDescendingOutlined, SyncOutlined,
-    UnorderedListOutlined
+    UnorderedListOutlined, WarningOutlined
 } from "@ant-design/icons";
 import * as checkbox from "antd/es/checkbox";
 
@@ -451,6 +451,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
             message.success(`${t("Clean Complete")}: ${cleanedCount} ${t("mods removed")}`);
         } else {
             message.info(t("No missing local mods found"));
+        }
+    }
+
+    @autoBind
+    private async onMenuBarCheckConflictsClick() {
+        try {
+            await taskQueueAPI.addTask({
+                taskType: 'mod_conflict_check',
+                params: {},
+            });
+        } catch (e) {
+            console.error('Failed to start conflict check task:', e);
+            message.error(t("Failed to start conflict check"));
         }
     }
 
@@ -954,6 +967,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 </Tooltip>
                                 <Tooltip title={t("Clean Missing Local Mods")}>
                                     <Button icon={<ClearOutlined/>} type={"text"} onClick={this.onMenuBarCleanMissingLocalModsClick}/>
+                                </Tooltip>
+                                <Tooltip title={t("Check Conflicts")}>
+                                    <Button icon={<WarningOutlined/>} type={"text"} onClick={this.onMenuBarCheckConflictsClick}/>
                                 </Tooltip>
                             </Typography.Link>
                             {
