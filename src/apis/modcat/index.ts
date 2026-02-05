@@ -14,14 +14,9 @@ import type { CompleteModData } from "@/storage/dao/ModDAO";
 import type {
     ModcatResultEntity,
     ModcatUserEntity,
-    ModcatResponseToken,
-    ModcatLoginRequest,
-    ModcatRegisterRequest,
-    ModcatRefreshTokenRequest,
     ModcatModEntity,
     ModcatModListViewEntity,
     ModcatModListRequest,
-    ModcatGameEntity,
     ModcatTypesEntity,
     ModcatDownloadProgressCallback,
 } from "./types";
@@ -31,12 +26,6 @@ const MODCAT_API_BASE_URL = "https://modcat.top:8089";
 
 /** OAuth 平台标识 */
 export const MODCAT_PLATFORM = "modcat";
-
-/** Deep Rock Galactic 游戏名称 */
-const DRG_GAME_NAME = "Deep Rock Galactic";
-
-/** 缓存的 DRG 游戏 ID */
-let cachedDrgGameId: string | null = null;
 
 /**
  * ModCat API 客户端类
@@ -147,142 +136,6 @@ export class ModcatApi {
         return result.ResultCode === 200;
     }
 
-    // ==================== 登录相关 API ====================
-
-    /**
-     * 用户登录
-     * @param email 邮箱
-     * @param password 密码
-     */
-    public static async login(email: string, password: string): Promise<ModcatResponseToken | null> {
-        try {
-            const request: ModcatLoginRequest = {
-                LoginAccount: email,
-                Password: password,
-            };
-            
-            const result = await ModcatApi.postRequest<ModcatResponseToken>(
-                "/api/Login/UserLogin",
-                request,
-                false
-            );
-            
-            if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.ResultMsg || "Login failed");
-            }
-            
-            if (result.ResultData?.Token) {
-                await ModcatApi.storeToken(result.ResultData.Token);
-            }
-            
-            return result.ResultData || null;
-        } catch (error) {
-            console.error("[ModcatApi] Login failed:", error);
-            throw error;
-        }
-    }
-
-    /**
-     * 用户注册并登录
-     * @param email 邮箱
-     * @param nickname 昵称
-     * @param password 密码
-     */
-    public static async register(
-        email: string, 
-        nickname: string, 
-        password: string
-    ): Promise<ModcatResponseToken | null> {
-        try {
-            const request: ModcatRegisterRequest = {
-                LoginAccount: email,
-                NickName: nickname,
-                Password: password,
-            };
-            
-            const result = await ModcatApi.postRequest<ModcatResponseToken>(
-                "/api/Login/UserRegister",
-                request,
-                false
-            );
-            
-            if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.ResultMsg || "Register failed");
-            }
-            
-            if (result.ResultData?.Token) {
-                await ModcatApi.storeToken(result.ResultData.Token);
-            }
-            
-            return result.ResultData || null;
-        } catch (error) {
-            console.error("[ModcatApi] Register failed:", error);
-            throw error;
-        }
-    }
-
-    /**
-     * 刷新 Token
-     */
-    public static async refreshToken(token: string, refreshToken: string): Promise<ModcatResponseToken | null> {
-        try {
-            const request: ModcatRefreshTokenRequest = {
-                Token: token,
-                RefreshToken: refreshToken,
-            };
-            
-            const result = await ModcatApi.postRequest<ModcatResponseToken>(
-                "/api/Login/RefreshToken",
-                request,
-                false
-            );
-            
-            if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.ResultMsg || "Refresh token failed");
-            }
-            
-            if (result.ResultData?.Token) {
-                await ModcatApi.storeToken(result.ResultData.Token);
-            }
-            
-            return result.ResultData || null;
-        } catch (error) {
-            console.error("[ModcatApi] Refresh token failed:", error);
-            throw error;
-        }
-    }
-
-    /**
-     * 创建长期 Token (80年)
-     */
-    public static async createLongLivedToken(email: string, password: string): Promise<ModcatResponseToken | null> {
-        try {
-            const request: ModcatLoginRequest = {
-                LoginAccount: email,
-                Password: password,
-            };
-            
-            const result = await ModcatApi.postRequest<ModcatResponseToken>(
-                "/api/Login/CreateToken",
-                request,
-                false
-            );
-            
-            if (!ModcatApi.isSuccess(result)) {
-                throw new Error(result.ResultMsg || "Create token failed");
-            }
-            
-            if (result.ResultData?.Token) {
-                await ModcatApi.storeToken(result.ResultData.Token);
-            }
-            
-            return result.ResultData || null;
-        } catch (error) {
-            console.error("[ModcatApi] Create long-lived token failed:", error);
-            throw error;
-        }
-    }
-
     /**
      * 测试接口连通性
      */
@@ -369,28 +222,6 @@ export class ModcatApi {
     }
 
     // ==================== 游戏相关 API ====================
-
-    /**
-     * 获取游戏列表
-     */
-    public static async getGameList(skip: number = 0, take: number = 100): Promise<ModcatGameEntity[]> {
-        try {
-            const result = await ModcatApi.postRequest<ModcatGameEntity[]>(
-                "/api/Game/GetGamePageList",
-                { Skip: String(skip), Take: String(take) },
-                false
-            );
-            
-            if (!ModcatApi.isSuccess(result)) {
-                return [];
-            }
-            
-            return result.ResultData || [];
-        } catch (error) {
-            console.error("[ModcatApi] Get game list failed:", error);
-            return [];
-        }
-    }
 
     /**
      * 获取 Deep Rock Galactic 游戏 ID
@@ -498,41 +329,6 @@ export class ModcatApi {
     }
 
     // ==================== 订阅相关 API ====================
-
-    /**
-     * 订阅 Mod
-     */
-    public static async subscribeMod(modId: string): Promise<boolean> {
-        try {
-            const result = await ModcatApi.postRequest<boolean>(
-                "/api/User/ModSubscribe",
-                { ModId: modId }
-            );
-            
-            return ModcatApi.isSuccess(result) && result.ResultData === true;
-        } catch (error) {
-            console.error("[ModcatApi] Subscribe mod failed:", error);
-            return false;
-        }
-    }
-
-    /**
-     * 取消订阅 Mod
-     */
-    public static async unsubscribeMod(modId: string): Promise<boolean> {
-        try {
-            const result = await ModcatApi.postRequest<boolean>(
-                "/api/User/UserUnsubscribeMod",
-                { ModId: modId }
-            );
-            
-            return ModcatApi.isSuccess(result) && result.ResultData === true;
-        } catch (error) {
-            console.error("[ModcatApi] Unsubscribe mod failed:", error);
-            return false;
-        }
-    }
-
     /**
      * 获取已订阅的 Mod 列表
      */

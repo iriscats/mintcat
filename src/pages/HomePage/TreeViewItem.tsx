@@ -3,7 +3,6 @@ import React, {useState} from "react";
 import {Dropdown, MenuProps, Select, Spin, Switch, Tag, theme, Tooltip} from "antd";
 import {
     ClockCircleOutlined,
-    CopyOutlined,
     DeleteOutlined,
     DragOutlined,
     EditOutlined,
@@ -722,7 +721,7 @@ export function TreeViewItem(
                         {nodeData.required === "RequiredByAll" && (
                             <Tag color="orange">RequiredByAll</Tag>)}
 
-                        {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.39" && (
+                        {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.40" && (
                             <Tag color="red">{nodeData.versions[0]}</Tag>)}
 
                         {nodeData.approval === "Verified" ? (
