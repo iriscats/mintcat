@@ -16,7 +16,5 @@ export enum ProfileTreeType {
  * 预定义文件夹类型枚举
  */
 export enum ProfileTreeGroupType {
-    ROOT = 0,
-    MODIO = 1,
-    LOCAL = 2
+    ROOT = 0
 }

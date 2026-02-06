@@ -56,16 +56,6 @@ export class DatabaseInitializer {
             OR IGNORE INTO profiles (name, display_name, game_id, user_id, is_active, description)
                               VALUES ('default', 'Default Profile', 1, 1, true, 'Default mod configuration profile')`);
 
-            // 插入 Modio 文件夹
-            await db.run(sql`INSERT
-            OR IGNORE INTO profile_folders (profile_id, name, folder_type, sort_order, is_expanded)
-                                  VALUES (1,'mod.io','modio', 1, true)`);
-
-            // 插入 Local 文件夹
-            await db.run(sql`INSERT
-            OR IGNORE INTO profile_folders (profile_id, name, folder_type, sort_order, is_expanded)
-                                  VALUES (1,'Local','local', 2, true)`);
-
             console.log('默认 profile 创建完成');
         } catch (error) {
             console.error('创建默认profile失败:', error);

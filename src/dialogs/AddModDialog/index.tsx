@@ -5,7 +5,6 @@ import {emitEvent, emitVoidEvent, listenEvent, type UnlistenFn} from "@/events";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
 import {OnlineTab} from "@/dialogs/AddModDialog/OnlineTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
-import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {DialogProfileService} from "@/services/DialogProfileService.ts";
 import {AppInitializer} from "@/core/AppInitializer";
@@ -16,10 +15,11 @@ export enum AddModType {
     LOCAL = "local"
 }
 
+const LAST_SELECTED_GROUP_KEY = 'add-mod-dialog-last-group-id';
+
 interface AddModDialogStates {
     addModType?: string;
     groupOptions?: any[];
-    groupFolders?: any[]; // Store full folder data with folderType
     groupId?: number;
     loading?: boolean;
     text?: string;
@@ -43,9 +43,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
         this.state = {
             addModType: AddModType.LOCAL,
-            groupId: ProfileTreeGroupType.LOCAL,
+            groupId: 0,
             groupOptions: [],
-            groupFolders: [],
         }
     }
 
@@ -83,32 +82,33 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         await emitVoidEvent('add-mod-dialog-close');
     }
 
+    /**
+     * 解析 groupId：优先使用传入的 groupId（如果在文件夹列表中存在），
+     * 否则使用缓存的上次选择，最后回退到第一个文件夹
+     */
+    private resolveGroupId(groupId: number | undefined, folders: any[]): number {
+        // 1. 如果传入了有效的 groupId 且在当前文件夹列表中存在，直接使用
+        if (groupId && folders?.some(f => f.id === groupId)) {
+            return groupId;
+        }
+
+        // 2. 尝试使用缓存的上次选择
+        const cachedId = parseInt(localStorage.getItem(LAST_SELECTED_GROUP_KEY) || '0');
+        if (cachedId && folders?.some(f => f.id === cachedId)) {
+            return cachedId;
+        }
+
+        // 3. 回退到第一个文件夹
+        if (folders && folders.length > 0) {
+            return folders[0].id;
+        }
+
+        return 0;
+    }
+
     @autoBind
     private handleTabChange(key: string) {
-        let groupId = 0;
-        let targetFolderType = "";
-
-        switch (key) {
-            case AddModType.ONLINE:
-                targetFolderType = "modio";  // 在线 mod 默认使用 modio 文件夹
-                break;
-            case AddModType.LOCAL:
-                targetFolderType = "local";
-                break;
-            default:
-                break;
-        }
-
-        // Find the actual folder ID by folderType
-        if (this.state.groupFolders && targetFolderType) {
-            const folder = this.state.groupFolders.find(f => f.folderType === targetFolderType);
-            if (folder) {
-                groupId = folder.id;
-            }
-        }
-
         this.setState({
-            groupId: groupId,
             addModType: key
         });
     }
@@ -118,6 +118,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         this.setState({
             groupId: value
         });
+        // 缓存用户选择的文件夹
+        localStorage.setItem(LAST_SELECTED_GROUP_KEY, String(value));
     }
 
     @autoBind
@@ -125,7 +127,6 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         const profileFolderList = await this.dialogProfileService.getActiveProfileFolders();
 
         this.setState({
-            groupFolders: profileFolderList, // Store full folder data
             groupOptions: profileFolderList.map((item) => {
                 return {
                     label: item.name,
@@ -157,18 +158,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
         const initData = JSON.parse(initDataStr);
 
-        // Resolve groupId based on addModType: always select the matching default group
-        let resolvedGroupId = initData.groupId;
-        if (groupFolders) {
-            // Select the default group based on addModType
-            if (initData.addModType === AddModType.LOCAL) {
-                const folder = groupFolders.find(f => f.folderType === "local");
-                if (folder) resolvedGroupId = folder.id;
-            } else if (initData.addModType === AddModType.ONLINE) {
-                const folder = groupFolders.find(f => f.folderType === "modio");
-                if (folder) resolvedGroupId = folder.id;
-            }
-        }
+        // Resolve groupId: use provided groupId > cached last selection > first folder
+        const resolvedGroupId = this.resolveGroupId(initData.groupId, groupFolders);
 
         this.setState({
             addModType: initData.addModType,
@@ -182,18 +173,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             // Reload group options to ensure they're up-to-date
             const groupFolders = await this.loadGroupOptions();
 
-            // Resolve groupId based on addModType: always select the matching default group
-            let resolvedGroupId = payload.groupId;
-            if (groupFolders) {
-                // Select the default group based on addModType
-                if (payload.addModType === AddModType.LOCAL) {
-                    const folder = groupFolders.find(f => f.folderType === "local");
-                    if (folder) resolvedGroupId = folder.id;
-                } else if (payload.addModType === AddModType.ONLINE) {
-                    const folder = groupFolders.find(f => f.folderType === "modio");
-                    if (folder) resolvedGroupId = folder.id;
-                }
-            }
+            const resolvedGroupId = this.resolveGroupId(payload.groupId, groupFolders);
 
             this.setState({
                 addModType: payload.addModType,

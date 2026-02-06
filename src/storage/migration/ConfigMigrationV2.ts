@@ -442,27 +442,9 @@ export class ConfigMigrationV2 {
             const profileId = createdProfile.id!;
             console.log(`已创建配置文件: ${profileName}, ID: ${profileId}, 激活: ${isActive}`);
 
-            // 创建默认文件夹
-            const modioFolder = await this.profileDAO.createFolder({
-                profileId,
-                name: 'mod.io',
-                folderType: 'modio',
-                sortOrder: 0,
-                isExpanded: true
-            });
-
-            const localFolder = await this.profileDAO.createFolder({
-                profileId,
-                name: '本地',
-                folderType: 'local',
-                sortOrder: 1,
-                isExpanded: true
-            });
-
             // 关联模组到配置文件
             if (profile.mods && Array.isArray(profile.mods)) {
-                let modioSortOrder = 0;
-                let localSortOrder = 0;
+                let sortOrder = 0;
 
                 for (const modSpec of profile.mods) {
                     const url = modSpec.spec?.url;
@@ -474,17 +456,12 @@ export class ConfigMigrationV2 {
                         continue;
                     }
 
-                    // 判断是 mod.io 还是本地模组
-                    const isModio = this.isModioUrl(url);
-                    const parentFolderId = isModio ? modioFolder?.id : localFolder?.id;
-                    const sortOrder = isModio ? modioSortOrder++ : localSortOrder++;
-
-                    // 添加模组到配置文件
+                    // 添加模组到配置文件（不创建默认文件夹，直接挂到根级别）
                     await this.profileDAO.addModToProfile({
                         profileId,
                         modId,
-                        parentFolderId: parentFolderId || null,
-                        sortOrder,
+                        parentFolderId: null,
+                        sortOrder: sortOrder++,
                         isEnabled: modSpec.enabled !== false,
                         usedVersion: '-'
                     });

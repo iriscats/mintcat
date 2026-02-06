@@ -1,6 +1,6 @@
 import { ProfileTreeItem } from '@/models/profile/ProfileTreeItem';
 import { ProfileTreeType, ProfileTreeGroupType } from '@/models/profile/types';
-import type { ProfileDAO, ProfileData, ProfileFolderData, ProfileModData, ProfileFolderTreeData } from '@/storage/dao/ProfileDAO';
+import type { ProfileData } from '@/storage/dao/ProfileDAO';
 import { StorageAPI } from '@/storage';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 
@@ -71,39 +71,19 @@ export class ProfileTreeService {
             const folders = await profileDAO.getProfileFolders(profileId);
             const mods = await profileDAO.getProfileMods(profileId);
 
-            const defaultFolders = folders.filter(f =>
-                f.folderType === 'modio' || f.folderType === 'local'
-            );
-
+            // 清除所有现有 mod 关联
             for (const mod of mods) {
                 await profileDAO.removeModFromProfile(profileId, mod.modId);
             }
 
-            const customFolders = folders.filter(f => f.folderType === 'custom');
-            customFolders.sort((a, b) => (b.id! - a.id!));
-
-            for (const folder of customFolders) {
+            // 删除所有文件夹（按 ID 降序删除，避免外键冲突）
+            const sortedFolders = [...folders].sort((a, b) => (b.id! - a.id!));
+            for (const folder of sortedFolders) {
                 await profileDAO.deleteFolder(folder.id!);
             }
 
-            const itemsToSave = this.collectNonDefaultItems(root, defaultFolders);
-
-            await this.saveProfileTreeItems(itemsToSave, profileDAO, profileId, null, 0);
-
-            for (const defaultFolder of defaultFolders) {
-                const correspondingItem = root.children.find(item =>
-                    item.type === ProfileTreeType.FOLDER && item.name === defaultFolder.name
-                );
-
-                if (correspondingItem) {
-                    await this.saveDefaultFolderItems(
-                        correspondingItem,
-                        profileDAO,
-                        profileId,
-                        defaultFolder.id!
-                    );
-                }
-            }
+            // 重新保存整棵树
+            await this.saveProfileTreeItems(root.children, profileDAO, profileId, null, 0);
 
         } catch (error) {
             console.error('[ProfileTreeService] Failed to save profile tree:', error);
@@ -230,52 +210,6 @@ export class ProfileTreeService {
     // 业务规则
     // ====================================
 
-    /**
-     * 创建默认文件夹
-     * Migrated from ProfileViewModel.createDefaultFolders
-     */
-    public async createDefaultFolders(profileId: number): Promise<void> {
-        try {
-            const profileDAO = await StorageAPI.getProfiles();
-
-            const existingFolders = await profileDAO.getProfileFolders(profileId);
-            const defaultFolders = [
-                {
-                    profileId,
-                    name: 'mod.io',
-                    folderType: 'modio',
-                    sortOrder: 0,
-                    aliases: ['mod.io', 'Mod.io']
-                },
-                {
-                    profileId,
-                    name: 'Local',
-                    folderType: 'local',
-                    sortOrder: 1,
-                    aliases: ['Local', '本地']
-                }
-            ];
-
-            for (const folder of defaultFolders) {
-                const existsByType = existingFolders.find(f => f.folderType === folder.folderType);
-                if (existsByType) {
-                    continue;
-                }
-
-                const existsByName = existingFolders.find(f => folder.aliases.includes(f.name));
-                if (existsByName?.id) {
-                    await profileDAO.updateFolder(existsByName.id, {
-                        folderType: folder.folderType
-                    });
-                    continue;
-                }
-
-                await profileDAO.createFolder(folder);
-            }
-        } catch (error) {
-            console.error(`[ProfileTreeService] Failed to create default folders for profile ${profileId}:`, error);
-        }
-    }
 
     // ====================================
     // 私有辅助方法
@@ -450,27 +384,6 @@ export class ProfileTreeService {
         return null;
     }
 
-    /**
-     * 收集顶级非默认文件夹和项目
-     * Migrated from ProfileViewModel.collectNonDefaultItems
-     */
-    private collectNonDefaultItems(root: ProfileTreeItem, defaultFolders: any[]): ProfileTreeItem[] {
-        const result: ProfileTreeItem[] = [];
-
-        for (const item of root.children) {
-            if (item.type === ProfileTreeType.FOLDER) {
-                const isDefaultFolder = defaultFolders.some(f => f.name === item.name);
-
-                if (!isDefaultFolder) {
-                    result.push(item);
-                }
-            } else if (item.type === ProfileTreeType.ITEM) {
-                result.push(item);
-            }
-        }
-
-        return result;
-    }
 
     /**
      * 递归保存 profile tree items
@@ -517,79 +430,7 @@ export class ProfileTreeService {
         }
     }
 
-    /**
-     * 保存默认文件夹中的项目
-     * Migrated from ProfileViewModel.saveDefaultFolderItems
-     */
-    private async saveDefaultFolderItems(
-        item: ProfileTreeItem,
-        profileDAO: any,
-        profileId: number,
-        defaultFolderId: number
-    ): Promise<void> {
-        const mods = item.children.filter(child => child.type === ProfileTreeType.ITEM);
 
-        for (let i = 0; i < mods.length; i++) {
-            await profileDAO.addModToProfile({
-                profileId,
-                modId: mods[i].id,
-                parentFolderId: defaultFolderId,
-                sortOrder: i,
-                isEnabled: mods[i].enabled,
-                usedVersion: mods[i].usedVersion
-            });
-        }
-
-        const customFolders = item.children.filter(child =>
-            child.type === ProfileTreeType.FOLDER
-        );
-
-        for (let i = 0; i < customFolders.length; i++) {
-            const folder = await profileDAO.createFolder({
-                profileId,
-                name: customFolders[i].name,
-                parentFolderId: defaultFolderId,
-                folderType: 'custom',
-                sortOrder: i
-            });
-
-            if (folder) {
-                await this.saveProfileTreeItems(
-                    customFolders[i].children,
-                    profileDAO,
-                    profileId,
-                    folder.id!,
-                    0
-                );
-            }
-        }
-    }
-
-    // ====================================
-    // Helper methods for folder access
-    // ====================================
-
-    /**
-     * Get Mod.io folder from tree root
-     * Migrated from ProfileTree.ModioFolder accessor
-     */
-    public getModioFolder(root: ProfileTreeItem): ProfileTreeItem | undefined {
-        return root.children.find(p =>
-            p.type === ProfileTreeType.FOLDER &&
-            (p.name === "Mod.io" || p.name === "mod.io")
-        );
-    }
-
-    /**
-     * Get Local folder from tree root
-     * Migrated from ProfileTree.LocalFolder accessor
-     */
-    public getLocalFolder(root: ProfileTreeItem): ProfileTreeItem | undefined {
-        return root.children.find(p =>
-            p.type === ProfileTreeType.FOLDER &&
-            (p.name === "Local" || p.name === "本地")
-        );
-    }
 
     /**
      * Duplicate profile tree (folders and mods) to a new profile

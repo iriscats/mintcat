@@ -406,10 +406,6 @@ export class ConfigMigrationV4 {
      * 根据文件夹名称确定文件夹类型
      */
     private getFolderTypeFromName(name: string): string {
-        if (name === 'mod.io')
-            return 'modio';
-        if (name === '本地' || name === 'Local')
-            return 'local';
         return 'custom';
     }
 

@@ -29,11 +29,9 @@ import {autoBind} from "@/utils/ReactUtils.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
-import {ProfileService} from "@/services/ProfileService.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
 import {listenEvent, type UnlistenFn} from "@/events";
-import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
 import {StorageAPI} from "@/storage";
@@ -385,16 +383,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarAddModClick() {
-        // Get current active profile's Local folder ID using ProfileService
-        const profileService = await IoC.get(ProfileService);
-        const localFolderId = await profileService.getActiveProfileFolderId('local');
-
-        if (!localFolderId) {
-            message.error(t("Local Folder Not Found"));
-            return;
-        }
-
-        openWindow(AddModType.LOCAL, localFolderId, "", async () => {
+        openWindow(AddModType.LOCAL, 0, "", async () => {
             await this.updateTreeView();
             await this.updateCountLabel();
         }).then();
@@ -799,40 +788,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
             }
                 break;
             case "add_mod": {
-                const profileService = await IoC.get(ProfileService);
-                switch (id) {
-                    case ProfileTreeGroupType.LOCAL: {
-                        const localFolderId = await profileService.getActiveProfileFolderId('local');
-                        if (!localFolderId) {
-                            message.error(t("Local Folder Not Found"));
-                            break;
-                        }
-                        await openWindow(AddModType.LOCAL, localFolderId, "", async () => {
-                            await this.updateTreeView();
-                            await this.updateCountLabel();
-                        });
-                        break;
-                    }
-                    case ProfileTreeGroupType.MODIO: {
-                        const modioFolderId = await profileService.getActiveProfileFolderId('modio');
-                        if (!modioFolderId) {
-                            message.error(t("Modio Folder Not Found"));
-                            break;
-                        }
-                        await openWindow(AddModType.ONLINE, modioFolderId, "", async () => {
-                            await this.updateTreeView();
-                            await this.updateCountLabel();
-                        });
-                        break;
-                    }
-                    default:
-                        // 对于自定义 folder，id 本身就是 folder ID，直接使用
-                        await openWindow(AddModType.ONLINE, id, "", async () => {
-                            await this.updateTreeView();
-                            await this.updateCountLabel();
-                        });
-                        break;
-                }
+                // id 就是 folder ID，直接使用
+                await openWindow(AddModType.LOCAL, id, "", async () => {
+                    await this.updateTreeView();
+                    await this.updateCountLabel();
+                });
             }
                 break;
             case "rename":

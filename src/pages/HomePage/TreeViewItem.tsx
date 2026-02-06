@@ -85,38 +85,27 @@ function ModTreeViewFolder({nodeData, onMenuClick, folders, onMoveToFolder}: {
     folders?: FolderInfo[];
     onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void;
 }) {
-    // 过滤掉当前文件夹和默认文件夹(folder-1, folder-2)，避免移动到自身或默认文件夹
+    // 过滤掉当前文件夹，避免移动到自身
     const moveToChildren: MenuProps['items'] = folders
-        ?.filter(f => {
-            if (f.key === nodeData.key) return false;
-            // 不能移动到默认文件夹
-            const folderId = parseInt(f.key.split('-')[1]);
-            if (folderId === 1 || folderId === 2) return false;
-            return true;
-        })
+        ?.filter(f => f.key !== nodeData.key)
         .map(f => ({
             key: `move_to_${f.key}`,
             label: f.title,
             icon: <FolderOutlined />,
         })) || [];
 
-    // 检查当前文件夹是否是默认文件夹
-    const currentFolderId = parseInt(nodeData.key.split('-')[1]);
-    const isDefaultFolder = currentFolderId === 1 || currentFolderId === 2;
-
     const contextMenusGroup: MenuProps['items'] = [
         {label: t('Add Mod'), key: 'add_mod', icon: <PlusCircleOutlined />},
         {label: t('Add New Group'), key: 'add_new_group', icon: <FolderAddOutlined />},
         {label: t('Add Sub Group'), key: 'add_sub_group', icon: <FolderAddOutlined />},
         {label: t('Rename Group'), key: 'rename_group', icon: <EditOutlined />},
-        // 只有非默认文件夹才显示 "移动到" 和 "删除" 选项
-        ...(!isDefaultFolder && moveToChildren.length > 0 ? [{
+        ...(moveToChildren.length > 0 ? [{
             label: t('Move To'),
             key: 'move_to',
             icon: <DragOutlined />,
             children: moveToChildren,
         }] : []),
-        ...(!isDefaultFolder ? [{label: t('Delete Group'), key: 'delete_group', icon: <DeleteOutlined />}] : [])
+        {label: t('Delete Group'), key: 'delete_group', icon: <DeleteOutlined />}
     ];
     
     return (
@@ -649,14 +638,9 @@ export function TreeViewItem(
     folders?: FolderInfo[],
     onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void
 ) {
-    // 构建"移动到"子菜单，过滤掉默认文件夹(folder-1, folder-2)
+    // 构建"移动到"子菜单
     const moveToChildren: MenuProps['items'] = folders
-        ?.filter(f => {
-            const folderId = parseInt(f.key.split('-')[1]);
-            // 不能移动到默认文件夹
-            return folderId !== 1 && folderId !== 2;
-        })
-        .map(f => ({
+        ?.map(f => ({
             key: `move_to_${f.key}`,
             label: f.title,
             icon: <FolderOutlined />,

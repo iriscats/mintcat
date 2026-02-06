@@ -174,7 +174,7 @@ export const profileFolders = sqliteTable("profile_folders", {
     profileId: integer("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }), // 关联配置文件
     parentFolderId: integer("parent_folder_id").references(() => profileFolders.id), // 父文件夹ID（支持层级结构）
     name: text("name").notNull(), // 文件夹名称
-    folderType: text("folder_type").notNull().default("custom"), // 文件夹类型: root, modio, local, custom
+    folderType: text("folder_type").notNull().default("custom"), // 文件夹类型: custom
     sortOrder: integer("sort_order").notNull().default(0), // 排序顺序
     isExpanded: integer("is_expanded", { mode: "boolean" }).notNull().default(true), // 是否展开
     createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

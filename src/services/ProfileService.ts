@@ -174,29 +174,6 @@ export class ProfileService {
     }
 
     /**
-     * 获取当前活跃 profile 指定类型的文件夹 ID
-     * @param folderType 文件夹类型 ('modio' | 'local')
-     * @returns 文件夹 ID，如果未找到返回 null
-     */
-    public async getActiveProfileFolderId(folderType: 'modio' | 'local'): Promise<number | null> {
-        const profiles = await StorageAPI.getProfiles();
-        const activeProfile = await this.ensureActiveProfile(profiles);
-
-        if (!activeProfile?.id) {
-            console.warn(`[ProfileService] No active profile found`);
-            return null;
-        }
-
-        const folderId = await profiles.getProfileFolderIdByType(activeProfile.id, folderType);
-        if (folderId) {
-            return folderId;
-        }
-
-        await this.treeService.createDefaultFolders(activeProfile.id);
-        return await profiles.getProfileFolderIdByType(activeProfile.id, folderType);
-    }
-
-    /**
      * 获取活跃 profile 中所有 mod.io 类型的 mod URL 列表
      * @returns mod.io mod 的 URL 数组
      */
@@ -247,20 +224,11 @@ export class ProfileService {
     // ====================================
 
     /**
-     * 创建新 profile（包含默认文件夹）
+     * 创建新 profile
      */
-    public async createProfile(data: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>, createDefaultFolders: boolean = true): Promise<ProfileData | null> {
+    public async createProfile(data: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileData | null> {
         const profiles = await StorageAPI.getProfiles();
-
-        // Create profile
-        const newProfile = await profiles.createProfile(data);
-
-        // Create default folders
-        if (newProfile?.id && createDefaultFolders) {
-            await this.treeService.createDefaultFolders(newProfile.id);
-        }
-
-        return newProfile;
+        return await profiles.createProfile(data);
     }
 
     public async getAllProfiles(): Promise<ProfileData[]> {
@@ -347,19 +315,13 @@ export class ProfileService {
      * 创建默认 profile
      */
     private async createDefaultProfile(profileDAO: ProfileDAO, gameId: number, userId: number): Promise<ProfileData | null> {
-        const defaultProfile = await profileDAO.createProfile({
+        return await profileDAO.createProfile({
             name: "default",
             displayName: "default",
             gameId: gameId,
             userId: userId,
             isActive: true
         });
-
-        if (defaultProfile?.id) {
-            await this.treeService.createDefaultFolders(defaultProfile.id);
-        }
-
-        return defaultProfile;
     }
 
     /**

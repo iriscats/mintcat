@@ -16,8 +16,6 @@ import {getCurrentWindow} from '@tauri-apps/api/window';
 import {SearchResultCard} from './SearchResultCard';
 import {useSearchViewModel} from './useSearchViewModel';
 import {SearchSource, initializeSearchProviders, SearchProviderRegistry} from '@/apis/search';
-import {ProfileService} from '@/services/ProfileService';
-import {IoC} from '@/core/IoC';
 import {AddModType} from '@/dialogs/AddModDialog';
 import {openWindow} from '@/dialogs/AddModDialog/open';
 import './styles.css';
@@ -135,15 +133,7 @@ export function SearchPage() {
     // 处理添加 mod
     const handleAdd = useCallback(async (profileUrl: string) => {
         try {
-            const profileService = await IoC.get(ProfileService);
-            const modioFolderId = await profileService.getActiveProfileFolderId('modio');
-
-            if (!modioFolderId) {
-                message.error(t('Modio Folder Not Found'));
-                return;
-            }
-
-            await openWindow(AddModType.ONLINE, modioFolderId, profileUrl);
+            await openWindow(AddModType.ONLINE, 0, profileUrl);
         } catch (error) {
             console.error('Failed to open add mod dialog:', error);
             message.error(t('Add Mod Error'));

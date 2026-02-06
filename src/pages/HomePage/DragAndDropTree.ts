@@ -7,14 +7,6 @@ export function dragAndDrop(nodeInfo: any, treeData: TreeDataNode[]) {
     const dropPos = nodeInfo.node.pos.split('-');
     const dropPosition = nodeInfo.dropPosition - Number(dropPos[dropPos.length - 1]);
 
-    // 阻止拖拽默认文件夹（mod.io 和本地）
-    if (typeof dragKey === 'string' && dragKey.startsWith('folder-')) {
-        const folderId = parseInt(dragKey.split('-')[1]);
-        if (folderId === 1 || folderId === 2) {
-            return treeData;
-        }
-    }
-
     const loop = (
         data: TreeDataNode[],
         key: React.Key,

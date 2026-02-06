@@ -1,6 +1,5 @@
 import {message} from "antd";
 import {t} from "i18next";
-import {ProfileTreeGroupType} from "@/storage/db/Schema.ts";
 import StatusBar from "@/components/StatusBar.tsx";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
@@ -97,10 +96,6 @@ export class HomeViewModel extends BaseViewModel {
     public async removeGroup(groupId: number): Promise<void> {
         console.log(`[HomeViewModel] removeGroup called with groupId=${groupId}`);
 
-        if (groupId === ProfileTreeGroupType.MODIO || groupId === ProfileTreeGroupType.LOCAL) {
-            message.error(t("Can't Remove Default Group"));
-            return;
-        }
 
         try {
             await this.homeService.removeGroup(groupId);
