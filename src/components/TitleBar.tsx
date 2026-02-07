@@ -15,7 +15,7 @@ import {open} from "@tauri-apps/plugin-shell";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
-import {emitEvent, listenEvent, UnlistenFn} from "@/events";
+import {emitEvent, emitVoidEvent, listenEvent, UnlistenFn} from "@/events";
 import { taskQueueAPI } from "tauri-plugin-task-queue-api";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
@@ -79,6 +79,19 @@ class TitleBar extends React.Component<any, any> {
 
     private async onLaunchGameClick() {
         try {
+            // 检查当前 profile 是否有 mod，没有则直接启动游戏
+            const profilesApi = await StorageAPI.getProfiles();
+            const activeProfile = await profilesApi.getActiveProfile();
+            if (!activeProfile?.id) {
+                await IntegrateApi.launchGame();
+                return;
+            }
+            const profileMods = await profilesApi.getProfileMods(activeProfile.id);
+            if (profileMods.length === 0) {
+                await IntegrateApi.launchGame();
+                return;
+            }
+
             // Submit installation task
             const taskId = await IntegrateApi.installMods();
 
@@ -86,7 +99,8 @@ class TitleBar extends React.Component<any, any> {
             const result = await taskQueueAPI.waitForTaskCompletion(taskId);
 
             if (result.status === 'completed') {
-                // Installation succeeded, launch game
+                // Installation succeeded, notify HomePage and launch game
+                await emitVoidEvent('mods-installed');
                 await IntegrateApi.launchGame();
             } else if (result.status === 'failed') {
                 message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);

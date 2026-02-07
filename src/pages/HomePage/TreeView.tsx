@@ -29,6 +29,7 @@ export interface TreeViewProps {
     onTreeNodeExpand?: (keys: any) => void;
     onTreeRightClick?: (info: any) => void;
     onVirtualStateChange?: (virtual: boolean) => void;
+    onModListChange?: () => void;
 }
 
 interface TreeViewState {
@@ -133,6 +134,9 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
 
             await profileVM.saveProfileTreeToDatabase(profileTreeItem);
 
+            if (this.props.onModListChange) {
+                this.props.onModListChange();
+            }
             if (this.props.onUpdateTreeView) {
                 await this.props.onUpdateTreeView();
             }
@@ -191,6 +195,9 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
             const profileVM = await IoC.get(ProfileViewModel);
             await profileVM.saveProfileTreeToDatabase(profileTreeItem);
 
+            if (this.props.onModListChange) {
+                this.props.onModListChange();
+            }
             if (this.props.onUpdateTreeView) {
                 await this.props.onUpdateTreeView();
             }

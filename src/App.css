@@ -211,6 +211,38 @@ body::before {
     min-width: 1000px;
 }
 
+/* 保存按钮未保存变更高亮呼吸动画 */
+@keyframes save-button-pulse {
+    0% {
+       
+        box-shadow: 0 0 4px rgba(22, 119, 255, 0.2);
+    }
+    50% {
+       
+        box-shadow: 0 0 10px rgba(22, 119, 255, 0.4);
+    }
+    100% {
+      
+        box-shadow: 0 0 4px rgba(22, 119, 255, 0.2);
+    }
+}
+
+.save-btn-unsaved {
+    animation: save-button-pulse 1.5s ease-in-out infinite;
+    background-color: rgba(22, 119, 255, 0.3) !important;
+    border-radius: 6px !important;
+    color: var(--ant-color-primary) !important;
+}
+
+.save-btn-unsaved .anticon {
+    color: var(--ant-color-primary) !important;
+}
+
+.save-btn-unsaved:hover {
+    background-color: rgba(22, 119, 255, 0.45) !important;
+    color: var(--ant-color-primary) !important;
+}
+
 .home-footer-bar {
     border-top: 1px solid #eee;
     padding: 2px 10px 0 10px;

@@ -155,6 +155,9 @@ export interface EventPayloads {
   // 安装/集成事件
   // ========================================
 
+  /** Mod 安装完成（保存到游戏），用于通知 HomePage 清除未保存状态 */
+  'mods-installed': void;
+
   /** 安装成功 (payload 为 mod pak timestamp) */
   'install-success': number;
 

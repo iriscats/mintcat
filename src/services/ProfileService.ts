@@ -225,10 +225,25 @@ export class ProfileService {
 
     /**
      * 创建新 profile
+     * @param data Profile 数据
+     * @param createDefaultFolder 是否创建"默认分组"文件夹，默认 true。复制 profile 时应传 false
      */
-    public async createProfile(data: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileData | null> {
+    public async createProfile(data: Omit<ProfileData, 'id' | 'createdAt' | 'updatedAt'>, createDefaultFolder: boolean = true): Promise<ProfileData | null> {
         const profiles = await StorageAPI.getProfiles();
-        return await profiles.createProfile(data);
+        const newProfile = await profiles.createProfile(data);
+
+        // 为新 profile 创建"默认分组"文件夹
+        if (newProfile?.id && createDefaultFolder) {
+            await profiles.createFolder({
+                profileId: newProfile.id,
+                name: '默认分组',
+                folderType: 'custom',
+                sortOrder: 0,
+                isExpanded: true,
+            });
+        }
+
+        return newProfile;
     }
 
     public async getAllProfiles(): Promise<ProfileData[]> {
@@ -315,13 +330,26 @@ export class ProfileService {
      * 创建默认 profile
      */
     private async createDefaultProfile(profileDAO: ProfileDAO, gameId: number, userId: number): Promise<ProfileData | null> {
-        return await profileDAO.createProfile({
+        const newProfile = await profileDAO.createProfile({
             name: "default",
             displayName: "default",
             gameId: gameId,
             userId: userId,
             isActive: true
         });
+
+        // 为默认 profile 创建"默认分组"文件夹
+        if (newProfile?.id) {
+            await profileDAO.createFolder({
+                profileId: newProfile.id,
+                name: '默认分组',
+                folderType: 'custom',
+                sortOrder: 0,
+                isExpanded: true,
+            });
+        }
+
+        return newProfile;
     }
 
     /**
