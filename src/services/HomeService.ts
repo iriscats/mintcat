@@ -8,6 +8,7 @@ import { ModUpdateService } from "@/services/ModUpdateService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
 import { IoC } from "@/core/IoC";
 import type { ProfileData } from "@/storage/dao/ProfileDAO";
+import { TimeUtils } from "@/utils/TimeUtils";
 
 export type AddModFromUrlResult = {
     status: "invalid" | "exists" | "added";
@@ -298,12 +299,16 @@ export class HomeService {
         // 如果提供了 profileModId，直接通过 ID 更新（避免竞态条件）
         if (profileModId !== undefined) {
             await profiles.setModEnabledById(profileModId, enable);
-            return;
+        } else {
+            // 兼容旧调用方式：通过 profileId + modId 更新
+            const profile = await this.getActiveProfile();
+            await profiles.setModEnabled(profile.id!, modId, enable);
         }
-        
-        // 兼容旧调用方式：通过 profileId + modId 更新
-        const profile = await this.getActiveProfile();
-        await profiles.setModEnabled(profile.id!, modId, enable);
+
+        // 更新 editTime，标记 profile 配置已变更
+        // 这样下次安装时 check_installed 不会误判为 "已安装"
+        const profileService = await this.getProfileService();
+        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {

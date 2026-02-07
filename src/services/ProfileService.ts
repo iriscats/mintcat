@@ -289,6 +289,38 @@ export class ProfileService {
         this.runtimeState.set(profileId, { ...current, ...patch });
     }
 
+    /**
+     * 生成持久化 settings key
+     */
+    private settingsKey(profileId: number, field: string): string {
+        return `profile_${profileId}_${field}`;
+    }
+
+    /**
+     * 从 settings 表读取持久化的时间戳（仅在 runtimeState 缺失时使用）
+     */
+    private async getPersistedTime(profileId: number, field: string): Promise<number> {
+        try {
+            const settings = await StorageAPI.getSettings();
+            const value = await settings.getValue(this.settingsKey(profileId, field));
+            return value ? parseInt(value, 10) || 0 : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    /**
+     * 将时间戳持久化到 settings 表
+     */
+    private async persistTime(profileId: number, field: string, timestamp: number): Promise<void> {
+        try {
+            const settings = await StorageAPI.getSettings();
+            await settings.setValue(this.settingsKey(profileId, field), String(timestamp));
+        } catch (e) {
+            console.error(`[ProfileService] Failed to persist ${field} for profile ${profileId}:`, e);
+        }
+    }
+
     public async getActiveProfileLastUpdate(): Promise<number> {
         const activeProfile = await this.ensureActiveProfile();
         const state = this.runtimeState.get(activeProfile.id!);
@@ -303,23 +335,39 @@ export class ProfileService {
     public async getActiveProfileEditTime(): Promise<number> {
         const activeProfile = await this.ensureActiveProfile();
         const state = this.runtimeState.get(activeProfile.id!);
-        return state?.editTime ?? 0;
+        if (state?.editTime !== undefined) {
+            return state.editTime;
+        }
+        // 内存中未初始化，从数据库恢复（应用重启后的首次读取）
+        const persisted = await this.getPersistedTime(activeProfile.id!, 'editTime');
+        this.updateRuntimeState(activeProfile.id!, { editTime: persisted });
+        return persisted;
     }
 
     public async setActiveProfileEditTime(timestamp: number): Promise<void> {
         const activeProfile = await this.ensureActiveProfile();
         this.updateRuntimeState(activeProfile.id!, { editTime: timestamp });
+        // 同步持久化到数据库，确保重启后可恢复
+        await this.persistTime(activeProfile.id!, 'editTime', timestamp);
     }
 
     public async getActiveProfileInstallTime(): Promise<number> {
         const activeProfile = await this.ensureActiveProfile();
         const state = this.runtimeState.get(activeProfile.id!);
-        return state?.installTime ?? 0;
+        if (state?.installTime !== undefined) {
+            return state.installTime;
+        }
+        // 内存中未初始化，从数据库恢复（应用重启后的首次读取）
+        const persisted = await this.getPersistedTime(activeProfile.id!, 'installTime');
+        this.updateRuntimeState(activeProfile.id!, { installTime: persisted });
+        return persisted;
     }
 
     public async setActiveProfileInstallTime(timestamp: number): Promise<void> {
         const activeProfile = await this.ensureActiveProfile();
         this.updateRuntimeState(activeProfile.id!, { installTime: timestamp });
+        // 同步持久化到数据库，确保重启后可恢复
+        await this.persistTime(activeProfile.id!, 'installTime', timestamp);
     }
 
     // ====================================
