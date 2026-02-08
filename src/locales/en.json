@@ -61,5 +61,6 @@
   "Changing the cache directory will require re-downloading all mods from mod.io. Continue?": "Changing the cache directory will require re-downloading all mods from mod.io. Continue?",
   "Confirm": "Confirm",
   "Cache directory changed successfully": "Cache directory changed successfully",
-  "Failed to change cache directory": "Failed to change cache directory"
+  "Failed to change cache directory": "Failed to change cache directory",
+  "Clipboard Monitor": "Clipboard Monitor"
 }

@@ -8,6 +8,7 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {AddModType} from "@/dialogs/AddModDialog/index.tsx";
 import StatusBar from "@/components/StatusBar.tsx";
+import {StorageAPI} from "@/storage";
 
 let windowInstance: WebviewWindow;
 
@@ -127,6 +128,15 @@ async function onClipboardChange(text: string) {
 }
 
 
-export function initClipboardWatcher() {
-    ClipboardApi.setClipboardWatcher(onClipboardChange).then();
+export async function initClipboardWatcher() {
+    const settings = await StorageAPI.getSettings();
+    const enabled = await settings.getClipboardMonitorEnabled();
+    if (enabled) {
+        await ClipboardApi.setClipboardWatcher(onClipboardChange);
+    } else {
+        // 仍然注册回调，但不启动监控
+        ClipboardApi.setClipboardWatcher(onClipboardChange).then(() => {
+            ClipboardApi.stopClipboardWatcher();
+        });
+    }
 }

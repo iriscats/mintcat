@@ -6,9 +6,10 @@ import i18n from "@/locales/i18n.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {StorageAPI} from "@/storage";
-import {Button, Card, Flex, Form, Input, message, Modal, Select} from "antd";
+import {Button, Card, Flex, Form, Input, message, Modal, Select, Switch} from "antd";
 import {ExclamationCircleFilled} from "@ant-design/icons";
 import {FolderAddOutlined} from "@ant-design/icons";
+import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {emitEvent, emitVoidEvent, useEventListener} from "@/events";
@@ -35,6 +36,7 @@ export function MintCatSettings() {
     const [configDirectory, setConfigDirectory] = React.useState<string>("");
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
     const [ue4ss, setUe4ss] = React.useState<string>("");
+    const [clipboardMonitor, setClipboardMonitor] = React.useState<boolean>(true);
 
     const onOpenConfigDirClick = async () => {
         const settings = await StorageAPI.getSettings();
@@ -114,6 +116,17 @@ export function MintCatSettings() {
         await settings.setValue('ue4ss', value);
     }
 
+    const onClipboardMonitorChange = async (checked: boolean) => {
+        setClipboardMonitor(checked);
+        const settings = await StorageAPI.getSettings();
+        await settings.setClipboardMonitorEnabled(checked);
+        if (checked) {
+            await ClipboardApi.restartClipboardWatcher();
+        } else {
+            ClipboardApi.stopClipboardWatcher();
+        }
+    }
+
     const onDevToolsClick = async () => {
         await IntegrateApi.openDevTools();
     }
@@ -154,6 +167,7 @@ export function MintCatSettings() {
             setCacheDirectory(await settings.getCachePath());
             const ue4ssValue = await settings.getValue('ue4ss');
             setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
+            setClipboardMonitor(await settings.getClipboardMonitorEnabled());
         }
         fetchData().then();
     }, []);
@@ -239,6 +253,11 @@ export function MintCatSettings() {
                                         label: "Custom",
                                     },
                                 ]}/>
+                    </Form.Item>
+                    <Form.Item label={t("Clipboard Monitor")}>
+                        <Switch checked={clipboardMonitor}
+                                onChange={onClipboardMonitorChange}
+                        />
                     </Form.Item>
                 </Form>
             </Card>

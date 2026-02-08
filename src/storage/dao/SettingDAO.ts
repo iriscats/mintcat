@@ -54,6 +54,17 @@ export class SettingDAO {
         await this.setValue('appVersion', value);
     }
 
+    public async getClipboardMonitorEnabled(): Promise<boolean> {
+        const value = await this.getValue('clipboardMonitor');
+        // 默认启用
+        if (value === '') return true;
+        return value === 'true';
+    }
+
+    public async setClipboardMonitorEnabled(enabled: boolean): Promise<void> {
+        await this.setValue('clipboardMonitor', enabled ? 'true' : 'false');
+    }
+
     public async getValue(name: string): Promise<string> {
         try {
             const db = await getDb();
