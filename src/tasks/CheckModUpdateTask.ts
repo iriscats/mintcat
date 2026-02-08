@@ -28,7 +28,26 @@ export class CheckModUpdateTask implements ITask {
         const updateTime = lastUpdate || (TimeUtils.nowSeconds() - 60 * 60 * 24 * 30);
 
         const modsApi = await StorageAPI.getMods();
-        const allMods = await modsApi.getAllCompleteModData();
+        const profilesApi = await StorageAPI.getProfiles();
+        
+        // 只获取当前活跃 profile 下的 mod，而不是全部 mod
+        const activeProfile = await profilesApi.getActiveProfile();
+        if (!activeProfile?.id) {
+            await context.setMessage('没有活跃的配置文件');
+            await context.updateProgress(100);
+            return;
+        }
+        
+        const profileModList = await profilesApi.getProfileMods(activeProfile.id);
+        const modIds = profileModList.map(pm => pm.modId!).filter(id => id != null);
+        
+        if (modIds.length === 0) {
+            await context.setMessage('当前配置文件没有模组');
+            await context.updateProgress(100);
+            return;
+        }
+        
+        const allMods = await modsApi.getBatchCompleteModData(modIds);
         
         // 分类 mod
         const modioMods = allMods.filter(m => m.sourceType === ModSourceType.Modio);

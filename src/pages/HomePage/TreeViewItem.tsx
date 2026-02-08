@@ -11,6 +11,7 @@ import {
     FolderAddOutlined,
     FolderOutlined,
     LinkOutlined,
+    LockOutlined,
     PlusCircleOutlined,
     SyncOutlined,
     WarningOutlined,
@@ -189,16 +190,29 @@ function ModTreeViewVersionSelect({nodeData}) {
 
     const [fetching, setFetching] = useState(false);
     const [options, setOptions] = useState<any[]>([]);
+    // 计算当前应显示的版本：usedVersion 非空时用 usedVersion，否则用 fileVersion
+    const resolveDisplayVersion = (usedVer: string, fileVer: string) => {
+        if (usedVer && usedVer !== "") return usedVer;
+        if (fileVer && fileVer !== "" && fileVer !== "-") return fileVer;
+        return "-";
+    };
     // 使用本地状态追踪当前选中的版本，解决选择后下拉框显示不更新的问题
     const [selectedVersion, setSelectedVersion] = useState<string>(
-        nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion
+        resolveDisplayVersion(nodeData.usedVersion, nodeData.fileVersion)
     );
     // 追踪是否正在处理版本切换（下载中）
     const [isProcessing, setIsProcessing] = useState(() => getVersionSwitchLock(nodeData.modId).isProcessing);
+    // 追踪版本是否被锁定（用户手动选择了非最新版本）
+    const [isVersionLocked, setIsVersionLocked] = useState<boolean>(
+        !!(nodeData.usedVersion && nodeData.usedVersion !== "")
+    );
+    // 存储最新版本号，用于判断用户选择的是否为最新版本
+    const latestVersionRef = React.useRef<string>("");
 
     // 同步外部 prop 变化（当 Tree 完整刷新时）
     React.useEffect(() => {
-        setSelectedVersion(nodeData.usedVersion === "" ? nodeData.fileVersion : nodeData.usedVersion);
+        setSelectedVersion(resolveDisplayVersion(nodeData.usedVersion, nodeData.fileVersion));
+        setIsVersionLocked(!!(nodeData.usedVersion && nodeData.usedVersion !== ""));
     }, [nodeData.usedVersion, nodeData.fileVersion]);
 
     // 同步锁定状态
@@ -206,6 +220,20 @@ function ModTreeViewVersionSelect({nodeData}) {
         const lock = getVersionSwitchLock(nodeData.modId);
         setIsProcessing(lock.isProcessing);
     }, [nodeData.modId]);
+
+    // 监听 mod-treeview-update 事件，当 mod 下载/更新完成后同步版本显示
+    // 这解决了 mod 添加后版本数据异步更新导致显示为空的问题
+    useFilteredEventListener(
+        'mod-treeview-update',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            const updatedVersion = payload.data.version?.currentVersion;
+            if (updatedVersion && updatedVersion !== "-" && !isVersionLocked) {
+                setSelectedVersion(updatedVersion);
+            }
+        },
+        [nodeData.modId, isVersionLocked]
+    );
 
     let fileInfos: ModFile[] = [];
     let modcatVersions: any[] = [];
@@ -246,6 +274,11 @@ function ModTreeViewVersionSelect({nodeData}) {
                 optionList.reverse();
             }
 
+            // 记录最新版本号（列表中第一个即为最新）
+            if (optionList.length > 0) {
+                latestVersionRef.current = optionList[0].label;
+            }
+
             setFetching(false);
             setOptions(optionList);
         }
@@ -276,16 +309,25 @@ function ModTreeViewVersionSelect({nodeData}) {
         setVersionSwitchLock(nodeData.modId, { isProcessing: true, currentVersion: newVersion });
         setIsProcessing(true);
         
+        // 判断用户选择的是否为最新版本
+        const isLatestVersion = latestVersionRef.current !== "" && newVersion === latestVersionRef.current;
+        
         // 立即更新本地状态（乐观更新），让下拉框立即显示新选中的版本
         setSelectedVersion(newVersion);
+        // 立即更新锁定图标状态
+        setIsVersionLocked(!isLatestVersion);
         
         await StatusBar.info(`${t("Switch Version")}: ${nodeData.title} ${newVersion}`);
 
         try {
             const viewModel = await IoC.get(HomeViewModel);
             // Use profileModId (profile_mods.id) instead of key
+            // 选择最新版本时清空 usedVersion（解锁），否则设置为选定版本（锁定）
             if (nodeData.profileModId) {
-                await viewModel.setModUsedVersion(nodeData.profileModId, newVersion);
+                await viewModel.setModUsedVersion(
+                    nodeData.profileModId,
+                    isLatestVersion ? "" : newVersion
+                );
             }
 
             const modItem = await getModById(nodeData.modId);
@@ -330,6 +372,13 @@ function ModTreeViewVersionSelect({nodeData}) {
                 modId: updatedModItem.modId!,
                 data: updatedModItem
             });
+
+            // 通知 HomePage 标记未保存变更，让保存按钮高亮
+            await emitEvent("mod-enabled-change", {
+                modId: nodeData.modId,
+                enabled: getPendingEnabled(nodeData.modId, nodeData.enabled)
+            });
+
             await ModUpdateService.updateModFile(updatedModItem);
         } catch (error) {
             console.error("版本切换失败:", error);
@@ -342,18 +391,27 @@ function ModTreeViewVersionSelect({nodeData}) {
     }
 
     return (
-        <Select size={"small"}
-                suffixIcon={null}
-                popupMatchSelectWidth={false}
-                style={{marginRight: "8px", width: "80px"}}
-                value={selectedVersion}
-                notFoundContent={fetching ? <Spin size="small"/> : null}
-                options={options}
-                onChange={onChange}
-                onOpenChange={onDropdownVisibleChange}
-                disabled={isProcessing}
-                loading={isProcessing}
-        />
+        <>
+            <Select size={"small"}
+                    suffixIcon={null}
+                    popupMatchSelectWidth={false}
+                    style={{marginRight: "4px", width: "80px"}}
+                    value={selectedVersion}
+                    notFoundContent={fetching ? <Spin size="small"/> : null}
+                    options={options}
+                    onChange={onChange}
+                    onOpenChange={onDropdownVisibleChange}
+                    disabled={isProcessing}
+                    loading={isProcessing}
+            />
+            {isVersionLocked && (
+                <Tooltip title={t("Version locked, switch to latest version to unlock")}>
+                    <span style={{color: "orange", marginRight: "4px", cursor: "pointer"}}>
+                        <LockOutlined/>
+                    </span>
+                </Tooltip>
+            )}
+        </>
     );
 }
 

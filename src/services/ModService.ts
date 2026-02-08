@@ -111,7 +111,7 @@ export class ModService {
             profileId,
             modId: savedMod.modId!,
             folderId,
-            usedVersion: dto.version?.currentVersion || "",
+            usedVersion: "",
         });
 
         // 保存版本、下载、状态信息
@@ -188,7 +188,7 @@ export class ModService {
             profileId,
             modId: savedMod.modId!,
             folderId,
-            usedVersion: dto.version?.currentVersion || "",
+            usedVersion: "",
         });
 
         // 保存版本、下载、状态信息

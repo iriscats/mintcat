@@ -75,6 +75,10 @@ export class AppInitializer {
             console.log('[AppInitializer] Running data migrations...');
             //await MigrationBase.autoMigrate();
 
+            // 一次性修复：清除历史数据中被错误写入的 usedVersion
+            // usedVersion 应只在用户手动切换版本时才写入，但旧逻辑在添加 mod 时错误地写入了当前版本
+            await this.fixUsedVersionData();
+
             // Phase 3: Core ViewModel
             this.currentPhase = InitPhase.CoreViewModel;
             console.log('[AppInitializer] Initializing AppViewModel...');
@@ -122,5 +126,30 @@ export class AppInitializer {
      */
     static isCoreReady(): boolean {
         return this.currentPhase === InitPhase.Complete;
+    }
+
+    /**
+     * 一次性修复 usedVersion 数据
+     * 旧逻辑在添加 mod 时错误地将 currentVersion 写入了 usedVersion，
+     * 导致所有 mod 都被视为"版本锁定"状态。
+     * 通过 settings 表的标记确保只执行一次。
+     */
+    private static async fixUsedVersionData(): Promise<void> {
+        try {
+            const settings = await StorageAPI.getSettings();
+            const flag = await settings.getValue('fix_used_version_v1');
+            if (flag === 'done') {
+                return;
+            }
+
+            console.log('[AppInitializer] Fixing usedVersion data...');
+            const profiles = await StorageAPI.getProfiles();
+            const cleared = await profiles.clearAllUsedVersions();
+            console.log(`[AppInitializer] Cleared ${cleared} incorrect usedVersion entries`);
+
+            await settings.setValue('fix_used_version_v1', 'done');
+        } catch (error) {
+            console.error('[AppInitializer] Failed to fix usedVersion data:', error);
+        }
     }
 }

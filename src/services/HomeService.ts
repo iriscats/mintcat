@@ -98,12 +98,11 @@ export class HomeService {
                 return { status: "exists", modName: existingModByName.displayName };
             }
 
-            const modVersion = await modsApi.getModVersion(existingModByName.modId!);
             await this.addModToProfile({
                 profileId: profile.id!,
                 modId: existingModByName.modId!,
                 groupId,
-                usedVersion: modVersion?.currentVersion || "",
+                usedVersion: "",
             });
 
             const completeData = await modsApi.getCompleteModData(existingModByName.modId!);
@@ -128,12 +127,11 @@ export class HomeService {
                 return { status: "exists", modName: modInfoResp.Name || "" };
             }
 
-            const modVersion = await modsApi.getModVersion(existingMod.modId!);
             await this.addModToProfile({
                 profileId: profile.id!,
                 modId: existingMod.modId!,
                 groupId,
-                usedVersion: modVersion?.currentVersion || "",
+                usedVersion: "",
             });
 
             const completeData = await modsApi.getCompleteModData(existingMod.modId!);
@@ -173,12 +171,11 @@ export class HomeService {
                 return { status: "exists", modName: existingModByName.displayName };
             }
 
-            const modVersion = await modsApi.getModVersion(existingModByName.modId!);
             await this.addModToProfile({
                 profileId: profile.id!,
                 modId: existingModByName.modId!,
                 groupId,
-                usedVersion: modVersion?.currentVersion || "",
+                usedVersion: "",
             });
 
             const completeData = await modsApi.getCompleteModData(existingModByName.modId!);
@@ -208,12 +205,11 @@ export class HomeService {
                 return { status: "exists", modName: modInfoResp.name };
             }
 
-            const modVersion = await modsApi.getModVersion(existingMod.modId!);
             await this.addModToProfile({
                 profileId: profile.id!,
                 modId: existingMod.modId!,
                 groupId,
-                usedVersion: modVersion?.currentVersion || "",
+                usedVersion: "",
             });
 
             const completeData = await modsApi.getCompleteModData(existingMod.modId!);
@@ -314,6 +310,11 @@ export class HomeService {
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.updateProfileMod(profileModId, { usedVersion: version });
+
+        // 更新 editTime，标记 profile 配置已变更
+        // 这样下次安装时 check_installed 不会误判为 "已安装"
+        const profileService = await this.getProfileService();
+        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {

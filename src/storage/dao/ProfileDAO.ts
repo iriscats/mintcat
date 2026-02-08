@@ -1,5 +1,5 @@
 import {profiles, profileFolders, profileMods} from '@/storage/db/Schema';
-import {eq, and, desc, asc, like} from 'drizzle-orm';
+import {eq, ne, and, desc, asc, like} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
 import {StorageAPI} from "@/storage";
 
@@ -528,6 +528,25 @@ export class ProfileDAO {
         } catch (error) {
             console.error(`更新配置文件模组设置失败 [ID: ${id}]:`, error);
             return false;
+        }
+    }
+
+    /**
+     * 清除所有 profile_mods 中的 usedVersion 值
+     * 用于一次性修复历史数据中错误写入的 usedVersion
+     */
+    public async clearAllUsedVersions(): Promise<number> {
+        try {
+            const db = await getDb();
+            const result = await db.update(profileMods)
+                .set({ usedVersion: "", updatedAt: new Date() })
+                .where(ne(profileMods.usedVersion, ""))
+                .returning();
+            console.log(`[ProfileDAO] 已清除 ${result.length} 条 usedVersion 记录`);
+            return result.length;
+        } catch (error) {
+            console.error('[ProfileDAO] 清除 usedVersion 失败:', error);
+            return 0;
         }
     }
 
