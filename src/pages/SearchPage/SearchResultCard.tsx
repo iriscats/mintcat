@@ -1,6 +1,6 @@
 import React, {memo, useCallback, useState} from 'react';
 import {Avatar, Button, Dropdown, Space, Skeleton} from 'antd';
-import {DownloadOutlined, LikeOutlined, PlusCircleOutlined} from '@ant-design/icons';
+import {DownloadOutlined, LikeOutlined, PlusCircleOutlined, StarFilled, UserOutlined} from '@ant-design/icons';
 import {t} from 'i18next';
 import {open} from '@tauri-apps/plugin-shell';
 import type {MenuProps} from 'antd';
@@ -121,6 +121,16 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                                 <span className="search-result-card-stat">
                                     <LikeOutlined /> {formatNumber(item.stats.subscribers)}
                                 </span>
+                                {item.stats.rating != null && item.stats.rating > 0 && (
+                                    <span className="search-result-card-stat search-result-card-rating">
+                                        <StarFilled /> {formatRating(item.stats.rating)}
+                                    </span>
+                                )}
+                                {item.author.name && item.author.name !== 'Unknown' && (
+                                    <span className="search-result-card-stat">
+                                        <UserOutlined /> {item.author.name}
+                                    </span>
+                                )}
                             </Space>
                         </div>
                     </div>
@@ -167,4 +177,13 @@ function formatNumber(num: number): string {
         return (num / 1000).toFixed(1) + 'K';
     }
     return num.toString();
+}
+
+/**
+ * 格式化评分（百分比转 5 分制显示）
+ * rating 存储为百分比 (0-100)，显示为 X.X/5
+ */
+function formatRating(rating: number): string {
+    const score = rating / 20;
+    return score % 1 === 0 ? `${score}/5` : `${score.toFixed(1)}/5`;
 }

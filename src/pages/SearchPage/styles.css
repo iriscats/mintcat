@@ -45,6 +45,22 @@
 /* 头像区域 */
 .search-result-card-avatar {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 60px;
+}
+
+/* 头像下方作者名 */
+.search-result-card-author-name {
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 信息区域 */
@@ -117,6 +133,11 @@
     margin-right: 4px;
 }
 
+/* 评分星星颜色 */
+.search-result-card-rating .anticon {
+    color: #faad14;
+}
+
 /* 缩略图区域 */
 .search-result-card-thumbnail {
     flex-shrink: 0;
@@ -183,6 +204,10 @@
 
 .dark-theme .search-result-card-stat {
     color: #707070;
+}
+
+.dark-theme .search-result-card-author-name {
+    color: #606060;
 }
 
 .dark-theme .search-result-card-thumbnail {

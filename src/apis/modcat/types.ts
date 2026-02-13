@@ -216,6 +216,10 @@ export interface ModcatModListViewEntity {
     ModTypeEntities?: ModcatModTypesListViewEntity[];
     IsMySubscribe?: boolean | null;
     AVGPoint?: number | null;
+    DownloadCount?: number;
+    CreatorUserId?: string;
+    CreatorNickName?: string;
+    CreatorHeadPic?: string;
 }
 
 // ==================== 请求参数类型 ====================

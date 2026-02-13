@@ -101,11 +101,11 @@ export class ModcatSearchProvider implements ISearchProvider {
             thumbnailUrl: mod.PicUrl || '',
             author: {
                 id: 0,
-                name: 'Unknown', // ListView 不包含作者信息
-                avatarUrl: '',
+                name: mod.CreatorNickName || 'Unknown',
+                avatarUrl: mod.CreatorHeadPic || '',
             },
             stats: {
-                downloads: 0, // ListView 不包含下载数
+                downloads: mod.DownloadCount || 0,
                 subscribers: 0,
                 rating: mod.AVGPoint ? mod.AVGPoint * 20 : undefined, // 转换为百分比
             },
