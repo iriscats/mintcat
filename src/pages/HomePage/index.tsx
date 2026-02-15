@@ -351,9 +351,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
 
         if (mods.length > 0) {
-            // First batch update metadata
-            await ModUpdateService.batchUpdateMods(mods);
-            // Then parallel download all mod files
+            // 内部会先批量刷新元数据再下载
             const { successCount, errors } = await ModUpdateService.batchDownloadModFiles(mods, 3);
             if (errors.length > 0) {
                 const failedNames = errors.map(e => e.mod.displayName).slice(0, 3).join(', ');

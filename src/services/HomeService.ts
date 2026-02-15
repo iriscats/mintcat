@@ -4,7 +4,6 @@ import { ModioApi } from "@/apis/modio";
 import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
 import { StorageAPI } from "@/storage";
 import { ModService } from "@/services/ModService.ts";
-import { ModUpdateService } from "@/services/ModUpdateService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
 import { IoC } from "@/core/IoC";
 import type { ProfileData } from "@/storage/dao/ProfileDAO";
@@ -42,8 +41,7 @@ export class HomeService {
         }
 
         for (const depend of depends) {
-            const addedMod = await ModService.addModFromModio(depend, profileId, groupId);
-            await ModUpdateService.updateMod(addedMod);
+            await ModService.addModFromModio(depend, profileId, groupId);
         }
     }
 
@@ -105,11 +103,6 @@ export class HomeService {
                 usedVersion: "",
             });
 
-            const completeData = await modsApi.getCompleteModData(existingModByName.modId!);
-            if (completeData) {
-                await ModUpdateService.updateMod(completeData);
-            }
-
             return { status: "added" };
         }
 
@@ -134,17 +127,11 @@ export class HomeService {
                 usedVersion: "",
             });
 
-            const completeData = await modsApi.getCompleteModData(existingMod.modId!);
-            if (completeData) {
-                await ModUpdateService.updateMod(completeData);
-            }
-
             return { status: "added" };
         }
 
-        // 添加新 mod
-        const addedMod = await ModService.addModFromModcat(modInfoResp, profile.id!, groupId);
-        await ModUpdateService.updateMod(addedMod);
+        // 添加新 mod（仅元数据，不下载；安装时再下载）
+        await ModService.addModFromModcat(modInfoResp, profile.id!, groupId);
 
         return { status: "added" };
     }
@@ -178,11 +165,6 @@ export class HomeService {
                 usedVersion: "",
             });
 
-            const completeData = await modsApi.getCompleteModData(existingModByName.modId!);
-            if (completeData) {
-                await ModUpdateService.updateMod(completeData);
-            }
-
             // 检查依赖：需要获取 platformId 来查询依赖
             if (existingModByName.platformId) {
                 await this.addModDependencies(existingModByName.platformId, groupId, profile.id!);
@@ -212,11 +194,6 @@ export class HomeService {
                 usedVersion: "",
             });
 
-            const completeData = await modsApi.getCompleteModData(existingMod.modId!);
-            if (completeData) {
-                await ModUpdateService.updateMod(completeData);
-            }
-
             if (modInfoResp.dependencies) {
                 await this.addModDependencies(modInfoResp.id, groupId, profile.id!);
             }
@@ -224,8 +201,8 @@ export class HomeService {
             return { status: "added" };
         }
 
-        const addedMod = await ModService.addModFromModio(modInfoResp, profile.id!, groupId);
-        await ModUpdateService.updateMod(addedMod);
+        // 仅写入元数据到列表，不下载；安装时再下载
+        await ModService.addModFromModio(modInfoResp, profile.id!, groupId);
 
         if (modInfoResp.dependencies) {
             await this.addModDependencies(modInfoResp.id, groupId, profile.id!);

@@ -9,6 +9,8 @@ import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {AddModType} from "@/dialogs/AddModDialog/index.tsx";
 import StatusBar from "@/components/StatusBar.tsx";
 import {StorageAPI} from "@/storage";
+import {asyncPoolAll} from "@/utils/AsyncPool";
+import {message} from "antd";
 
 let windowInstance: WebviewWindow;
 
@@ -66,8 +68,13 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
             case AddModType.ONLINE:
             case AddModType.SUBSCRIBED: {
                 const list = result.list;
-                for (const item of list) {
-                    await vm.addModFromUrl(item, result.groupId);
+                const { errors } = await asyncPoolAll(
+                    list,
+                    (item) => vm.addModFromUrl(item, result.groupId),
+                    5
+                );
+                if (errors.length > 0) {
+                    message.warning(t("Some mods failed to add") + `: ${errors.length}/${list.length}`);
                 }
             }
                 break;
