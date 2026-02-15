@@ -4,6 +4,7 @@ import {Button, Flex, Form, message, Select, Tabs} from 'antd';
 import {emitEvent, emitVoidEvent, listenEvent, type UnlistenFn} from "@/events";
 import {LocalTab} from "@/dialogs/AddModDialog/LocalTab.tsx";
 import {OnlineTab} from "@/dialogs/AddModDialog/OnlineTab.tsx";
+import {SubscribedTab} from "@/dialogs/AddModDialog/SubscribedTab.tsx";
 import {BasePage} from "@/pages/IBasePage.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {DialogProfileService} from "@/services/DialogProfileService.ts";
@@ -12,7 +13,8 @@ import {registerIoC} from "@/core/IoCRegistration.ts";
 
 export enum AddModType {
     ONLINE = "online",
-    LOCAL = "local"
+    LOCAL = "local",
+    SUBSCRIBED = "subscribed"
 }
 
 const LAST_SELECTED_GROUP_KEY = 'add-mod-dialog-last-group-id';
@@ -36,6 +38,7 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     private readonly onlineFormRef: any = React.createRef();
     private readonly localFormRef: any = React.createRef();
+    private readonly subscribedFormRef: any = React.createRef();
     private unlistenInitData?: UnlistenFn;
 
     public constructor(props: any) {
@@ -59,8 +62,12 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             }
             case AddModType.LOCAL: {
                 list = this.localFormRef.current?.submit();
-            }
                 break;
+            }
+            case AddModType.SUBSCRIBED: {
+                list = this.subscribedFormRef.current?.submit() ?? [];
+                break;
+            }
             default:
                 break;
         }
@@ -210,6 +217,11 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                                   label: t("Online"),
                                   children: <OnlineTab ref={this.onlineFormRef}
                                                        text={this.state.text}/>,
+                              },
+                              {
+                                  key: AddModType.SUBSCRIBED,
+                                  label: t("mod.io Subscribed"),
+                                  children: <SubscribedTab ref={this.subscribedFormRef}/>,
                               }
                           ]
                       }>

@@ -2,7 +2,7 @@ import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { MigrationBase } from '@/storage/migration';
-import { CloudBackupApi } from '@/apis/CloudBackupApi';
+import { CloudBackupApi } from '@/apis/mintcat';
 
 /**
  * Application initialization phases

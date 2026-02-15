@@ -21,7 +21,7 @@ import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ModioApi} from "@/apis/modio";
-import {CloudBackupApi} from "@/apis/CloudBackupApi.ts";
+import { CloudBackupApi } from "@/apis/mintcat";
 import StatusBar from "./StatusBar.tsx";
 
 

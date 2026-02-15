@@ -10,7 +10,7 @@ import {
 } from "@ant-design/icons";
 import { save } from "@tauri-apps/plugin-dialog";
 
-import { CloudBackupApi, type CloudBackupRecord } from "@/apis/CloudBackupApi";
+import { CloudBackupApi, type CloudBackupRecord } from "@/apis/mintcat";
 import { MessageBox } from "@/components/MessageBox";
 
 const { Text } = Typography;

@@ -21,3 +21,27 @@ export interface UpdateCheckResult {
     checksum?: string;
     md5?: string;
 }
+
+/**
+ * Types for MintCat Cloud Backup API.
+ */
+
+export interface CloudBackupConfig {
+    baseUrl: string;
+    /** accessToken 来自 oauths 表中的 mintcat 记录，只读 */
+    accessToken: string;
+}
+
+export interface CloudBackupMetadata {
+    createdAt: string;
+    size: number;
+    checksum?: string;
+    appVersion?: string;
+    schemaVersion?: string;
+    deviceId?: string;
+    note?: string;
+}
+
+export interface CloudBackupRecord extends CloudBackupMetadata {
+    id: string;
+}

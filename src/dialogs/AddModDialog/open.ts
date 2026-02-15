@@ -63,7 +63,8 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         result.list = [...new Set(result.list)];
 
         switch (result.addModType) {
-            case AddModType.ONLINE: {
+            case AddModType.ONLINE:
+            case AddModType.SUBSCRIBED: {
                 const list = result.list;
                 for (const item of list) {
                     await vm.addModFromUrl(item, result.groupId);

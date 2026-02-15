@@ -185,6 +185,18 @@ export class ModioApi {
         }
     }
 
+    /** 获取当前用户订阅的 mod 列表（需已登录 mod.io） */
+    public static async getSubscribedMods(pageNo: number = 0, pageSize: number = 100): Promise<ModInfo[]> {
+        try {
+            const path = `/me/subscribed?game_id=${MODIO_GAME_ID}&_limit=${pageSize}&_offset=${pageSize * pageNo}`;
+            const data = await ModioApi.getRequest(path);
+            return (data.data ?? data) as ModInfo[];
+        } catch (e) {
+            message.error(`${t("Fetch Subscribed Mods Error")}: ${e}`);
+            return [];
+        }
+    }
+
     public static async getDependencies(modId: number) {
         try {
             const path = `/games/${MODIO_GAME_ID}/mods/${modId}/dependencies`;

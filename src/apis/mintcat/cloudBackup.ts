@@ -2,31 +2,10 @@ import { readFile, writeFile, exists, stat, remove, copyFile } from "@tauri-apps
 import { path } from "@tauri-apps/api";
 import { configDir } from "@tauri-apps/api/path";
 import { getVersion } from "@tauri-apps/api/app";
-import { message } from "antd";
 import { StorageAPI } from "@/storage";
-
-export interface CloudBackupConfig {
-    baseUrl: string;
-    /** accessToken 来自 oauths 表中的 mintcat 记录，只读 */
-    accessToken: string;
-}
-
-export interface CloudBackupMetadata {
-    createdAt: string;
-    size: number;
-    checksum?: string;
-    appVersion?: string;
-    schemaVersion?: string;
-    deviceId?: string;
-    note?: string;
-}
-
-export interface CloudBackupRecord extends CloudBackupMetadata {
-    id: string;
-}
+import type { CloudBackupConfig, CloudBackupMetadata, CloudBackupRecord } from "./types";
 
 const BASE_URL = "https://api.mintcat.work";
-
 const DB_FILE_NAME = "mintcat.sqlite";
 const RESTORE_SUFFIX = ".restore";
 const BACKUP_SUFFIX = ".bak";
@@ -85,8 +64,8 @@ async function throwIfNotOk(response: Response): Promise<void> {
         return;
     }
     const data = await parseResponseJson<{ message?: string }>(response);
-    const message = data?.message || `Request failed (${response.status})`;
-    throw new Error(message);
+    const msg = data?.message || `Request failed (${response.status})`;
+    throw new Error(msg);
 }
 
 async function fetchBytes(url: string, headers?: HeadersInit): Promise<Uint8Array> {
@@ -96,18 +75,17 @@ async function fetchBytes(url: string, headers?: HeadersInit): Promise<Uint8Arra
     return new Uint8Array(buffer);
 }
 
+/**
+ * 云备份 API，accessToken 来自 oauths 表中的 mintcat 记录。
+ */
 export class CloudBackupApi {
-    /**
-     * 获取云备份配置
-     * accessToken 来自 oauths 表中的 mintcat 记录
-     */
     public static async getConfig(): Promise<CloudBackupConfig> {
         const oauthDAO = await StorageAPI.getOAuths();
-        const mintcatOAuth = await oauthDAO.getActiveUserOAuthByPlatform('mintcat');
-        
+        const mintcatOAuth = await oauthDAO.getActiveUserOAuthByPlatform("mintcat");
+
         return {
             baseUrl: BASE_URL,
-            accessToken: mintcatOAuth?.oauth || "",
+            accessToken: mintcatOAuth?.oauth ?? "",
         };
     }
 
@@ -117,7 +95,6 @@ export class CloudBackupApi {
         if (!baseUrl) {
             return [];
         }
-        // 如果没有设置 token，直接返回空列表，避免请求失败
         if (!config.accessToken) {
             return [];
         }
@@ -145,7 +122,7 @@ export class CloudBackupApi {
         }
 
         const dbPath = await getDatabasePath();
-        if (!await exists(dbPath)) {
+        if (!(await exists(dbPath))) {
             throw new Error("Database file not found");
         }
 
@@ -180,7 +157,9 @@ export class CloudBackupApi {
         });
 
         await throwIfNotOk(response);
-        const data = await parseResponseJson<{ backup?: CloudBackupRecord; data?: CloudBackupRecord } | CloudBackupRecord>(response);
+        const data = await parseResponseJson<
+            { backup?: CloudBackupRecord; data?: CloudBackupRecord } | CloudBackupRecord
+        >(response);
         if (!data) {
             return { ...metadata, id: "" };
         }
@@ -202,11 +181,11 @@ export class CloudBackupApi {
         const response = await fetch(`${baseUrl}/v1/backups/${backupId}/download`, {
             headers: {
                 ...buildAuthHeaders(config.accessToken),
-                "Accept": "application/octet-stream",
+                Accept: "application/octet-stream",
             },
         });
         await throwIfNotOk(response);
-        const contentType = response.headers.get("content-type") || "";
+        const contentType = response.headers.get("content-type") ?? "";
         if (contentType.includes("application/json")) {
             const data = await parseResponseJson<{ downloadUrl?: string }>(response);
             if (data?.downloadUrl) {
@@ -247,7 +226,7 @@ export class CloudBackupApi {
 
     public static async applyPendingRestore(): Promise<boolean> {
         const restorePath = await getRestorePath();
-        if (!await exists(restorePath)) {
+        if (!(await exists(restorePath))) {
             return false;
         }
 
