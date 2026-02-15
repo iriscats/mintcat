@@ -3,10 +3,10 @@ use crate::integrator::ReadSeek;
 use anyhow::{Context, Result};
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
-use zip::ZipArchive;
+use zip::read::ZipArchive;
 
 const DOTNET_RUNTIME_URL: &str =
     "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
@@ -62,7 +62,50 @@ fn sanitize_dir_name(input: &str) -> String {
     }
 }
 
-pub fn install_ue4ss(install_path: &PathBuf) -> Result<()> {
+/// UE4SSL.zip entry names (path inside zip). Used as fallback and for matching.
+const UE4SSL_DLL: &str = "UE4SSL.dll";
+const UE4SSL_JAVASCRIPT_DLL: &str = "UE4SSL.JavaScript.dll";
+const DWMAPI_DLL: &str = "dwmapi.dll";
+
+/// Returns true if the zip entry name matches the expected file name (last path component, case-insensitive).
+fn zip_entry_matches(entry_name: &str, expected_file_name: &str) -> bool {
+    let normalized = entry_name.replace('\\', "/");
+    let last = normalized.rsplit('/').next().unwrap_or(&normalized);
+    last.eq_ignore_ascii_case(expected_file_name)
+}
+
+/// Find an entry in the zip by exact name or by filename (with optional path prefix, case-insensitive), then read its content.
+fn read_zip_entry(archive: &mut ZipArchive<File>, expected_name: &str) -> Result<Vec<u8>> {
+    // Try exact match first (e.g. "UE4SSL.dll" at root)
+    if let Ok(mut entry) = archive.by_name(expected_name) {
+        if !entry.is_dir() {
+            let mut content = Vec::new();
+            entry.read_to_end(&mut content).context("Failed to read zip entry")?;
+            return Ok(content);
+        }
+    }
+
+    // Search by filename: zip may have paths like "UE4SSL/UE4SSL.dll" or "ue4ssl.dll"
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i).context("Failed to get zip entry by index")?;
+        let name = file.name().to_string();
+        if zip_entry_matches(&name, expected_name) && !file.is_dir() {
+            let mut content = Vec::new();
+            file.read_to_end(&mut content).context("Failed to read zip entry")?;
+            return Ok(content);
+        }
+    }
+
+    anyhow::bail!(
+        "Missing {} in UE4SSL zip: specified file not found in archive",
+        expected_name
+    )
+}
+
+pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> Result<()> {
+    let zip_path = ue4ss_zip_path
+        .ok_or_else(|| anyhow::anyhow!("UE4SSL asset zip path is required (UE4SSL.zip)"))?;
+
     let ue4ss_path = install_path.join("ue4ss");
     println!("Installing UE4SS to: {:?}", ue4ss_path);
 
@@ -71,56 +114,27 @@ pub fn install_ue4ss(install_path: &PathBuf) -> Result<()> {
             .with_context(|| format!("Failed to create ue4ss directory {:?}", ue4ss_path))?;
     }
 
+    let file = File::open(zip_path).with_context(|| format!("Failed to open UE4SSL zip: {:?}", zip_path))?;
+    let mut archive = ZipArchive::new(file).context("Failed to parse UE4SSL zip")?;
+
     let dll_path = ue4ss_path.join("UE4SSL.dll");
-    if !dll_path.exists() {
-        let ue4ss_dll = include_bytes!("../../../assets/UE4SSL.dll");
-        fs::write(&dll_path, ue4ss_dll).context("Failed to write UE4SSL.dll")?;
+    let dll_content = read_zip_entry(&mut archive, UE4SSL_DLL)?;
+    fs::write(&dll_path, &dll_content).context("Failed to write UE4SSL.dll")?;
 
-        // let ue4ss_runtime_dll = ue4ss_path.join("UE4SSL.Runtime.dll");
-        // let ue4ss_runtime_dll_buff = include_bytes!("../../../assets/UE4SSL.Runtime.dll");
-        // fs::write(&ue4ss_runtime_dll, ue4ss_runtime_dll_buff)
-        //     .context("Failed to write UE4SSL.Runtime.dll")?;
+    let js_dll_path = ue4ss_path.join("UE4SSL.JavaScript.dll");
+    let js_dll_content = read_zip_entry(&mut archive, UE4SSL_JAVASCRIPT_DLL)?;
+    fs::write(&js_dll_path, &js_dll_content).context("Failed to write UE4SSL.JavaScript.dll")?;
 
-        // let ue4ss_csharp_dll = ue4ss_path.join("UE4SSL.CSharp.dll");
-        // let ue4ss_csharp_dll_buff = include_bytes!("../../../assets/UE4SSL.CSharp.dll");
-        // fs::write(&ue4ss_csharp_dll, ue4ss_csharp_dll_buff)
-        //     .context("Failed to write UE4SSL.CSharp.dll")?;
+    let proxy_dll_path = install_path.join("dwmapi.dll");
+    let proxy_content = read_zip_entry(&mut archive, DWMAPI_DLL)?;
+    fs::write(&proxy_dll_path, &proxy_content).context("Failed to write dwmapi.dll")?;
 
-        // let ue4ss_runtime_json = ue4ss_path.join("UE4SSL.Runtime.runtimeconfig.json");
-        // let ue4ss_runtime_json_buff =
-        //     include_bytes!("../../../assets/UE4SSL.Runtime.runtimeconfig.json");
-        // fs::write(&ue4ss_runtime_json, ue4ss_runtime_json_buff)
-        //     .context("Failed to write UE4SSL.Runtime.runtimeconfig.json")?;
-
-
-        let ue4ss_csharp_dll = ue4ss_path.join("UE4SSL.JavaScript.dll");
-        let ue4ss_csharp_dll_buff = include_bytes!("../../../assets/UE4SSL.JavaScript.dll");
-        fs::write(&ue4ss_csharp_dll, ue4ss_csharp_dll_buff)
-            .context("Failed to write UE4SSL.JavaScript.dll")?;
-
-        let proxy_dll_path = install_path.join("dwmapi.dll");
-        let proxy_dll = include_bytes!("../../../assets/dwmapi.dll");
-        fs::write(&proxy_dll_path, proxy_dll).context("Failed to write dwmapi.dll")?;
-
-        // TODO：清除旧的 mods 目录
-        let mods_path = ue4ss_path.join("mods");
-        if mods_path.exists() {
-            fs::remove_dir_all(&mods_path)?;
-        }
-        fs::create_dir(&mods_path).context("Failed to create mods directory")?;
-
-        // 清除旧的 csmods 目录
-        // let csmods_path = ue4ss_path.join("csmods");
-        // if csmods_path.exists() {
-        //     fs::remove_dir_all(&csmods_path)?;
-        // }
-        // fs::create_dir(&csmods_path).context("Failed to create csmods directory")?;
-
-        // let ue4ss_framework_dll = csmods_path.join("UE4SSL.Framework.dll");
-        // let ue4ss_framework_dll_buff = include_bytes!("../../../assets/UE4SSL.Framework.dll");
-        // fs::write(&ue4ss_framework_dll, ue4ss_framework_dll_buff)
-        //     .context("Failed to write UE4SSL.Framework.dll")?;
+    let mods_path = ue4ss_path.join("mods");
+    if mods_path.exists() {
+        fs::remove_dir_all(&mods_path)?;
     }
+    fs::create_dir(&mods_path).context("Failed to create mods directory")?;
+
     Ok(())
 }
 

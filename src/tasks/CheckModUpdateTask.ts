@@ -7,6 +7,7 @@ import { ModioApi } from '@/apis/modio';
 import { ModcatApi, MODCAT_PLATFORM } from '@/apis/modcat';
 import { ModSourceType } from '@/models/mod/types';
 import { t } from 'i18next';
+import { ensureInternalAssets } from '@/services/InternalAssetService';
 
 @Task({
     type: 'check_mod_update',
@@ -17,10 +18,19 @@ import { t } from 'i18next';
 })
 export class CheckModUpdateTask implements ITask {
     async run(context: ITaskContext): Promise<void> {
-        const TOTAL_STEPS = 4;
+        const TOTAL_STEPS = 5;
 
-        // Step 1: Load mod list
-        await context.setStep('加载模组列表', 1, TOTAL_STEPS);
+        // Step 1: Check internal assets (UE4SSL.zip, DRG.zip)
+        await context.setStep('检查内部资产', 1, TOTAL_STEPS);
+        await ensureInternalAssets({
+            setStep: context.setStep.bind(context),
+            setMessage: context.setMessage.bind(context),
+            updateProgress: context.updateProgress.bind(context),
+            checkCancelled: context.checkCancelled.bind(context),
+        });
+
+        // Step 2: Load mod list
+        await context.setStep('加载模组列表', 2, TOTAL_STEPS);
         await context.setMessage(t("Mod Update Check Start"));
 
         const profileVM = await IoC.get(ProfileViewModel);
@@ -59,8 +69,8 @@ export class CheckModUpdateTask implements ITask {
             return;
         }
 
-        // Step 2: Check Modio mods via events API
-        await context.setStep('检查 Modio 更新', 2, TOTAL_STEPS);
+        // Step 3: Check Modio mods via events API
+        await context.setStep('检查 Modio 更新', 3, TOTAL_STEPS);
         
         if (modioMods.length > 0) {
             // Check modio OAuth
@@ -110,8 +120,8 @@ export class CheckModUpdateTask implements ITask {
             }
         }
 
-        // Step 3: Check ModCat mods by fetching latest version
-        await context.setStep('检查 ModCat 更新', 3, TOTAL_STEPS);
+        // Step 4: Check ModCat mods by fetching latest version
+        await context.setStep('检查 ModCat 更新', 4, TOTAL_STEPS);
         
         if (modcatMods.length > 0) {
             await context.setMessage(`正在检查 ${modcatMods.length} 个 ModCat 模组...`);
@@ -174,8 +184,8 @@ export class CheckModUpdateTask implements ITask {
             }
         }
 
-        // Step 4: Complete
-        await context.setStep('完成', 4, TOTAL_STEPS);
+        // Step 5: Complete
+        await context.setStep('完成', 5, TOTAL_STEPS);
         await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
 
         await context.setMessage(t("Mod Update Check Finish"));

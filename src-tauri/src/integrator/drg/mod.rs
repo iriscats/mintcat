@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::BufReader;
+use std::path::PathBuf;
 use tauri::{AppHandle, Emitter};
 use walkdir::WalkDir;
 
@@ -18,7 +19,14 @@ pub mod pak_integrator;
 mod raw_asset;
 pub mod unpacked_mod;
 
-fn do_install_mods(app: &AppHandle, game_path: &str, mod_list_json: &str, skip_ue4ss: bool) -> anyhow::Result<()> {
+fn do_install_mods(
+    app: &AppHandle,
+    game_path: &str,
+    mod_list_json: &str,
+    skip_ue4ss: bool,
+    ue4ss_zip_path: Option<&str>,
+    drg_zip_path: Option<&str>,
+) -> anyhow::Result<()> {
     let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
 
     app.emit("status-bar-log", "Start Install...").unwrap();
@@ -30,15 +38,31 @@ fn do_install_mods(app: &AppHandle, game_path: &str, mod_list_json: &str, skip_u
     app.emit("status-bar-log", "Load Mods ...").unwrap();
     app.emit("status-bar-percent", 10).unwrap();
 
-    integrator.install(app.clone(), &mut mods, skip_ue4ss)?;
+    let ue4ss_zip = ue4ss_zip_path.map(PathBuf::from);
+    let drg_zip = drg_zip_path.map(PathBuf::from);
+    integrator.install(app.clone(), &mut mods, skip_ue4ss, ue4ss_zip.as_deref(), drg_zip.as_deref())?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn install_mods(app: AppHandle, game_path: String, mod_list_json: Box<str>, skip_ue4ss: bool) {
+pub fn install_mods(
+    app: AppHandle,
+    game_path: String,
+    mod_list_json: Box<str>,
+    skip_ue4ss: bool,
+    ue4ss_zip_path: Option<String>,
+    drg_zip_path: Option<String>,
+) {
     std::thread::spawn(move || {
-        if let Err(e) = do_install_mods(&app, &game_path, &mod_list_json, skip_ue4ss) {
+        if let Err(e) = do_install_mods(
+            &app,
+            &game_path,
+            &mod_list_json,
+            skip_ue4ss,
+            ue4ss_zip_path.as_deref(),
+            drg_zip_path.as_deref(),
+        ) {
             let error_msg = format!("{:#}", e);
             eprintln!("{}", error_msg);
             app.emit("install-error", error_msg).unwrap();

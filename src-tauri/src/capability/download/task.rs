@@ -1,4 +1,6 @@
-use crate::capability::download::checksum::{ChecksumCalculator, ChecksumType};
+use crate::capability::download::checksum::{
+    swap_hex_nibbles_per_byte, ChecksumCalculator, ChecksumType,
+};
 use crate::capability::download::error::DownloadError;
 use futures::StreamExt;
 use rand::Rng;
@@ -8,7 +10,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use tokio::fs::{File, OpenOptions};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize)]
@@ -145,7 +147,9 @@ impl DownloadTask {
 
     async fn download_with_resume(&self, _attempt: u32) -> Result<(), DownloadError> {
         let part_path = self.file_path.with_extension("part");
-        let resume_enabled = self.options.resume.unwrap_or(true);
+        // When verifying checksum, never resume: hash only the bytes we receive in this request.
+        let resume_enabled = self.options.resume.unwrap_or(true)
+            && self.options.checksum.is_none();
         
         // Ensure parent directory exists before downloading
         if let Some(parent) = self.file_path.parent() {
@@ -157,6 +161,10 @@ impl DownloadTask {
         let start_byte = if resume_enabled {
             self.get_partial_file_size().await?
         } else {
+            // Remove any stale .part so we do a full download when checksum is required
+            if part_path.exists() {
+                let _ = tokio::fs::remove_file(&part_path).await;
+            }
             0
         };
 
@@ -192,7 +200,33 @@ impl DownloadTask {
 
         let total_size = response.content_length().unwrap_or(0) + start_byte;
 
-        // Open file for writing
+        // Initialize checksum calculator if needed
+        let mut checksum_calculator = if let Some(checksum_type) = &self.options.checksum_type {
+            Some(ChecksumCalculator::new(checksum_type.clone()))
+        } else {
+            None
+        };
+
+        // When resuming with checksum: feed existing partial file bytes into calculator
+        // so we compute hash of the full file, not just the new bytes.
+        if start_byte > 0 {
+            if let Some(calculator) = &mut checksum_calculator {
+                let mut read_file = File::open(&part_path).await?;
+                let mut remaining = start_byte;
+                let mut buf = [0u8; 65536];
+                while remaining > 0 {
+                    let to_read = remaining.min(buf.len() as u64) as usize;
+                    let n = read_file.read(&mut buf[..to_read]).await?;
+                    if n == 0 {
+                        break;
+                    }
+                    calculator.update(&buf[..n]);
+                    remaining -= n as u64;
+                }
+            }
+        }
+
+        // Open file for writing (append when resuming)
         let mut file = if start_byte > 0 {
             OpenOptions::new()
                 .append(true)
@@ -200,13 +234,6 @@ impl DownloadTask {
                 .await?
         } else {
             File::create(&part_path).await?
-        };
-
-        // Initialize checksum calculator if needed
-        let mut checksum_calculator = if let Some(checksum_type) = &self.options.checksum_type {
-            Some(ChecksumCalculator::new(checksum_type.clone()))
-        } else {
-            None
         };
 
         // Download with progress tracking
@@ -255,11 +282,28 @@ impl DownloadTask {
         if let (Some(expected_checksum), Some(calculator)) = 
             (&self.options.checksum, checksum_calculator) {
             let actual_checksum = calculator.finalize();
-            if expected_checksum.to_lowercase() != actual_checksum.to_lowercase() {
+            let expected_normalized = expected_checksum.trim().to_lowercase();
+            let actual_normalized = actual_checksum.trim().to_lowercase();
+
+            let md5_nibble_swapped_match = matches!(self.options.checksum_type, Some(ChecksumType::Md5))
+                && swap_hex_nibbles_per_byte(&expected_normalized)
+                    .map(|swapped| swapped == actual_normalized)
+                    .unwrap_or(false);
+
+            if expected_normalized != actual_normalized && !md5_nibble_swapped_match {
                 return Err(DownloadError::ChecksumMismatch {
-                    expected: expected_checksum.clone(),
-                    actual: actual_checksum,
+                    expected: expected_normalized,
+                    actual: actual_normalized,
                 });
+            }
+
+            if md5_nibble_swapped_match {
+                log::warn!(
+                    "Checksum matched only after MD5 nibble-swap normalization (download_id={}, expected={}, actual={})",
+                    self.id,
+                    expected_normalized,
+                    actual_normalized
+                );
             }
         }
 
@@ -298,8 +342,9 @@ impl DownloadTask {
                             return Err(e);
                         }
                         DownloadError::ChecksumMismatch { .. } => {
-                            // Delete the file on checksum mismatch
+                            // Delete partial and final file so retry does a full re-download
                             let _ = tokio::fs::remove_file(&self.file_path).await;
+                            let _ = tokio::fs::remove_file(self.file_path.with_extension("part")).await;
                             self.emit_status("failed", Some(e.to_string()), None);
                             return Err(e);
                         }

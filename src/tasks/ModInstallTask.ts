@@ -12,6 +12,7 @@ import { exists, stat } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { ModSourceType } from '@/models/mod/types';
 import { MODCAT_PLATFORM } from '@/apis/modcat';
+import { ensureInternalAssets, getInternalAssetPaths } from '@/services/InternalAssetService';
 
 /**
  * Check if a path is a valid unpacked mod directory
@@ -55,7 +56,7 @@ async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
 export class ModInstallTask implements ITask {
 
     async run(context: ITaskContext): Promise<void> {
-        const TOTAL_STEPS = 8;
+        const TOTAL_STEPS = 9;
         await context.setMessage(t("Start installation"));
 
         // Get profile view model and settings
@@ -250,10 +251,18 @@ export class ModInstallTask implements ITask {
         // In Custom mode, don't delete UE4SS; otherwise delete it
         await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
-        // Step 7: Install .NET runtime
-        // await context.setStep('安装运行时环境', 7, TOTAL_STEPS);
-        // await context.setMessage('正在安装 .NET Runtime...');
-        // await IntegrateApi.installDotnetRuntime(drgPakPath);
+        // Step 7: Ensure internal assets (UE4SSL.zip, DRG.zip) - force download if missing
+        await context.setStep('检查内部资产', 7, TOTAL_STEPS);
+        let assetPaths = await getInternalAssetPaths();
+        if (!assetPaths) {
+            await context.setMessage('正在下载模组管理器资产...');
+            assetPaths = await ensureInternalAssets({
+                setStep: context.setStep.bind(context),
+                setMessage: context.setMessage.bind(context),
+                updateProgress: context.updateProgress.bind(context),
+                checkCancelled: context.checkCancelled.bind(context),
+            });
+        }
 
         // Step 8: Install mods
         await context.setStep('安装模组', 8, TOTAL_STEPS);
@@ -277,7 +286,13 @@ export class ModInstallTask implements ITask {
 
         await context.setMessage('正在写入模组文件...');
         // In Custom mode, skip UE4SS installation (user manages it themselves)
-        const result = await IntegrateApi.install(drgPakPath, JSON.stringify(installModList), isCustomMode);
+        const result = await IntegrateApi.install(
+            drgPakPath,
+            JSON.stringify(installModList),
+            isCustomMode,
+            assetPaths.ue4ssZipPath,
+            assetPaths.drgZipPath
+        );
 
         if (!result) {
             throw new Error(t("Installation Failed"));

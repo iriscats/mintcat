@@ -1,5 +1,6 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::integrator::drg::game_pak_patch;
+use zip::read::ZipArchive;
 use crate::integrator::drg::game_pak_patch::{
     get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
     SERVER_LIST_ENTRY_PATH,
@@ -131,14 +132,21 @@ impl PakIntegrator {
         Ok(())
     }
 
-    pub fn install(mut self, app: AppHandle, mods: &mut Vec<ModInfo>, skip_ue4ss: bool) -> Result<()> {
+    pub fn install(
+        mut self,
+        app: AppHandle,
+        mods: &mut Vec<ModInfo>,
+        skip_ue4ss: bool,
+        ue4ss_zip_path: Option<&Path>,
+        drg_zip_path: Option<&Path>,
+    ) -> Result<()> {
         let total_percent = 70.0;
         let mods_size = mods.len();
 
         // Install UE4SS once before processing mods (unless skipped)
         if !skip_ue4ss {
             app.emit("status-bar-log", "Installing UE4SS...").unwrap();
-            install_ue4ss(&self.installation.binaries_directory())?;
+            install_ue4ss(&self.installation.binaries_directory(), ue4ss_zip_path)?;
         }
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
@@ -171,9 +179,11 @@ impl PakIntegrator {
         app.emit("status-bar-log", "Patch Game Pak...").unwrap();
         app.emit("status-bar-percent", 80).unwrap();
 
-        let integration_dir = include_dir::include_dir!("$CARGO_MANIFEST_DIR/assets/integration");
+        let drg_zip = drg_zip_path
+            .ok_or_else(|| anyhow::anyhow!("DRG asset zip path is required (DRG.zip)"))?;
         let mut mint_files = HashMap::new();
-        Self::collect_mint_files(&integration_dir, &mut mint_files);
+        Self::collect_mint_files_from_drg_zip(drg_zip, &mut mint_files)?;
+        Self::write_hook_dll_from_drg_zip(drg_zip, &self.installation.binaries_directory())?;
 
         self.apply_mint_patch(&mut mint_files)?;
         self.apply_pcb_patch()?;
@@ -188,14 +198,6 @@ impl PakIntegrator {
         self.write_mint_files(&mut mint_files)?;
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
-
-        let hook_dll_path = self
-            .installation
-            .binaries_directory()
-            .join("x3daudio1_7.dll");
-        let hook_dll = include_bytes!("../../../assets/x3daudio1_7.dll");
-        fs::write(&hook_dll_path, hook_dll)
-            .with_context(|| format!("Failed to write hook dll: {:?}", hook_dll_path))?;
 
         app.emit("status-bar-log", "Install Mod Success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
@@ -574,18 +576,44 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn collect_mint_files(dir: &include_dir::Dir, files: &mut HashMap<String, Vec<u8>>) {
-        for entry in dir.entries() {
-            match entry {
-                include_dir::DirEntry::Dir(d) => Self::collect_mint_files(d, files),
-                include_dir::DirEntry::File(f) => {
-                    files.insert(
-                        f.path().to_str().unwrap().replace('\\', "/"),
-                        f.contents().to_vec(),
-                    );
-                }
+    /// Load mint files from DRG.zip: Paks/ModIntegration/* -> FSD/Content/ModIntegration/*
+    fn collect_mint_files_from_drg_zip(
+        zip_path: &Path,
+        files: &mut HashMap<String, Vec<u8>>,
+    ) -> Result<()> {
+        const PREFIX: &str = "Paks/ModIntegration/";
+        const KEY_PREFIX: &str = "FSD/Content/ModIntegration/";
+        let file = fs::File::open(zip_path)
+            .with_context(|| format!("Failed to open DRG zip: {:?}", zip_path))?;
+        let mut archive = ZipArchive::new(file).context("Failed to parse DRG zip")?;
+        for i in 0..archive.len() {
+            let mut entry = archive.by_index(i).context("Failed to read zip entry")?;
+            let name = entry.name().to_string();
+            if name.starts_with(PREFIX) && !name.ends_with('/') {
+                let suffix = name.trim_start_matches(PREFIX);
+                let key = format!("{KEY_PREFIX}{}", suffix.replace('\\', "/"));
+                let mut content = Vec::new();
+                entry.read_to_end(&mut content).context("Failed to read zip entry content")?;
+                files.insert(key, content);
             }
         }
+        Ok(())
+    }
+
+    /// Extract DLLs/x3daudio1_7.dll from DRG.zip to binaries directory.
+    fn write_hook_dll_from_drg_zip(zip_path: &Path, binaries_dir: &Path) -> Result<()> {
+        const HOOK_ENTRY: &str = "DLLs/x3daudio1_7.dll";
+        let file = fs::File::open(zip_path)
+            .with_context(|| format!("Failed to open DRG zip: {:?}", zip_path))?;
+        let mut archive = ZipArchive::new(file).context("Failed to parse DRG zip")?;
+        let mut entry = archive
+            .by_name(HOOK_ENTRY)
+            .with_context(|| format!("Missing {} in DRG zip", HOOK_ENTRY))?;
+        let mut content = Vec::new();
+        entry.read_to_end(&mut content).context("Failed to read hook dll from zip")?;
+        let hook_path = binaries_dir.join("x3daudio1_7.dll");
+        fs::write(&hook_path, content).with_context(|| format!("Failed to write hook dll: {:?}", hook_path))?;
+        Ok(())
     }
 
     fn serialize_asset_registry(&mut self) -> Result<()> {

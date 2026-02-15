@@ -6,6 +6,17 @@ use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use tauri_plugin_sentry::{minidump, sentry};
 
 #[tauri::command]
+fn get_asset_cache_dir(app: AppHandle) -> Result<String, String> {
+    let path = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?;
+    path.to_str()
+        .ok_or_else(|| "Invalid path".to_string())
+        .map(|s| s.to_string())
+}
+
+#[tauri::command]
 fn open_devtools(app_handle: AppHandle) {
     if let Some(window) = app_handle.get_webview_window("main") {
         if !window.is_devtools_open() {
@@ -97,6 +108,7 @@ pub fn run() {
         //                 .tcp("127.0.0.1".parse().unwrap(), 9999),
         //         ))
         .invoke_handler(tauri::generate_handler![
+            get_asset_cache_dir,
             integrator::drg::install_mods,
             integrator::drg::uninstall_mods,
             integrator::drg::check_installed,
