@@ -11,6 +11,8 @@ import StatusBar from "@/components/StatusBar.tsx";
 import {StorageAPI} from "@/storage";
 import {asyncPoolAll} from "@/utils/AsyncPool";
 import {message} from "antd";
+import type {AddModFromUrlResult} from "@/services/HomeService.ts";
+import type {AddModFromPathResult} from "@/services/HomeService.ts";
 
 let windowInstance: WebviewWindow;
 
@@ -68,11 +70,15 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
             case AddModType.ONLINE:
             case AddModType.SUBSCRIBED: {
                 const list = result.list;
-                const { errors } = await asyncPoolAll(
+                const { results, errors } = await asyncPoolAll(
                     list,
                     (item) => vm.addModFromUrl(item, result.groupId),
                     5
                 );
+                const existsCount = (results as AddModFromUrlResult[]).filter((r) => r?.status === "exists").length;
+                if (existsCount > 0) {
+                    message.warning(t("Mod Already Exists") + ` (${existsCount} ${t("in current list")})`);
+                }
                 if (errors.length > 0) {
                     message.warning(t("Some mods failed to add") + `: ${errors.length}/${list.length}`);
                 }
@@ -80,8 +86,13 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                 break;
             case AddModType.LOCAL: {
                 const list = result.list;
+                const pathResults: AddModFromPathResult[] = [];
                 for (const item of list) {
-                    await vm.addModFromPath(item, result.groupId);
+                    pathResults.push(await vm.addModFromPath(item, result.groupId));
+                }
+                const existsCount = pathResults.filter((r) => r.status === "exists").length;
+                if (existsCount > 0) {
+                    message.warning(t("Mod Already Exists") + ` (${existsCount} ${t("in current list")})`);
                 }
             }
                 break;

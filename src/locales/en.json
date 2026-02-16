@@ -63,5 +63,6 @@
   "Cache directory changed successfully": "Cache directory changed successfully",
   "Failed to change cache directory": "Failed to change cache directory",
   "Clipboard Monitor": "Clipboard Monitor",
-  "Some mods failed to add": "Some mods failed to add"
+  "Some mods failed to add": "Some mods failed to add",
+  "in current list": "already in current list"
 }

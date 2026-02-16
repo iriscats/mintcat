@@ -6,7 +6,7 @@ import { IoC } from "@/core/IoC.ts";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileService} from "@/services/ProfileService.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
-import {HomeService} from "@/services/HomeService.ts";
+import {HomeService, type AddModFromUrlResult, type AddModFromPathResult} from "@/services/HomeService.ts";
 
 /**
  * HomeViewModel handles mod operations and business logic
@@ -19,42 +19,30 @@ export class HomeViewModel extends BaseViewModel {
         super();
     }
 
-    public async addModFromUrl(url: string, groupId: number): Promise<boolean> {
+    public async addModFromUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
         await StatusBar.log(t("Fetch Mod Info"), 'info');
         try {
-            const result = await this.homeService.addModFromUrl(url, groupId);
-            if (result.status === "invalid") {
-                return false;
-            }
-            if (result.status === "exists") {
-                message.warning(`${t("Mod Already Exists")} ${result.modName ?? ""}`.trim());
-                return true;
-            }
-            return true;
+            return await this.homeService.addModFromUrl(url, groupId);
         } catch (error) {
             console.error('Failed to add mod from URL:', error);
             message.error(t("Failed to add mod to database"));
-            return false;
+            return { status: "invalid" };
         }
     }
 
-    public async addModFromPath(modPath: string, groupId: number): Promise<boolean> {
+    public async addModFromPath(modPath: string, groupId: number): Promise<AddModFromPathResult> {
         console.log(`[addModFromPath] Adding local mod: ${modPath}, groupId: ${groupId}`);
         try {
             const result = await this.homeService.addModFromPath(modPath, groupId);
             if (result.status === "missing") {
                 console.log(`[addModFromPath] File does not exist: ${modPath}`);
-                message.warning(t("Mod Path No Exists" + modPath));
-                return true;
+                message.warning(t("Mod Path No Exists") + ": " + modPath);
             }
-            if (result.status === "exists") {
-                message.warning(`${t("Mod Already Exists")}: ${modPath}`);
-            }
-            return true;
+            return result;
         } catch (error) {
             console.error(`[addModFromPath] Failed to add mod to database: ${modPath}`, error);
             message.error(t("Failed to add mod to database"));
-            return false;
+            return { status: "missing", modPath };
         }
     }
 

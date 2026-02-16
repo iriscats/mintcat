@@ -250,10 +250,10 @@ export class ConfigMigrationV4 {
 
             const modId = mod.modId!;
 
-            // 设置版本信息 - 修正字段名
+            // 设置版本信息 - 修正字段名（导入时忽略 used_version，仅使用 file_version）
             await this.modDAO.upsertModVersion({
                 modId,
-                currentVersion: oldMod.file_version || oldMod.used_version || '-',
+                currentVersion: oldMod.file_version || '-',
                 availableVersions: oldMod.versions || []
             });
 
@@ -480,13 +480,14 @@ export class ConfigMigrationV4 {
             // 获取模组版本信息
             const modVersion = await this.modDAO.getModVersion(mod.modId!);
 
+            // 导入配置时忽略 used_version，统一使用默认值
             await this.profileDAO.addModToProfile({
                 profileId,
                 modId: mod.modId!,
                 parentFolderId,
                 sortOrder,
                 isEnabled,
-                usedVersion: modVersion?.currentVersion || '-'
+                usedVersion: ''
             });
 
         } catch (error) {

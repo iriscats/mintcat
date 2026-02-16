@@ -172,6 +172,9 @@ export class ModMapper {
     // 辅助方法
     // =============================
 
+    /** 匹配“像版本号”的 tag（如 1.35.0、2.0、v1.2），避免把版本号误归为普通 tag */
+    private static readonly VERSION_LIKE_TAG = /^v?\d+\.\d+(\.\d+)*$/i;
+
     /**
      * 解析标签以提取版本、审核状态、必需标志
      * 迁移自 HomeViewModel.convertModVersion/Approval/Required()
@@ -186,9 +189,9 @@ export class ModMapper {
         let approval: ModApprovalStatus = ModApprovalStatus.Unknown;
 
         for (const tag of rawTags) {
-            // 提取版本标签（例如 "1.35.0"）
-            if (tag.startsWith("1.")) {
-                versions.push(tag);
+            // 提取版本类标签（如 1.35.0、2.0、v1.2），不再仅用 "1." 前缀，避免版本号被当成普通 tag
+            if (ModMapper.VERSION_LIKE_TAG.test(tag.trim())) {
+                versions.push(tag.trim());
             }
             // 提取审核状态
             else if (tag === "Verified" || tag === "Auto-Verified") {
@@ -198,7 +201,7 @@ export class ModMapper {
             } else if (tag === "Sandbox") {
                 approval = ModApprovalStatus.Sandbox;
             }
-            // 保留其他标签（RequiredByAll 和 Optional 也保留在 tags 中）
+            // 保留其他标签（RequiredByAll、Optional 等）
             else {
                 tags.push(tag);
             }
