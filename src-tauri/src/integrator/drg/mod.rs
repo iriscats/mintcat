@@ -83,9 +83,13 @@ pub fn check_installed(game_path: String, install_time: u64) -> Result<String, S
 }
 
 #[tauri::command]
-pub fn find_game_pak() -> String {
-    DRGInstallation::find()
-        .and_then(|i| i.main_pak().to_str().map(|s| s.to_string()))
+pub fn find_game_pak(game_name: Option<String>) -> String {
+    let installation = match game_name.as_deref() {
+        Some("rc") => DRGInstallation::find_rc(),
+        _ => DRGInstallation::find(), // "drg" or None -> DRG
+    };
+    installation
+        .and_then(|i| i.pak_path.to_str().map(|s| s.to_string()))
         .unwrap_or_default()
 }
 

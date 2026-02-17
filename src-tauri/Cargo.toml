@@ -37,7 +37,8 @@ tauri-plugin-store = "2"
 tauri-plugin-sql = { version = "2.3.0",features = ["sqlite"] }
 tauri-plugin-sentry = "0.4"
 tauri-plugin-task-queue = { path = "../../tauri-plugin-task-queue" }
-
+tauri-plugin-deep-link = "2"
+tauri-plugin-single-instance = "2"
 
 anyhow = "1"
 log = "0.4.27"
@@ -66,5 +67,4 @@ unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "pat
 uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
 
 steamlocate = "2.0.1"
-tauri-plugin-deep-link = "2"
-tauri-plugin-single-instance = "2"
+

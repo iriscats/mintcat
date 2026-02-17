@@ -13,21 +13,31 @@ pub enum DRGInstallationType {
     Xbox,
 }
 
+/// Steam App IDs for DRG and Rogue Core Playtest
+const STEAM_APP_ID_DRG: u32 = 548430;
+const STEAM_APP_ID_RC_PLAYTEST: u32 = 2860770;
+
 impl DRGInstallation {
+    /// Find DRG (Deep Rock Galactic) installation via Steam
     pub fn find() -> Option<Self> {
-        //C:\XboxGames\Deep Rock Galactic\Content\FSD\Content\Paks\FSD-WinGDK.pak
+        Self::find_by_steam_app_id(STEAM_APP_ID_DRG, "FSD/Content/Paks/FSD-WindowsNoEditor.pak")
+    }
+
+    /// Find Rogue Core Playtest installation via Steam
+    /// Path: .../Deep Rock Galactic Rogue Core Playtest/RogueCore/Content/Paks/RogueCore-Windows.pak
+    pub fn find_rc() -> Option<Self> {
+        Self::find_by_steam_app_id(STEAM_APP_ID_RC_PLAYTEST, "RogueCore/Content/Paks/RogueCore-Windows.pak")
+    }
+
+    fn find_by_steam_app_id(app_id: u32, pak_relative_path: &str) -> Option<Self> {
         steamlocate::SteamDir::locate()
             .ok()
             .and_then(|steam_dir| {
                 steam_dir
-                    .find_app(548430)
+                    .find_app(app_id)
                     .ok()
                     .flatten()
-                    .map(|(app, library)| {
-                        library
-                            .resolve_app_dir(&app)
-                            .join("FSD/Content/Paks/FSD-WindowsNoEditor.pak")
-                    })
+                    .map(|(app, library)| library.resolve_app_dir(&app).join(pak_relative_path))
             })
             .and_then(|path| Self::from_pak_path(path).ok())
     }
@@ -71,6 +81,7 @@ impl DRGInstallation {
         self.root.join("Content").join("Paks")
     }
 
+    #[allow(dead_code)]
     pub fn main_pak(&self) -> PathBuf {
         self.root
             .join("Content")

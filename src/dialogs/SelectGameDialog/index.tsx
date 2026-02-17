@@ -100,35 +100,38 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
     const onGamePathClick = async (gameId: number) => {
         const game = games.find(g => g.id === gameId);
         const currentPath = game?.installPath || "";
+        const isRc = game?.name?.toLowerCase() === 'rc';
 
         const result = await open({
             defaultPath: currentPath,
             filters: [{
-                name: 'FSD-*',
+                name: isRc ? 'RogueCore-*' : 'FSD-*',
                 extensions: ['pak'],
             }],
             multiple: false,
         });
 
         if (result) {
-            if (result.endsWith("FSD-WindowsNoEditor.pak") ||
-                result.endsWith("FSD-WinGDK.pak")
-            ) {
+            const validDrg = result.endsWith("FSD-WindowsNoEditor.pak") || result.endsWith("FSD-WinGDK.pak");
+            const validRc = result.endsWith("RogueCore-Windows.pak");
+            if ((isRc && validRc) || (!isRc && validDrg)) {
                 await dialogGameService.updateGameInstallPath(gameId, result);
                 await loadGames();
             } else {
-                message.error(t("Please select FSD-WindowsNoEditor.pak"));
+                message.error(isRc ? t("Please select RogueCore-Windows.pak") : t("Please select FSD-WindowsNoEditor.pak"));
             }
         }
     };
 
     const onFindGamePathClick = async (gameId: number) => {
-        const path = await IntegrateApi.findGamePak();
+        const game = games.find(g => g.id === gameId);
+        const gameName = game?.name ?? undefined;
+        const path = await IntegrateApi.findGamePak(gameName);
         if (path) {
             await dialogGameService.updateGameInstallPath(gameId, path);
             await loadGames();
         } else {
-            message.error(t("Can't find FSD-WindowsNoEditor.pak"));
+            message.error(gameName === 'rc' ? t("Can't find RogueCore-Windows.pak") : t("Can't find FSD-WindowsNoEditor.pak"));
         }
     };
 

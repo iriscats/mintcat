@@ -103,8 +103,8 @@ export class IntegrateApi  {
         });
     }
 
-    public static async findGamePak(): Promise<string> {
-        return await invoke('find_game_pak');
+    public static async findGamePak(gameName?: string): Promise<string> {
+        return await invoke('find_game_pak', { gameName: gameName ?? null });
     }
 
     public static async launchGame() {
