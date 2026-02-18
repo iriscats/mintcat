@@ -52,14 +52,18 @@ export function SearchPage() {
     const [searchValue, setSearchValue] = useState('');
     const [containerHeight, setContainerHeight] = useState(window.innerHeight - 81);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isInitializedRef = useRef(false);
 
-    // 初始化搜索提供者
+    // 初始化搜索提供者，并按当前游戏刷新可用源后再做首次加载（避免 RC 时仍用 mod.io）
     useEffect(() => {
         initializeSearchProviders();
-        // 刷新可用的搜索源（确保所有提供者都已注册）
-        refreshAvailableSources();
-    }, [refreshAvailableSources]);
+        let cancelled = false;
+        Promise.resolve(refreshAvailableSources()).then(() => {
+            if (!cancelled) loadInitial();
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [refreshAvailableSources, loadInitial]);
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -85,14 +89,6 @@ export function SearchPage() {
             window.removeEventListener('resize', handleResize);
         };
     }, []);
-
-    // 初始加载数据
-    useEffect(() => {
-        if (isInitialized && !isInitializedRef.current) {
-            isInitializedRef.current = true;
-            loadInitial();
-        }
-    }, [isInitialized, loadInitial]);
 
     // 处理搜索
     const handleSearch = useCallback(

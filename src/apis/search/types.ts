@@ -65,6 +65,8 @@ export interface SearchParams {
     page: number;
     /** 每页数量 */
     pageSize: number;
+    /** ModCat 平台游戏 ID（如 "drg" | "rc"），用于按当前游戏筛选 */
+    modcatGameId?: string;
     /** 排序字段 */
     sortBy?: 'downloads' | 'subscribers' | 'rating' | 'date' | 'name';
     /** 排序方向 */

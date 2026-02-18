@@ -7,6 +7,7 @@ import {
 } from '@/apis/search';
 import {CacheApi} from '@/apis/CacheApi';
 import {TranslateApi} from '@/apis/TranslateApi';
+import {StorageAPI} from '@/storage';
 
 /**
  * 搜索状态
@@ -63,7 +64,7 @@ export class SearchViewModel {
     }
 
     /**
-     * 初始化可用的搜索源
+     * 初始化可用的搜索源（同步，先使用全部已注册源）
      */
     private initAvailableSources(): void {
         const registry = SearchProviderRegistry.getInstance();
@@ -74,15 +75,53 @@ export class SearchViewModel {
     }
 
     /**
-     * 刷新可用的搜索源（用于提供者注册后更新）
+     * 根据当前游戏解析 ModCat 游戏 ID：drg -> "drg", rc -> "drgrc"
      */
-    public refreshAvailableSources(): void {
+    private async getModcatGameIdForCurrentGame(): Promise<string | undefined> {
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const name = activeGame?.name?.toLowerCase();
+        if (name === 'drg') return 'drg';
+        if (name === 'rc') return 'drgrc';
+        return undefined;
+    }
+
+    /**
+     * 根据当前游戏得到可用搜索源：DRG 支持 mod.io(2475) + ModCat(drg)，RC 仅支持 ModCat(drgrc)
+     */
+    private async getAvailableSourcesForCurrentGame(): Promise<SearchSource[]> {
         const registry = SearchProviderRegistry.getInstance();
-        const newSources = registry.getSources();
-        
-        if (JSON.stringify(newSources) !== JSON.stringify(this.state.availableSources)) {
+        const allSources = registry.getSources();
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const gameName = activeGame?.name?.toLowerCase();
+
+        if (gameName === 'rc') {
+            return allSources.filter((s) => s === SearchSource.MODCAT);
+        }
+        if (gameName === 'drg') {
+            return allSources.filter((s) => s === SearchSource.MODIO || s === SearchSource.MODCAT);
+        }
+        return allSources;
+    }
+
+    /**
+     * 刷新可用的搜索源（按当前游戏过滤：DRG=mod.io+ModCat，RC=仅 ModCat）
+     */
+    public async refreshAvailableSources(): Promise<void> {
+        const newSources = await this.getAvailableSourcesForCurrentGame();
+        if (newSources.length === 0) return;
+
+        const prev = this.state.availableSources;
+        const changed = JSON.stringify(newSources) !== JSON.stringify(prev);
+        let currentSource = this.state.currentSource;
+        if (!newSources.includes(currentSource)) {
+            currentSource = newSources[0];
+        }
+        if (changed || currentSource !== this.state.currentSource) {
             this.setState({
                 availableSources: newSources,
+                currentSource,
             });
         }
     }
@@ -172,10 +211,12 @@ export class SearchViewModel {
                 throw new Error('No search provider available');
             }
 
+            const modcatGameId = await this.getModcatGameIdForCurrentGame();
             const params: SearchParams = {
                 query,
                 page: 0,
                 pageSize: this.state.pageSize,
+                modcatGameId,
             };
 
             const result = await provider.search(params);
@@ -223,10 +264,12 @@ export class SearchViewModel {
                 throw new Error('No search provider available');
             }
 
+            const modcatGameId = await this.getModcatGameIdForCurrentGame();
             const params: SearchParams = {
                 query: this.state.query,
                 page: nextPage,
                 pageSize: this.state.pageSize,
+                modcatGameId,
             };
 
             const result = await provider.search(params);

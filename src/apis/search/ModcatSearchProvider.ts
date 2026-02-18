@@ -51,10 +51,10 @@ export class ModcatSearchProvider implements ISearchProvider {
      * 执行搜索
      */
     public async search(params: SearchParams): Promise<SearchResult> {
-        const { query, page, pageSize } = params;
+        const { query, page, pageSize, modcatGameId } = params;
 
         try {
-            const modList = await ModcatApi.getModList(page, pageSize, query || undefined);
+            const modList = await ModcatApi.getModList(page, pageSize, query || undefined, modcatGameId);
             const items = modList.map((mod) => this.mapModToSearchResult(mod));
 
             return {

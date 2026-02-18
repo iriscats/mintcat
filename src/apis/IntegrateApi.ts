@@ -110,7 +110,10 @@ export class IntegrateApi  {
     }
 
     public static async launchGame() {
-        return await invoke('launch_steam_game');
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const gameName = activeGame?.name ?? null;
+        return await invoke('launch_steam_game', { gameName });
     }
 
     public static async checkSteamGame() {

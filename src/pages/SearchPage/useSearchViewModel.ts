@@ -92,9 +92,9 @@ export function useSearchViewModel() {
         return viewModelRef.current?.getSearchPlaceholder() || 'Search...';
     }, []);
 
-    // 刷新可用的搜索源
-    const refreshAvailableSources = useCallback(() => {
-        viewModelRef.current?.refreshAvailableSources();
+    // 刷新可用的搜索源（按当前游戏过滤），返回 Promise 便于在首次加载前 await
+    const refreshAvailableSources = useCallback((): Promise<void> | undefined => {
+        return viewModelRef.current?.refreshAvailableSources();
     }, []);
 
     // 清理

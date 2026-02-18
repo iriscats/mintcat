@@ -297,13 +297,15 @@ export class ModcatApi {
 
     /**
      * 获取 Mod 列表（统一使用 /api/Mod/ModListPage 接口）
+     * @param gameId ModCat 游戏 ID，如 "drg" | "drgrc"（RC），不传则默认 drg
      */
     public static async getModList(
         page: number = 0,
         pageSize: number = 20,
-        query?: string
+        query?: string,
+        gameId?: string
     ): Promise<ModcatModListViewEntity[]> {
-        return await ModcatApi.getModListPage(page * pageSize, pageSize, query);
+        return await ModcatApi.getModListPage(page * pageSize, pageSize, query, undefined, gameId);
     }
 
     /**
