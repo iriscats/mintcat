@@ -11,8 +11,8 @@ import { ensureInternalAssets } from '@/services/InternalAssetService';
 
 @Task({
     type: 'check_mod_update',
-    name: '检查模组更新',
-    description: '在线检查模组是否有更新',
+    name: t('Check Mod Updates'),
+    description: t('Check mod updates online'),
     schema: null,
     estimatedDuration: 30
 })
@@ -21,7 +21,7 @@ export class CheckModUpdateTask implements ITask {
         const TOTAL_STEPS = 5;
 
         // Step 1: Check internal assets (UE4SSL.zip, DRG.zip)
-        await context.setStep('检查内部资产', 1, TOTAL_STEPS);
+        await context.setStep(t('Check internal assets'), 1, TOTAL_STEPS);
         await ensureInternalAssets({
             setStep: context.setStep.bind(context),
             setMessage: context.setMessage.bind(context),
@@ -30,7 +30,7 @@ export class CheckModUpdateTask implements ITask {
         });
 
         // Step 2: Load mod list
-        await context.setStep('加载模组列表', 2, TOTAL_STEPS);
+        await context.setStep(t('Load mod list'), 2, TOTAL_STEPS);
         await context.setMessage(t("Mod Update Check Start"));
 
         const profileVM = await IoC.get(ProfileViewModel);
@@ -43,7 +43,7 @@ export class CheckModUpdateTask implements ITask {
         // 只获取当前活跃 profile 下的 mod，而不是全部 mod
         const activeProfile = await profilesApi.getActiveProfile();
         if (!activeProfile?.id) {
-            await context.setMessage('没有活跃的配置文件');
+            await context.setMessage(t('No active profile'));
             await context.updateProgress(100);
             return;
         }
@@ -52,7 +52,7 @@ export class CheckModUpdateTask implements ITask {
         const modIds = profileModList.map(pm => pm.modId!).filter(id => id != null);
         
         if (modIds.length === 0) {
-            await context.setMessage('当前配置文件没有模组');
+            await context.setMessage(t('Current profile has no mods'));
             await context.updateProgress(100);
             return;
         }
@@ -64,13 +64,13 @@ export class CheckModUpdateTask implements ITask {
         const modcatMods = allMods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
 
         if (modioMods.length === 0 && modcatMods.length === 0) {
-            await context.setMessage('没有需要检查的模组');
+            await context.setMessage(t('No mods to check'));
             await context.updateProgress(100);
             return;
         }
 
         // Step 3: Check Modio mods via events API
-        await context.setStep('检查 Modio 更新', 3, TOTAL_STEPS);
+        await context.setStep(t('Check Modio updates'), 3, TOTAL_STEPS);
         
         if (modioMods.length > 0) {
             // Check modio OAuth
@@ -79,7 +79,7 @@ export class CheckModUpdateTask implements ITask {
             
             if (modioOAuth?.oauth) {
                 const modIdList = modioMods.map(m => m.platformId);
-                await context.setMessage(`正在检查 ${modIdList.length} 个 Modio 模组...`);
+                await context.setMessage(`${t('Checking Modio mods...')} (${modIdList.length} ${t('mods')})`);
 
                 const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
 
@@ -121,10 +121,10 @@ export class CheckModUpdateTask implements ITask {
         }
 
         // Step 4: Check ModCat mods by fetching latest version
-        await context.setStep('检查 ModCat 更新', 4, TOTAL_STEPS);
+        await context.setStep(t('Check ModCat updates'), 4, TOTAL_STEPS);
         
         if (modcatMods.length > 0) {
-            await context.setMessage(`正在检查 ${modcatMods.length} 个 ModCat 模组...`);
+            await context.setMessage(`${t('Checking ModCat mods...')} (${modcatMods.length} ${t('mods')})`);
             
             for (let i = 0; i < modcatMods.length; i++) {
                 if (context.checkCancelled()) {
@@ -185,7 +185,7 @@ export class CheckModUpdateTask implements ITask {
         }
 
         // Step 5: Complete
-        await context.setStep('完成', 5, TOTAL_STEPS);
+        await context.setStep(t('Complete'), 5, TOTAL_STEPS);
         await profileVM.setActiveProfileLastUpdate(TimeUtils.nowSeconds());
 
         await context.setMessage(t("Mod Update Check Finish"));

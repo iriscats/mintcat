@@ -18,8 +18,8 @@ export interface EventPayloads {
   // 应用级事件
   // ========================================
 
-  /** 全局错误消息 */
-  'app-error': string;
+  /** 全局错误消息（字符串或 backend key 对象 { key, ...params }） */
+  'app-error': string | { key: string; [k: string]: unknown };
 
   /** 主题变更 */
   'theme-change': string;
@@ -161,8 +161,8 @@ export interface EventPayloads {
   /** 安装成功 (payload 为 mod pak timestamp) */
   'install-success': number;
 
-  /** 安装错误 (payload 为模组名称) */
-  'install-error': string;
+  /** 安装错误（字符串或 backend key 对象 { key, name }） */
+  'install-error': string | { key: string; name?: string };
 
   // ========================================
   // 任务队列事件

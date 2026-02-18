@@ -46,8 +46,8 @@ interface ConflictCheckModInfo {
  */
 @Task({
     type: 'mod_conflict_check',
-    name: '模组冲突检测',
-    description: '检测模组之间的文件冲突',
+    name: t('Mod conflict check'),
+    description: t('Detect file conflicts between mods'),
     schema: null,
     estimatedDuration: 30
 })
@@ -56,17 +56,21 @@ export class ModConflictCheckTask implements ITask {
         const TOTAL_STEPS = 4;
 
         // Step 1: Load enabled mod list
-        await context.setStep('加载模组列表', 1, TOTAL_STEPS);
+        await context.setStep(t('Load mod list'), 1, TOTAL_STEPS);
         await context.setMessage(t('Loading mod list...'));
 
         const profileVM = await IoC.get(ProfileViewModel);
         const profilesDAO = await StorageAPI.getProfiles();
         const modsDAO = await StorageAPI.getMods();
+        const gameDAO = await StorageAPI.getGames();
 
         const activeProfileData = await profileVM.getActiveProfileData();
         if (!activeProfileData || !activeProfileData.id) {
             throw new Error(t('No active profile'));
         }
+
+        const activeGame = await gameDAO.getGameById(activeProfileData.gameId);
+        const gameName = activeGame?.name ?? undefined;
 
         // Get enabled mods from profile
         const profileMods = await profilesDAO.getProfileMods(activeProfileData.id);
@@ -83,7 +87,7 @@ export class ModConflictCheckTask implements ITask {
         await context.updateProgress(20);
 
         // Step 2: Prepare mod info for conflict check
-        await context.setStep('准备模组数据', 2, TOTAL_STEPS);
+        await context.setStep(t('Prepare mod data'), 2, TOTAL_STEPS);
         
         const modInfoList: ConflictCheckModInfo[] = [];
         
@@ -134,18 +138,19 @@ export class ModConflictCheckTask implements ITask {
         await context.updateProgress(40);
 
         // Step 3: Call backend to check conflicts
-        await context.setStep('检测文件冲突', 3, TOTAL_STEPS);
+        await context.setStep(t('Check file conflicts'), 3, TOTAL_STEPS);
         await context.setMessage(`${t('Analyzing')} ${modInfoList.length} ${t('mods')}...`);
 
         try {
             const conflicts = await invoke<ModConflictResponse[]>('check_mod_conflicts', {
-                modListJson: JSON.stringify(modInfoList)
+                modListJson: JSON.stringify(modInfoList),
+                game_name: gameName ?? null,
             });
 
             await context.updateProgress(80);
 
             // Step 4: Process results
-            await context.setStep('处理结果', 4, TOTAL_STEPS);
+            await context.setStep(t('Process results'), 4, TOTAL_STEPS);
 
             if (conflicts.length === 0) {
                 await context.setMessage(t('No conflicts detected'));

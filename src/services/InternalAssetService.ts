@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { exists, readTextFile, writeFile } from '@tauri-apps/plugin-fs';
+import { t } from 'i18next';
 import { checkUpdatesBatch, getDownloadUrl, getReleaseDownloadUrl } from '@/apis/mintcat';
 import { DownloadApi } from '@/apis/DownloadApi';
 
@@ -70,7 +71,7 @@ export async function ensureInternalAssets(
 
     const manifest = await readManifest(cacheDir);
 
-    await setMessage('检查内部资产更新...');
+    await setMessage(t('Checking internal assets for updates...'));
     const results = await checkUpdatesBatch([
         { currentVersion: manifest.ue4ssl, appType: 'ue4ssl', platform: PLATFORM, channel: CHANNEL },
         { currentVersion: manifest.drg, appType: 'drg', platform: PLATFORM, channel: CHANNEL },
@@ -84,7 +85,7 @@ export async function ensureInternalAssets(
         if (checkCancelled()) throw new Error('Task cancelled');
         const r = results[0];
         if (!r.latestVersion || !r.md5) throw new Error('Missing version or MD5 for UE4SSL');
-        await setMessage('正在下载 UE4SSL.zip...');
+        await setMessage(t('Downloading UE4SSL.zip...'));
         const ue4sslDownloadUrl = r.downloadUrl
             ? getDownloadUrl(r.downloadUrl)
             : getReleaseDownloadUrl(r.latestVersion, 'ue4ssl', PLATFORM, CHANNEL);
@@ -100,7 +101,7 @@ export async function ensureInternalAssets(
         if (checkCancelled()) throw new Error('Task cancelled');
         const r = results[1];
         if (!r.latestVersion || !r.md5) throw new Error('Missing version or MD5 for DRG');
-        await setMessage('正在下载 DRG.zip...');
+        await setMessage(t('Downloading DRG.zip...'));
         const drgDownloadUrl = r.downloadUrl
             ? getDownloadUrl(r.downloadUrl)
             : getReleaseDownloadUrl(r.latestVersion, 'drg', PLATFORM, CHANNEL);

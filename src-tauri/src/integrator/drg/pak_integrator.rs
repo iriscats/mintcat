@@ -14,6 +14,7 @@ use crate::integrator::ue4ss::ue4ss_integrate::{
 };
 use crate::integrator::{ModInfo, ReadSeek};
 use anyhow::{Context, Result};
+use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, Read, Seek};
@@ -144,14 +145,14 @@ impl PakIntegrator {
 
         // Install UE4SS once before processing mods (unless skipped)
         if !skip_ue4ss {
-            app.emit("status-bar-log", "Installing UE4SS...").unwrap();
+            app.emit("status-bar-log", "backend.install.ue4ss").unwrap();
             install_ue4ss(&self.installation.binaries_directory(), ue4ss_zip_path)?;
         }
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
             app.emit(
                 "status-bar-log",
-                format!("Start Process Mod: {} ...", mod_info.name),
+                json!({ "key": "backend.install.process_mod_start", "name": mod_info.name }),
             )
             .unwrap();
 
@@ -163,20 +164,23 @@ impl PakIntegrator {
                 Ok(_) => {
                     app.emit(
                         "status-bar-log",
-                        format!("Process Mod: {} Success", mod_info.name),
+                        json!({ "key": "backend.install.process_mod_success", "name": mod_info.name }),
                     )
                     .unwrap();
                 }
-                Err(e) => {
-                    app.emit("install-error", format!("{}", mod_info.name))
-                        .unwrap();
-                    return Err(e);
+                Err(_) => {
+                    app.emit(
+                        "install-error",
+                        json!({ "key": "backend.install.mod_failed", "name": mod_info.name }),
+                    )
+                    .unwrap();
+                    return Err(anyhow::anyhow!("Mod install failed: {}", mod_info.name));
                 }
             }
         }
 
         if drg_zip_path.is_some() {
-            app.emit("status-bar-log", "Patch Game Pak...").unwrap();
+            app.emit("status-bar-log", "backend.install.patch_pak").unwrap();
             app.emit("status-bar-percent", 80).unwrap();
 
             let drg_zip = drg_zip_path
@@ -189,19 +193,19 @@ impl PakIntegrator {
             self.apply_pcb_patch()?;
             self.apply_sandbox_patch()?;
 
-            app.emit("status-bar-log", "Write Mod...").unwrap();
+            app.emit("status-bar-log", "backend.install.write_mod").unwrap();
             app.emit("status-bar-percent", 90).unwrap();
 
             self.write_mint_files(&mut mint_files)?;
         } else {
-            app.emit("status-bar-log", "Write Mod...").unwrap();
+            app.emit("status-bar-log", "backend.install.write_mod").unwrap();
             app.emit("status-bar-percent", 90).unwrap();
         }
 
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
-        app.emit("status-bar-log", "Install Mod Success").unwrap();
+        app.emit("status-bar-log", "backend.install.success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
 
         let mod_pak_path = self

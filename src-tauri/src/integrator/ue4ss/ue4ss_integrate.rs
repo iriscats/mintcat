@@ -1,6 +1,7 @@
 use crate::capability::zip::extract_zip_to_directory;
 use crate::integrator::ReadSeek;
 use anyhow::{Context, Result};
+use serde_json::json;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -227,12 +228,7 @@ fn try_download_dotnet_runtime(
         url.to_string()
     };
 
-    let proxy_label = if use_proxy { " (via proxy)" } else { "" };
-    app.emit(
-        "status-bar-log",
-        format!("Downloading .NET Runtime{}...", proxy_label),
-    )
-    .unwrap();
+    app.emit("status-bar-log", "backend.dotnet.downloading").unwrap();
 
     log::info!("Downloading .NET runtime from: {}", download_url);
 
@@ -333,7 +329,7 @@ fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
             );
             app.emit(
                 "status-bar-log",
-                format!("Retrying download in {} seconds...", delay_secs),
+                json!({ "key": "backend.dotnet.retrying", "seconds": delay_secs }),
             )
             .unwrap();
             std::thread::sleep(Duration::from_secs(delay_secs));
@@ -351,8 +347,7 @@ fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
                 // Switch to proxy on first failure
                 if !use_proxy {
                     log::info!("Switching to v1st proxy for next attempt");
-                    app.emit("status-bar-log", "Switching to proxy server...")
-                        .unwrap();
+                    app.emit("status-bar-log", "backend.dotnet.switching_proxy").unwrap();
                     use_proxy = true;
                 }
             }
@@ -373,7 +368,7 @@ pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result
     // Check if runtime already exists
     let dotnet_check_path = dotnet_path.join("shared").join("Microsoft.NETCore.App");
     if dotnet_check_path.exists() {
-        app.emit("status-bar-log", "Dotnet runtime already installed")
+        app.emit("status-bar-log", "backend.dotnet.already_installed")
             .unwrap();
         return Ok(true);
     }
@@ -398,12 +393,12 @@ pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result
     // Check if we need to download (file doesn't exist or is invalid)
     let need_download = if zip_path.exists() {
         if is_valid_zip(&zip_path) {
-            app.emit("status-bar-log", "Using cached .NET Runtime...")
+            app.emit("status-bar-log", "backend.dotnet.using_cached")
                 .unwrap();
             false
         } else {
             // Cached file is corrupted, delete and re-download
-            app.emit("status-bar-log", "Cached file corrupted, re-downloading...")
+            app.emit("status-bar-log", "backend.dotnet.cached_corrupted")
                 .unwrap();
             let _ = fs::remove_file(&zip_path);
             true
@@ -416,12 +411,12 @@ pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result
         download_dotnet_runtime(app, &zip_path)?;
     }
 
-    app.emit("status-bar-log", "Extracting .NET Runtime...")
+    app.emit("status-bar-log", "backend.dotnet.extracting")
         .unwrap();
 
     // Try to extract, if it fails due to corrupted file, retry download once
     if extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap()).is_err() {
-        app.emit("status-bar-log", "Extraction failed, retrying download...")
+        app.emit("status-bar-log", "backend.dotnet.extraction_retry")
             .unwrap();
 
         // Delete corrupted file and clean up partial extraction
@@ -435,13 +430,13 @@ pub fn install_dotnet_runtime(app: &AppHandle, install_path: &PathBuf) -> Result
         // Retry download and extract
         download_dotnet_runtime(app, &zip_path)?;
 
-        app.emit("status-bar-log", "Extracting .NET Runtime...")
+        app.emit("status-bar-log", "backend.dotnet.extracting")
             .unwrap();
         extract_zip_to_directory(&zip_path_str, dotnet_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Extraction failed after retry: {}", e))?;
     }
 
-    app.emit("status-bar-log", ".NET Runtime installed")
+    app.emit("status-bar-log", "backend.dotnet.installed")
         .unwrap();
 
     Ok(true)

@@ -6,13 +6,14 @@ use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::ue4ss::ue4ss_integrate::{install_ue4ss, uninstall_ue4ss};
 use crate::integrator::{ModInfo, ReadSeek};
 use anyhow::{Context, Result};
+use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, Read};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
 use crate::uasset_utils::asset_registry::{
-    AssetRegistry, Dependencies, Names, Readable as _, Store, Writable as _,
+    AssetRegistry, Dependencies, Names, Readable as _, Store,
 };
 use crate::uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
@@ -170,35 +171,45 @@ impl RcPakIntegrator {
         let total_percent = 70.0f32;
         let mods_size = mods.len();
 
+        // RC 临时跳过 ue4ssl.zip 集成，仅在有传入 zip 且未勾选跳过时安装
         if !skip_ue4ss {
-            app.emit("status-bar-log", "Installing UE4SS...").unwrap();
-            install_ue4ss(&self.installation.binaries_directory(), ue4ss_zip_path)?;
+            if let Some(zip_path) = ue4ss_zip_path {
+                app.emit("status-bar-log", "backend.install.ue4ss").unwrap();
+                install_ue4ss(&self.installation.binaries_directory(), Some(zip_path))?;
+            }
         }
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
             app.emit(
                 "status-bar-log",
-                format!("Start Process Mod: {} ...", mod_info.name),
+                json!({ "key": "backend.install.process_mod_start", "name": mod_info.name }),
             )
             .unwrap();
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             app.emit("status-bar-percent", current_percent).unwrap();
 
             if let Err(e) = self.process_mod(mod_info) {
-                app.emit("install-error", format!("{}", mod_info.name)).unwrap();
+                app.emit(
+                    "install-error",
+                    json!({ "key": "backend.install.mod_failed", "name": mod_info.name }),
+                )
+                .unwrap();
                 return Err(e);
             }
-            app.emit("status-bar-log", format!("Process Mod: {} Success", mod_info.name))
-                .unwrap();
+            app.emit(
+                "status-bar-log",
+                json!({ "key": "backend.install.process_mod_success", "name": mod_info.name }),
+            )
+            .unwrap();
         }
 
-        app.emit("status-bar-log", "Write Mod...").unwrap();
+        app.emit("status-bar-log", "backend.install.write_mod").unwrap();
         app.emit("status-bar-percent", 90).unwrap();
 
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
-        app.emit("status-bar-log", "Install Mod Success").unwrap();
+        app.emit("status-bar-log", "backend.install.success").unwrap();
         app.emit("status-bar-percent", 100).unwrap();
 
         let mod_pak_path = self.installation.paks_path().join(self.installation.mod_pak_name());

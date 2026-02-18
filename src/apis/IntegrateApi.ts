@@ -1,6 +1,7 @@
 import {t} from "i18next";
 import {message} from "antd";
-import {emitEvent, onceEvent} from "@/events";
+import { emitEvent, onceEvent } from "@/events";
+import type { EventPayload } from "@/events";
 import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
@@ -90,8 +91,9 @@ export class IntegrateApi  {
             });
             await onceEvent('install-error', async (errorMsg) => {
                 await emitEvent("status-bar-percent", 0);
-                await emitEvent("app-error", errorMsg || "Unknown error");
-                reject(new Error(errorMsg || "Unknown error"));
+                const payload = errorMsg ?? "Unknown error";
+                await emitEvent("app-error", payload as EventPayload<'app-error'>);
+                reject(new Error(typeof payload === 'string' ? payload : payload.key));
             });
         });
     }

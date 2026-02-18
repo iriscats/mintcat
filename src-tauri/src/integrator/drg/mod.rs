@@ -33,17 +33,22 @@ fn do_install_mods(
     let mut mods: Vec<ModInfo> =
         serde_json::from_str(mod_list_json).context("Failed to parse mod list")?;
 
-    app.emit("status-bar-log", "Start Install...").unwrap();
+    app.emit("status-bar-log", "backend.install.start").unwrap();
     app.emit("status-bar-percent", 5).unwrap();
-    app.emit("status-bar-log", "Load Mods ...").unwrap();
+    app.emit("status-bar-log", "backend.install.load_mods").unwrap();
     app.emit("status-bar-percent", 10).unwrap();
 
-    let ue4ss_zip = ue4ss_zip_path.map(PathBuf::from);
+    let is_rc = game_path.ends_with("RogueCore-Windows.pak");
+    let ue4ss_zip = if is_rc {
+        None
+    } else {
+        ue4ss_zip_path.map(PathBuf::from)
+    };
 
-    if game_path.ends_with("RogueCore-Windows.pak") {
+    if is_rc {
         let integrator = drgrc::pak_integrator::RcPakIntegrator::new(game_path)
             .context("Failed to initialize RC integrator")?;
-        integrator.install(app.clone(), &mut mods, skip_ue4ss, ue4ss_zip.as_deref())?;
+        integrator.install(app.clone(), &mut mods, skip_ue4ss, None)?;
     } else {
         let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
         let drg_zip = drg_zip_path.map(PathBuf::from);
@@ -115,15 +120,15 @@ pub fn find_game_pak(game_name: Option<String>) -> String {
 pub async fn install_dotnet_runtime(app: AppHandle, game_path: String) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let installation = DRGInstallation::from_pak_path(&game_path)
-            .map_err(|e| format!("Invalid game path: {:#}", e))?;
+            .map_err(|_| "backend.error.invalid_game_path".to_string())?;
 
         let binaries_path = installation.binaries_directory();
 
         ue4ss_integrate::install_dotnet_runtime(&app, &binaries_path)
-            .map_err(|e| format!("Failed to install .NET runtime: {:#}", e))
+            .map_err(|_| "backend.error.dotnet_install_failed".to_string())
     })
     .await
-    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|_| "backend.error.task_join".to_string())?
 }
 
 /// Check if a directory is a valid unpacked mod directory
@@ -182,17 +187,26 @@ fn get_pak_files(pak_path: &str) -> anyhow::Result<Vec<String>> {
     Ok(files)
 }
 
+/// Content prefix for unpacked mod path (lowercase): "fsd" or "roguecore"
+fn content_prefix_for_game(game_name: Option<&str>) -> &'static str {
+    match game_name {
+        Some(name) if name.eq_ignore_ascii_case("rc") => "roguecore",
+        _ => "fsd",
+    }
+}
+
 /// Get file list from an unpacked mod directory
-fn get_unpacked_mod_files(dir_path: &str) -> anyhow::Result<Vec<String>> {
+/// `content_prefix`: "fsd" or "roguecore", produces pak-style path {prefix}/content/...
+fn get_unpacked_mod_files(dir_path: &str, content_prefix: &str) -> anyhow::Result<Vec<String>> {
     let path = std::path::Path::new(dir_path);
     let content_path = path.join("Content");
-    
+
     if !content_path.is_dir() {
         anyhow::bail!("Content directory not found in unpacked mod: {}", dir_path);
     }
-    
+
     let mut files = Vec::new();
-    
+
     for entry in WalkDir::new(&content_path)
         .follow_links(true)
         .into_iter()
@@ -202,35 +216,41 @@ fn get_unpacked_mod_files(dir_path: &str) -> anyhow::Result<Vec<String>> {
         if entry_path.is_dir() {
             continue;
         }
-        
+
         // Get relative path from Content directory
         if let Ok(relative) = entry_path.strip_prefix(&content_path) {
-            // Construct pak-style path: FSD/Content/...
             let pak_path = format!(
-                "fsd/content/{}",
+                "{}/content/{}",
+                content_prefix.to_lowercase(),
                 relative.to_string_lossy().replace('\\', "/").to_lowercase()
             );
             files.push(pak_path);
         }
     }
-    
+
     Ok(files)
 }
 
 /// Check for file conflicts between mods
 /// Returns a list of mods that have conflicts with other mods
+/// `game_name`: current active game name (e.g. "drg" or "rc") for unpacked mod path prefix
 #[tauri::command]
-pub fn check_mod_conflicts(mod_list_json: String) -> Result<Vec<ModConflict>, String> {
+pub fn check_mod_conflicts(
+    mod_list_json: String,
+    game_name: Option<String>,
+) -> Result<Vec<ModConflict>, String> {
     let mods: Vec<ConflictCheckModInfo> = serde_json::from_str(&mod_list_json)
-        .map_err(|e| format!("Failed to parse mod list: {}", e))?;
-    
+        .map_err(|_| "backend.error.parse_mod_list".to_string())?;
+
+    let content_prefix = content_prefix_for_game(game_name.as_deref());
+
     // Map from file path to list of mod IDs that contain this file
     let mut file_to_mods: HashMap<String, Vec<i64>> = HashMap::new();
-    
+
     // Process each mod
     for mod_info in &mods {
         let files = if mod_info.is_unpacked {
-            get_unpacked_mod_files(&mod_info.cache_path)
+            get_unpacked_mod_files(&mod_info.cache_path, content_prefix)
         } else {
             get_pak_files(&mod_info.cache_path)
         };

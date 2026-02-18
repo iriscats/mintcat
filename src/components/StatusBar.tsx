@@ -45,16 +45,20 @@ function StatusBar() {
         }
     };
 
-    // ✅ 自动清理的状态栏日志监听器
+    // ✅ 自动清理的状态栏日志监听器（支持 backend.* key 与 { key, ...params } 多语言）
     useEventListener('status-bar-log', (msg) => {
-        // 支持向后兼容：处理字符串或对象格式
+        let text: string;
         if (typeof msg === 'string') {
-            setMessage(msg);
-            setLogLevel('info');
+            text = msg.startsWith('backend.') ? t(msg) : msg;
+        } else if (msg && typeof msg === 'object' && 'key' in msg && typeof (msg as { key: string }).key === 'string') {
+            const { key, ...params } = msg as { key: string; [k: string]: unknown };
+            text = t(key, params as Record<string, string>);
         } else {
-            setMessage(msg.message);
-            setLogLevel(msg.level || 'info');
+            const raw = (msg as { message?: string })?.message ?? String(msg);
+            text = raw.startsWith('backend.') ? t(raw) : raw;
         }
+        setMessage(text);
+        setLogLevel((msg && typeof msg === 'object' && 'level' in msg) ? ((msg as { level?: LogLevel }).level || 'info') : 'info');
 
         // 清除之前的定时器
         if (timerRef.current) {

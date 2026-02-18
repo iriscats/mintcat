@@ -13,7 +13,7 @@ fn get_asset_cache_dir(app: AppHandle) -> Result<String, String> {
         .app_cache_dir()
         .map_err(|e| e.to_string())?;
     path.to_str()
-        .ok_or_else(|| "Invalid path".to_string())
+        .ok_or_else(|| "backend.error.invalid_path".to_string())
         .map(|s| s.to_string())
 }
 

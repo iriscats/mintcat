@@ -48,8 +48,8 @@ async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
  */
 @Task({
     type: 'mod_install',
-    name: '模组安装',
-    description: '将模组安装到游戏目录',
+    name: t('Mod installation'),
+    description: t('Install mods to game directory'),
     schema: null,
     estimatedDuration: 120
 })
@@ -64,21 +64,21 @@ export class ModInstallTask implements ITask {
         const settings = await StorageAPI.getSettings();
 
         // Step 1: Validate game environment
-        await context.setStep('验证游戏环境', 1, TOTAL_STEPS);
-        await context.setMessage('正在检查游戏路径...');
+        await context.setStep(t('Validate game environment'), 1, TOTAL_STEPS);
+        await context.setMessage(t('Checking game path...'));
 
         if (!await IntegrateApi.checkGamePath()) {
             throw new Error(t('Game Path Not Found'));
         }
 
-        await context.setMessage('正在检查游戏是否运行中...');
+        await context.setMessage(t('Checking if game is running...'));
         if (await IntegrateApi.checkSteamGame()) {
             throw new Error(t('Game Not Closed'));
         }
 
         // Step 2: Load mod configuration
-        await context.setStep('加载模组配置', 2, TOTAL_STEPS);
-        await context.setMessage('正在读取配置文件...');
+        await context.setStep(t('Load mod configuration'), 2, TOTAL_STEPS);
+        await context.setMessage(t('Reading configuration...'));
 
         const profilesDAO = await StorageAPI.getProfiles();
         const activeProfileData = await profileVM.getActiveProfileData();
@@ -88,10 +88,10 @@ export class ModInstallTask implements ITask {
         const enabledProfileMods = profileMods.filter(pm => pm.isEnabled);
 
         if (enabledProfileMods.length === 0) {
-            throw new Error('没有可安装的模组');
+            throw new Error(t('No mods to install'));
         }
 
-        await context.setMessage(`找到 ${enabledProfileMods.length} 个已启用的模组`);
+        await context.setMessage(`${t('Found')} ${enabledProfileMods.length} ${t('enabled mods')}`);
 
         // Get complete mod data for enabled mods
         const modsDAO = await StorageAPI.getMods();
@@ -104,7 +104,7 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 3: Check and update mods (parallel download)
-        await context.setStep('检查模组更新', 3, TOTAL_STEPS);
+        await context.setStep(t('Check Mod Updates'), 3, TOTAL_STEPS);
         let editTime = await profileVM.getActiveProfileEditTime();
         const totalMods = enabledMods.length;
 
@@ -117,7 +117,7 @@ export class ModInstallTask implements ITask {
             }
 
             const item = enabledMods[i];
-            await context.setMessage(`检查模组 (${i + 1}/${totalMods}): ${item.displayName}`);
+            await context.setMessage(`${t('Checking mod')} (${i + 1}/${totalMods}): ${item.displayName}`);
 
             const cachePath = item.download?.cachePath || "";
             const pathExists = cachePath ? await exists(cachePath) : false;
@@ -160,7 +160,7 @@ export class ModInstallTask implements ITask {
 
         // Parallel download all mods that need updating
         if (modsNeedingDownload.length > 0) {
-            await context.setMessage(`并行下载 ${modsNeedingDownload.length} 个模组...`);
+            await context.setMessage(`${t('Downloading mods in parallel...')} (${modsNeedingDownload.length} ${t('mods')})`);
 
             const { errors } = await ModUpdateService.batchDownloadModFiles(modsNeedingDownload, 3);
 
@@ -190,7 +190,7 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 4: Validate mod files
-        await context.setStep('验证模组文件', 4, TOTAL_STEPS);
+        await context.setStep(t('Validate mod files'), 4, TOTAL_STEPS);
         for (let i = 0; i < totalMods; i++) {
             if (context.checkCancelled()) {
                 throw new Error('Task cancelled');
@@ -198,7 +198,7 @@ export class ModInstallTask implements ITask {
 
             const item = enabledMods[i];
             const cachePath = item.download?.cachePath || "";
-            await context.setMessage(`验证文件 (${i + 1}/${totalMods}): ${item.displayName}`);
+            await context.setMessage(`${t('Verifying file')} (${i + 1}/${totalMods}): ${item.displayName}`);
 
             // Validate mod cache
             if (!await ModUpdateService.checkLocalModCache(item)) {
@@ -207,8 +207,8 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 5: Check installation status
-        await context.setStep('检查安装状态', 5, TOTAL_STEPS);
-        await context.setMessage('正在检查现有安装...');
+        await context.setStep(t('Check installation status'), 5, TOTAL_STEPS);
+        await context.setMessage(t('Checking existing installation...'));
 
         let installTime = await profileVM.getActiveProfileInstallTime();
         if (installTime < editTime) {
@@ -230,7 +230,7 @@ export class ModInstallTask implements ITask {
 
         // Handle old version detection
         if (installType === "old_version_mint_installed") {
-            await context.setMessage('检测到旧版本安装文件', 'warning');
+            await context.setMessage(t('Detected old version installation'), 'warning');
             const result = await MessageBox.confirm({
                 title: t("Installation Warning"),
                 content: t("Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?"),
@@ -245,8 +245,8 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 6: Uninstall old mods
-        await context.setStep('卸载旧版本', 6, TOTAL_STEPS);
-        await context.setMessage('正在卸载旧版本模组...');
+        await context.setStep(t('Uninstall old version'), 6, TOTAL_STEPS);
+        await context.setMessage(t('Uninstalling old mods...'));
 
         // In Custom mode, don't delete UE4SS; otherwise delete it
         await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
@@ -256,10 +256,10 @@ export class ModInstallTask implements ITask {
         const isRc = activeGame?.name?.toLowerCase() === 'rc';
         let assetPaths: Awaited<ReturnType<typeof getInternalAssetPaths>> = null;
         if (!isRc) {
-            await context.setStep('检查内部资产', 7, TOTAL_STEPS);
+            await context.setStep(t('Check internal assets'), 7, TOTAL_STEPS);
             assetPaths = await getInternalAssetPaths();
             if (!assetPaths) {
-                await context.setMessage('正在下载模组管理器资产...');
+                await context.setMessage(t('Downloading mod manager assets...'));
                 assetPaths = await ensureInternalAssets({
                     setStep: context.setStep.bind(context),
                     setMessage: context.setMessage.bind(context),
@@ -270,8 +270,8 @@ export class ModInstallTask implements ITask {
         }
 
         // Step 8: Install mods
-        await context.setStep('安装模组', 8, TOTAL_STEPS);
-        await context.setMessage(`准备安装 ${enabledMods.length} 个模组...`);
+        await context.setStep(t('Install mods'), 8, TOTAL_STEPS);
+        await context.setMessage(`${t('Preparing to install mods...')} (${enabledMods.length} ${t('mods')})`);
 
         const installModList = [];
         for (const item of enabledMods) {
@@ -289,7 +289,7 @@ export class ModInstallTask implements ITask {
             });
         }
 
-        await context.setMessage('正在写入模组文件...');
+        await context.setMessage(t('Writing mod files...'));
         // RC (Rogue Core) 不需要 DRG.zip 的 mint 注入，不传 drgZipPath；RC 临时跳过内部资产时 assetPaths 为 null
         const result = await IntegrateApi.install(
             drgPakPath,
