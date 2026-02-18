@@ -61,12 +61,6 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             return;
         }
 
-        // 检查是否是 RC 版本
-        if (selectedGame.name.toLowerCase().includes('rc')) {
-            message.warning(t("RC version is not supported"));
-            return;
-        }
-
         try {
             await dialogGameService.setGameActive(selectedGameId);
 

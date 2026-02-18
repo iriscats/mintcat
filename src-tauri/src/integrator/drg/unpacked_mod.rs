@@ -72,8 +72,9 @@ impl UnpackedMod {
         false
     }
 
-    /// Load all files from the unpacked mod directory
-    pub fn load_files(&mut self) -> Result<()> {
+    /// Load all files from the unpacked mod directory.
+    /// `content_prefix`: pak 路径前缀，如 "FSD" 或 "RogueCore"，生成路径为 `{content_prefix}/Content/...`
+    pub fn load_files(&mut self, content_prefix: &str) -> Result<()> {
         self.files.clear();
 
         // Find the Content directory
@@ -103,8 +104,12 @@ impl UnpackedMod {
                 .strip_prefix(&content_path)
                 .with_context(|| format!("Failed to get relative path for: {:?}", path))?;
 
-            // Construct the pak-style path: FSD/Content/...
-            let pak_path = format!("FSD/Content/{}", relative_path.to_string_lossy().replace('\\', "/"));
+            // Construct the pak-style path: {content_prefix}/Content/...
+            let pak_path = format!(
+                "{}/Content/{}",
+                content_prefix,
+                relative_path.to_string_lossy().replace('\\', "/")
+            );
 
             // Read the file content
             let content = fs::read(path)

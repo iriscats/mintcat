@@ -13,20 +13,12 @@ pub enum DRGInstallationType {
     Xbox,
 }
 
-/// Steam App IDs for DRG and Rogue Core Playtest
 const STEAM_APP_ID_DRG: u32 = 548430;
-const STEAM_APP_ID_RC_PLAYTEST: u32 = 2860770;
 
 impl DRGInstallation {
     /// Find DRG (Deep Rock Galactic) installation via Steam
     pub fn find() -> Option<Self> {
         Self::find_by_steam_app_id(STEAM_APP_ID_DRG, "FSD/Content/Paks/FSD-WindowsNoEditor.pak")
-    }
-
-    /// Find Rogue Core Playtest installation via Steam
-    /// Path: .../Deep Rock Galactic Rogue Core Playtest/RogueCore/Content/Paks/RogueCore-Windows.pak
-    pub fn find_rc() -> Option<Self> {
-        Self::find_by_steam_app_id(STEAM_APP_ID_RC_PLAYTEST, "RogueCore/Content/Paks/RogueCore-Windows.pak")
     }
 
     fn find_by_steam_app_id(app_id: u32, pak_relative_path: &str) -> Option<Self> {
@@ -62,7 +54,7 @@ impl DRGInstallation {
         match name_str {
             "FSD-WindowsNoEditor.pak" => DRGInstallationType::Steam,
             "FSD-WinGDK.pak" => DRGInstallationType::Xbox,
-            _ => panic!("Unknown installation type: {}", name_str),
+            _ => panic!("Unknown DRG installation type (not FSD): {}", name_str),
         }
     }
 
@@ -71,6 +63,21 @@ impl DRGInstallation {
             DRGInstallationType::Steam => "FSD-WindowsNoEditor_Mods.pak".parse().unwrap(),
             DRGInstallationType::Xbox => "FSD-WinGDK_Mods.pak".parse().unwrap(),
         }
+    }
+
+    /// Pak 内 AssetRegistry 路径（仅 FSD）
+    pub fn asset_registry_pak_path(&self) -> &'static str {
+        "FSD/AssetRegistry.bin"
+    }
+
+    /// Content 前缀，用于 unpacked mod 路径：FSD/Content/...
+    pub fn content_prefix(&self) -> &'static str {
+        "FSD"
+    }
+
+    /// 用于 strip_prefix 的 content 路径
+    pub fn content_prefix_for_path(&self) -> &'static str {
+        "FSD/Content"
     }
 
     pub fn binaries_directory(&self) -> PathBuf {

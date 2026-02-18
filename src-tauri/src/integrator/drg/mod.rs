@@ -1,6 +1,7 @@
 use crate::integrator::drg::installation::DRGInstallation;
 use crate::integrator::drg::pak_integrator::PakIntegrator;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
+use crate::integrator::drgrc;
 use crate::integrator::ue4ss::ue4ss_integrate;
 use crate::integrator::ModInfo;
 use anyhow::Context;
@@ -14,9 +15,11 @@ use walkdir::WalkDir;
 
 mod game_pak_patch;
 pub(crate) mod installation;
-mod mod_bundle_writer;
+pub(crate) mod mod_bundle_writer;
 pub mod pak_integrator;
 mod raw_asset;
+#[cfg(test)]
+mod repak_rc_test;
 pub mod unpacked_mod;
 
 fn do_install_mods(
@@ -27,20 +30,25 @@ fn do_install_mods(
     ue4ss_zip_path: Option<&str>,
     drg_zip_path: Option<&str>,
 ) -> anyhow::Result<()> {
-    let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
-
-    app.emit("status-bar-log", "Start Install...").unwrap();
-    app.emit("status-bar-percent", 5).unwrap();
-
     let mut mods: Vec<ModInfo> =
         serde_json::from_str(mod_list_json).context("Failed to parse mod list")?;
 
+    app.emit("status-bar-log", "Start Install...").unwrap();
+    app.emit("status-bar-percent", 5).unwrap();
     app.emit("status-bar-log", "Load Mods ...").unwrap();
     app.emit("status-bar-percent", 10).unwrap();
 
     let ue4ss_zip = ue4ss_zip_path.map(PathBuf::from);
-    let drg_zip = drg_zip_path.map(PathBuf::from);
-    integrator.install(app.clone(), &mut mods, skip_ue4ss, ue4ss_zip.as_deref(), drg_zip.as_deref())?;
+
+    if game_path.ends_with("RogueCore-Windows.pak") {
+        let integrator = drgrc::pak_integrator::RcPakIntegrator::new(game_path)
+            .context("Failed to initialize RC integrator")?;
+        integrator.install(app.clone(), &mut mods, skip_ue4ss, ue4ss_zip.as_deref())?;
+    } else {
+        let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
+        let drg_zip = drg_zip_path.map(PathBuf::from);
+        integrator.install(app.clone(), &mut mods, skip_ue4ss, ue4ss_zip.as_deref(), drg_zip.as_deref())?;
+    }
 
     Ok(())
 }
@@ -72,25 +80,35 @@ pub fn install_mods(
 
 #[tauri::command]
 pub fn uninstall_mods(game_path: String, is_delete_ue4ss: bool) -> Result<bool, String> {
-    PakIntegrator::uninstall(game_path, is_delete_ue4ss)
-        .map(|_| true)
-        .map_err(|e| format!("{:#}", e))
+    if game_path.ends_with("RogueCore-Windows.pak") {
+        drgrc::pak_integrator::RcPakIntegrator::uninstall(game_path, is_delete_ue4ss)
+            .map(|_| true)
+            .map_err(|e| format!("{:#}", e))
+    } else {
+        PakIntegrator::uninstall(game_path, is_delete_ue4ss)
+            .map(|_| true)
+            .map_err(|e| format!("{:#}", e))
+    }
 }
 
 #[tauri::command]
 pub fn check_installed(game_path: String, install_time: u64) -> Result<String, String> {
-    PakIntegrator::check_installed(game_path, install_time).map_err(|e| format!("{:#}", e))
+    if game_path.ends_with("RogueCore-Windows.pak") {
+        drgrc::pak_integrator::RcPakIntegrator::check_installed(game_path, install_time)
+            .map_err(|e| format!("{:#}", e))
+    } else {
+        PakIntegrator::check_installed(game_path, install_time).map_err(|e| format!("{:#}", e))
+    }
 }
 
 #[tauri::command]
 pub fn find_game_pak(game_name: Option<String>) -> String {
-    let installation = match game_name.as_deref() {
-        Some("rc") => DRGInstallation::find_rc(),
-        _ => DRGInstallation::find(), // "drg" or None -> DRG
+    let path = match game_name.as_deref() {
+        Some("rc") => drgrc::installation::RcInstallation::find_rc()
+            .and_then(|i| i.pak_path.to_str().map(String::from)),
+        _ => DRGInstallation::find().and_then(|i| i.pak_path.to_str().map(String::from)),
     };
-    installation
-        .and_then(|i| i.pak_path.to_str().map(|s| s.to_string()))
-        .unwrap_or_default()
+    path.unwrap_or_default()
 }
 
 #[tauri::command]

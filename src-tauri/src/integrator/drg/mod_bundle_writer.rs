@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use repak::PakWriter;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, Write};
-use uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
+use crate::uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
 use unreal_asset::Asset;
 
 #[derive(Debug, Default)]

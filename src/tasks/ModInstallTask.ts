@@ -252,16 +252,21 @@ export class ModInstallTask implements ITask {
         await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
         // Step 7: Ensure internal assets (UE4SSL.zip, DRG.zip) - force download if missing
-        await context.setStep('检查内部资产', 7, TOTAL_STEPS);
-        let assetPaths = await getInternalAssetPaths();
-        if (!assetPaths) {
-            await context.setMessage('正在下载模组管理器资产...');
-            assetPaths = await ensureInternalAssets({
-                setStep: context.setStep.bind(context),
-                setMessage: context.setMessage.bind(context),
-                updateProgress: context.updateProgress.bind(context),
-                checkCancelled: context.checkCancelled.bind(context),
-            });
+        // RC 临时跳过检查内部资产；是否 RC 以数据库中当前活跃游戏的 name 为准
+        const isRc = activeGame?.name?.toLowerCase() === 'rc';
+        let assetPaths: Awaited<ReturnType<typeof getInternalAssetPaths>> = null;
+        if (!isRc) {
+            await context.setStep('检查内部资产', 7, TOTAL_STEPS);
+            assetPaths = await getInternalAssetPaths();
+            if (!assetPaths) {
+                await context.setMessage('正在下载模组管理器资产...');
+                assetPaths = await ensureInternalAssets({
+                    setStep: context.setStep.bind(context),
+                    setMessage: context.setMessage.bind(context),
+                    updateProgress: context.updateProgress.bind(context),
+                    checkCancelled: context.checkCancelled.bind(context),
+                });
+            }
         }
 
         // Step 8: Install mods
@@ -285,13 +290,13 @@ export class ModInstallTask implements ITask {
         }
 
         await context.setMessage('正在写入模组文件...');
-        // In Custom mode, skip UE4SS installation (user manages it themselves)
+        // RC (Rogue Core) 不需要 DRG.zip 的 mint 注入，不传 drgZipPath；RC 临时跳过内部资产时 assetPaths 为 null
         const result = await IntegrateApi.install(
             drgPakPath,
             JSON.stringify(installModList),
             isCustomMode,
-            assetPaths.ue4ssZipPath,
-            assetPaths.drgZipPath
+            assetPaths?.ue4ssZipPath,
+            isRc ? undefined : assetPaths?.drgZipPath
         );
 
         if (!result) {

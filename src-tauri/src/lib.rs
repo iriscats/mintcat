@@ -1,5 +1,6 @@
 pub mod capability;
 pub mod integrator;
+pub mod uasset_utils;
 
 use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 //use tauri_plugin_mcp;

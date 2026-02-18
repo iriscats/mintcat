@@ -64,7 +64,14 @@ walkdir = "2"
 # trumank
 repak = { git = "https://github.com/trumank/repak", features = ["oodle"] }
 unreal_asset = { git = "https://github.com/trumank/unrealmodding", branch = "patches" }
-uasset_utils = { git = "https://github.com/trumank/uasset_utils" }
+indexmap = "2"
+byteorder = "1.5"
+typed-path = "0.8"
+cityhasher = "0.1"
+unicase = "2.7"
 
 steamlocate = "2.0.1"
+
+[dev-dependencies]
+tempfile = "3"
 

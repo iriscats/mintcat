@@ -19,12 +19,10 @@ use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
-use uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
-use uasset_utils::paths::PakPath;
+use crate::uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
+use crate::uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
-
-static FSD_AR_PATH: &str = "FSD/AssetRegistry.bin";
 
 pub struct PakIntegrator {
     installation: DRGInstallation,
@@ -36,22 +34,25 @@ pub struct PakIntegrator {
     init_cave_assets: HashSet<String>,
 }
 
-fn format_soft_class(path: &Path) -> String {
-    let name = path.file_stem().unwrap().to_string_lossy();
-    format!(
-        "/Game/{}{}_C",
-        path.strip_prefix("FSD/Content")
-            .unwrap()
+impl PakIntegrator {
+    fn format_soft_class(&self, path: &Path) -> String {
+        let prefix = self.installation.content_prefix_for_path();
+        let name = path.file_stem().unwrap().to_string_lossy();
+        let relative = path
+            .strip_prefix(prefix)
+            .unwrap_or(path)
             .to_string_lossy()
             .strip_suffix("uasset")
-            .unwrap(),
-        name
-    )
-}
-
-impl PakIntegrator {
+            .unwrap_or(&*path.to_string_lossy())
+            .to_string();
+        format!("/Game/{}{}_C", relative, name)
+    }
     pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self> {
         let pak_path = fsd_path_pak.as_ref();
+        let installation = DRGInstallation::from_pak_path(pak_path)
+            .context("Failed to determine game installation")?;
+        let ar_path = installation.asset_registry_pak_path();
+
         let mut fsd_pak_reader = BufReader::new(
             fs::File::open(pak_path)
                 .with_context(|| format!("Failed to open game pak: {:?}", pak_path))?,
@@ -62,8 +63,8 @@ impl PakIntegrator {
 
         let asset_registry = AssetRegistry::read(&mut Cursor::new(
             fsd_pak
-                .get(FSD_AR_PATH, &mut fsd_pak_reader)
-                .context("Failed to read AssetRegistry.bin from game pak")?,
+                .get(ar_path, &mut fsd_pak_reader)
+                .with_context(|| format!("Failed to read AssetRegistry.bin from game pak (path: {})", ar_path))?,
         ))
         .context("Failed to parse AssetRegistry")?;
 
@@ -74,8 +75,6 @@ impl PakIntegrator {
             &mut deferred_assets,
         )?;
 
-        let installation = DRGInstallation::from_pak_path(&fsd_path_pak)
-            .context("Failed to determine DRG installation")?;
         let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
         let bundle = ModBundleWriter::new(
             BufWriter::new(
@@ -176,26 +175,29 @@ impl PakIntegrator {
             }
         }
 
-        app.emit("status-bar-log", "Patch Game Pak...").unwrap();
-        app.emit("status-bar-percent", 80).unwrap();
+        if drg_zip_path.is_some() {
+            app.emit("status-bar-log", "Patch Game Pak...").unwrap();
+            app.emit("status-bar-percent", 80).unwrap();
 
-        let drg_zip = drg_zip_path
-            .ok_or_else(|| anyhow::anyhow!("DRG asset zip path is required (DRG.zip)"))?;
-        let mut mint_files = HashMap::new();
-        Self::collect_mint_files_from_drg_zip(drg_zip, &mut mint_files)?;
-        Self::write_hook_dll_from_drg_zip(drg_zip, &self.installation.binaries_directory())?;
+            let drg_zip = drg_zip_path
+                .ok_or_else(|| anyhow::anyhow!("DRG asset zip path is required (DRG.zip)"))?;
+            let mut mint_files = HashMap::new();
+            Self::collect_mint_files_from_drg_zip(drg_zip, &mut mint_files)?;
+            Self::write_hook_dll_from_drg_zip(drg_zip, &self.installation.binaries_directory())?;
 
-        self.apply_mint_patch(&mut mint_files)?;
-        self.apply_pcb_patch()?;
-        self.apply_sandbox_patch()?;
-        //self.apply_modding_tab_patch()?;
-        //self.apply_escape_menu_patch()?;
-        //self.apply_server_list_entry_patch()?;
+            self.apply_mint_patch(&mut mint_files)?;
+            self.apply_pcb_patch()?;
+            self.apply_sandbox_patch()?;
 
-        app.emit("status-bar-log", "Write Mod...").unwrap();
-        app.emit("status-bar-percent", 90).unwrap();
+            app.emit("status-bar-log", "Write Mod...").unwrap();
+            app.emit("status-bar-percent", 90).unwrap();
 
-        self.write_mint_files(&mut mint_files)?;
+            self.write_mint_files(&mut mint_files)?;
+        } else {
+            app.emit("status-bar-log", "Write Mod...").unwrap();
+            app.emit("status-bar-percent", 90).unwrap();
+        }
+
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
@@ -253,7 +255,7 @@ impl PakIntegrator {
             .with_context(|| format!("Failed to create unpacked mod: {:?}", mod_path))?;
 
         unpacked_mod
-            .load_files()
+            .load_files(self.installation.content_prefix())
             .with_context(|| format!("Failed to load unpacked mod files: {:?}", mod_path))?;
 
         // Process init assets (InitSpaceRig.uasset, InitCave.uasset)
@@ -359,11 +361,11 @@ impl PakIntegrator {
                 let lower = filename.to_string_lossy().to_lowercase();
                 if lower == "initspacerig.uasset" {
                     self.init_space_rig_assets
-                        .insert(format_soft_class(&*pak_file.0));
+                        .insert(self.format_soft_class(&*pak_file.0));
                 }
                 if lower == "initcave.uasset" {
                     self.init_cave_assets
-                        .insert(format_soft_class(&*pak_file.0));
+                        .insert(self.format_soft_class(&*pak_file.0));
                 }
             }
         }
@@ -622,7 +624,7 @@ impl PakIntegrator {
             .write(&mut buf)
             .context("Failed to serialize asset registry")?;
         self.bundle
-            .write_file(&buf, FSD_AR_PATH)
+            .write_file(&buf, self.installation.asset_registry_pak_path())
             .context("Failed to write asset registry to mod pak")?;
         Ok(())
     }
