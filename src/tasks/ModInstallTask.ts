@@ -76,6 +76,24 @@ export class ModInstallTask implements ITask {
             throw new Error(t('Game Not Closed'));
         }
 
+        let gameDAO = await StorageAPI.getGames();
+        let activeGame = await gameDAO.getActiveGame();
+        let drgPakPath = activeGame?.installPath;
+        if (drgPakPath) {
+            const { hasForeign, fileNames } = await IntegrateApi.checkForeignPaksInPaksDir(drgPakPath);
+            if (hasForeign) {
+                const confirm = await MessageBox.confirm({
+                    title: t('Foreign paks in game dir title'),
+                    content: `${t('Foreign paks in game dir message')}\n\n${t('Detected files')}: ${fileNames.join(', ')}`,
+                    okText: t('Install anyway'),
+                    cancelText: t('Cancel'),
+                });
+                if (!confirm) {
+                    throw new Error(t('User Cancels Installation'));
+                }
+            }
+        }
+
         // Step 2: Load mod configuration
         await context.setStep(t('Load mod configuration'), 2, TOTAL_STEPS);
         await context.setMessage(t('Reading configuration...'));
@@ -215,9 +233,9 @@ export class ModInstallTask implements ITask {
             installTime = editTime;
         }
 
-        const gameDAO = await StorageAPI.getGames();
-        const activeGame = await gameDAO.getActiveGame();
-        const drgPakPath = activeGame?.installPath;
+        gameDAO = await StorageAPI.getGames();
+        activeGame = await gameDAO.getActiveGame();
+        drgPakPath = activeGame?.installPath;
         if (!drgPakPath) {
             throw new Error(t('Game Path Not Found'));
         }

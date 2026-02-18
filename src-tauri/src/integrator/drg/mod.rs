@@ -116,6 +116,65 @@ pub fn find_game_pak(game_name: Option<String>) -> String {
     path.unwrap_or_default()
 }
 
+/// Allowed .pak filenames in game Paks directory: game main pak(s) and MintCat-generated mod pak(s).
+fn allowed_pak_names_drg() -> std::collections::HashSet<&'static str> {
+    [
+        "FSD-WindowsNoEditor.pak",
+        "FSD-WinGDK.pak",
+        "FSD-WindowsNoEditor_Mods.pak",
+        "FSD-WinGDK_Mods.pak",
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// Allowed .pak filenames in RC game Paks directory.
+fn allowed_pak_names_rc() -> std::collections::HashSet<&'static str> {
+    [
+        "RogueCore-Windows.pak",
+        "RogueCore-Windows_Mods.pak",
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// Check for foreign .pak files in game Paks directory (not game nor MintCat-generated).
+/// Returns list of foreign .pak file names; empty if none or on error (e.g. path invalid).
+#[tauri::command]
+pub fn check_foreign_paks_in_paks_dir(game_path: String) -> Result<Vec<String>, String> {
+    let allowed = if game_path.ends_with("RogueCore-Windows.pak") {
+        let installation = drgrc::installation::RcInstallation::from_pak_path(&game_path)
+            .map_err(|e| format!("{:#}", e))?;
+        installation.paks_path()
+    } else {
+        let installation = DRGInstallation::from_pak_path(&game_path)
+            .map_err(|e| format!("{:#}", e))?;
+        installation.paks_path()
+    };
+
+    let allowed_names = if game_path.ends_with("RogueCore-Windows.pak") {
+        allowed_pak_names_rc()
+    } else {
+        allowed_pak_names_drg()
+    };
+
+    let entries = fs::read_dir(&allowed).map_err(|e| format!("{:#}", e))?;
+    let mut foreign = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("{:#}", e))?;
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.ends_with(".pak") && !allowed_names.contains(name) {
+                    foreign.push(name.to_string());
+                }
+            }
+        }
+    }
+    foreign.sort();
+    Ok(foreign)
+}
+
 #[tauri::command]
 pub async fn install_dotnet_runtime(app: AppHandle, game_path: String) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {

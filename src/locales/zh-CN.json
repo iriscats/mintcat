@@ -114,6 +114,7 @@
 	"Deselect All": "反选",
 	"Detect file conflicts between mods": "检测模组之间的文件冲突",
 	"Detected": "检测到",
+	"Detected files": "检测到的文件",
 	"Detected old version installation": "检测到旧版本安装文件",
 	"Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?": "检测到旧版 MINT(0.2, 0.3) 安装文件，是否卸载？",
 	"Detected the following configurations. Please select the configurations to import": "检测到存在多个配置，请按需导入配置",
@@ -344,5 +345,8 @@
 	"Version locked, switch to latest version to unlock": "版本已锁定，切换到最新版本以解锁",
 	"Version switch failed": "版本切换失败",
 	"Version switch in progress": "版本切换进行中",
-	"Writing mod files...": "正在写入模组文件..."
+	"Writing mod files...": "正在写入模组文件...",
+	"Foreign paks in game dir title": "检测到游戏 Paks 目录下的其他 pak 文件",
+	"Foreign paks in game dir message": "当前游戏 Paks 目录下存在非游戏本体且非 MintCat 生成的 pak 文件，不建议将 pak 直接放在游戏目录。建议将这些文件移动到其他目录后，通过 MintCat 的「添加 Mod」功能添加。是否仍要继续安装？",
+	"Install anyway": "仍要安装"
 }

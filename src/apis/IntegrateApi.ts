@@ -109,6 +109,15 @@ export class IntegrateApi  {
         return await invoke('find_game_pak', { gameName: gameName ?? null });
     }
 
+    /**
+     * Check if game Paks directory contains .pak files that are neither game nor MintCat-generated.
+     * @returns { hasForeign: boolean, fileNames: string[] } fileNames are the foreign .pak base names.
+     */
+    public static async checkForeignPaksInPaksDir(gamePath: string): Promise<{ hasForeign: boolean; fileNames: string[] }> {
+        const fileNames = await invoke<string[]>('check_foreign_paks_in_paks_dir', { gamePath });
+        return { hasForeign: fileNames.length > 0, fileNames };
+    }
+
     public static async launchGame() {
         const gameDAO = await StorageAPI.getGames();
         const activeGame = await gameDAO.getActiveGame();

@@ -114,6 +114,7 @@ pub fn run() {
             integrator::drg::uninstall_mods,
             integrator::drg::check_installed,
             integrator::drg::find_game_pak,
+            integrator::drg::check_foreign_paks_in_paks_dir,
             integrator::drg::install_dotnet_runtime,
             integrator::drg::is_valid_unpacked_mod,
             integrator::drg::check_mod_conflicts,

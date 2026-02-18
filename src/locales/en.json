@@ -114,6 +114,7 @@
     "Deselect All": "Deselect All",
     "Detect file conflicts between mods": "Detect file conflicts between mods",
     "Detected": "Detected",
+    "Detected files": "Detected files",
     "Detected old version installation": "Detected old version installation",
     "Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?": "Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?",
     "Detected the following configurations. Please select the configurations to import": "Detected the following configurations. Please select the configurations to import",
@@ -344,5 +345,8 @@
     "Version locked, switch to latest version to unlock": "Version locked, switch to latest version to unlock",
     "Version switch failed": "Version switch failed",
     "Version switch in progress": "Version switch in progress",
-    "Writing mod files...": "Writing mod files..."
+    "Writing mod files...": "Writing mod files...",
+    "Foreign paks in game dir title": "Other pak files found in game Paks directory",
+    "Foreign paks in game dir message": "The game Paks directory contains .pak files that are not from the game or MintCat. It is not recommended to place pak files directly in the game directory. Please move them elsewhere and add them via MintCat's \"Add Mod\". Continue with installation anyway?",
+    "Install anyway": "Install anyway"
 }
