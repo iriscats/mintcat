@@ -95,11 +95,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     /**
-     * 标记 mod 列表有未保存的变更
+     * 根据 profile 的 editTime 与 installTime 刷新「未保存变更」状态（与安装逻辑同源，避免双轨）
      */
-    private markUnsavedChanges() {
-        if (!this.state.hasUnsavedChanges) {
-            this.setState({ hasUnsavedChanges: true });
+    private async refreshUnsavedState(): Promise<void> {
+        try {
+            const profileVM = await IoC.get(ProfileViewModel);
+            const editTime = await profileVM.getActiveProfileEditTime();
+            const installTime = await profileVM.getActiveProfileInstallTime();
+            const hasUnsaved = editTime > installTime;
+            if (this.state.hasUnsavedChanges !== hasUnsaved) {
+                this.setState({ hasUnsavedChanges: hasUnsaved });
+            }
+        } catch (e) {
+            console.warn('[HomePage] refreshUnsavedState failed', e);
         }
     }
 
@@ -314,7 +322,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     await vm.removeMod(modItem.modId!);
                 }
             }
-            this.markUnsavedChanges();
             await this.updateTreeView();
             await this.updateCountLabel();
         }
@@ -332,7 +339,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
             if (modId === null) continue;
             await vm.setModEnabled(modId, isEnable);
         }
-        this.markUnsavedChanges();
         await this.updateTreeView();
         await this.updateCountLabel();
     }
@@ -397,7 +403,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onMenuBarAddModClick() {
         openWindow(AddModType.LOCAL, 0, "", async () => {
-            this.markUnsavedChanges();
             await this.updateTreeView();
             await this.updateCountLabel();
         }).then();
@@ -413,7 +418,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             const result = await taskQueueAPI.waitForTaskCompletion(taskId);
 
             if (result.status === 'completed') {
-                this.setState({ hasUnsavedChanges: false });
+                this.refreshUnsavedState();
                 message.success(t("Installation Finish"));
             } else if (result.status === 'failed') {
                 message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
@@ -450,7 +455,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const cleanedCount = await vm.cleanMissingLocalMods();
         
         if (cleanedCount > 0) {
-            this.markUnsavedChanges();
             await this.updateTreeView();
             await this.updateCountLabel();
             message.success(`${t("Clean Complete")}: ${cleanedCount} ${t("mods removed")}`);
@@ -494,7 +498,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
         this.setState({ sortOrder: order });
         const vm = await IoC.get(TreeViewModel);
         await vm.sortMods(order);
-        this.markUnsavedChanges();
         await this.updateTreeView();
     }
 
@@ -520,7 +523,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
             defaultProfile: value as string,
             loading: true,
         });
-        this.markUnsavedChanges();
 
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
@@ -717,6 +719,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             treeData: converter.treeData,
             expandedKeys: newExpandedKeys,
         });
+        await this.refreshUnsavedState();
     }
 
     @autoBind
@@ -784,7 +787,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 try {
                     await vm.removeGroup(id);
                     shouldUpdateTree = true;
-                    this.markUnsavedChanges();
                 } catch (error) {
                     console.error(`[HomePage] Delete group failed for id=${id}:`, error);
                 }
@@ -809,7 +811,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
             case "add_mod": {
                 // id 就是 folder ID，直接使用
                 await openWindow(AddModType.LOCAL, id, "", async () => {
-                    this.markUnsavedChanges();
                     await this.updateTreeView();
                     await this.updateCountLabel();
                 });
@@ -830,7 +831,6 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 await vm.removeMod(id);
                 shouldUpdateTree = true;
                 shouldUpdateCount = true;
-                this.markUnsavedChanges();
                 break;
             case "copy_link":
                 await this.handleCopyLink(id);
@@ -870,12 +870,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
         // Setup event listeners
         // 监听单个 mod 启用/禁用切换事件
         this.unlistenModEnabledChange = await listenEvent("mod-enabled-change", () => {
-            this.markUnsavedChanges();
+            this.refreshUnsavedState();
         });
 
         // 监听 mod 安装完成事件（例如从标题栏启动游戏时触发的安装）
         this.unlistenModsInstalled = await listenEvent("mods-installed", () => {
-            this.setState({ hasUnsavedChanges: false });
+            this.refreshUnsavedState();
         });
 
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
@@ -1051,7 +1051,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 onVirtualStateChange={(virtual) => {
                                     this.setState({ virtual });
                                 }}
-                                onModListChange={() => this.markUnsavedChanges()}
+                                onModListChange={() => this.refreshUnsavedState()}
                             />
                         </div>
                         <Flex className="home-footer-bar" gap={4} align="center">

@@ -159,18 +159,17 @@ function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
         setChecked(newChecked);
         setPendingEnabled(nodeData.modId, newChecked);
 
-        // 2. 立即发射事件通知标题组件更新（同步，不等待数据库）
+        // 2. 先更新数据库与 editTime（profile 配置变更），再发事件
+        // 顺序重要：HomePage 监听 mod-enabled-change 后执行 refreshUnsavedState()，若先发事件则 editTime 尚未更新，第一次点击不会显示「未保存」
+        const viewModel = await IoC.get(HomeViewModel);
+        await viewModel.setModEnabled(nodeData.modId, newChecked, nodeData.profileModId);
+
         await emitEvent("mod-enabled-change", {
             modId: nodeData.modId,
             enabled: newChecked
         });
 
-        // 3. 异步更新数据库（不清除缓存，等 treeData 刷新后自动清除）
-        // 使用 profileModId 来避免切换 profile 时的竞态条件
-        const viewModel = await IoC.get(HomeViewModel);
-        await viewModel.setModEnabled(nodeData.modId, newChecked, nodeData.profileModId);
-
-        // 4. 只更新计数标签
+        // 3. 只更新计数标签
         if (onCountLabelUpdate) {
             await onCountLabelUpdate();
         }

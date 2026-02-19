@@ -4,6 +4,7 @@ import {ProfileTreeItem} from "@/storage/db/Schema.ts";
 import type {ProfileData} from "@/storage/dao/ProfileDAO.ts";
 import { ProfileService } from "@/services/ProfileService";
 import { IoC } from "@/core/IoC";
+import { TimeUtils } from "@/utils/TimeUtils";
 
 /**
  * ProfileViewModel manages profile-level operations
@@ -217,6 +218,9 @@ export class ProfileViewModel {
         const profileData = await profileService.getActiveProfileData();
         const treeService = profileService.getTreeService();
         await treeService.saveProfileTree(root, profileData.id!);
+
+        // 更新 editTime（排序/拖拽改变了列表），使下次安装会重新打包而非误判为已安装
+        await this.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     /**
