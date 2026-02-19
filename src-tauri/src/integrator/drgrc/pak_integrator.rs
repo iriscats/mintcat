@@ -167,17 +167,19 @@ impl RcPakIntegrator {
         mods: &mut Vec<ModInfo>,
         skip_ue4ss: bool,
         ue4ss_zip_path: Option<&Path>,
+        _rc_zip_path: Option<&Path>,
     ) -> Result<()> {
         let total_percent = 70.0f32;
         let mods_size = mods.len();
 
-        // RC 临时跳过 ue4ssl.zip 集成，仅在有传入 zip 且未勾选跳过时安装
+        // 有传入 ue4ssl.zip 且未勾选跳过时安装 UE4SS
         if !skip_ue4ss {
             if let Some(zip_path) = ue4ss_zip_path {
                 app.emit("status-bar-log", "backend.install.ue4ss").unwrap();
                 install_ue4ss(&self.installation.binaries_directory(), Some(zip_path))?;
             }
         }
+        // RC.zip 预留：后续可在此处按 DRG 的 DRG.zip 方式做 RC 专用注入
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
             app.emit(

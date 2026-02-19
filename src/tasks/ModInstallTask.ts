@@ -269,22 +269,20 @@ export class ModInstallTask implements ITask {
         // In Custom mode, don't delete UE4SS; otherwise delete it
         await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
-        // Step 7: Ensure internal assets (UE4SSL.zip, DRG.zip) - force download if missing
-        // RC 临时跳过检查内部资产；是否 RC 以数据库中当前活跃游戏的 name 为准
+        // Step 7: Ensure internal assets - DRG: UE4SSL.zip + DRG.zip；RC: UE4SSL.zip + RC.zip
         const isRc = activeGame?.name?.toLowerCase() === 'rc';
-        let assetPaths: Awaited<ReturnType<typeof getInternalAssetPaths>> = null;
-        if (!isRc) {
-            await context.setStep(t('Check internal assets'), 7, TOTAL_STEPS);
-            assetPaths = await getInternalAssetPaths();
-            if (!assetPaths) {
-                await context.setMessage(t('Downloading mod manager assets...'));
-                assetPaths = await ensureInternalAssets({
-                    setStep: context.setStep.bind(context),
-                    setMessage: context.setMessage.bind(context),
-                    updateProgress: context.updateProgress.bind(context),
-                    checkCancelled: context.checkCancelled.bind(context),
-                });
-            }
+        const assetGame = isRc ? 'rc' : 'drg';
+        await context.setStep(t('Check internal assets'), 7, TOTAL_STEPS);
+        let assetPaths = await getInternalAssetPaths(assetGame);
+        if (!assetPaths) {
+            await context.setMessage(t('Downloading mod manager assets...'));
+            assetPaths = await ensureInternalAssets({
+                setStep: context.setStep.bind(context),
+                setMessage: context.setMessage.bind(context),
+                updateProgress: context.updateProgress.bind(context),
+                checkCancelled: context.checkCancelled.bind(context),
+                game: assetGame,
+            });
         }
 
         // Step 8: Install mods
@@ -308,13 +306,13 @@ export class ModInstallTask implements ITask {
         }
 
         await context.setMessage(t('Writing mod files...'));
-        // RC (Rogue Core) 不需要 DRG.zip 的 mint 注入，不传 drgZipPath；RC 临时跳过内部资产时 assetPaths 为 null
         const result = await IntegrateApi.install(
             drgPakPath,
             JSON.stringify(installModList),
             isCustomMode,
             assetPaths?.ue4ssZipPath,
-            isRc ? undefined : assetPaths?.drgZipPath
+            isRc ? undefined : assetPaths?.drgZipPath,
+            isRc ? assetPaths?.rcZipPath : undefined
         );
 
         if (!result) {

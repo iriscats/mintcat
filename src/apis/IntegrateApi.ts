@@ -73,7 +73,8 @@ export class IntegrateApi  {
         modListJson: string,
         skipUe4ss: boolean = false,
         ue4ssZipPath?: string,
-        drgZipPath?: string
+        drgZipPath?: string,
+        rcZipPath?: string
     ) {
         return new Promise<boolean>(async (resolve, reject) => {
             await invoke('install_mods', {
@@ -82,6 +83,7 @@ export class IntegrateApi  {
                 skipUe4ss: skipUe4ss,
                 ue4ssZipPath: ue4ssZipPath ?? null,
                 drgZipPath: drgZipPath ?? null,
+                rcZipPath: rcZipPath ?? null,
             });
 
             await onceEvent('install-success', async (installTime) => {

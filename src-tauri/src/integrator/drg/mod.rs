@@ -29,6 +29,7 @@ fn do_install_mods(
     skip_ue4ss: bool,
     ue4ss_zip_path: Option<&str>,
     drg_zip_path: Option<&str>,
+    rc_zip_path: Option<&str>,
 ) -> anyhow::Result<()> {
     let mut mods: Vec<ModInfo> =
         serde_json::from_str(mod_list_json).context("Failed to parse mod list")?;
@@ -39,16 +40,19 @@ fn do_install_mods(
     app.emit("status-bar-percent", 10).unwrap();
 
     let is_rc = game_path.ends_with("RogueCore-Windows.pak");
-    let ue4ss_zip = if is_rc {
-        None
-    } else {
-        ue4ss_zip_path.map(PathBuf::from)
-    };
+    let ue4ss_zip = ue4ss_zip_path.map(PathBuf::from);
+    let rc_zip = rc_zip_path.map(PathBuf::from);
 
     if is_rc {
         let integrator = drgrc::pak_integrator::RcPakIntegrator::new(game_path)
             .context("Failed to initialize RC integrator")?;
-        integrator.install(app.clone(), &mut mods, skip_ue4ss, None)?;
+        integrator.install(
+            app.clone(),
+            &mut mods,
+            skip_ue4ss,
+            ue4ss_zip.as_deref(),
+            rc_zip.as_deref(),
+        )?;
     } else {
         let integrator = PakIntegrator::new(game_path).context("Failed to initialize integrator")?;
         let drg_zip = drg_zip_path.map(PathBuf::from);
@@ -66,6 +70,7 @@ pub fn install_mods(
     skip_ue4ss: bool,
     ue4ss_zip_path: Option<String>,
     drg_zip_path: Option<String>,
+    rc_zip_path: Option<String>,
 ) {
     std::thread::spawn(move || {
         if let Err(e) = do_install_mods(
@@ -75,6 +80,7 @@ pub fn install_mods(
             skip_ue4ss,
             ue4ss_zip_path.as_deref(),
             drg_zip_path.as_deref(),
+            rc_zip_path.as_deref(),
         ) {
             let error_msg = format!("{:#}", e);
             eprintln!("{}", error_msg);

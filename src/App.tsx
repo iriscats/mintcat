@@ -22,7 +22,9 @@ import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 
 import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
 import {useKeyboardListener} from "@/hooks/useKeyboardListener.tsx";
-import {emitEvent} from "@/events";
+import {emitEvent, listenEvent} from "@/events";
+import {OnboardingTour} from "@/components/OnboardingTour.tsx";
+import {DeviceApi} from "@/apis/DeviceApi.ts";
 
 const {
     Header,
@@ -36,6 +38,8 @@ const AppContent = () => {
 
 
     const [isAppViewModelReady, setIsAppViewModelReady] = React.useState(false);
+    const [showOnboarding, setShowOnboarding] = React.useState(false);
+    const onboardingOpenedByUserRef = React.useRef(false);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -76,6 +80,13 @@ const AppContent = () => {
             .then(async () => {
                 console.log('[App] Core initialization complete');
                 setIsAppViewModelReady(true);
+                const completed = await DeviceApi.getOnboardingCompleted();
+                if (!completed) {
+                    // 延迟一帧确保侧边栏已渲染，再打开新手指引
+                    requestAnimationFrame(() => {
+                        setTimeout(() => setShowOnboarding(true), 100);
+                    });
+                }
             })
             .catch((error) => {
                 console.error('[App] Core initialization failed:', error);
@@ -87,9 +98,26 @@ const AppContent = () => {
 
     }, []);
 
+    React.useEffect(() => {
+        let unlisten: (() => void) | undefined;
+        listenEvent('start-onboarding', () => {
+            onboardingOpenedByUserRef.current = true;
+            requestAnimationFrame(() => setTimeout(() => setShowOnboarding(true), 100));
+        }).then((fn) => { unlisten = fn; });
+        return () => { unlisten?.(); };
+    }, []);
+
+    const handleOnboardingComplete = React.useCallback(async () => {
+        setShowOnboarding(false);
+        if (!onboardingOpenedByUserRef.current) {
+            await DeviceApi.setOnboardingCompleted();
+        }
+        onboardingOpenedByUserRef.current = false;
+    }, []);
 
     return (
         <Layout className={"app"}>
+            <OnboardingTour open={showOnboarding} onComplete={handleOnboardingComplete}/>
             <UpdateDialog/>
             <ConfigManageDialog/>
             <SelectGameDialog/>

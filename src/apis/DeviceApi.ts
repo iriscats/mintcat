@@ -47,4 +47,29 @@ export class DeviceApi {
         }
     }
 
+    private static readonly ONBOARDING_STORE_KEY = 'onboarding_completed';
+
+    /** 是否已完成新手指引（仅首次使用为 false） */
+    public static async getOnboardingCompleted(): Promise<boolean> {
+        try {
+            const store = await Store.load('running.dat');
+            const completed = await store.get<boolean>(DeviceApi.ONBOARDING_STORE_KEY);
+            return completed === true;
+        } catch (error) {
+            console.error('getOnboardingCompleted error:', error);
+            return true; // 出错时不再弹出引导
+        }
+    }
+
+    /** 标记新手指引已完成 */
+    public static async setOnboardingCompleted(): Promise<void> {
+        try {
+            const store = await Store.load('running.dat');
+            await store.set(DeviceApi.ONBOARDING_STORE_KEY, true);
+            await store.save();
+        } catch (error) {
+            console.error('setOnboardingCompleted error:', error);
+        }
+    }
+
 }

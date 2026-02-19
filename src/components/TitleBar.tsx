@@ -3,10 +3,10 @@ import {Avatar, Badge, Button, Flex, Image, Popover, Space, Tooltip, message} fr
 import {t} from "i18next";
 import {
     BellOutlined,
+    BookOutlined,
     CloudOutlined,
     EllipsisOutlined,
     PlayCircleOutlined,
-    QuestionCircleOutlined,
     SkinOutlined,
     SyncOutlined,
     UserOutlined
@@ -40,7 +40,8 @@ class TitleBar extends React.Component<any, any> {
         this.state = {
             gameName: "未选择",
             avatarUrl: null,
-            cloudBackupLoading: false
+            cloudBackupLoading: false,
+            guidePopoverOpen: false,
         };
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
@@ -73,8 +74,16 @@ class TitleBar extends React.Component<any, any> {
         }
     }
 
-    private async onOpenWikiClick() {
-        await open("https://www.mintcat.work");
+    private readonly HELP_DOC_URL = "https://www.mintcat.work";
+
+    private async onOpenHelpDoc() {
+        this.setState({ guidePopoverOpen: false });
+        await open(this.HELP_DOC_URL);
+    }
+
+    private async onShowOnboarding() {
+        this.setState({ guidePopoverOpen: false });
+        await emitVoidEvent("start-onboarding");
     }
 
     private async onLaunchGameClick() {
@@ -195,7 +204,7 @@ class TitleBar extends React.Component<any, any> {
                         <Space.Compact block>
                             <Button type="primary"
                                 onClick={this.onLaunchGameClick}
-                                className={"ant-header-start-button"}
+                                className={"ant-header-start-button tour-step-launch"}
                             >
                                 <PlayCircleOutlined/>
                                 <span style={{marginTop: "-1px"}}>
@@ -204,9 +213,9 @@ class TitleBar extends React.Component<any, any> {
                                     </b>
                                 </span>
                             </Button>
-                            <Tooltip title="Tooltip">
+                            <Tooltip title={t("Select Game")}>
                                 <Button type="primary" 
-                                    className={"ant-header-start-button"}
+                                    className={"ant-header-start-button tour-step-switch-game"}
                                     icon={<EllipsisOutlined />} 
                                     onClick={() => this.selectGameDialogRef.current?.show()}
                                 />
@@ -262,12 +271,29 @@ class TitleBar extends React.Component<any, any> {
                     </Popover>
                     </span>
                     <span>
-                        <Button type={"text"}
-                                icon={<QuestionCircleOutlined/>}
-                                onClick={this.onOpenWikiClick}
-                        />
+                        <Popover
+                            placement="bottomRight"
+                            trigger="click"
+                            open={this.state.guidePopoverOpen}
+                            onOpenChange={(open) => this.setState({ guidePopoverOpen: open })}
+                            title={t("Beginner's Guide")}
+                            content={
+                                <Flex vertical gap={8}>
+                                    <Button type="text" icon={<BookOutlined/>} block style={{ justifyContent: 'flex-start' }} onClick={() => this.onShowOnboarding()}>
+                                        {t("Show onboarding again")}
+                                    </Button>
+                                    <Button type="text" icon={<BookOutlined/>} block style={{ justifyContent: 'flex-start' }} onClick={() => this.onOpenHelpDoc()}>
+                                        {t("Help Document")}
+                                    </Button>
+                                </Flex>
+                            }
+                        >
+                            <Tooltip title={t("Beginner's Guide")}>
+                                <Button type={"text"} icon={<BookOutlined/>}/>
+                            </Tooltip>
+                        </Popover>
                     </span>
-                    <Avatar className={"app-header-avatar"}
+                    <Avatar className={"app-header-avatar tour-step-avatar"}
                             icon={<UserOutlined/>}
                             src={this.state.avatarUrl}
                             onClick={() => {

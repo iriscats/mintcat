@@ -25,10 +25,11 @@ class MenuBar extends React.Component<MenuBarProps, any> {
         {
             key: MenuPage.Home,
             icon: <HomeOutlined/>,
-            label: t("Home")
+            label: t("Home"),
+            className: 'tour-step-home',
         },
-        {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io'},
-        {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings")},
+        {key: MenuPage.Modio, icon: <ModioOutlined/>, label: 'mod.io', className: 'tour-step-modio'},
+        {key: MenuPage.Setting, icon: <SettingOutlined/>, label: t("Settings"), className: 'tour-step-setting'},
     ];
 
     public constructor(props: any) {

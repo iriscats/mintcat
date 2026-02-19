@@ -946,7 +946,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                             <Typography.Link>
                                 <Tooltip title={t("Save Changes")}>
                                     <Button icon={<SaveOutlined/>} type={"text"}
-                                            className={this.state.hasUnsavedChanges ? "save-btn-unsaved" : ""}
+                                            className={`tour-step-save ${this.state.hasUnsavedChanges ? "save-btn-unsaved" : ""}`}
                                             onClick={this.onMenuBarSaveChangesClick}/>
                                 </Tooltip>
                                 <Tooltip title={t("Uninstall Mods")}>
@@ -955,6 +955,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 </Tooltip>
                                 <Tooltip title={t("Add Mod")}>
                                     <Button icon={<PlusCircleOutlined/>} type={"text"}
+                                            className="tour-step-add-mod"
                                             onClick={this.onMenuBarAddModClick}/>
                                 </Tooltip>
                                 <Tooltip title={t("Check Mod Updates")}>
@@ -1016,7 +1017,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                     </Tooltip>
                                 </Dropdown>
                             </Typography.Link>
-                            <Typography.Link>
+                            <Typography.Link className="tour-step-profile">
                                 <Select
                                     size={"small"}
                                     className="w-300"
