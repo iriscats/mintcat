@@ -95,7 +95,10 @@ export class IntegrateApi  {
                 await emitEvent("status-bar-percent", 0);
                 const payload = errorMsg ?? "Unknown error";
                 await emitEvent("app-error", payload as EventPayload<'app-error'>);
-                reject(new Error(typeof payload === 'string' ? payload : payload.key));
+                const raw = typeof payload === 'string' ? payload : payload.key;
+                const normalized =
+                    raw === 'Load failed' ? 'error.release_check_network' : raw;
+                reject(new Error(normalized));
             });
         });
     }

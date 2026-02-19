@@ -49,15 +49,17 @@ pub fn check_steam_game(exe_name: String) -> bool {
 }
 
 /// Steam App ID: DRG = 548430, RC (Rogue Core) = 2860770
+#[cfg(target_os = "windows")]
 const STEAM_APP_ID_DRG: u32 = 548430;
+#[cfg(target_os = "windows")]
 const STEAM_APP_ID_RC: u32 = 2860770;
 
 #[tauri::command]
-pub fn launch_steam_game(game_name: Option<String>) {
+pub fn launch_steam_game(_game_name: Option<String>) {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
-        let game_id = match game_name.as_deref() {
+        let game_id = match _game_name.as_deref() {
             Some("rc") => STEAM_APP_ID_RC,
             _ => STEAM_APP_ID_DRG,
         };

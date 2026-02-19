@@ -38,17 +38,25 @@ export function getReleaseDownloadUrl(
  * Batch check updates (POST /releases/check-update).
  * Returns results in same order as items.
  */
+/** i18n key when network/API fails during update check (avoids raw "Load failed") */
+export const RELEASE_CHECK_NETWORK_ERROR_KEY = 'error.release_check_network';
+
 export async function checkUpdatesBatch(
     items: UpdateCheckItem[],
     baseUrl?: string
 ): Promise<UpdateCheckResult[]> {
     const base = baseUrl ?? getBaseUrl();
     const url = `${base.replace(/\/$/, '')}/releases/check-update`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-    });
+    let response: Response;
+    try {
+        response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items }),
+        });
+    } catch (e) {
+        throw new Error(RELEASE_CHECK_NETWORK_ERROR_KEY);
+    }
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(

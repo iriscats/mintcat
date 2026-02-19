@@ -582,26 +582,34 @@ impl PakIntegrator {
         Ok(())
     }
 
-    /// Load mint files from DRG.zip: Paks/ModIntegration/* -> FSD/Content/ModIntegration/*
+    /// 从 DRG.zip 读取 Paks/ 目录下全部文件，映射为 FSD/Content/ 下的 pak 路径。
+    /// 跳过目录条目、__MACOSX、.DS_Store 等无关文件。
     fn collect_mint_files_from_drg_zip(
         zip_path: &Path,
         files: &mut HashMap<String, Vec<u8>>,
     ) -> Result<()> {
-        const PREFIX: &str = "Paks/ModIntegration/";
-        const KEY_PREFIX: &str = "FSD/Content/ModIntegration/";
+        const ZIP_PREFIX: &str = "Paks/";
+        const KEY_PREFIX: &str = "FSD/Content/";
         let file = fs::File::open(zip_path)
             .with_context(|| format!("Failed to open DRG zip: {:?}", zip_path))?;
         let mut archive = ZipArchive::new(file).context("Failed to parse DRG zip")?;
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i).context("Failed to read zip entry")?;
             let name = entry.name().to_string();
-            if name.starts_with(PREFIX) && !name.ends_with('/') {
-                let suffix = name.trim_start_matches(PREFIX);
-                let key = format!("{KEY_PREFIX}{}", suffix.replace('\\', "/"));
-                let mut content = Vec::new();
-                entry.read_to_end(&mut content).context("Failed to read zip entry content")?;
-                files.insert(key, content);
+            let name_normalized = name.replace('\\', "/");
+            if !name_normalized.starts_with(ZIP_PREFIX) || name_normalized.ends_with('/') {
+                continue;
             }
+            if name_normalized.contains("__MACOSX") || name_normalized.contains(".DS_Store") {
+                continue;
+            }
+            let suffix = name_normalized.trim_start_matches(ZIP_PREFIX);
+            let key = format!("{KEY_PREFIX}{}", suffix);
+            let mut content = Vec::new();
+            entry
+                .read_to_end(&mut content)
+                .context("Failed to read zip entry content")?;
+            files.insert(key, content);
         }
         Ok(())
     }

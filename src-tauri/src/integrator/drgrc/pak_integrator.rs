@@ -2,6 +2,7 @@
 
 use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
+use zip::read::ZipArchive;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::ue4ss::ue4ss_integrate::{install_ue4ss, uninstall_ue4ss};
 use crate::integrator::{ModInfo, ReadSeek};
@@ -161,13 +162,45 @@ impl RcPakIntegrator {
         format!("/Game/{}{}_C", relative, name)
     }
 
+    /// 从 RC.zip 读取 Paks/ 目录下全部文件，映射为 RogueCore/Content/ 下的 pak 路径。
+    /// 跳过目录条目、__MACOSX、.DS_Store 等无关文件。
+    fn collect_files_from_rc_zip(
+        zip_path: &Path,
+        files: &mut HashMap<String, Vec<u8>>,
+    ) -> Result<()> {
+        const ZIP_PREFIX: &str = "Paks/";
+        const KEY_PREFIX: &str = "RogueCore/Content/";
+        let file = fs::File::open(zip_path)
+            .with_context(|| format!("Failed to open RC zip: {:?}", zip_path))?;
+        let mut archive = ZipArchive::new(file).context("Failed to parse RC zip")?;
+        for i in 0..archive.len() {
+            let mut entry = archive.by_index(i).context("Failed to read zip entry")?;
+            let name = entry.name().to_string();
+            let name_normalized = name.replace('\\', "/");
+            if !name_normalized.starts_with(ZIP_PREFIX) || name_normalized.ends_with('/') {
+                continue;
+            }
+            if name_normalized.contains("__MACOSX") || name_normalized.contains(".DS_Store") {
+                continue;
+            }
+            let suffix = name_normalized.trim_start_matches(ZIP_PREFIX);
+            let key = format!("{KEY_PREFIX}{}", suffix);
+            let mut content = Vec::new();
+            entry
+                .read_to_end(&mut content)
+                .context("Failed to read zip entry content")?;
+            files.insert(key, content);
+        }
+        Ok(())
+    }
+
     pub fn install(
         mut self,
         app: AppHandle,
         mods: &mut Vec<ModInfo>,
         skip_ue4ss: bool,
         ue4ss_zip_path: Option<&Path>,
-        _rc_zip_path: Option<&Path>,
+        rc_zip_path: Option<&Path>,
     ) -> Result<()> {
         let total_percent = 70.0f32;
         let mods_size = mods.len();
@@ -179,7 +212,6 @@ impl RcPakIntegrator {
                 install_ue4ss(&self.installation.binaries_directory(), Some(zip_path))?;
             }
         }
-        // RC.zip 预留：后续可在此处按 DRG 的 DRG.zip 方式做 RC 专用注入
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
             app.emit(
@@ -207,6 +239,18 @@ impl RcPakIntegrator {
 
         app.emit("status-bar-log", "backend.install.write_mod").unwrap();
         app.emit("status-bar-percent", 90).unwrap();
+
+        // RC.zip：将 Paks/ 目录下全部文件写入 mod pak（RogueCore/Content/...）
+        if let Some(zip_path) = rc_zip_path {
+            app.emit("status-bar-log", "backend.install.rc_zip").unwrap();
+            let mut rc_files = HashMap::new();
+            Self::collect_files_from_rc_zip(zip_path, &mut rc_files)?;
+            for (pak_path, data) in rc_files {
+                self.bundle
+                    .write_file(&data, &pak_path)
+                    .with_context(|| format!("Failed to write RC zip file: {}", pak_path))?;
+            }
+        }
 
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;

@@ -49,13 +49,13 @@ function StatusBar() {
     useEventListener('status-bar-log', (msg) => {
         let text: string;
         if (typeof msg === 'string') {
-            text = msg.startsWith('backend.') ? t(msg) : msg;
+            text = (msg.startsWith('backend.') || msg.startsWith('error.')) ? t(msg) : msg;
         } else if (msg && typeof msg === 'object' && 'key' in msg && typeof (msg as { key: string }).key === 'string') {
             const { key, ...params } = msg as { key: string; [k: string]: unknown };
             text = t(key, params as Record<string, string>);
         } else {
             const raw = (msg as { message?: string })?.message ?? String(msg);
-            text = raw.startsWith('backend.') ? t(raw) : raw;
+            text = (raw.startsWith('backend.') || raw.startsWith('error.')) ? t(raw) : raw;
         }
         setMessage(text);
         setLogLevel((msg && typeof msg === 'object' && 'level' in msg) ? ((msg as { level?: LogLevel }).level || 'info') : 'info');
