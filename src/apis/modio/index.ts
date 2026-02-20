@@ -169,14 +169,45 @@ export class ModioApi {
         }
     }
 
-    public static async getModList(pageNo: number = 0, pageSize: number = 20, name: string = undefined): Promise<ModInfo[]> {
+    /**
+     * 将 sortBy + sortOrder 映射为 mod.io Get Mods 的 _sort 值
+     * @see https://docs.mod.io/restapiref/#get-mods
+     */
+    private static getModListSortParam(
+        sortBy?: 'downloads' | 'subscribers' | 'rating' | 'date' | 'name',
+        sortOrder?: 'asc' | 'desc'
+    ): string | undefined {
+        if (!sortBy || !sortOrder) return undefined;
+        const desc = sortOrder === 'desc';
+        const map: Record<string, string> = {
+            date: desc ? '-date_updated' : 'date_updated',
+            downloads: desc ? '-downloads_total' : 'downloads_total',
+            subscribers: desc ? '-subscribers_total' : 'subscribers_total',
+            rating: desc ? '-ratings_weighted_aggregate' : 'ratings_weighted_aggregate',
+            name: desc ? '-name' : 'name',
+        };
+        return map[sortBy];
+    }
+
+    public static async getModList(
+        pageNo: number = 0,
+        pageSize: number = 20,
+        name: string = undefined,
+        sortBy?: 'downloads' | 'subscribers' | 'rating' | 'date' | 'name',
+        sortOrder?: 'asc' | 'desc'
+    ): Promise<ModInfo[]> {
         try {
-            let path: string;
+            const params = new URLSearchParams();
+            params.set('_limit', String(pageSize));
+            params.set('_offset', String(pageSize * pageNo));
             if (name) {
-                path = `/games/${MODIO_GAME_ID}/mods?name-lk=*${name}*`;
-            } else {
-                path = `/games/${MODIO_GAME_ID}/mods?_limit=${pageSize}&_offset=${pageSize * pageNo}`;
+                params.set('name-lk', `*${name}*`);
             }
+            const sortParam = ModioApi.getModListSortParam(sortBy, sortOrder);
+            if (sortParam) {
+                params.set('_sort', sortParam);
+            }
+            const path = `/games/${MODIO_GAME_ID}/mods?${params.toString()}`;
             const data = await ModioApi.getRequest(path);
             return data.data as ModInfo[];
         } catch (e) {

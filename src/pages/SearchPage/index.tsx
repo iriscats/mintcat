@@ -15,10 +15,20 @@ import {t} from 'i18next';
 import {getCurrentWindow} from '@tauri-apps/api/window';
 import {SearchResultCard} from './SearchResultCard';
 import {useSearchViewModel} from './useSearchViewModel';
-import {SearchSource, initializeSearchProviders, SearchProviderRegistry} from '@/apis/search';
+import type {SearchSortBy, SearchSortOrder} from './SearchViewModel';
+import {SearchSource, initializeSearchProviders} from '@/apis/search';
 import {AddModType} from '@/dialogs/AddModDialog';
 import {openWindow} from '@/dialogs/AddModDialog/open';
 import './styles.css';
+
+// mod.io 排序选项：value 为 sortBy_sortOrder，便于与 state 同步
+const MODIO_SORT_OPTIONS: { value: string; sortBy: SearchSortBy; sortOrder: SearchSortOrder }[] = [
+    { value: 'date_desc', sortBy: 'date', sortOrder: 'desc' },
+    { value: 'downloads_desc', sortBy: 'downloads', sortOrder: 'desc' },
+    { value: 'rating_desc', sortBy: 'rating', sortOrder: 'desc' },
+    { value: 'name_asc', sortBy: 'name', sortOrder: 'asc' },
+    { value: 'name_desc', sortBy: 'name', sortOrder: 'desc' },
+];
 
 // 搜索源显示名称映射
 const sourceDisplayNames: Record<SearchSource, string> = {
@@ -43,6 +53,7 @@ export function SearchPage() {
         refresh,
         reset,
         switchSource,
+        setSort,
         translateItem,
         restoreItem,
         getSearchPlaceholder,
@@ -124,6 +135,15 @@ export function SearchPage() {
             switchSource(value);
         },
         [switchSource]
+    );
+
+    // 处理 mod.io 排序变更
+    const handleSortChange = useCallback(
+        (value: string) => {
+            const option = MODIO_SORT_OPTIONS.find((o) => o.value === value);
+            if (option) setSort(option.sortBy, option.sortOrder);
+        },
+        [setSort]
     );
 
     // 处理添加 mod
@@ -215,6 +235,30 @@ export function SearchPage() {
                             onChange={handleSourceChange}
                             disabled={isLoading}
                             style={{width: 110}}
+                        />
+                    )}
+
+                    {/* mod.io 排序（仅当前源为 mod.io 时显示） */}
+                    {state?.currentSource === SearchSource.MODIO && (
+                        <Select
+                            value={`${state?.sortBy ?? 'date'}_${state?.sortOrder ?? 'desc'}`}
+                            options={MODIO_SORT_OPTIONS.map((o) => ({
+                                value: o.value,
+                                label: t(
+                                    o.value === 'date_desc'
+                                        ? 'Latest'
+                                        : o.value === 'downloads_desc'
+                                          ? 'Popular'
+                                          : o.value === 'rating_desc'
+                                            ? 'Top Rated'
+                                            : o.value === 'name_asc'
+                                              ? 'Name A–Z'
+                                              : 'Name Z–A'
+                                ),
+                            }))}
+                            onChange={handleSortChange}
+                            disabled={isLoading}
+                            style={{width: 120}}
                         />
                     )}
 

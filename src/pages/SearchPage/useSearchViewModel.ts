@@ -1,5 +1,5 @@
 import {useState, useEffect, useCallback, useRef} from 'react';
-import {SearchViewModel, SearchState, getSearchViewModel} from './SearchViewModel';
+import {SearchViewModel, SearchState, SearchSortBy, SearchSortOrder, getSearchViewModel} from './SearchViewModel';
 import {SearchSource} from '@/apis/search';
 
 /**
@@ -97,6 +97,11 @@ export function useSearchViewModel() {
         return viewModelRef.current?.refreshAvailableSources();
     }, []);
 
+    // 设置排序
+    const setSort = useCallback((sortBy: SearchSortBy, sortOrder: SearchSortOrder) => {
+        return viewModelRef.current?.setSort(sortBy, sortOrder);
+    }, []);
+
     // 清理
     useEffect(() => {
         return () => {
@@ -116,6 +121,7 @@ export function useSearchViewModel() {
         refresh,
         reset,
         switchSource,
+        setSort,
         translateItem,
         restoreItem,
         getSearchPlaceholder,

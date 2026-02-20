@@ -839,6 +839,26 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 await this.handleExportMod(id);
             }
                 break;
+            case "pin_to_top": {
+                const activeProfile = await (await StorageAPI.getProfiles()).getActiveProfile();
+                if (!activeProfile?.id) break;
+                const profilesApi = await StorageAPI.getProfiles();
+                const profileMod = await profilesApi.getProfileMod(activeProfile.id, id);
+                if (!profileMod?.id) break;
+                const allMods = await profilesApi.getProfileMods(activeProfile.id);
+                const sameFolder = allMods.filter(
+                    (m) => (m.parentFolderId ?? null) === (profileMod.parentFolderId ?? null)
+                );
+                sameFolder.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                const idx = sameFolder.findIndex((m) => m.modId === id);
+                if (idx <= 0) break;
+                const reordered = [sameFolder[idx], ...sameFolder.slice(0, idx), ...sameFolder.slice(idx + 1)];
+                for (let i = 0; i < reordered.length; i++) {
+                    await profilesApi.updateProfileMod(reordered[i].id!, { sortOrder: i });
+                }
+                shouldUpdateTree = true;
+            }
+                break;
             default:
                 break;
         }

@@ -71,7 +71,7 @@ ON profile_mods(profileId, sortOrder);
 
 #### 关键方法：`getProfileMods()`
 
-**位置**：`src/storage/dao/ProfileDAO.ts:424-434`
+**位置**：`src/storage/dao/ProfileDAO.ts:405-416`
 
 ```typescript
 public async getProfileMods(profileId: number): Promise<ProfileModData[]> {
@@ -228,7 +228,7 @@ private async saveProfileTreeItems(
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 5. Rust 后端按顺序处理                                       │
-│    src-tauri/src/integrator/drg/pak_integrator.rs:119-155  │
+│    src-tauri/src/integrator/drg/pak_integrator.rs:135-179  │
 │                                                              │
 │    for (current_index, mod_info) in mods.iter_mut()        │
 │                                                .enumerate() {│
@@ -237,7 +237,19 @@ private async saveProfileTreeItems(
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 排序操作流程
+### 4.2 资源冲突与覆盖规则
+
+当多个 Mod 包含**相同资源路径**（如同一 uasset/uexp 文件）时，后端通过 `added_paths` 集合决定写入顺序：
+
+- **规则**：先被处理的 Mod 先写入；若某路径已被写入，后续 Mod 中的同路径文件会**被跳过**，不再写入。
+- **顺序**：后端按前端传入的列表顺序依次处理（列表从上到下 = sortOrder 升序）。
+- **结论**：**列表上方的 Mod 优先生效**，同路径时下方的 Mod 不会覆盖上方的；即「下方的被上方的覆盖」，而非「上方的被下方的覆盖」。
+
+**实现位置**：
+- DRG：`src-tauri/src/integrator/drg/pak_integrator.rs` 中 `write_mod_assets`（约 453-455 行）与 `process_unpacked_mod`（约 295-299 行）在写入前检查 `added_paths`，已存在则 `continue`。
+- RC：`src-tauri/src/integrator/drgrc/pak_integrator.rs` 中逻辑一致。
+
+### 4.3 排序操作流程
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -460,7 +472,7 @@ for (const pm of enabledProfileMods) {
 | profile_mods 表定义 | `src/storage/db/Schema.ts` | 192-206 |
 | profile_folders 表定义 | `src/storage/db/Schema.ts` | 170-186 |
 | sortOrder 索引 | `src/storage/db/Schema.ts` | 204 |
-| getProfileMods() | `src/storage/dao/ProfileDAO.ts` | 424-434 |
+| getProfileMods() | `src/storage/dao/ProfileDAO.ts` | 405-416 |
 | getProfileFolders() | `src/storage/dao/ProfileDAO.ts` | 302-313 |
 | buildProfileTree() | `src/storage/dao/ProfileDAO.ts` | 553-617 |
 
@@ -497,7 +509,7 @@ for (const pm of enabledProfileMods) {
 
 | 功能 | 文件 | 行号 |
 |------|------|------|
-| DRG pak 安装 | `src-tauri/src/integrator/drg/pak_integrator.rs` | 119-155 |
+| DRG pak 安装 | `src-tauri/src/integrator/drg/pak_integrator.rs` | 135-179 |
 | UE4SS mod 安装 | `src-tauri/src/integrator/ue4ss/ue4ss_integrate.rs` | 112-139 |
 
 ## 8. 总结
@@ -534,6 +546,7 @@ for (const pm of enabledProfileMods) {
 2. **文件夹独立性**：每个文件夹内的 Mod 有独立的 sortOrder 序列
 3. **禁用 Mod 的顺序**：禁用的 Mod 保留 sortOrder，重新启用后顺序不变
 4. **并发安全**：sortOrder 分配使用 `maxSortOrder + 1`，避免冲突
+5. **同路径覆盖规则**：打包时同一资源路径只保留**先被处理**的那份（即列表上方的 Mod 优先）；若希望某 Mod 的资源生效，应将其排在列表更上方
 
 ## 9. 相关文档
 

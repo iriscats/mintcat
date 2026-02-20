@@ -96,6 +96,16 @@ export class AppInitializer {
     }
 
     /**
+     * Reset state so that initializeCore() can be retried after a failure.
+     * Clears IoC so that StorageAPI and AppViewModel are re-created on next init.
+     */
+    static resetForRetry(): void {
+        this.currentPhase = InitPhase.NotStarted;
+        this.error = null;
+        IoC.clear();
+    }
+
+    /**
      * Get current initialization phase
      *
      * @returns Current initialization phase

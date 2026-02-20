@@ -38,6 +38,7 @@ const AppContent = () => {
 
 
     const [isAppViewModelReady, setIsAppViewModelReady] = React.useState(false);
+    const [initError, setInitError] = React.useState<Error | null>(null);
     const [showOnboarding, setShowOnboarding] = React.useState(false);
     const onboardingOpenedByUserRef = React.useRef(false);
     const navigate = useNavigate();
@@ -76,9 +77,11 @@ const AppContent = () => {
         console.log('App 组件加载...');
 
         // Initialize core (database + AppViewModel)
+        setInitError(null);
         AppInitializer.initializeCore()
             .then(async () => {
                 console.log('[App] Core initialization complete');
+                setInitError(null);
                 setIsAppViewModelReady(true);
                 const completed = await DeviceApi.getOnboardingCompleted();
                 if (!completed) {
@@ -90,7 +93,7 @@ const AppContent = () => {
             })
             .catch((error) => {
                 console.error('[App] Core initialization failed:', error);
-                // Show error UI
+                setInitError(error instanceof Error ? error : new Error(String(error)));
                 emitEvent('app-error', error.message || 'Application initialization failed').catch(console.error);
             });
 
@@ -129,8 +132,29 @@ const AppContent = () => {
                     <MenuBar onClick={clickMenu} activeKey={activeMenuKey}/>
                 </Sider>
                 <Content>
-                    {!isAppViewModelReady && <EmptyPage/>}
-                    {isAppViewModelReady && (
+                    {initError != null && (
+                        <EmptyPage initError={initError} onRetry={() => {
+                            setInitError(null);
+                            AppInitializer.resetForRetry();
+                            AppInitializer.initializeCore()
+                                .then(async () => {
+                                    setInitError(null);
+                                    setIsAppViewModelReady(true);
+                                    const completed = await DeviceApi.getOnboardingCompleted();
+                                    if (!completed) {
+                                        requestAnimationFrame(() => {
+                                            setTimeout(() => setShowOnboarding(true), 100);
+                                        });
+                                    }
+                                })
+                                .catch((err) => {
+                                    setInitError(err instanceof Error ? err : new Error(String(err)));
+                                    emitEvent('app-error', err.message || 'Application initialization failed').catch(console.error);
+                                });
+                        }}/>
+                    )}
+                    {initError == null && !isAppViewModelReady && <EmptyPage/>}
+                    {initError == null && isAppViewModelReady && (
                         <Routes>
                             <Route path="/home" element={<HomePage/>}/>
                             <Route path="/home/modio" element={<SearchPage/>}/>

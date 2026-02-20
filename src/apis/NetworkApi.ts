@@ -1,7 +1,7 @@
 import {retry} from "ts-retry";
 import {t} from "i18next";
 
-const PROXY_API_URL = "https://api.v1st.net/";
+const PROXY_API_URL = "https://proxy.mintcat.work/";
 
 export class NetworkApi {
 

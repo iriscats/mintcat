@@ -14,6 +14,7 @@ import {
     LockOutlined,
     PlusCircleOutlined,
     SyncOutlined,
+    VerticalAlignTopOutlined,
     WarningOutlined,
 } from "@ant-design/icons";
 import {open} from "@tauri-apps/plugin-shell";
@@ -706,6 +707,7 @@ export function TreeViewItem(
     const contextMenus: MenuProps['items'] = [
         {label: t('Rename'), key: 'rename', icon: <EditOutlined />},
         {label: t('Update'), key: 'update', icon: <SyncOutlined />},
+        {label: t('Pin to Top'), key: 'pin_to_top', icon: <VerticalAlignTopOutlined />},
         ...(moveToChildren.length > 0 ? [{
             label: t('Move To'),
             key: 'move_to',

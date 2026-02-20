@@ -43,10 +43,10 @@ export class ModioSearchProvider implements ISearchProvider {
      * 执行搜索
      */
     public async search(params: SearchParams): Promise<SearchResult> {
-        const {query, page, pageSize} = params;
+        const {query, page, pageSize, sortBy, sortOrder} = params;
 
         try {
-            const modList = await ModioApi.getModList(page, pageSize, query || undefined);
+            const modList = await ModioApi.getModList(page, pageSize, query || undefined, sortBy, sortOrder);
             const items = modList.map((mod) => this.mapModInfoToSearchResult(mod));
 
             return {

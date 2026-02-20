@@ -12,6 +12,9 @@ import {StorageAPI} from '@/storage';
 /**
  * 搜索状态
  */
+export type SearchSortBy = 'downloads' | 'subscribers' | 'rating' | 'date' | 'name';
+export type SearchSortOrder = 'asc' | 'desc';
+
 export interface SearchState {
     /** 搜索结果列表 */
     items: SearchResultItem[];
@@ -29,6 +32,10 @@ export interface SearchState {
     currentSource: SearchSource;
     /** 可用的搜索源列表 */
     availableSources: SearchSource[];
+    /** 排序字段 */
+    sortBy: SearchSortBy;
+    /** 排序方向 */
+    sortOrder: SearchSortOrder;
     /** 错误信息 */
     error: string | null;
 }
@@ -45,6 +52,8 @@ export const initialSearchState: SearchState = {
     pageSize: 30,
     currentSource: SearchSource.MODIO,
     availableSources: [SearchSource.MODIO],
+    sortBy: 'date',
+    sortOrder: 'desc',
     error: null,
 };
 
@@ -217,6 +226,8 @@ export class SearchViewModel {
                 page: 0,
                 pageSize: this.state.pageSize,
                 modcatGameId,
+                sortBy: this.state.sortBy,
+                sortOrder: this.state.sortOrder,
             };
 
             const result = await provider.search(params);
@@ -270,6 +281,8 @@ export class SearchViewModel {
                 page: nextPage,
                 pageSize: this.state.pageSize,
                 modcatGameId,
+                sortBy: this.state.sortBy,
+                sortOrder: this.state.sortOrder,
             };
 
             const result = await provider.search(params);
@@ -296,6 +309,22 @@ export class SearchViewModel {
      */
     public async refresh(): Promise<void> {
         await this.search(this.state.query);
+    }
+
+    /**
+     * 设置排序并重新拉取第一页
+     */
+    public async setSort(sortBy: SearchSortBy, sortOrder: SearchSortOrder): Promise<void> {
+        if (this.state.sortBy === sortBy && this.state.sortOrder === sortOrder) return;
+
+        this.cancelCurrentRequest();
+        this.setState({ sortBy, sortOrder, items: [], page: 0, hasMore: false, error: null });
+
+        if (this.state.query) {
+            await this.search(this.state.query);
+        } else {
+            await this.loadInitial();
+        }
     }
 
     /**

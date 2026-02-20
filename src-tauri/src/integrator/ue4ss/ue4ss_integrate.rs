@@ -12,8 +12,8 @@ use zip::read::ZipArchive;
 const DOTNET_RUNTIME_URL: &str =
     "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
 
-/// v1st proxy API for improved download reliability
-const V1ST_PROXY_API: &str = "https://api.v1st.net/";
+/// proxy API for improved download reliability
+const PROXY_API: &str = "https://proxy.mintcat.work/";
 
 /// Maximum number of retry attempts for downloading
 const MAX_DOWNLOAD_RETRIES: u32 = 3;
@@ -212,7 +212,7 @@ fn is_valid_zip(path: &PathBuf) -> bool {
 
 /// Transforms a URL to use v1st proxy
 fn get_proxied_url(url: &str) -> String {
-    format!("{}{}", V1ST_PROXY_API, url)
+    format!("{}{}", PROXY_API, url)
 }
 
 /// Downloads the .NET runtime ZIP file from a single URL attempt.
