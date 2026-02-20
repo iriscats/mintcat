@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { t } from "i18next";
 import { Flex, Progress, ProgressProps, theme } from "antd";
 import { emitEvent, useEventListener } from "@/events";
-import { taskQueueAPI } from 'tauri-plugin-task-queue-api';
+import { taskQueueAPI } from 'tauri-plugin-task-queue';
 
 const ProgressColors: ProgressProps['strokeColor'] = {
     '0%': '#108ee9',

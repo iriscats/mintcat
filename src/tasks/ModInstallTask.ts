@@ -1,4 +1,4 @@
-import { ITask, ITaskContext, Task, SchemaBuilder } from 'tauri-plugin-task-queue-api';
+import { ITask, ITaskContext, Task, SchemaBuilder } from 'tauri-plugin-task-queue';
 import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
 import { IoC } from '@/core/IoC.ts';
 import { ModUpdateService } from '@/services/ModUpdateService';

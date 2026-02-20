@@ -10,7 +10,7 @@ import { ModMapper } from "@/mappers/ModMapper";
 import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
 import type { ModInfo } from "@/apis/modio/ModInfo";
-import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
+import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue";
 import { asyncPoolAll } from "@/utils/AsyncPool";
 
 /**

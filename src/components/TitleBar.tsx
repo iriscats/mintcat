@@ -16,7 +16,7 @@ import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
 import {emitEvent, emitVoidEvent, listenEvent, UnlistenFn} from "@/events";
-import { taskQueueAPI } from "tauri-plugin-task-queue-api";
+import { taskQueueAPI } from "tauri-plugin-task-queue";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
 import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 import {CacheApi} from "@/apis/CacheApi.ts";

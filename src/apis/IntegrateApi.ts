@@ -7,7 +7,7 @@ import {exists} from "@tauri-apps/plugin-fs";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
-import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue-api";
+import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue";
 
 
 export class IntegrateApi  {

@@ -141,7 +141,7 @@ pnpm preview           # Preview built application
 - **Build Output**: Optimized for Tauri frontend
 - **Path Aliases**:
   - `@/*` mapped to `src/*`
-  - `tauri-plugin-task-queue-api` mapped to `../tauri-plugin-task-queue/guest-js`
+  - `tauri-plugin-task-queue` (npm package)
 
 ### Tauri Configuration (`src-tauri/Cargo.toml`)
 - **Cross-compilation**: Windows (MSVC) and Linux targets supported

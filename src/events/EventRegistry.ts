@@ -7,7 +7,7 @@
 import type { UserData } from '@/storage/dao/UserDAO';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import type { GameData } from '@/storage/dao/GameDAO';
-import type { TaskData, TaskTypeInfo } from 'tauri-plugin-task-queue-api';
+import type { TaskData, TaskTypeInfo } from 'tauri-plugin-task-queue';
 
 /**
  * 事件 payload 类型映射

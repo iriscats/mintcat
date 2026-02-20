@@ -41,7 +41,7 @@ import type {ProfileTreeItem} from "@/models/profile/ProfileTreeItem";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
-import { taskQueueAPI } from "tauri-plugin-task-queue-api";
+import { taskQueueAPI } from "tauri-plugin-task-queue";
 import type {DataNode} from "antd/es/tree";
 import {clearPendingEnabled} from "./TreeViewItem.tsx";
 

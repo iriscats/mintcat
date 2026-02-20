@@ -1,4 +1,4 @@
-import { initTaskRegistry, discoverTasks, taskQueueAPI } from 'tauri-plugin-task-queue-api';
+import { initTaskRegistry, discoverTasks, taskQueueAPI } from 'tauri-plugin-task-queue';
 
 /**
  * Initialize the task system for this project
