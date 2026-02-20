@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "gen-sql": "drizzle-kit generate --out migrations-sql --schema ./src/storage/db/Schema.ts --dialect sqlite"
+    "gen-sql": "drizzle-kit generate --out migrations-sql --schema ./src/storage/db/Schema.ts --dialect sqlite",
+    "package": "./scripts/build-release.sh",
+    "package:fixed-webview2": "node scripts/build-fixed-webview2.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",

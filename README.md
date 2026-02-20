@@ -74,24 +74,3 @@ C:\Users\Alice\AppData\Local\com.mint.cat\
 macOS:
 ~/Library/Caches/com.mint.cat
 ```
-
-# RoadMap
-
-## 0.5.0-beta1
-- [wip] Task Manager
-- [done] Sqlite and Tauri Store
-
-## 0.5.0-beta2
-- [done] Multi Game
-- [wip] C# Mod System
-
-## 0.5.0-beta3
-- [ ] Multi Mod Provider
-- [wip] Login / Register
-
-## 0.5.0-beta4
-- [ ] Mod Hot Patch
-
-## 0.5.0-beta5
-- [ ] Online Mod Browser
-
