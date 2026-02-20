@@ -37,10 +37,27 @@ interface SearchBoxProps {
     onUpdateTreeView: () => void;
 }
 
-export const SearchBox = ({ onUpdateTreeView }: SearchBoxProps) => {
+/** 从 filterList 中收集不在默认选项里的自定义项，用于构建 options */
+function getCustomOptionsFromFilterList(filterList: string[] | undefined): SelectProps['options'] {
+    if (!filterList?.length) return [];
+    const defaultValues = new Set<string>();
+    defaultFilterOptions.forEach((g) => {
+        (g as { options?: { value: string }[] }).options?.forEach((o) => defaultValues.add(o.value));
+    });
+    return filterList
+        .filter((v) => !defaultValues.has(v))
+        .map((value) => ({ value, label: value }));
+}
 
-    const [searchValue, setSearchValue] = React.useState<string[]>(undefined);
-    const [searchOptions, setSearchOptions] = React.useState<SelectProps['options']>(defaultFilterOptions);
+export const SearchBox = ({ onUpdateTreeView }: SearchBoxProps) => {
+    const [searchValue, setSearchValue] = React.useState<string[] | undefined>(() => {
+        const list = TreeViewConverter.filterList;
+        return list?.length ? list : undefined;
+    });
+    const [searchOptions, setSearchOptions] = React.useState<SelectProps['options']>(() => {
+        const custom = getCustomOptionsFromFilterList(TreeViewConverter.filterList);
+        return custom.length ? [...custom, ...defaultFilterOptions] : defaultFilterOptions;
+    });
 
     const onSearch = async (newValue: string) => {
         TreeViewConverter.filterList = [newValue];

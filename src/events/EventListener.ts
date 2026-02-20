@@ -7,6 +7,21 @@ import { listen as tauriListen, once as tauriOnce, type Event, type UnlistenFn }
 import type { EventName, EventPayload } from './EventRegistry';
 
 /**
+ * 包装 Tauri 的 unlisten，避免重复调用或 eventId 失效时抛出未处理的 Promise 拒绝
+ * （listeners[eventId].handlerId 在 Tauri 内部可能已不存在）
+ */
+function safeUnlisten(tauriUnlisten: UnlistenFn, eventName: string): UnlistenFn {
+  let called = false;
+  return () => {
+    if (called) return;
+    called = true;
+    Promise.resolve(tauriUnlisten()).catch((err) => {
+      console.warn(`[EventListener] Unlisten for "${eventName}" failed (listener may already be removed):`, err);
+    });
+  };
+}
+
+/**
  * 监听事件
  *
  * 编译时确保：
@@ -39,13 +54,14 @@ export async function listenEvent<E extends EventName>(
   callback: (payload: EventPayload<E>) => void | Promise<void>
 ): Promise<UnlistenFn> {
   try {
-    return await tauriListen<EventPayload<E>>(event, async (tauriEvent: Event<EventPayload<E>>) => {
+    const tauriUnlisten = await tauriListen<EventPayload<E>>(event, async (tauriEvent: Event<EventPayload<E>>) => {
       try {
         await callback(tauriEvent.payload);
       } catch (error) {
         console.error(`[EventListener] Error in callback for event "${event}":`, error);
       }
     });
+    return safeUnlisten(tauriUnlisten, event);
   } catch (error) {
     console.error(`[EventListener] Failed to setup listener for event "${event}":`, error);
     throw error;
@@ -100,7 +116,7 @@ export async function listenFiltered<E extends EventName>(
   callback: (payload: EventPayload<E>) => void | Promise<void>
 ): Promise<UnlistenFn> {
   try {
-    return await tauriListen<EventPayload<E>>(event, async (tauriEvent: Event<EventPayload<E>>) => {
+    const tauriUnlisten = await tauriListen<EventPayload<E>>(event, async (tauriEvent: Event<EventPayload<E>>) => {
       try {
         // 应用过滤器
         if (filter(tauriEvent.payload)) {
@@ -110,6 +126,7 @@ export async function listenFiltered<E extends EventName>(
         console.error(`[EventListener] Error in filtered callback for event "${event}":`, error);
       }
     });
+    return safeUnlisten(tauriUnlisten, event);
   } catch (error) {
     console.error(`[EventListener] Failed to setup filtered listener for event "${event}":`, error);
     throw error;
@@ -132,13 +149,14 @@ export async function onceEvent<E extends EventName>(
   callback: (payload: EventPayload<E>) => void | Promise<void>
 ): Promise<UnlistenFn> {
   try {
-    return await tauriOnce<EventPayload<E>>(event, async (tauriEvent: Event<EventPayload<E>>) => {
+    const tauriUnlisten = await tauriOnce<EventPayload<E>>(event, async (tauriEvent: Event<EventPayload<E>>) => {
       try {
         await callback(tauriEvent.payload);
       } catch (error) {
         console.error(`[EventListener] Error in once callback for event "${event}":`, error);
       }
     });
+    return safeUnlisten(tauriUnlisten, event);
   } catch (error) {
     console.error(`[EventListener] Failed to setup once listener for event "${event}":`, error);
     throw error;
