@@ -6,7 +6,7 @@ import {EventInfo} from "@/apis/modio/EventInfo.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {DownloadApi} from "@/apis/DownloadApi.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
-import {ModFile, ModInfo} from "@/apis/modio/ModInfo.ts";
+import {ModFile, ModInfo, Tags} from "@/apis/modio/ModInfo.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
 
@@ -166,6 +166,28 @@ export class ModioApi {
         } catch (e) {
             message.error(`${t("Fetch Mod Info Error")}: ${e}`);
             throw e;
+        }
+    }
+
+    /**
+     * 获取单个 mod 的标签（Get Mod Tags）
+     * 列表接口可能不返回 tags，一键更新时需单独拉取以刷新标签
+     * @see https://docs.mod.io/restapi/docs/get-mod-tags
+     */
+    public static async getModTags(platformModId: number): Promise<Tags[]> {
+        try {
+            const path = `/games/${MODIO_GAME_ID}/mods/${platformModId}/tags`;
+            const data = await ModioApi.getRequest(path);
+            const list = data?.data ?? [];
+            if (!Array.isArray(list)) return [];
+            return list.map((t: any) => ({
+                name: t.name ?? "",
+                name_localized: t.name_localized ?? t.name ?? "",
+                date_added: t.date_added ?? 0
+            }));
+        } catch (e) {
+            console.warn("[ModioApi] getModTags failed for mod", platformModId, e);
+            return [];
         }
     }
 

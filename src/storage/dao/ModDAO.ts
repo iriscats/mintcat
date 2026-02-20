@@ -1,6 +1,7 @@
 import {mods, modVersions, modDownloads, modStatus} from '@/storage/db/Schema';
 import {eq, desc, and, inArray} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
+import {ModMapper} from "@/mappers/ModMapper";
 
 /**
  * 模组数据访问层
@@ -170,11 +171,16 @@ export class ModDAO {
 
     /**
      * 添加模组
+     * 写入前统一过滤 tags，避免版本号等被当成标签入库（添加 mod 窗口等所有入口生效）
      */
     public async addMod(modData: ModData): Promise<ModData | null> {
         try {
             const db = await getDb();
-            const result = await db.insert(mods).values(modData).returning();
+            const dataToInsert = {
+                ...modData,
+                tags: ModMapper.filterTagsForStorage(modData.tags ?? []),
+            };
+            const result = await db.insert(mods).values(dataToInsert).returning();
             return result.length > 0 ? this.mapToModData(result[0]) : null;
         } catch (error) {
             console.error('添加模组失败:', error);
@@ -197,7 +203,7 @@ export class ModDAO {
                 originalName: modData.originalName || modData.displayName,
                 url: modData.url || "",
                 sourceType: modData.sourceType || "Unknown",
-                tags: modData.tags || [],
+                tags: ModMapper.filterTagsForStorage(modData.tags || []),
                 approvalStatus: modData.approvalStatus || "",
                 dependModId: modData.dependModId || 0,
             }).returning();
@@ -224,7 +230,7 @@ export class ModDAO {
             if (modData.originalName !== undefined) updateData.originalName = modData.originalName;
             if (modData.url !== undefined) updateData.url = modData.url;
             if (modData.sourceType !== undefined) updateData.sourceType = modData.sourceType;
-            if (modData.tags !== undefined) updateData.tags = modData.tags;
+            if (modData.tags !== undefined) updateData.tags = ModMapper.filterTagsForStorage(modData.tags);
             if (modData.approvalStatus !== undefined) updateData.approvalStatus = modData.approvalStatus;
             if (modData.dependModId !== undefined) updateData.dependModId = modData.dependModId;
 

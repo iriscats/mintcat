@@ -11,6 +11,7 @@ import { StorageAPI } from "@/storage";
 import { CacheApi } from "@/apis/CacheApi";
 import { DownloadApi } from "@/apis/DownloadApi";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
+import { ModMapper } from "@/mappers/ModMapper";
 import type {
     ModcatResultEntity,
     ModcatUserEntity,
@@ -468,7 +469,7 @@ export class ModcatApi {
             url: ModcatApi.getModUrl(mod.ModId || ""),
             sourceType: MODCAT_PLATFORM,
             platformId: 0, // modcat 使用字符串 ID
-            tags: mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || [],
+            tags: ModMapper.filterTagsForStorage(mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || []),
             download: latestVersion?.FilesId ? {
                 modId: placeholderModId,
                 downloadUrl: ModcatApi.getDownloadUrl(latestVersion.FilesId),

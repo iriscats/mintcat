@@ -20,10 +20,8 @@ export class ModMapper {
      * 从 mod.io API 响应转换到 CompleteModData
      */
     static fromModioResponse(modInfo: any): CompleteModData {
-        // 提取标签
+        // 提取标签并过滤版本号等，避免写入 tags（与添加 mod 窗口等所有入口一致）
         const rawTags = modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : [];
-
-        // 解析标签以提取版本、审核状态
         const { tags, versions, approval } = ModMapper.parseTags(rawTags);
 
         const modName = modInfo.name || "";
@@ -68,8 +66,9 @@ export class ModMapper {
      * 从 ModCat API 响应转换到 CompleteModData
      */
     static fromModcatResponse(mod: ModcatModEntity): CompleteModData {
-        // 提取标签
-        const tags = mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || [];
+        // 提取标签并过滤掉版本号类（避免版本被当成 tag 写入）
+        const rawTags = mod.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] || [];
+        const tags = ModMapper.filterTagsForStorage(rawTags);
 
         // 获取最新版本 - 放宽过滤条件，因为 Status 可能是 null 或其他值
         const latestVersion = mod.ModVersionEntities
@@ -174,6 +173,14 @@ export class ModMapper {
 
     /** 匹配“像版本号”的 tag（如 1.35.0、2.0、v1.2），避免把版本号误归为普通 tag */
     private static readonly VERSION_LIKE_TAG = /^v?\d+\.\d+(\.\d+)*$/i;
+
+    /**
+     * 从原始标签列表中筛掉“版本号”类标签，只保留用于展示的 tag。
+     * 添加/更新 mod 时统一用此方法写库，避免把版本写入 tags。
+     */
+    public static filterTagsForStorage(rawTags: string[]): string[] {
+        return ModMapper.parseTags(rawTags ?? []).tags;
+    }
 
     /**
      * 解析标签以提取版本、审核状态、必需标志

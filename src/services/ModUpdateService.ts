@@ -6,6 +6,7 @@ import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
 import { ModSourceType } from "@/models/mod/types";
 import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
+import { ModMapper } from "@/mappers/ModMapper";
 import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
 import type { ModInfo } from "@/apis/modio/ModInfo";
@@ -74,6 +75,11 @@ export class ModUpdateService {
             for (const mod of modioMods) {
                 const modInfo = modInfoMap.get(mod.platformId);
                 if (modInfo) {
+                    // 列表接口可能不返回 tags 或需刷新，一键更新时拉取最新标签（issue #62）
+                    const tagList = await ModioApi.getModTags(mod.platformId);
+                    if (tagList.length > 0) {
+                        modInfo.tags = tagList;
+                    }
                     await this.updateModInDatabase(mod.modId!, modInfo);
                 } else {
                     await this.markModUnavailable(mod.modId!);
@@ -146,10 +152,11 @@ export class ModUpdateService {
         // 获取远程名称
         const remoteName = modInfo.name || "";
 
+        const rawTagNames = modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : modData.tags ?? [];
         const updatePayload: any = {
             nameId: modInfo.name_id || modData.nameId,
             url: modInfo.profile_url || modData.url,
-            tags: modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : modData.tags,
+            tags: ModMapper.filterTagsForStorage(Array.isArray(rawTagNames) ? rawTagNames : []),
             originalName: remoteName || modData.originalName,  // 始终更新 originalName
         };
 
@@ -260,6 +267,10 @@ export class ModUpdateService {
             onlineUpdateDate,
             isOnlineAvailable: true
         });
+        // 刷新标签信息（issue #62），并过滤掉版本号类避免写入 tags
+        const rawTags = modDetail.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] ?? [];
+        const tags = ModMapper.filterTagsForStorage(rawTags);
+        await modsApi.updateMod(mod.modId!, { tags });
     }
 
     /**
