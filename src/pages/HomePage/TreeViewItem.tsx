@@ -72,6 +72,44 @@ export function clearPendingEnabled(modId?: number): void {
     }
 }
 
+// 模块级别的「待定版本」缓存，用于在滚动后 treeData 未刷新时保持版本选择框显示正确
+const pendingUsedVersion = new Map<number, string>();
+
+export function getPendingUsedVersion(modId: number, defaultValue: string): string {
+    return pendingUsedVersion.has(modId) ? pendingUsedVersion.get(modId)! : defaultValue;
+}
+
+export function setPendingUsedVersion(modId: number, value: string): void {
+    pendingUsedVersion.set(modId, value);
+}
+
+export function clearPendingUsedVersion(modId?: number): void {
+    if (modId !== undefined) {
+        pendingUsedVersion.delete(modId);
+    } else {
+        pendingUsedVersion.clear();
+    }
+}
+
+// 模块级别的「待定版本锁定」缓存，用于在滚动后 treeData 未刷新时保持锁定图标显示
+const pendingVersionLocked = new Map<number, boolean>();
+
+export function getPendingVersionLocked(modId: number, defaultValue: boolean): boolean {
+    return pendingVersionLocked.has(modId) ? pendingVersionLocked.get(modId)! : defaultValue;
+}
+
+export function setPendingVersionLocked(modId: number, value: boolean): void {
+    pendingVersionLocked.set(modId, value);
+}
+
+export function clearPendingVersionLocked(modId?: number): void {
+    if (modId !== undefined) {
+        pendingVersionLocked.delete(modId);
+    } else {
+        pendingVersionLocked.clear();
+    }
+}
+
 /**
  * Helper method to get a mod from database by ID
  */
@@ -130,7 +168,11 @@ function ModTreeViewFolder({nodeData, onMenuClick, folders, onMoveToFolder}: {
                         paddingLeft: "6px",
                         borderRadius: "6px",
                         backgroundColor: "rgba(238,238,238,0.2)",
-                    }}>
+                    }}
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onFocus={(e) => e.stopPropagation()}
+                    >
                       <b><FolderOutlined/> {nodeData.title}</b>
                     </span>
         </Dropdown>
@@ -196,24 +238,33 @@ function ModTreeViewVersionSelect({nodeData}) {
         if (fileVer && fileVer !== "" && fileVer !== "-") return fileVer;
         return "-";
     };
-    // 使用本地状态追踪当前选中的版本，解决选择后下拉框显示不更新的问题
-    const [selectedVersion, setSelectedVersion] = useState<string>(
-        resolveDisplayVersion(nodeData.usedVersion, nodeData.fileVersion)
+    // 使用本地状态 + 模块级待定版本缓存，解决切换版本后滚动导致显示回退的问题
+    const [selectedVersion, setSelectedVersion] = useState<string>(() =>
+        getPendingUsedVersion(nodeData.modId, resolveDisplayVersion(nodeData.usedVersion, nodeData.fileVersion))
     );
     // 追踪是否正在处理版本切换（下载中）
     const [isProcessing, setIsProcessing] = useState(() => getVersionSwitchLock(nodeData.modId).isProcessing);
-    // 追踪版本是否被锁定（用户手动选择了非最新版本）
-    const [isVersionLocked, setIsVersionLocked] = useState<boolean>(
-        !!(nodeData.usedVersion && nodeData.usedVersion !== "")
+    // 追踪版本是否被锁定（用户手动选择了非最新版本）；使用缓存避免滚动后图标消失
+    const [isVersionLocked, setIsVersionLocked] = useState<boolean>(() =>
+        getPendingVersionLocked(nodeData.modId, !!(nodeData.usedVersion && nodeData.usedVersion !== ""))
     );
     // 存储最新版本号，用于判断用户选择的是否为最新版本
     const latestVersionRef = React.useRef<string>("");
 
-    // 同步外部 prop 变化（当 Tree 完整刷新时）
+    // 同步外部 prop 变化（当 Tree 完整刷新时）；优先使用待定版本/锁定缓存，避免滚动时被旧 nodeData 覆盖
     React.useEffect(() => {
-        setSelectedVersion(resolveDisplayVersion(nodeData.usedVersion, nodeData.fileVersion));
-        setIsVersionLocked(!!(nodeData.usedVersion && nodeData.usedVersion !== ""));
-    }, [nodeData.usedVersion, nodeData.fileVersion]);
+        const fromProps = resolveDisplayVersion(nodeData.usedVersion, nodeData.fileVersion);
+        const displayVersion = getPendingUsedVersion(nodeData.modId, fromProps);
+        const lockedFromProps = !!(nodeData.usedVersion && nodeData.usedVersion !== "");
+        const displayLocked = getPendingVersionLocked(nodeData.modId, lockedFromProps);
+        setSelectedVersion(displayVersion);
+        setIsVersionLocked(displayLocked);
+        // 当 tree 数据与当前显示一致时清除待定缓存（避免长期占用）
+        if (displayVersion === fromProps) {
+            clearPendingUsedVersion(nodeData.modId);
+            clearPendingVersionLocked(nodeData.modId);
+        }
+    }, [nodeData.usedVersion, nodeData.fileVersion, nodeData.modId]);
 
     // 同步锁定状态
     React.useEffect(() => {
@@ -312,9 +363,10 @@ function ModTreeViewVersionSelect({nodeData}) {
         // 判断用户选择的是否为最新版本
         const isLatestVersion = latestVersionRef.current !== "" && newVersion === latestVersionRef.current;
         
-        // 立即更新本地状态（乐观更新），让下拉框立即显示新选中的版本
+        // 立即更新本地状态与待定版本/锁定缓存（乐观更新），避免滚动后显示被旧 treeData 覆盖
         setSelectedVersion(newVersion);
-        // 立即更新锁定图标状态
+        setPendingUsedVersion(nodeData.modId, newVersion);
+        setPendingVersionLocked(nodeData.modId, !isLatestVersion);
         setIsVersionLocked(!isLatestVersion);
         
         await StatusBar.info(`${t("Switch Version")}: ${nodeData.title} ${newVersion}`);
@@ -383,6 +435,8 @@ function ModTreeViewVersionSelect({nodeData}) {
         } catch (error) {
             console.error("版本切换失败:", error);
             await StatusBar.error(`${t("Version switch failed")}: ${nodeData.title}`);
+            clearPendingUsedVersion(nodeData.modId);
+            clearPendingVersionLocked(nodeData.modId);
         } finally {
             // 清除锁定状态
             clearVersionSwitchLock(nodeData.modId);
@@ -572,6 +626,8 @@ function ModTreeViewProgressBackground({nodeData, children, ...restProps}) {
         )`,
     } : {};
 
+    const stopBubble = (e: React.SyntheticEvent) => e.stopPropagation();
+
     return (
         <div style={{
             width: "calc(100% - 20px)",
@@ -581,7 +637,11 @@ function ModTreeViewProgressBackground({nodeData, children, ...restProps}) {
             padding: "2px 4px",
             transition: "background 0.3s ease",
             ...progressStyle
-        }} {...restProps}>
+        }} {...restProps}
+            onClick={stopBubble}
+            onMouseDown={stopBubble}
+            onFocus={stopBubble}
+        >
             {children}
         </div>
     );

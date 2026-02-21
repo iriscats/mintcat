@@ -43,7 +43,7 @@ import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
 import { taskQueueAPI } from "tauri-plugin-task-queue";
 import type {DataNode} from "antd/es/tree";
-import {clearPendingEnabled} from "./TreeViewItem.tsx";
+import {clearPendingEnabled, clearPendingUsedVersion} from "./TreeViewItem.tsx";
 
 
 interface ModListPageState {
@@ -53,6 +53,7 @@ interface ModListPageState {
     isMultiSelect?: boolean;
     expandedKeys?: any[];
     selectedKeys?: any[];
+    checkedKeys?: any[];
     defaultProfile?: string;
     displayMode?: string;
     loading?: boolean;
@@ -83,6 +84,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             contextMenus: [],
             expandedKeys: [],
             selectedKeys: [],
+            checkedKeys: [],
             defaultProfile: "",
             loading: false,
             virtual: true,
@@ -277,11 +279,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
         return keys;
     }
 
+    /** 多选时用勾选列表，否则用高亮列表（兼容） */
+    private getBulkOpKeys(): string[] {
+        return this.state.isMultiSelect ? (this.state.checkedKeys || []) : (this.state.selectedKeys || []);
+    }
+
     private isAllSelected(): boolean {
         const treeData = this.state.treeData as DataNode[] | undefined;
         const allKeys = this.getAllLeafKeys(treeData);
-        const { selectedKeys } = this.state;
-        return allKeys.length > 0 && selectedKeys.length === allKeys.length;
+        const keys = this.getBulkOpKeys();
+        return allKeys.length > 0 && keys.length === allKeys.length;
     }
 
     @autoBind
@@ -289,15 +296,17 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const treeData = this.state.treeData as DataNode[] | undefined;
         const allKeys = this.getAllLeafKeys(treeData);
         const isAllSelected = this.isAllSelected();
-        this.setState({ selectedKeys: isAllSelected ? [] : allKeys });
+        this.setState({ checkedKeys: isAllSelected ? [] : allKeys });
     }
 
     // Multi Operations
     @autoBind
     private onMultiCheckboxChange(e: checkbox.CheckboxChangeEvent) {
-        this.setState({
-            isMultiSelect: e.target.checked
-        })
+        const enabled = e.target.checked;
+        this.setState((state) => ({
+            isMultiSelect: enabled,
+            checkedKeys: enabled ? (state.selectedKeys?.length ? [...state.selectedKeys] : []) : [],
+        }));
     }
 
     @autoBind
@@ -309,12 +318,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
             content: t("Are you sure you want to delete the selected mods?"),
         });
 
-        if (this.state.selectedKeys.length === 0) {
+        if (this.getBulkOpKeys().length === 0) {
             return;
         }
 
         if (confirm) {
-            for (const key of this.state.selectedKeys) {
+            for (const key of this.getBulkOpKeys()) {
                 const modId = this.extractModIdFromKey(key);
                 if (modId === null) continue;
                 const modItem = await this.getModById(modId);
@@ -330,11 +339,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
     @autoBind
     private async onMultiEnableClick(isEnable: boolean) {
         const vm = await IoC.get(HomeViewModel);
-        if (this.state.selectedKeys.length === 0) {
+        if (this.getBulkOpKeys().length === 0) {
             return;
         }
 
-        for (const key of this.state.selectedKeys) {
+        for (const key of this.getBulkOpKeys()) {
             const modId = this.extractModIdFromKey(key);
             if (modId === null) continue;
             await vm.setModEnabled(modId, isEnable);
@@ -347,7 +356,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private async onMultiUpdateClick() {
         const mods: CompleteModData[] = [];
 
-        for (const key of this.state.selectedKeys) {
+        for (const key of this.getBulkOpKeys()) {
             const modId = this.extractModIdFromKey(key);
             if (modId === null) continue;
             const modItem = await this.getModById(modId);
@@ -371,12 +380,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMultiCopyClick() {
-        if (this.state.selectedKeys.length === 0) {
+        if (this.getBulkOpKeys().length === 0) {
             return;
         }
 
         const urls: string[] = [];
-        for (const key of this.state.selectedKeys) {
+        for (const key of this.getBulkOpKeys()) {
             const modId = this.extractModIdFromKey(key);
             if (modId === null) continue;
             const mod = await this.getModById(modId);
@@ -530,8 +539,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         // 设置活跃 profile（已优化为 2 次 SQL）
         await profileVM.setActiveProfile(value);
         
-        // 清除 mod 启用状态缓存，确保新 profile 使用自己的启用状态
+        // 清除 mod 启用状态与待定版本缓存，确保新 profile 使用自己的状态
         clearPendingEnabled();
+        clearPendingUsedVersion();
         
         // 后台执行在线更新检查，不阻塞 UI
         ModUpdateService.checkModUpdate().catch(err => {
@@ -625,11 +635,17 @@ export class HomePage extends BasePage<any, ModListPageState> {
         });
     }
 
+    /** 仅更新高亮选中（点击行时），避免与 onCheck 混用导致焦点跳到第一项 */
     @autoBind
-    private onTreeNodeSelect(keys) {
-        this.setState({
-            selectedKeys: keys,
-        })
+    private onTreeNodeSelect(keys: any[]) {
+        this.setState({ selectedKeys: keys ?? [] });
+    }
+
+    /** 仅更新勾选列表（点击复选框时），用于多选与批量操作 */
+    @autoBind
+    private onTreeNodeCheck(checkedKeys: any) {
+        const keys = Array.isArray(checkedKeys) ? checkedKeys : (checkedKeys?.checked ?? []);
+        this.setState({ checkedKeys: keys });
     }
 
     @autoBind
@@ -881,8 +897,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await IoC.get(TreeViewModel);
         await IoC.get(HomeViewModel);
 
-        // 清除 mod 启用状态缓存，确保使用当前 profile 的状态
+        // 清除 mod 启用状态与待定版本缓存，确保使用当前 profile 的状态
         clearPendingEnabled();
+        clearPendingUsedVersion();
 
         // Setup window resize hook
         this.hookWindowResized();
@@ -900,8 +917,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
-            // 清除 mod 启用状态缓存，确保新 profile 使用自己的启用状态
+            // 清除 mod 启用状态与待定版本缓存，确保新 profile 使用自己的状态
             clearPendingEnabled();
+            clearPendingUsedVersion();
             
             await this.updateProfileSelect();
             // 切换游戏时重置展开状态，使用新 profile 的默认展开状态
@@ -1061,11 +1079,13 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 isMultiSelect={this.state.isMultiSelect}
                                 expandedKeys={this.state.expandedKeys}
                                 selectedKeys={this.state.selectedKeys}
+                                checkedKeys={this.state.checkedKeys}
                                 virtual={this.state.virtual}
                                 onMenuClick={this.onMenuClick}
                                 onUpdateTreeView={this.updateTreeView}
                                 onCountLabelUpdate={this.updateCountLabel}
                                 onTreeNodeSelect={this.onTreeNodeSelect}
+                                onTreeNodeCheck={this.onTreeNodeCheck}
                                 onTreeNodeExpand={this.onTreeNodeExpand}
                                 onTreeRightClick={this.onTreeRightClick}
                                 onVirtualStateChange={(virtual) => {

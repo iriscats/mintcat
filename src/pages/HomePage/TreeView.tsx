@@ -21,11 +21,13 @@ export interface TreeViewProps {
     isMultiSelect?: boolean;
     expandedKeys?: any[];
     selectedKeys?: any[];
+    checkedKeys?: any[];
     virtual?: boolean;
     onMenuClick: (key: string, nodeKey: string) => void;
     onUpdateTreeView?: () => void;
     onCountLabelUpdate?: () => Promise<void>;
     onTreeNodeSelect?: (keys: any) => void;
+    onTreeNodeCheck?: (checkedKeys: any) => void;
     onTreeNodeExpand?: (keys: any) => void;
     onTreeRightClick?: (info: any) => void;
     onVirtualStateChange?: (virtual: boolean) => void;
@@ -40,6 +42,18 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
     state: TreeViewState = {
         isDragging: false
     };
+
+    shouldComponentUpdate(nextProps: TreeViewProps, nextState: TreeViewState) {
+        return (
+            nextProps.treeData !== this.props.treeData ||
+            nextProps.expandedKeys !== this.props.expandedKeys ||
+            nextProps.selectedKeys !== this.props.selectedKeys ||
+            nextProps.checkedKeys !== this.props.checkedKeys ||
+            nextProps.isMultiSelect !== this.props.isMultiSelect ||
+            nextProps.virtual !== this.props.virtual ||
+            nextState.isDragging !== this.state.isDragging
+        );
+    }
 
     /**
      * 从 treeData 中提取所有文件夹信息
@@ -214,6 +228,13 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
     }
 
     @autoBind
+    private onTreeNodeCheck(checkedKeys: any) {
+        if (this.props.onTreeNodeCheck) {
+            this.props.onTreeNodeCheck(checkedKeys);
+        }
+    }
+
+    @autoBind
     private onTreeNodeExpand(keys: any) {
         if (this.props.onTreeNodeExpand) {
             this.props.onTreeNodeExpand(keys);
@@ -254,6 +275,8 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
                 className="ant-tree-content"
                 blockNode
                 draggable
+                focusable={false}
+                tabIndex={-1}
                 // Workaround for antd bug: https://github.com/ant-design/ant-design/issues/54610
                 // Disable virtual scrolling during drag to prevent auto-scroll from getting stuck
                 virtual={!this.state.isDragging}
@@ -261,9 +284,9 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
                 checkable={this.props.isMultiSelect}
                 expandedKeys={this.props.expandedKeys}
                 selectedKeys={this.props.selectedKeys}
-                checkedKeys={this.props.isMultiSelect ? this.props.selectedKeys : undefined}
+                checkedKeys={this.props.isMultiSelect ? this.props.checkedKeys : undefined}
                 treeData={this.props.treeData}
-                onCheck={this.onTreeNodeSelect}
+                onCheck={this.onTreeNodeCheck}
                 onSelect={this.onTreeNodeSelect}
                 onRightClick={this.onTreeRightClick}
                 onExpand={this.onTreeNodeExpand}
