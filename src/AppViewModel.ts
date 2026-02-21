@@ -104,8 +104,8 @@ export class AppViewModel extends BaseViewModel {
         await this.loadUserInfo();
         await this.loadGameInfo();
         await this.checkAppPath();
-        await this.checkOauth();
-        await IntegrateApi.checkGamePath();
+        //await this.checkOauth();
+        //await IntegrateApi.checkGamePath();
         await this.saveAppVersion();
 
         await emitVoidEvent("title-bar-load-avatar");

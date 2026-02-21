@@ -77,6 +77,11 @@ export class ModioApi {
 
     public static async getUserInfo() {
         try {
+            const oAuthDAO = await StorageAPI.getOAuths();
+            const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
+            if (!oAuthData?.oauth?.trim()) {
+                return undefined;
+            }
             const path = "/me";
             const data = await ModioApi.getRequest(path);
             return data as UserInfo;

@@ -142,6 +142,7 @@
 	"Enter your ModCat OAuth key": "输入您的 ModCat OAuth 密钥",
 	"Export": "导出",
 	"error.release_check_network": "无法连接更新服务器，请检查网络或稍后重试",
+	"Internal assets missing after check: {{files}}": "内置资产校验后仍缺失：{{files}}",
 	"Export Failed": "导出失败",
 	"Export Success": "导出成功",
 	"Failed to add mod to database": "添加 Mod 到数据库失败",

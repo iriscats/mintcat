@@ -40,27 +40,33 @@ interface AssetManifest {
     rc: string;
 }
 
-async function readManifest(cacheDir: string): Promise<AssetManifest> {
+const DEFAULT_MANIFEST: AssetManifest = { ue4ssl: '0', drg: '0', rc: '0' };
+
+/** 读取 manifest；若文件缺失或解析错误则返回默认值并标记 invalid */
+async function readManifest(cacheDir: string): Promise<{ manifest: AssetManifest; valid: boolean }> {
     const path = joinPath(cacheDir, MANIFEST_FILENAME);
     try {
         if (await exists(path)) {
             const content = await readTextFile(path);
             const data = JSON.parse(content) as { ue4ssl?: string; drg?: string; rc?: string };
             return {
-                ue4ssl: data.ue4ssl ?? '0',
-                drg: data.drg ?? '0',
-                rc: data.rc ?? '0',
+                manifest: {
+                    ue4ssl: data.ue4ssl ?? '0',
+                    drg: data.drg ?? '0',
+                    rc: data.rc ?? '0',
+                },
+                valid: true,
             };
         }
     } catch (_) {
-        // ignore
+        // 文件缺失或 JSON 解析错误
     }
-    return { ue4ssl: '0', drg: '0', rc: '0' };
+    return { manifest: { ...DEFAULT_MANIFEST }, valid: false };
 }
 
 async function writeManifest(cacheDir: string, updates: Partial<AssetManifest>): Promise<void> {
     const path = joinPath(cacheDir, MANIFEST_FILENAME);
-    const current = await readManifest(cacheDir);
+    const { manifest: current } = await readManifest(cacheDir);
     const merged = { ...current, ...updates };
     const content = JSON.stringify(merged);
     const bytes = new TextEncoder().encode(content);
@@ -92,19 +98,51 @@ export async function ensureInternalAssets(
     const drgExists = await exists(drgZipPath);
     const rcExists = await exists(rcZipPath);
 
-    const manifest = await readManifest(cacheDir);
+    const { manifest, valid: manifestValid } = await readManifest(cacheDir);
+
+    // manifest 缺失或解析错误时强制重新下载并生成 manifest
+    const forceRedownload = !manifestValid;
+
+    // 缓存文件缺失时与 manifest 同步：避免 manifest 存在但 zip 被删后的不一致状态
+    if (!forceRedownload && !ue4ssExists && manifest.ue4ssl !== '0') {
+        await writeManifest(cacheDir, { ue4ssl: '0' });
+        manifest.ue4ssl = '0';
+    }
+    if (!forceRedownload && game === 'rc') {
+        if (!rcExists && manifest.rc !== '0') {
+            await writeManifest(cacheDir, { rc: '0' });
+            manifest.rc = '0';
+        }
+    } else if (!forceRedownload) {
+        if (!drgExists && manifest.drg !== '0') {
+            await writeManifest(cacheDir, { drg: '0' });
+            manifest.drg = '0';
+        }
+    }
+
+    // 若缓存文件缺失或 manifest 无效则用 '0' 参与检查，否则 API 可能不返回 latestVersion/md5 导致报错
+    const ue4sslVersionForCheck = forceRedownload || !ue4ssExists ? '0' : manifest.ue4ssl;
+    const secondVersionForCheck =
+        forceRedownload || (game === 'rc' ? !rcExists : !drgExists)
+            ? '0'
+            : (game === 'rc' ? manifest.rc : manifest.drg);
 
     await setMessage(t('Checking internal assets for updates...'));
     const secondAppType = game === 'rc' ? 'rc' : 'drg';
     const results = await checkUpdatesBatch([
-        { currentVersion: manifest.ue4ssl, appType: 'ue4ssl', platform: PLATFORM, channel: CHANNEL },
-        { currentVersion: game === 'rc' ? manifest.rc : manifest.drg, appType: secondAppType, platform: PLATFORM, channel: CHANNEL },
+        { currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel: CHANNEL },
+        { currentVersion: secondVersionForCheck, appType: secondAppType, platform: PLATFORM, channel: CHANNEL },
     ]);
 
-    const needUe4ssl = !ue4ssExists || (results[0].hasUpdate && results[0].latestVersion != null && results[0].md5 != null);
-    const needSecond = game === 'rc'
-        ? !rcExists || (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null)
-        : !drgExists || (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null);
+    const needUe4ssl =
+        forceRedownload ||
+        !ue4ssExists ||
+        (results[0].hasUpdate && results[0].latestVersion != null && results[0].md5 != null);
+    const needSecond =
+        forceRedownload ||
+        (game === 'rc'
+            ? (!rcExists || (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null))
+            : (!drgExists || (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null)));
 
     if (needUe4ssl) {
         if (checkCancelled()) throw new Error('Task cancelled');
@@ -145,6 +183,15 @@ export async function ensureInternalAssets(
     }
 
     updateProgress(100);
+
+    // 再次确认所需缓存文件存在，防止 manifest 与磁盘不一致导致返回无效路径
+    const ue4ssOk = await exists(ue4ssZipPath);
+    const secondOk = game === 'rc' ? await exists(rcZipPath) : await exists(drgZipPath);
+    if (!ue4ssOk || !secondOk) {
+        const missing = [(!ue4ssOk && ASSET_UE4SSL), (!secondOk && (game === 'rc' ? ASSET_RC : ASSET_DRG))].filter(Boolean);
+        throw new Error(t('Internal assets missing after check: {{files}}', { files: missing.join(', ') }));
+    }
+
     if (game === 'rc') {
         return { ue4ssZipPath, rcZipPath };
     }

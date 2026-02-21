@@ -142,6 +142,7 @@
     "Enter your ModCat OAuth key": "Enter your ModCat OAuth key",
     "Export": "Export",
     "error.release_check_network": "Could not reach update server. Please check your network or try again later.",
+    "Internal assets missing after check: {{files}}": "Internal assets missing after check: {{files}}",
     "Export Failed": "Export failed",
     "Export Success": "Export success",
     "Failed to add mod to database": "Failed to add mod to database",
