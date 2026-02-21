@@ -220,11 +220,20 @@ fn try_download_dotnet_runtime(
 
     log::info!("Downloading .NET runtime from: {}", download_url);
 
-    let client = reqwest::blocking::Client::builder()
+    let manual_proxy = app
+        .try_state::<crate::capability::network::NetworkProxyState>()
+        .and_then(|s| s.get());
+    let proxy_url = crate::capability::network::resolve_proxy(manual_proxy);
+
+    let builder = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(DOWNLOAD_TIMEOUT_SECS))
-        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
-        .build()
-        .context("Failed to create HTTP client")?;
+        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS));
+    let builder = crate::capability::network::apply_proxy_blocking_builder(
+        builder,
+        proxy_url.as_deref(),
+    )
+    .context("Failed to apply proxy to HTTP client")?;
+    let client = builder.build().context("Failed to create HTTP client")?;
 
     let mut response = client
         .get(&download_url)

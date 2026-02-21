@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
@@ -78,6 +79,9 @@ export class AppInitializer {
             // 一次性修复：清除历史数据中被错误写入的 usedVersion
             // usedVersion 应只在用户手动切换版本时才写入，但旧逻辑在添加 mod 时错误地写入了当前版本
             await this.fixUsedVersionData();
+
+            // 应用网络代理设置（使后端下载等请求可走 Clash 等代理）
+            await this.applyNetworkProxy();
 
             // Phase 3: Core ViewModel
             this.currentPhase = InitPhase.CoreViewModel;
@@ -160,6 +164,20 @@ export class AppInitializer {
             await settings.setValue('fix_used_version_v1', 'done');
         } catch (error) {
             console.error('[AppInitializer] Failed to fix usedVersion data:', error);
+        }
+    }
+
+    /**
+     * 从 settings 读取 network.proxy 并同步到后端，使下载、.NET 等请求走 Clash 等代理。
+     */
+    private static async applyNetworkProxy(): Promise<void> {
+        try {
+            const settings = await StorageAPI.getSettings();
+            const raw = await settings.getValue('network.proxy');
+            const proxy = raw?.trim() ? raw.trim() : null;
+            await invoke('set_network_proxy', { proxy });
+        } catch (error) {
+            console.warn('[AppInitializer] Failed to apply network proxy:', error);
         }
     }
 }

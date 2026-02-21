@@ -66,9 +66,9 @@ pub async fn download_file(
         .map(|o| o.into())
         .unwrap_or_else(DownloadOptions::default);
 
-    // Get manager and client
+    // Get manager and client（使用当前代理设置）
     let manager = manager_state.0.lock().await;
-    let client = manager.get_client();
+    let client = manager.get_client().await;
 
     // Create download task
     let task = Arc::new(DownloadTask::new(
@@ -115,6 +115,10 @@ pub async fn cancel_download(
     manager.cancel_download(&download_id).await
 }
 
-pub fn init_download_manager() -> DownloadManagerState {
-    DownloadManagerState(Arc::new(Mutex::new(DownloadManager::new())))
+pub fn init_download_manager(
+    proxy_arc: std::sync::Arc<std::sync::Mutex<Option<String>>>,
+) -> DownloadManagerState {
+    DownloadManagerState(Arc::new(Mutex::new(
+        DownloadManager::new_with_proxy_arc(proxy_arc),
+    )))
 }

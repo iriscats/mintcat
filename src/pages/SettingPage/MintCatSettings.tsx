@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import {t} from "i18next";
 import React from "react";
 import {openPath} from "@tauri-apps/plugin-opener";
@@ -37,6 +38,7 @@ export function MintCatSettings() {
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
     const [ue4ss, setUe4ss] = React.useState<string>("");
     const [clipboardMonitor, setClipboardMonitor] = React.useState<boolean>(true);
+    const [networkProxy, setNetworkProxy] = React.useState<string>("");
 
     const onOpenConfigDirClick = async () => {
         const settings = await StorageAPI.getSettings();
@@ -127,6 +129,14 @@ export function MintCatSettings() {
         }
     }
 
+    const onNetworkProxyChange = async (value: string) => {
+        const trimmed = value?.trim() ?? "";
+        setNetworkProxy(trimmed);
+        const settings = await StorageAPI.getSettings();
+        await settings.setValue('network.proxy', trimmed);
+        await invoke('set_network_proxy', { proxy: trimmed || null });
+    }
+
     const onDevToolsClick = async () => {
         await IntegrateApi.openDevTools();
     }
@@ -168,6 +178,7 @@ export function MintCatSettings() {
             const ue4ssValue = await settings.getValue('ue4ss');
             setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
             setClipboardMonitor(await settings.getClipboardMonitorEnabled());
+            setNetworkProxy((await settings.getValue('network.proxy')) || "");
         }
         fetchData().then();
     }, []);
@@ -257,6 +268,13 @@ export function MintCatSettings() {
                     <Form.Item label={t("Clipboard Monitor")}>
                         <Switch checked={clipboardMonitor}
                                 onChange={onClipboardMonitorChange}
+                        />
+                    </Form.Item>
+                    <Form.Item label={t("Network Proxy")}>
+                        <Input placeholder="http://127.0.0.1:7890"
+                               value={networkProxy}
+                               onChange={(e) => setNetworkProxy(e.target.value)}
+                               onBlur={(e) => onNetworkProxyChange(e.target.value)}
                         />
                     </Form.Item>
                 </Form>

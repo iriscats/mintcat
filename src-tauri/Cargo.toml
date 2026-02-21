@@ -72,6 +72,10 @@ unicase = "2.7"
 
 steamlocate = "2.0.1"
 
+# 系统代理检测（未手动设置代理时使用）
+[target.'cfg(windows)'.dependencies]
+winhttp = "0.1"
+
 [dev-dependencies]
 tempfile = "3"
 

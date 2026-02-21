@@ -63,8 +63,11 @@ pub fn run() {
             }
         }))
         .setup(|app| {
-            // Initialize download manager
-            app.manage(capability::download::init_download_manager());
+            // 网络代理状态（前端通过 set_network_proxy 设置，供下载/.NET 等请求走 Clash 等代理）
+            let proxy_state = capability::network::NetworkProxyState::new();
+            let proxy_arc = proxy_state.0.clone();
+            app.manage(proxy_state);
+            app.manage(capability::download::init_download_manager(proxy_arc));
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -122,6 +125,7 @@ pub fn run() {
             capability::steam::check_steam_game,
             capability::download::download_file,
             capability::download::cancel_download,
+            capability::network::set_network_proxy,
             open_devtools
         ])
         .run(tauri::generate_context!())
