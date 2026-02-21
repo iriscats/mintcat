@@ -9,6 +9,7 @@ const defaultFilterOptions: SelectProps['options'] = [
         options: [
             {value: 'source:Local', label: 'Local'},
             {value: 'source:Modio', label: 'Modio'},
+            {value: 'source:modcat', label: 'ModCat'},
         ]
     },
     {

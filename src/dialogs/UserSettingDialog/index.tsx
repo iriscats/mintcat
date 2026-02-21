@@ -11,6 +11,7 @@ import {AppViewModel} from "@/AppViewModel";
 import {IoC} from "@/core/IoC.ts";
 import {AppService} from "@/services/AppService.ts";
 import { autoBind } from "@/utils/ReactUtils";
+import { emitVoidEvent } from "@/events";
 
 const {Text, Title} = Typography;
 
@@ -93,6 +94,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         this.setState({
             isModalOpen: false
         });
+        emitVoidEvent("user-setting-dialog-closed");
     }
 
     @autoBind
@@ -197,6 +199,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         return (
             <Modal title={t("User Settings")}
                    open={this.state.isModalOpen}
+                   zIndex={1200}
                    onCancel={this.handleCancel}
                    footer={null}
                    width={480}

@@ -56,6 +56,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
             }
 
             setIsModalOpen(false);
+            emitVoidEvent("config-manage-dialog-closed");
             window.location.reload();
         } finally {
             setIsImporting(false);
@@ -64,6 +65,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
 
     const handleCancel = () => {
         setIsModalOpen(false);
+        emitVoidEvent("config-manage-dialog-closed");
     };
 
     const onOpenClick = async (path: string) => {
@@ -111,6 +113,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
         <Modal
             title={t("Configuration Management")}
             open={isModalOpen}
+            zIndex={1200}
             okText={t("Import Config")}
             cancelText={t("Import Cancel")}
             onOk={handleOk}

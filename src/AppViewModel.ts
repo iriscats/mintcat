@@ -109,9 +109,7 @@ export class AppViewModel extends BaseViewModel {
         await this.saveAppVersion();
 
         await emitVoidEvent("title-bar-load-avatar");
-        if (await DeviceApi.isFirstRun()) {
-            await emitVoidEvent("config-manage-dialog-open");
-        }
+        // 首次启动引导（配置导入→游戏选择→用户设置）由 App 根据 getOnboardingCompleted() 统一触发
 
         this.initialized = true;
     }

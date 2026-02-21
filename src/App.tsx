@@ -85,7 +85,7 @@ const AppContent = () => {
                 setIsAppViewModelReady(true);
                 const completed = await DeviceApi.getOnboardingCompleted();
                 if (!completed) {
-                    // 延迟一帧确保侧边栏已渲染，再打开新手指引
+                    // 首次启动：触发新手指引（欢迎 → 配置导入 → 游戏选择 → 用户设置 → 其余步骤）
                     requestAnimationFrame(() => {
                         setTimeout(() => setShowOnboarding(true), 100);
                     });

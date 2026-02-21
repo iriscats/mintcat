@@ -1,3 +1,13 @@
+/* 新手指引：配置导入步骤中「打开配置导入窗口」按钮高亮 */
+.tour-step-config-import-btn {
+    box-shadow: 0 0 0 1px var(--ant-color-primary-bg), 0 0 4px 4px var(--ant-color-primary-bg) !important;
+    position: relative;
+    z-index: 1;
+}
+.tour-step-config-import-btn:hover {
+    box-shadow: 0 0 0 3px var(--ant-color-primary), 0 0 18px 4px var(--ant-color-primary) !important;
+}
+
 /* 全局变量与主题色 */
 :root {
     --select-game-accent: var(--ant-color-primary);

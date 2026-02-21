@@ -12,9 +12,6 @@ use zip::read::ZipArchive;
 const DOTNET_RUNTIME_URL: &str =
     "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.1/dotnet-runtime-10.0.1-win-x64.zip";
 
-/// proxy API for improved download reliability
-const PROXY_API: &str = "https://proxy.mintcat.work/";
-
 /// Maximum number of retry attempts for downloading
 const MAX_DOWNLOAD_RETRIES: u32 = 3;
 
@@ -210,23 +207,14 @@ fn is_valid_zip(path: &PathBuf) -> bool {
     }
 }
 
-/// Transforms a URL to use v1st proxy
-fn get_proxied_url(url: &str) -> String {
-    format!("{}{}", PROXY_API, url)
-}
 
 /// Downloads the .NET runtime ZIP file from a single URL attempt.
 fn try_download_dotnet_runtime(
     app: &AppHandle,
     url: &str,
     dest_path: &PathBuf,
-    use_proxy: bool,
 ) -> Result<()> {
-    let download_url = if use_proxy {
-        get_proxied_url(url)
-    } else {
-        url.to_string()
-    };
+    let download_url = url.to_string();
 
     app.emit("status-bar-log", "backend.dotnet.downloading").unwrap();
 
@@ -335,7 +323,7 @@ fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
             std::thread::sleep(Duration::from_secs(delay_secs));
         }
 
-        match try_download_dotnet_runtime(app, DOTNET_RUNTIME_URL, dest_path, use_proxy) {
+        match try_download_dotnet_runtime(app, DOTNET_RUNTIME_URL, dest_path) {
             Ok(_) => {
                 log::info!(".NET runtime downloaded successfully");
                 return Ok(());

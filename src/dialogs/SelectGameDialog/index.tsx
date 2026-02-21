@@ -2,7 +2,7 @@ import {useState, useEffect, useImperativeHandle, forwardRef} from 'react';
 import {t} from "i18next";
 import {Button, Flex, message, Typography, Modal, Tag, Input, Tooltip, theme} from 'antd';
 import {FolderOpenOutlined, AimOutlined, RocketOutlined, CheckCircleFilled} from "@ant-design/icons";
-import {useEventListener, emitEvent} from "@/events";
+import {useEventListener, emitEvent, emitVoidEvent} from "@/events";
 import {open} from "@tauri-apps/plugin-dialog";
 
 import {GameData} from "@/storage/dao/GameDAO.ts";
@@ -71,6 +71,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             // 重新加载列表以确保状态最新
             await loadGames();
             setIsModalOpen(false);
+            emitVoidEvent("select-game-dialog-closed");
         } catch (error) {
             console.error('Failed to update active game:', error);
             message.error(t("Failed to update active game"));
@@ -79,6 +80,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
 
     const handleCancel = () => {
         setIsModalOpen(false);
+        emitVoidEvent("select-game-dialog-closed");
     };
 
     useImperativeHandle(ref, () => ({
@@ -212,6 +214,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
         <Modal
             title={t("Select Game")}
             open={isModalOpen}
+            zIndex={1200}
             onOk={handleOk}
             onCancel={handleCancel}
             width={520}

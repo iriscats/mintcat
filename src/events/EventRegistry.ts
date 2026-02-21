@@ -73,6 +73,18 @@ export interface EventPayloads {
   /** 选择游戏对话框打开 */
   'select-game-dialog-open': void;
 
+  /** 用户设置对话框打开 */
+  'user-setting-dialog-open': void;
+
+  /** 配置管理对话框关闭（用于首次启动引导串联） */
+  'config-manage-dialog-closed': void;
+
+  /** 选择游戏对话框关闭（用于首次启动引导串联） */
+  'select-game-dialog-closed': void;
+
+  /** 用户设置对话框关闭（用于首次启动引导串联） */
+  'user-setting-dialog-closed': void;
+
   /** 登录对话框打开 */
   'login-dialog-open': void;
 

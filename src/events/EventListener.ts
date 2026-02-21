@@ -16,7 +16,8 @@ function safeUnlisten(tauriUnlisten: UnlistenFn, eventName: string): UnlistenFn 
     if (called) return;
     called = true;
     Promise.resolve(tauriUnlisten()).catch((err) => {
-      console.warn(`[EventListener] Unlisten for "${eventName}" failed (listener may already be removed):`, err);
+      // 组件卸载或依赖变更时可能重复清理，Tauri 端监听器已移除时会 reject，属预期情况，仅打 debug 避免刷屏
+      console.debug(`[EventListener] Unlisten for "${eventName}" failed (listener may already be removed):`, err);
     });
   };
 }

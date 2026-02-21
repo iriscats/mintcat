@@ -73,7 +73,6 @@ export class SettingDAO {
                 .where(eq(settings.name, name))
                 .limit(1);
 
-            console.log(`获取值 [名称: ${name}, 值: ${result}]`);
             if (result.length === 0) {
                 return "";
             }
@@ -86,7 +85,6 @@ export class SettingDAO {
 
     public async setValue(name: string, value: string): Promise<void> {
         try {
-            console.log(`设置值 [名称: ${name}, 值: ${value}]`);
             const db = await getDb();
             await db.insert(settings).values({
                 name,

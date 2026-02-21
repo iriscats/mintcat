@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Tour } from 'antd';
+import { Button, Space, Tour } from 'antd';
 import type { TourProps } from 'antd';
 import { t } from 'i18next';
+import { emitVoidEvent } from '@/events';
 
 const TOUR_SELECTORS = {
     welcome: null,
@@ -38,6 +39,32 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
                 target: getTarget(TOUR_SELECTORS.welcome),
             },
             {
+                title: t('onboarding.configImport.title'),
+                description: (
+                    <Space direction="vertical" size="middle">
+                        <span>{t('onboarding.configImport.description')}</span>
+                        <Button
+                            type="primary"
+                            className="tour-step-config-import-btn"
+                            onClick={() => emitVoidEvent('config-manage-dialog-open')}
+                        >
+                            {t('onboarding.configImport.openButton')}
+                        </Button>
+                    </Space>
+                ),
+                target: getTarget(null),
+            },
+            {
+                title: t('onboarding.gameSelect.title'),
+                description: t('onboarding.gameSelect.description'),
+                target: getTarget(TOUR_SELECTORS.switchGame),
+            },
+            {
+                title: t('onboarding.userSettings.title'),
+                description: t('onboarding.userSettings.description'),
+                target: getTarget(TOUR_SELECTORS.userSettings),
+            },
+            {
                 title: t('onboarding.home.title'),
                 description: t('onboarding.home.description'),
                 target: getTarget(TOUR_SELECTORS.home),
@@ -63,11 +90,6 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
                 target: getTarget(TOUR_SELECTORS.launch),
             },
             {
-                title: t('onboarding.switchGame.title'),
-                description: t('onboarding.switchGame.description'),
-                target: getTarget(TOUR_SELECTORS.switchGame),
-            },
-            {
                 title: t('onboarding.modio.title'),
                 description: t('onboarding.modio.description'),
                 target: getTarget(TOUR_SELECTORS.modio),
@@ -76,11 +98,6 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
                 title: t('onboarding.setting.title'),
                 description: t('onboarding.setting.description'),
                 target: getTarget(TOUR_SELECTORS.setting),
-            },
-            {
-                title: t('onboarding.userSettings.title'),
-                description: t('onboarding.userSettings.description'),
-                target: getTarget(TOUR_SELECTORS.userSettings),
             },
             {
                 title: t('onboarding.end.title'),
