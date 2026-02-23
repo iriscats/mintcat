@@ -1,8 +1,8 @@
-import { invoke } from '@tauri-apps/api/core';
 import { exists, readTextFile, writeFile } from '@tauri-apps/plugin-fs';
 import { t } from 'i18next';
 import { checkUpdatesBatch, getDownloadUrl, getReleaseDownloadUrl } from '@/apis/mintcat';
 import { DownloadApi } from '@/apis/DownloadApi';
+import { CacheApi } from '@/apis/CacheApi';
 
 const ASSET_UE4SSL = 'UE4SSL.zip';
 const ASSET_DRG = 'DRG.zip';
@@ -89,7 +89,7 @@ export async function ensureInternalAssets(
     const checkCancelled = opts.checkCancelled ?? (() => false);
     const game: InternalAssetGame = opts.game ?? 'drg';
 
-    const cacheDir = await invoke<string>('get_asset_cache_dir');
+    const cacheDir = await CacheApi.getCacheDir();
     const ue4ssZipPath = joinPath(cacheDir, ASSET_UE4SSL);
     const drgZipPath = joinPath(cacheDir, ASSET_DRG);
     const rcZipPath = joinPath(cacheDir, ASSET_RC);
@@ -204,7 +204,7 @@ export async function ensureInternalAssets(
  * - game 'rc': requires UE4SSL.zip + RC.zip
  */
 export async function getInternalAssetPaths(game: InternalAssetGame = 'drg'): Promise<InternalAssetPaths | null> {
-    const cacheDir = await invoke<string>('get_asset_cache_dir');
+    const cacheDir = await CacheApi.getCacheDir();
     const ue4ssZipPath = joinPath(cacheDir, ASSET_UE4SSL);
     const drgZipPath = joinPath(cacheDir, ASSET_DRG);
     const rcZipPath = joinPath(cacheDir, ASSET_RC);

@@ -1,14 +1,14 @@
-import {t} from "i18next";
+import { t } from "i18next";
 import i18n from "@/locales/i18n";
-import {appCacheDir, appConfigDir} from '@tauri-apps/api/path';
-import {getVersion} from '@tauri-apps/api/app';
-import {IntegrateApi} from "@/apis/IntegrateApi.ts";
-import {ModUpdateService} from "@/services/ModUpdateService.ts";
-import {exists} from "@tauri-apps/plugin-fs";
-import {emitEvent, emitVoidEvent} from "@/events";
-import {DeviceApi} from "@/apis/DeviceApi.ts";
-import {BaseViewModel} from "@/core/BaseViewModel";
-import {AppService} from "@/services/AppService.ts";
+import { appCacheDir, appConfigDir } from "@tauri-apps/api/path";
+import { getVersion } from "@tauri-apps/api/app";
+import { IntegrateApi } from "@/apis/IntegrateApi.ts";
+import { ModUpdateService } from "@/services/ModUpdateService.ts";
+import { exists } from "@tauri-apps/plugin-fs";
+import { emitEvent, emitVoidEvent } from "@/events";
+import { DeviceApi } from "@/apis/DeviceApi.ts";
+import { BaseViewModel } from "@/core/BaseViewModel";
+import { AppService } from "@/services/AppService.ts";
 
 /**
  * AppViewModel manages application-level state and business logic
@@ -34,12 +34,11 @@ export class AppViewModel extends BaseViewModel {
     public async checkAppPath() {
         try {
             const cachePath = await this.appService.getCachePath();
-            console.log(cachePath)
-            if (cachePath === "" || !await exists(cachePath)) {
+            if (cachePath === "" || !(await exists(cachePath))) {
                 await this.appService.setCachePath(await appCacheDir());
             }
             const configPath = await this.appService.getConfigPath();
-            if (configPath === "" || !await exists(configPath)) {
+            if (configPath === "" || !(await exists(configPath))) {
                 await this.appService.setConfigPath(await appConfigDir());
             }
         } catch (err) {
