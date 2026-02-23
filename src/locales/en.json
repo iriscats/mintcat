@@ -390,5 +390,21 @@
     "onboarding.userSettings.title": "User Settings",
     "onboarding.userSettings.description": "Click here to open User Settings and manage account sign-in and access keys for mod.io, ModCat, and other platforms for searching and downloading mods.",
     "onboarding.end.title": "Get Started",
-    "onboarding.end.description": "That's it. You can find help or send feedback in Settings anytime. Enjoy!"
+    "onboarding.end.description": "That's it. You can find help or send feedback in Settings anytime. Enjoy!",
+    "userSetting.title": "User Settings",
+    "userSetting.guestUser": "Guest User",
+    "userSetting.loadUserInfoFailed": "Failed to load user info",
+    "userSetting.invalidOAuth": "Invalid OAuth",
+    "userSetting.saveOAuthFailed": "Failed to save OAuth",
+    "userSetting.mintcatVip": "MintCat VIP",
+    "userSetting.getAccessKey": "Get Access Key",
+    "userSetting.placeholderMintcatOAuth": "Enter your MintCat OAuth key",
+    "userSetting.descMintcatOAuth": "Paste your key to unlock backup VIP features.",
+    "userSetting.modioConfig": "Mod.io Configuration",
+    "userSetting.placeholderModioOAuth": "Enter your mod.io OAuth key",
+    "userSetting.descModioOAuth": "Paste your key here to sync mod.io subscriptions, search and download mods.",
+    "userSetting.modcat": "ModCat",
+    "userSetting.placeholderModcatOAuth": "Enter your ModCat OAuth key",
+    "userSetting.descModcatOAuth": "Paste your key here to search and download mods from modcat.top",
+    "userSetting.saveChanges": "Save Changes"
 }

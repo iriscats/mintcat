@@ -85,7 +85,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                 })
             }
         } catch (error) {
-            message.error(t("Failed to load user info") + error);
+            message.error(t("userSetting.loadUserInfoFailed") + error);
         }
     }
 
@@ -116,7 +116,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
         if (value.length !== 0 && value.length < 20) {
             message.error({
-                content: t("Invalid OAuth"),
+                content: t("userSetting.invalidOAuth"),
                 key: "oauth-invalid"
             });
             return;
@@ -129,7 +129,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             }
         } catch (error) {
             console.error('Failed to save OAuth:', error);
-            message.error(t("Failed to save OAuth"));
+            message.error(t("userSetting.saveOAuthFailed"));
         }
     }
 
@@ -142,7 +142,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
         if (value.length !== 0 && value.length < 20) {
             message.error({
-                content: t("Invalid OAuth"),
+                content: t("userSetting.invalidOAuth"),
                 key: "mintcat-oauth-invalid"
             });
             return;
@@ -155,7 +155,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             }
         } catch (error) {
             console.error('Failed to save MintCat OAuth:', error);
-            message.error(t("Failed to save OAuth"));
+            message.error(t("userSetting.saveOAuthFailed"));
         }
     }
 
@@ -173,7 +173,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
         if (value.length !== 0 && value.length < 20) {
             message.error({
-                content: t("Invalid OAuth"),
+                content: t("userSetting.invalidOAuth"),
                 key: "modcat-oauth-invalid"
             });
             return;
@@ -186,7 +186,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             }
         } catch (error) {
             console.error('Failed to save ModCat OAuth:', error);
-            message.error(t("Failed to save OAuth"));
+            message.error(t("userSetting.saveOAuthFailed"));
         }
     }
 
@@ -197,7 +197,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
     render() {
         return (
-            <Modal title={t("User Settings")}
+            <Modal title={t("userSetting.title")}
                    open={this.state.isModalOpen}
                    zIndex={1200}
                    onCancel={this.handleCancel}
@@ -217,7 +217,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                         <Flex vertical gap={4}>
                             <Flex align="center" gap={8}>
                                 <Title level={4} className="user-settings-title">
-                                    {this.state.username || t("Guest User")}
+                                    {this.state.username || t("userSetting.guestUser")}
                                 </Title>
                                 {this.state.mintcatOAuth && (
                                     <Button
@@ -239,38 +239,10 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
                     <Divider className="user-settings-divider" />
 
-                    {/* ModCat Configuration Section */}
-                    <Flex vertical gap={8}>
-                        <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("ModCat")}</Text>
-                            <Button 
-                                color="primary"
-                                variant="link" 
-                                size="small" 
-                                onClick={this.onOpenModcatClick}
-                                icon={<LinkOutlined/>}
-                                className="user-settings-link"
-                            >
-                                {t("Get Access Key")}
-                            </Button>
-                        </Flex>
-                        
-                        <Input 
-                            prefix={<KeyOutlined className="user-settings-input-icon" />}
-                            onChange={this.onModcatOAuthChange}
-                            allowClear
-                            value={this.state.modcatOAuth}
-                            placeholder={t("Enter your ModCat OAuth key")}
-                        />
-                        <Text type="secondary" className="user-settings-desc">
-                            {t("Paste your ModCat OAuth key to search and download mods from modcat.top")}
-                        </Text>
-                    </Flex>
-
                     {/* MintCat Configuration Section */}
                     <Flex vertical gap={8}>
                         <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("MintCat VIP")}</Text>
+                            <Text strong className="user-settings-config-title">{t("userSetting.mintcatVip")}</Text>
                             <Button 
                                 color="primary"
                                 variant="link" 
@@ -279,7 +251,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                 icon={<LinkOutlined/>}
                                 className="user-settings-link"
                             >
-                                {t("Get Access Key")}
+                                {t("userSetting.getAccessKey")}
                             </Button>
                         </Flex>
                         
@@ -288,17 +260,19 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                             onChange={this.onMintcatOAuthChange}
                             allowClear
                             value={this.state.mintcatOAuth}
-                            placeholder={t("Enter your MintCat OAuth key")}
+                            placeholder={t("userSetting.placeholderMintcatOAuth")}
                         />
                         <Text type="secondary" className="user-settings-desc">
-                            {t("Paste your MintCat OAuth key to unlock VIP features.")}
+                            {t("userSetting.descMintcatOAuth")}
                         </Text>
                     </Flex>
+
+                    <Divider className="user-settings-divider" />
 
                     {/* Mod.io Configuration Section */}
                     <Flex vertical gap={8}>
                         <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("Mod.io Configuration")}</Text>
+                            <Text strong className="user-settings-config-title">{t("userSetting.modioConfig")}</Text>
                             <Button 
                                 color="primary"
                                 variant="link" 
@@ -307,7 +281,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                 icon={<LinkOutlined/>}
                                 className="user-settings-link"
                             >
-                                {t("Get Access Key")}
+                                {t("userSetting.getAccessKey")}
                             </Button>
                         </Flex>
                         
@@ -316,12 +290,42 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                             onChange={this.onOAuthChange}
                             allowClear
                             value={this.state.modioOAuth}
-                            placeholder={t("Enter your mod.io OAuth key")}
+                            placeholder={t("userSetting.placeholderModioOAuth")}
                         />
                         <Text type="secondary" className="user-settings-desc">
-                            {t("Paste your OAuth key here to sync your subscriptions.")}
+                            {t("userSetting.descModioOAuth")}
                         </Text>
                     </Flex>
+
+
+                    {/* ModCat Configuration Section */}
+                    <Flex vertical gap={8}>
+                        <Flex justify="space-between" align="center">
+                            <Text strong className="user-settings-config-title">{t("userSetting.modcat")}</Text>
+                            <Button 
+                                color="primary"
+                                variant="link" 
+                                size="small" 
+                                onClick={this.onOpenModcatClick}
+                                icon={<LinkOutlined/>}
+                                className="user-settings-link"
+                            >
+                                {t("userSetting.getAccessKey")}
+                            </Button>
+                        </Flex>
+                        
+                        <Input 
+                            prefix={<KeyOutlined className="user-settings-input-icon" />}
+                            onChange={this.onModcatOAuthChange}
+                            allowClear
+                            value={this.state.modcatOAuth}
+                            placeholder={t("userSetting.placeholderModcatOAuth")}
+                        />
+                        <Text type="secondary" className="user-settings-desc">
+                            {t("userSetting.descModcatOAuth")}
+                        </Text>
+                    </Flex>
+
 
                     {/* Footer Actions */}
                     <Button type="primary"
@@ -329,7 +333,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                             onClick={this.handleCancel}
                             className="user-settings-save"
                     >
-                        {t("Save Changes")}
+                        {t("userSetting.saveChanges")}
                     </Button>
                 </Flex>
             </Modal>

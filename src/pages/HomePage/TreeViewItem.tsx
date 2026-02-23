@@ -110,6 +110,50 @@ export function clearPendingVersionLocked(modId?: number): void {
     }
 }
 
+// 模块级别缓存：警告图标状态（过期/本地缺失/在线不可用/冲突），避免滚动后图标消失或错乱
+interface WarningState {
+    isExpired: boolean;
+    isLocalNoFound: boolean;
+    isOnlineUnavailable: boolean;
+    hasConflict: boolean;
+}
+const warningStateCache = new Map<number, WarningState>();
+
+export function getCachedWarningState(modId: number, fallback: WarningState): WarningState {
+    return warningStateCache.get(modId) ?? fallback;
+}
+
+export function setCachedWarningState(modId: number, state: WarningState): void {
+    warningStateCache.set(modId, state);
+}
+
+export function clearCachedWarningState(modId?: number): void {
+    if (modId !== undefined) {
+        warningStateCache.delete(modId);
+    } else {
+        warningStateCache.clear();
+    }
+}
+
+// 模块级别缓存：下载进度，避免滚动后进度条/百分比消失或回退
+const downloadProgressCache = new Map<number, number>();
+
+export function getCachedDownloadProgress(modId: number, defaultValue: number): number {
+    return downloadProgressCache.has(modId) ? downloadProgressCache.get(modId)! : defaultValue;
+}
+
+export function setCachedDownloadProgress(modId: number, value: number): void {
+    downloadProgressCache.set(modId, value);
+}
+
+export function clearCachedDownloadProgress(modId?: number): void {
+    if (modId !== undefined) {
+        downloadProgressCache.delete(modId);
+    } else {
+        downloadProgressCache.clear();
+    }
+}
+
 /**
  * Helper method to get a mod from database by ID
  */
@@ -517,22 +561,50 @@ function ModTreeViewWarring({nodeData}) {
         return ConflictService.hasConflict(nodeDataRef.current.modId);
     }
 
-    const [isExpired, setIsExpired] = useState(checkExpired());
-    const [isLocalNoFound, setIsLocalNoFound] = useState(checkLocalNoFound());
-    const [isOnlineUnavailable, setIsOnlineUnavailable] = useState(checkOnlineUnavailable());
-    const [hasConflict, setHasConflict] = useState(checkConflict());
+    const fallbackWarning: WarningState = {
+        isExpired: checkExpired(),
+        isLocalNoFound: checkLocalNoFound(),
+        isOnlineUnavailable: checkOnlineUnavailable(),
+        hasConflict: checkConflict(),
+    };
+    const [warningState, setWarningState] = useState<WarningState>(() =>
+        getCachedWarningState(nodeData.modId, fallbackWarning)
+    );
+    const { isExpired, isLocalNoFound, isOnlineUnavailable, hasConflict } = warningState;
+
+    // 同步外部 nodeData 变化（滚动后重挂载时可能带旧数据，优先用缓存）
+    React.useEffect(() => {
+        nodeDataRef.current = nodeData;
+        const fallback: WarningState = {
+            isExpired: checkExpired(),
+            isLocalNoFound: checkLocalNoFound(),
+            isOnlineUnavailable: checkOnlineUnavailable(),
+            hasConflict: checkConflict(),
+        };
+        if (!warningStateCache.has(nodeData.modId)) {
+            setCachedWarningState(nodeData.modId, fallback);
+        }
+        const cached = getCachedWarningState(nodeData.modId, fallback);
+        setWarningState(cached);
+    }, [nodeData.modId, nodeData.downloadProgress, nodeData.lastUpdateDate, nodeData.onlineUpdateDate, nodeData.onlineAvailable, nodeData.localNoFound]);
 
     // ✅ 使用 useFilteredEventListener 自动清理监听器
     useFilteredEventListener(
         'mod-treeview-update',
         (payload) => payload.modId === nodeData.modId,
         (payload) => {
-            // 更新 nodeDataRef
             nodeDataRef.current = payload.data;
-            // 重新检查状态
-            setIsExpired(checkExpired());
-            setIsLocalNoFound(checkLocalNoFound());
-            setIsOnlineUnavailable(checkOnlineUnavailable());
+            const next: WarningState = {
+                isExpired: checkExpired(),
+                isLocalNoFound: checkLocalNoFound(),
+                isOnlineUnavailable: checkOnlineUnavailable(),
+                hasConflict: checkConflict(),
+            };
+            setWarningState((prev) => {
+                const s = { ...prev, ...next };
+                setCachedWarningState(nodeData.modId, s);
+                return s;
+            });
         },
         [nodeData.modId]
     );
@@ -542,7 +614,12 @@ function ModTreeViewWarring({nodeData}) {
         'mod-conflict-update',
         (payload) => payload.modId === nodeData.modId,
         () => {
-            setHasConflict(checkConflict());
+            const nextConflict = checkConflict();
+            setWarningState((prev) => {
+                const s = { ...prev, hasConflict: nextConflict };
+                setCachedWarningState(nodeData.modId, s);
+                return s;
+            });
         },
         [nodeData.modId]
     );
@@ -601,14 +678,22 @@ function ModTreeViewWarring({nodeData}) {
 
 
 function ModTreeViewProgressBackground({nodeData, children, ...restProps}) {
-    const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
+    const [downloadProgress, setDownloadProgress] = useState(() =>
+        getCachedDownloadProgress(nodeData.modId, nodeData.downloadProgress)
+    );
 
-    // ✅ 使用 useFilteredEventListener 自动清理监听器
+    React.useEffect(() => {
+        const v = getCachedDownloadProgress(nodeData.modId, nodeData.downloadProgress);
+        setDownloadProgress(v);
+    }, [nodeData.modId, nodeData.downloadProgress]);
+
     useFilteredEventListener(
         'mod-treeview-update',
         (payload) => payload.modId === nodeData.modId,
         (payload) => {
-            setDownloadProgress(payload.data.download?.downloadProgress || 100);
+            const v = payload.data.download?.downloadProgress ?? 100;
+            setCachedDownloadProgress(nodeData.modId, v);
+            setDownloadProgress(v);
         },
         [nodeData.modId]
     );
@@ -649,13 +734,22 @@ function ModTreeViewProgressBackground({nodeData, children, ...restProps}) {
 
 
 function ModTreeViewProgressPercent({nodeData}) {
-    const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
+    const [downloadProgress, setDownloadProgress] = useState(() =>
+        getCachedDownloadProgress(nodeData.modId, nodeData.downloadProgress)
+    );
+
+    React.useEffect(() => {
+        const v = getCachedDownloadProgress(nodeData.modId, nodeData.downloadProgress);
+        setDownloadProgress(v);
+    }, [nodeData.modId, nodeData.downloadProgress]);
 
     useFilteredEventListener(
         'mod-treeview-update',
         (payload) => payload.modId === nodeData.modId,
         (payload) => {
-            setDownloadProgress(payload.data.download?.downloadProgress || 100);
+            const v = payload.data.download?.downloadProgress ?? 100;
+            setCachedDownloadProgress(nodeData.modId, v);
+            setDownloadProgress(v);
         },
         [nodeData.modId]
     );
@@ -700,25 +794,26 @@ function ModTreeViewLocalTitle({nodeData}) {
 
 function ModTreeViewTitle({nodeData}) {
 
-    const [downloadProgress, setDownloadProgress] = useState(nodeData.downloadProgress);
-    // 使用模块级别缓存获取初始 enabled 状态，与 Switch 保持同步
+    const [downloadProgress, setDownloadProgress] = useState(() =>
+        getCachedDownloadProgress(nodeData.modId, nodeData.downloadProgress)
+    );
     const [enabled, setEnabled] = useState(() =>
         getPendingEnabled(nodeData.modId, nodeData.enabled)
     );
     const {token} = useToken();
 
-    // 同步外部 prop 变化（当 Tree 完整刷新时）
     React.useEffect(() => {
-        const cachedValue = getPendingEnabled(nodeData.modId, nodeData.enabled);
-        setEnabled(cachedValue);
-    }, [nodeData.enabled, nodeData.modId]);
+        setDownloadProgress(getCachedDownloadProgress(nodeData.modId, nodeData.downloadProgress));
+        setEnabled(getPendingEnabled(nodeData.modId, nodeData.enabled));
+    }, [nodeData.modId, nodeData.downloadProgress, nodeData.enabled]);
 
-    // ✅ 使用 useFilteredEventListener 自动清理监听器
     useFilteredEventListener(
         'mod-treeview-update',
         (payload) => payload.modId === nodeData.modId,
         (payload) => {
-            setDownloadProgress(payload.data.download?.downloadProgress || 100);
+            const v = payload.data.download?.downloadProgress ?? 100;
+            setCachedDownloadProgress(nodeData.modId, v);
+            setDownloadProgress(v);
         },
         [nodeData.modId]
     );

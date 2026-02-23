@@ -43,7 +43,13 @@ import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
 import { taskQueueAPI } from "tauri-plugin-task-queue";
 import type {DataNode} from "antd/es/tree";
-import {clearPendingEnabled, clearPendingUsedVersion} from "./TreeViewItem.tsx";
+import {
+    clearPendingEnabled,
+    clearPendingUsedVersion,
+    clearPendingVersionLocked,
+    clearCachedWarningState,
+    clearCachedDownloadProgress,
+} from "./TreeViewItem.tsx";
 
 
 interface ModListPageState {
@@ -539,9 +545,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
         // 设置活跃 profile（已优化为 2 次 SQL）
         await profileVM.setActiveProfile(value);
         
-        // 清除 mod 启用状态与待定版本缓存，确保新 profile 使用自己的状态
+        // 清除 mod 相关缓存，确保新 profile 使用自己的状态
         clearPendingEnabled();
         clearPendingUsedVersion();
+        clearPendingVersionLocked();
+        clearCachedWarningState();
+        clearCachedDownloadProgress();
         
         // 后台执行在线更新检查，不阻塞 UI
         ModUpdateService.checkModUpdate().catch(err => {
@@ -897,9 +906,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await IoC.get(TreeViewModel);
         await IoC.get(HomeViewModel);
 
-        // 清除 mod 启用状态与待定版本缓存，确保使用当前 profile 的状态
+        // 清除 mod 相关缓存，确保使用当前 profile 的状态
         clearPendingEnabled();
         clearPendingUsedVersion();
+        clearPendingVersionLocked();
+        clearCachedWarningState();
+        clearCachedDownloadProgress();
 
         // Setup window resize hook
         this.hookWindowResized();
@@ -917,9 +929,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
-            // 清除 mod 启用状态与待定版本缓存，确保新 profile 使用自己的状态
+            // 清除 mod 相关缓存，确保新 profile 使用自己的状态
             clearPendingEnabled();
             clearPendingUsedVersion();
+            clearPendingVersionLocked();
+            clearCachedWarningState();
+            clearCachedDownloadProgress();
             
             await this.updateProfileSelect();
             // 切换游戏时重置展开状态，使用新 profile 的默认展开状态

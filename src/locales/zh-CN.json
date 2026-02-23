@@ -390,5 +390,21 @@
 	"onboarding.userSettings.title": "用户设置",
 	"onboarding.userSettings.description": "点击此处打开用户设置，管理 mod.io、ModCat 等平台的账号登录与访问密钥，用于搜索与下载模组。",
 	"onboarding.end.title": "开始使用",
-	"onboarding.end.description": "介绍就到这里。你随时可以在设置中查看帮助或反馈问题。祝游戏愉快！"
+	"onboarding.end.description": "介绍就到这里。你随时可以在设置中查看帮助或反馈问题。祝游戏愉快！",
+	"userSetting.title": "用户设置",
+	"userSetting.guestUser": "访客用户",
+	"userSetting.loadUserInfoFailed": "加载用户信息失败",
+	"userSetting.invalidOAuth": "无效的授权",
+	"userSetting.saveOAuthFailed": "保存 OAuth 失败",
+	"userSetting.mintcatVip": "MintCat VIP",
+	"userSetting.getAccessKey": "获取访问密钥",
+	"userSetting.placeholderMintcatOAuth": "输入您的 MintCat OAuth 密钥",
+	"userSetting.descMintcatOAuth": "在此粘贴密钥以解锁备份 VIP 功能。",
+	"userSetting.modioConfig": "Mod.io 配置",
+	"userSetting.placeholderModioOAuth": "输入您的 mod.io OAuth 密钥",
+	"userSetting.descModioOAuth": "在此粘贴密钥以同步 mod.io 订阅、搜索和下载 Mod。",
+	"userSetting.modcat": "ModCat",
+	"userSetting.placeholderModcatOAuth": "输入您的 ModCat OAuth 密钥",
+	"userSetting.descModcatOAuth": "在此粘贴密钥以在 modcat.top 搜索和下载 Mod。",
+	"userSetting.saveChanges": "保存更改"
 }

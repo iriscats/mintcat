@@ -65,15 +65,16 @@ export class ModUpdateService {
 
         if (modioMods.length > 0) {
             const platformIds = modioMods.map(m => m.platformId);
-            let modInfoList: ModInfo[] = [];
+            let modInfoList: ModInfo[] | null = null;
             try {
                 modInfoList = await ModioApi.getModInfoByIdList(platformIds);
             } catch (e) {
-                console.error("批量获取 Modio 模组信息失败:", e);
+                console.error("批量获取 Modio 模组信息失败（可能是网络错误）:", e);
+                // 网络错误时不标记任何 mod 为不可用，避免误显示「无法获取或已被删除」
             }
-            const modInfoMap = new Map(modInfoList.map(m => [m.id, m]));
+            const modInfoMap = modInfoList !== null ? new Map(modInfoList.map(m => [m.id, m])) : null;
             for (const mod of modioMods) {
-                const modInfo = modInfoMap.get(mod.platformId);
+                const modInfo = modInfoMap?.get(mod.platformId);
                 if (modInfo) {
                     // 列表接口可能不返回 tags 或需刷新，一键更新时拉取最新标签（issue #62）
                     const tagList = await ModioApi.getModTags(mod.platformId);
@@ -81,7 +82,8 @@ export class ModUpdateService {
                         modInfo.tags = tagList;
                     }
                     await this.updateModInDatabase(mod.modId!, modInfo);
-                } else {
+                } else if (modInfoMap !== null) {
+                    // 仅当 API 成功返回且该 mod 不在列表中时，才标记为不可用（被删除等）
                     await this.markModUnavailable(mod.modId!);
                 }
                 const refreshed = await modsApi.getCompleteModData(mod.modId!);
