@@ -47,7 +47,7 @@ export class ConfigMigrationV4 {
 
                 if (hasSettings || hasModList || hasProfile) {
                     return {
-                        version: '0.4.0',
+                        version: '0.4',
                         saveTime: new Date(dirInfo.mtime).toISOString(),
                         path: configPath
                     };

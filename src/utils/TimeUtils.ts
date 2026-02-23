@@ -126,4 +126,26 @@ export class TimeUtils {
     public static formatTimestamp(ms: TimestampMs): string {
         return this.formatDate(new Date(ms));
     }
+
+    /**
+     * 将配置保存时间字符串格式化为本地友好的显示（支持 ISO 或 YYYY/MM/DD HH:mm:ss）
+     * @param saveTime 来自 ConfigDataType.saveTime 的字符串
+     * @returns 本地化友好格式，解析失败时返回原字符串
+     */
+    public static formatFriendlySaveTime(saveTime: string): string {
+        if (!saveTime || typeof saveTime !== 'string') {
+            return saveTime ?? '';
+        }
+        const date = new Date(saveTime);
+        if (Number.isNaN(date.getTime())) {
+            return saveTime;
+        }
+        return date.toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
 }

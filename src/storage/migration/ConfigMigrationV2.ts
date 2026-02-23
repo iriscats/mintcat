@@ -449,6 +449,9 @@ export class ConfigMigrationV2 {
             if (existingProfile) {
                 console.log(`配置文件 ${profileName} 已存在，将 V2 模组关联到该配置`);
                 const profileId = existingProfile.id!;
+                const folders = await this.profileDAO.getProfileFolders(profileId);
+                const defaultFolder = folders.find(f => f.name === '默认分组');
+                const parentFolderId = defaultFolder?.id ?? null;
                 if (profile.mods && Array.isArray(profile.mods)) {
                     let sortOrder = 0;
                     for (const modSpec of profile.mods) {
@@ -459,7 +462,7 @@ export class ConfigMigrationV2 {
                         await this.profileDAO.addModToProfile({
                             profileId,
                             modId,
-                            parentFolderId: null,
+                            parentFolderId,
                             sortOrder: sortOrder++,
                             isEnabled: modSpec.enabled !== false,
                             usedVersion: ''
@@ -490,7 +493,17 @@ export class ConfigMigrationV2 {
             const profileId = createdProfile.id!;
             console.log(`已创建配置文件: ${profileName}, ID: ${profileId}, 激活: ${isActive}`);
 
-            // 关联模组到配置文件
+            // 为新建的 profile 创建默认分组文件夹（与 ProfileService.createDefaultProfile 一致）
+            const defaultFolder = await this.profileDAO.createFolder({
+                profileId,
+                name: '默认分组',
+                folderType: 'custom',
+                sortOrder: 0,
+                isExpanded: true,
+            });
+            const parentFolderId = defaultFolder?.id ?? null;
+
+            // 关联模组到配置文件（放入默认分组）
             if (profile.mods && Array.isArray(profile.mods)) {
                 let sortOrder = 0;
 
@@ -504,11 +517,10 @@ export class ConfigMigrationV2 {
                         continue;
                     }
 
-                    // 添加模组到配置文件（不创建默认文件夹，直接挂到根级别）
                     await this.profileDAO.addModToProfile({
                         profileId,
                         modId,
-                        parentFolderId: null,
+                        parentFolderId,
                         sortOrder: sortOrder++,
                         isEnabled: modSpec.enabled !== false,
                         usedVersion: ''

@@ -6,6 +6,7 @@ import {ConfigDataType} from "@/storage/DataType.ts";
 import {MessageBox} from "@/components/MessageBox.ts";
 import {emitVoidEvent, useEventListener} from "@/events";
 import {DialogConfigService} from "@/services/DialogConfigService.ts";
+import {TimeUtils} from "@/utils/TimeUtils.ts";
 
 
 interface ListDataType extends ConfigDataType {
@@ -151,7 +152,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                                                 }/>
                                       <FileOutlined/>
                                       <span>
-                                          {`${t("Saved at")}: ${item.saveTime}`}
+                                          {`${t("Saved at")}: ${TimeUtils.formatFriendlySaveTime(item.saveTime)}`}
                                       </span>
                                       <Tag color="blue"
                                            style={{

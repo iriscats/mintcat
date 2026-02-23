@@ -12,7 +12,7 @@ export class ConfigV4 implements IConfig {
         if (await exists(fullConfigDir)) {
             const dirInfo = await stat(fullConfigDir);
             return {
-                version: "0.4.0",
+                version: "0.4",
                 saveTime: TimeUtils.formatDate(dirInfo.mtime),
                 path: fullConfigDir
             }
