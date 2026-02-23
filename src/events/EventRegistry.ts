@@ -76,6 +76,12 @@ export interface EventPayloads {
   /** 用户设置对话框打开 */
   'user-setting-dialog-open': void;
 
+  /** mod.io 未授权/授权错误，payload 为错误信息，用于展示带「前往用户管理」的提示 */
+  'modio-unauthorized': string;
+
+  /** 安装失败-游戏路径不存在，payload 为错误信息，用于展示带「选择游戏」的提示 */
+  'install-failed-game-path-not-found': string;
+
   /** 配置管理对话框关闭（用于首次启动引导串联） */
   'config-manage-dialog-closed': void;
 

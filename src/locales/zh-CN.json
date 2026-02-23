@@ -230,6 +230,7 @@
 	"mod.io Subscribed": "mod.io 订阅",
 	"mod.io Too Many Requests": "mod.io 请求过多",
 	"mod.io Unauthorized": "mod.io 未授权或授权错误",
+	"Open User Management": "前往用户管理",
 	"ModCat": "ModCat",
 	"Modio Folder Not Found": "未找到 Modio 文件夹",
 	"mods": "个 Mod",
@@ -405,7 +406,7 @@
 	"userSetting.modioConfig": "Mod.io 配置",
 	"userSetting.placeholderModioOAuth": "输入您的 mod.io OAuth 密钥",
 	"userSetting.descModioOAuth": "在此粘贴密钥以同步 mod.io 订阅、搜索和下载 Mod。",
-	"userSetting.modcat": "ModCat",
+	"userSetting.modcatConfig": "ModCat 配置",
 	"userSetting.placeholderModcatOAuth": "输入您的 ModCat OAuth 密钥",
 	"userSetting.descModcatOAuth": "在此粘贴密钥以在 modcat.top 搜索和下载 Mod。",
 	"userSetting.saveChanges": "保存更改"

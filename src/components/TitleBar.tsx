@@ -18,7 +18,6 @@ import {StorageAPI} from "@/storage";
 import {emitEvent, emitVoidEvent, listenEvent, UnlistenFn} from "@/events";
 import { taskQueueAPI } from "tauri-plugin-task-queue";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
-import {SelectGameDialog, SelectGameDialogRef} from "@/dialogs/SelectGameDialog/index.tsx";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {ModioApi} from "@/apis/modio";
 import { CloudBackupApi } from "@/apis/mintcat";
@@ -28,16 +27,16 @@ import StatusBar from "./StatusBar.tsx";
 class TitleBar extends React.Component<any, any> {
 
     private readonly userSettingDialogRef: React.RefObject<UserSettingDialog>
-    private readonly selectGameDialogRef: React.RefObject<SelectGameDialogRef>
     private unlistenActiveGameChange: UnlistenFn | undefined;
     private unlistenConfigImported: UnlistenFn | undefined;
     private unlistenUserSettingOpen: UnlistenFn | undefined;
+    private unlistenModioUnauthorized: UnlistenFn | undefined;
+    private unlistenInstallFailedGamePath: UnlistenFn | undefined;
 
     public constructor(props: any) {
         super(props);
 
         this.userSettingDialogRef = React.createRef();
-        this.selectGameDialogRef = React.createRef();
 
         this.state = {
             gameName: "未选择",
@@ -114,7 +113,12 @@ class TitleBar extends React.Component<any, any> {
                 await emitVoidEvent('mods-installed');
                 await IntegrateApi.launchGame();
             } else if (result.status === 'failed') {
-                message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
+                const msg = `${t("Installation Failed")}: ${result.error || 'Unknown error'}`;
+                if (result.error && result.error.includes(t('Game Path Not Found'))) {
+                    await emitEvent('install-failed-game-path-not-found', msg);
+                } else {
+                    message.error(msg);
+                }
             }
         } catch (error) {
             console.error('[TitleBar] Installation failed:', error);
@@ -172,6 +176,44 @@ class TitleBar extends React.Component<any, any> {
         this.unlistenUserSettingOpen = await listenEvent('user-setting-dialog-open', () => {
             this.userSettingDialogRef.current?.show();
         });
+        this.unlistenModioUnauthorized = await listenEvent('modio-unauthorized', (errorMessage: string) => {
+            const key = 'modio-unauthorized';
+            message.error({
+                key,
+                content: (
+                    <span>
+                        {errorMessage}
+                        {' '}
+                        <Button type="link" size="small" style={{ padding: 0, height: 'auto' }} onClick={() => {
+                            message.destroy(key);
+                            this.userSettingDialogRef.current?.show();
+                        }}>
+                            {t("Open User Management")}
+                        </Button>
+                    </span>
+                ),
+                duration: 6,
+            });
+        });
+        this.unlistenInstallFailedGamePath = await listenEvent('install-failed-game-path-not-found', (errorMessage: string) => {
+            const key = 'install-failed-game-path';
+            message.error({
+                key,
+                content: (
+                    <span>
+                        {errorMessage}
+                        {' '}
+                        <Button type="link" size="small" style={{ padding: 0, height: 'auto' }} onClick={() => {
+                            message.destroy(key);
+                            emitVoidEvent('select-game-dialog-open');
+                        }}>
+                            {t("Select Game")}
+                        </Button>
+                    </span>
+                ),
+                duration: 6,
+            });
+        });
     }
 
     componentWillUnmount() {
@@ -183,6 +225,12 @@ class TitleBar extends React.Component<any, any> {
         }
         if (this.unlistenUserSettingOpen) {
             this.unlistenUserSettingOpen();
+        }
+        if (this.unlistenModioUnauthorized) {
+            this.unlistenModioUnauthorized();
+        }
+        if (this.unlistenInstallFailedGamePath) {
+            this.unlistenInstallFailedGamePath();
         }
     }
 
@@ -231,7 +279,7 @@ class TitleBar extends React.Component<any, any> {
                                 <Button type="primary" 
                                     className={"ant-header-start-button tour-step-switch-game"}
                                     icon={<EllipsisOutlined />} 
-                                    onClick={() => this.selectGameDialogRef.current?.show()}
+                                    onClick={() => emitVoidEvent('select-game-dialog-open')}
                                 />
                             </Tooltip>
                         </Space.Compact>
@@ -316,7 +364,6 @@ class TitleBar extends React.Component<any, any> {
                     />
                 </Flex>
                 <UserSettingDialog ref={this.userSettingDialogRef}/>
-                <SelectGameDialog ref={this.selectGameDialogRef}/>
             </Flex>
         );
     }

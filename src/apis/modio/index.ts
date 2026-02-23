@@ -1,5 +1,6 @@
 import {message} from "antd";
 import {t} from "i18next";
+import {emitEvent} from "@/events";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 import {UserInfo} from "@/apis/modio/UserInfo.ts";
 import {EventInfo} from "@/apis/modio/EventInfo.ts";
@@ -86,7 +87,8 @@ export class ModioApi {
             const data = await ModioApi.getRequest(path);
             return data as UserInfo;
         } catch (e) {
-            message.error(`${t("Fetch User Info Error")}: ${e}`);
+            const msg = `${t("Fetch User Info Error")}: ${e}`;
+            await emitEvent("modio-unauthorized", msg);
         }
     }
 

@@ -31,7 +31,7 @@ import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {CountLabel} from "./CountLabel.tsx";
 import {BasePage} from "../IBasePage.ts";
-import {listenEvent, type UnlistenFn} from "@/events";
+import {emitEvent, listenEvent, type UnlistenFn} from "@/events";
 import {AddModType} from "@/dialogs/AddModDialog";
 import {SearchBox} from "@/pages/HomePage/SearchBox.tsx";
 import {StorageAPI} from "@/storage";
@@ -437,7 +437,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 this.refreshUnsavedState();
                 message.success(t("Installation Finish"));
             } else if (result.status === 'failed') {
-                message.error(`${t("Installation Failed")}: ${result.error || 'Unknown error'}`);
+                const msg = `${t("Installation Failed")}: ${result.error || 'Unknown error'}`;
+                if (result.error && result.error.includes(t('Game Path Not Found'))) {
+                    await emitEvent('install-failed-game-path-not-found', msg);
+                } else {
+                    message.error(msg);
+                }
             }
         } catch (error) {
             console.error('[HomePage] Installation failed:', error);

@@ -301,7 +301,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     {/* ModCat Configuration Section */}
                     <Flex vertical gap={8}>
                         <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("userSetting.modcat")}</Text>
+                            <Text strong className="user-settings-config-title">{t("userSetting.modcatConfig")}</Text>
                             <Button 
                                 color="primary"
                                 variant="link" 
