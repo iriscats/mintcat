@@ -14,9 +14,11 @@ export class DeviceApi {
             }
             if (userLocale.includes("zh")) {
                 return "zh";
-            } else if (userLocale.includes("en")) {
+            }
+            if (userLocale.includes("en")) {
                 return "en";
             }
+            return "en";
         } catch (e) {
             // console.log(e);
             return "en";

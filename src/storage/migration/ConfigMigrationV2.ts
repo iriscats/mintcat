@@ -295,6 +295,21 @@ export class ConfigMigrationV2 {
                 await this.createProfileWithMods(profileName, profile, isActive);
             }
 
+            // 显式激活 V2 的 active_profile，确保 getActiveProfile() 返回带模组的配置
+            // （否则可能仍指向已有的空 profile，导致「当前配置文件没有模组」）
+            if (activeProfileName) {
+                const normalizedActive = activeProfileName.toLowerCase().replace(/\s+/g, '_');
+                const activeProfile = await this.profileDAO.getProfileByName(
+                    normalizedActive,
+                    this.gameId,
+                    this.userId
+                );
+                if (activeProfile?.id) {
+                    await this.profileDAO.activateProfile(activeProfile.id);
+                    console.log(`已激活配置文件: ${activeProfileName} (ID: ${activeProfile.id})`);
+                }
+            }
+
             console.log('模组和配置文件迁移完成');
         } catch (error) {
             console.error('迁移模组和配置文件失败:', error);
@@ -384,13 +399,24 @@ export class ConfigMigrationV2 {
                 downloadStatus: 'completed'
             });
 
-            // 创建状态信息
+            // 创建状态信息（本地 mod 首次导入时检测文件是否存在）
+            let isLocalNotFound = false;
+            if (parsed.type === 'local') {
+                try {
+                    isLocalNotFound = !(await exists(url));
+                    if (isLocalNotFound) {
+                        console.warn(`本地模组文件不存在: ${url}`);
+                    }
+                } catch {
+                    isLocalNotFound = true;
+                }
+            }
             await this.modDAO.upsertModStatus({
                 modId,
                 lastUpdateDate: 0,
                 onlineUpdateDate: 0,
                 isOnlineAvailable: parsed.type === 'modio',
-                isLocalNotFound: false
+                isLocalNotFound
             });
 
             console.log(`已创建模组: ${displayName} (${sourceType})`);
@@ -421,7 +447,29 @@ export class ConfigMigrationV2 {
             );
 
             if (existingProfile) {
-                console.log(`配置文件 ${profileName} 已存在，跳过创建`);
+                console.log(`配置文件 ${profileName} 已存在，将 V2 模组关联到该配置`);
+                const profileId = existingProfile.id!;
+                if (profile.mods && Array.isArray(profile.mods)) {
+                    let sortOrder = 0;
+                    for (const modSpec of profile.mods) {
+                        const url = modSpec.spec?.url;
+                        if (!url) continue;
+                        const modId = this.modUrlToDbId.get(url);
+                        if (!modId) continue;
+                        await this.profileDAO.addModToProfile({
+                            profileId,
+                            modId,
+                            parentFolderId: null,
+                            sortOrder: sortOrder++,
+                            isEnabled: modSpec.enabled !== false,
+                            usedVersion: ''
+                        });
+                    }
+                    console.log(`已关联 ${profile.mods.length} 个模组到已有配置文件 ${profileName}`);
+                }
+                if (isActive) {
+                    await this.profileDAO.activateProfile(profileId);
+                }
                 return;
             }
 
@@ -463,7 +511,7 @@ export class ConfigMigrationV2 {
                         parentFolderId: null,
                         sortOrder: sortOrder++,
                         isEnabled: modSpec.enabled !== false,
-                        usedVersion: '-'
+                        usedVersion: ''
                     });
                 }
 
