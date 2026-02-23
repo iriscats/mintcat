@@ -22,9 +22,11 @@ import {ConfigManageDialog} from "@/dialogs/ConfigManageDialog";
 
 import {SelectGameDialog} from "@/dialogs/SelectGameDialog";
 import {useKeyboardListener} from "@/hooks/useKeyboardListener.tsx";
-import {emitEvent, listenEvent} from "@/events";
+import {emitEvent, listenEvent, useEventListener} from "@/events";
 import {OnboardingTour} from "@/components/OnboardingTour.tsx";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
+import {IoC} from "@/core/IoC";
+import {AppViewModel} from "@/AppViewModel";
 
 const {
     Header,
@@ -67,6 +69,16 @@ const AppContent = () => {
     useAppError();
     useDeepLinkHandler(isAppViewModelReady);
     useOAuthCallback();
+    // 配置导入成功后刷新主题和语言，使界面立即反映迁移后的设置
+    useEventListener('config-imported', async () => {
+        try {
+            const vm = await IoC.get(AppViewModel);
+            await vm.loadUserGuiTheme();
+            await vm.loadUserLanguages();
+        } catch (e) {
+            console.warn('[App] config-imported refresh theme/language failed', e);
+        }
+    });
     useKeyboardListener((event) => {
         if (event.ctrlKey && event.key === 'f') {
             event.preventDefault();

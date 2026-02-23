@@ -278,6 +278,7 @@ export class ModioApi {
             return data.data as EventInfo[];
         } catch (e) {
             message.error(`${t("Fetch Events Error")}: ${e}`);
+            return [];
         }
     }
 

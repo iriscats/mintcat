@@ -73,17 +73,23 @@ export class CheckModUpdateTask implements ITask {
         await context.setStep(t('Check Modio updates'), 3, TOTAL_STEPS);
         
         if (modioMods.length > 0) {
-            // Check modio OAuth
+            // Check modio OAuth first; skip Modio check without auth to avoid confusing errors
             const oAuthDAO = await StorageAPI.getOAuths();
             const modioOAuth = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
-            
-            if (modioOAuth?.oauth) {
-                const modIdList = modioMods.map(m => m.platformId);
-                await context.setMessage(`${t('Checking Modio mods...')} (${modIdList.length} ${t('mods')})`);
+            const hasModioAuth = !!(modioOAuth?.oauth);
 
-                const events = await ModioApi.getEvents(updateTime, modIdList.join(","));
+            if (!hasModioAuth) {
+                await context.setMessage(t('No mod.io OAuth, skip Modio update check'));
+            } else if (typeof ModioApi?.getEvents !== 'function') {
+                await context.setMessage(t('Mod.io service unavailable, skip Modio update check'));
+            } else {
+                try {
+                    const modIdList = modioMods.map(m => m.platformId);
+                    await context.setMessage(`${t('Checking Modio mods...')} (${modIdList.length} ${t('mods')})`);
 
-                for (const event of events) {
+                    const events = await ModioApi.getEvents(updateTime, modIdList.join(",")) ?? [];
+
+                    for (const event of events) {
                     if (context.checkCancelled()) {
                         throw new Error('Task cancelled');
                     }
@@ -115,8 +121,10 @@ export class CheckModUpdateTask implements ITask {
                         }
                     }
                 }
-            } else {
-                await context.setMessage(t("No mod.io OAuth, skip Modio update check"));
+                } catch (e) {
+                    console.warn('[CheckModUpdateTask] Modio update check failed:', e);
+                    await context.setMessage(t('Mod.io update check failed, skip'));
+                }
             }
         }
 

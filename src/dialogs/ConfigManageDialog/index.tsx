@@ -57,7 +57,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
 
             setIsModalOpen(false);
             emitVoidEvent("config-manage-dialog-closed");
-            window.location.reload();
+            emitVoidEvent("config-imported");
         } finally {
             setIsImporting(false);
         }

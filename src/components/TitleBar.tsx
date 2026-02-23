@@ -30,6 +30,7 @@ class TitleBar extends React.Component<any, any> {
     private readonly userSettingDialogRef: React.RefObject<UserSettingDialog>
     private readonly selectGameDialogRef: React.RefObject<SelectGameDialogRef>
     private unlistenActiveGameChange: UnlistenFn | undefined;
+    private unlistenConfigImported: UnlistenFn | undefined;
     private unlistenUserSettingOpen: UnlistenFn | undefined;
 
     public constructor(props: any) {
@@ -165,6 +166,9 @@ class TitleBar extends React.Component<any, any> {
         this.unlistenActiveGameChange = await listenEvent('active-game-change', (game) => {
             this.setState({ gameName: game.displayName });
         });
+        this.unlistenConfigImported = await listenEvent('config-imported', () => {
+            this.loadActiveGame();
+        });
         this.unlistenUserSettingOpen = await listenEvent('user-setting-dialog-open', () => {
             this.userSettingDialogRef.current?.show();
         });
@@ -173,6 +177,9 @@ class TitleBar extends React.Component<any, any> {
     componentWillUnmount() {
         if (this.unlistenActiveGameChange) {
             this.unlistenActiveGameChange();
+        }
+        if (this.unlistenConfigImported) {
+            this.unlistenConfigImported();
         }
         if (this.unlistenUserSettingOpen) {
             this.unlistenUserSettingOpen();

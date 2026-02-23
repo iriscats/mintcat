@@ -252,6 +252,8 @@
     "No missing local mods found": "No missing local mods found",
     "No mod.io mods found in current profile": "No mod.io mods found in current profile",
     "No mod.io OAuth, skip Modio update check": "No mod.io OAuth, skip Modio update check",
+    "Mod.io service unavailable, skip Modio update check": "Mod.io service unavailable, skip Modio update check",
+    "Mod.io update check failed, skip": "Mod.io update check failed, skip",
     "No mods to check": "No mods to check",
     "No mods to install": "No mods to install",
     "No more results": "No more results",

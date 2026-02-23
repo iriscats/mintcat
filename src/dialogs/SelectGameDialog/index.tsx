@@ -135,6 +135,13 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
         loadGames().then();
     }, []);
 
+    // 每次打开弹窗时重新拉取游戏列表（含 installPath），避免配置迁移等操作后路径未刷新
+    useEffect(() => {
+        if (isModalOpen) {
+            loadGames().then();
+        }
+    }, [isModalOpen]);
+
     useEventListener("select-game-dialog-open", () => {
         setIsModalOpen(true);
     });

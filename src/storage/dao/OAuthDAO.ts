@@ -239,6 +239,9 @@ export class OAuthDAO {
         try {
             const userDAO = await StorageAPI.getUsers();
             const activeUserData = await userDAO.getActiveUser();
+            if (!activeUserData?.id) {
+                return null;
+            }
 
             const db = await getDb();
             const result = await db.select()

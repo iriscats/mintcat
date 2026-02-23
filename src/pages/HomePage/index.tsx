@@ -79,6 +79,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     // Event listener cleanup functions
     private unlistenActiveGameChange?: UnlistenFn;
+    private unlistenConfigImported?: UnlistenFn;
     private unlistenModEnabledChange?: UnlistenFn;
     private unlistenModsInstalled?: UnlistenFn;
 
@@ -942,6 +943,18 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await this.updateCountLabel();
         });
 
+        // 监听配置导入成功，与游戏切换类似地刷新 Profile / TreeView / 计数
+        this.unlistenConfigImported = await listenEvent("config-imported", async () => {
+            clearPendingEnabled();
+            clearPendingUsedVersion();
+            clearPendingVersionLocked();
+            clearCachedWarningState();
+            clearCachedDownloadProgress();
+            await this.updateProfileSelect();
+            await this.updateTreeView(true);
+            await this.updateCountLabel();
+        });
+
         // Initial UI update
         this.updateProfileSelect().then();
         this.updateTreeView().then();
@@ -957,6 +970,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         // ✅ 清理所有事件监听器
         if (this.unlistenActiveGameChange) {
             this.unlistenActiveGameChange();
+        }
+        if (this.unlistenConfigImported) {
+            this.unlistenConfigImported();
         }
         if (this.unlistenModEnabledChange) {
             this.unlistenModEnabledChange();

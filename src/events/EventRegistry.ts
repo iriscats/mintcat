@@ -79,6 +79,9 @@ export interface EventPayloads {
   /** 配置管理对话框关闭（用于首次启动引导串联） */
   'config-manage-dialog-closed': void;
 
+  /** 配置导入成功，各页面应刷新本地数据（不整页刷新） */
+  'config-imported': void;
+
   /** 选择游戏对话框关闭（用于首次启动引导串联） */
   'select-game-dialog-closed': void;
 

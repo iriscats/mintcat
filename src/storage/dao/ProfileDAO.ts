@@ -195,9 +195,12 @@ export class ProfileDAO {
             }
 
             const db = await getDb();
+            const displayName = profileData.displayName != null && profileData.displayName !== ''
+                ? profileData.displayName
+                : profileData.name.charAt(0).toUpperCase() + profileData.name.slice(1);
             const result = await db.insert(profiles).values({
                 name: profileData.name,
-                displayName: profileData.name.charAt(0).toUpperCase() + profileData.name.slice(1), // 首字母大写作为显示名称
+                displayName,
                 gameId: profileData.gameId,
                 userId: profileData.userId,
                 isActive: profileData.isActive ?? false,

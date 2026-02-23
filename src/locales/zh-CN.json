@@ -252,6 +252,8 @@
 	"No missing local mods found": "没有发现缺失文件的本地 Mod",
 	"No mod.io mods found in current profile": "当前配置中未找到 mod.io Mod",
 	"No mod.io OAuth, skip Modio update check": "未配置 mod.io OAuth，跳过 Modio 更新检查",
+	"Mod.io service unavailable, skip Modio update check": "Mod.io 服务不可用，跳过 Modio 更新检查",
+	"Mod.io update check failed, skip": "Mod.io 更新检查失败，已跳过",
 	"No mods to check": "没有需要检查的模组",
 	"No mods to install": "没有可安装的模组",
 	"No more results": "没有更多结果",

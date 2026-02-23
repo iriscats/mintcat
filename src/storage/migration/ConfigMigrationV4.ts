@@ -116,6 +116,7 @@ export class ConfigMigrationV4 {
 
     /**
      * 迁移设置数据
+     * 旧版 settings.json 使用 snake_case（gui_theme/cache_path/config_path），需兼容读取。
      */
     private async migrateSettings(): Promise<void> {
         try {
@@ -124,19 +125,22 @@ export class ConfigMigrationV4 {
                 const settingsContent = await readTextFile(settingsPath);
                 const settings = MigrationUtils.safeParseJson(settingsContent, {});
 
-                // 逐个设置配置项
-                if (settings.guiTheme !== undefined)
-                    await this.settingDAO.setValue('guiTheme', settings.guiTheme);
+                const guiTheme = settings.guiTheme ?? settings.gui_theme;
+                const cachePath = settings.cachePath ?? settings.cache_path;
+                const configPath = settings.configPath ?? settings.config_path;
+                const ue4ss = settings.ue4ss;
+
+                if (guiTheme !== undefined)
+                    await this.settingDAO.setValue('guiTheme', guiTheme);
                 if (settings.language !== undefined)
                     await this.settingDAO.setValue('language', settings.language);
-                if (settings.cachePath !== undefined)
-                    await this.settingDAO.setValue('cachePath', settings.cachePath);
-                if (settings.configPath !== undefined)
-                    await this.settingDAO.setValue('configPath', settings.configPath);
-                if (settings.ue4ss !== undefined)
-                    await this.settingDAO.setValue('ue4ssVersion', settings.ue4ss);
+                if (cachePath !== undefined)
+                    await this.settingDAO.setValue('cachePath', cachePath);
+                if (configPath !== undefined)
+                    await this.settingDAO.setValue('configPath', configPath);
+                if (ue4ss !== undefined)
+                    await this.settingDAO.setValue('ue4ssVersion', ue4ss);
 
-                // 迁移OAuth信息
                 if (settings.modio_oauth) {
                     await this.oauthDAO.createOAuth({
                         uid: this.userId,
@@ -145,13 +149,11 @@ export class ConfigMigrationV4 {
                     });
                 }
 
-                // 迁移 DRG 安装路径
                 if (settings.drg_pak_path) {
                     await this.gameDAO.updateGame(this.gameId, {
                         installPath: settings.drg_pak_path
                     });
                 }
-
             }
         } catch (error) {
             console.error('迁移设置数据失败:', error);
@@ -342,14 +344,27 @@ export class ConfigMigrationV4 {
 
     /**
      * 迁移单个配置文件详细信息
+     * 旧版配置文件名使用原始显示名（含空格），如 profile_default - Copy.json，
+     * 故需优先用 displayName 拼路径，找不到再尝试标准化 name。
      */
     private async migrateSingleProfileDetails(profile: any): Promise<void> {
         try {
-            const profileDetailPath = await path.join(
-                await configDir(),
-                'com.mint.cat',
-                `profile_${profile.name}.json`
-            );
+            const configDirPath = await configDir();
+            const baseDir = await path.join(configDirPath, 'com.mint.cat');
+            // 旧版文件名与 displayName 一致（含空格），如 "profile_default - Copy.json"
+            const fileNameFromDisplay = `profile_${profile.displayName ?? profile.name}.json`;
+            const pathByDisplay = await path.join(baseDir, fileNameFromDisplay);
+            const pathByNormalized = await path.join(baseDir, `profile_${profile.name}.json`);
+
+            let profileDetailPath: string;
+            if (await exists(pathByDisplay)) {
+                profileDetailPath = pathByDisplay;
+            } else if (await exists(pathByNormalized)) {
+                profileDetailPath = pathByNormalized;
+            } else {
+                console.warn(`[Migration] 未找到 profile 详情文件，跳过: ${profile.displayName ?? profile.name} (尝试过 ${fileNameFromDisplay} 与 profile_${profile.name}.json)`);
+                return;
+            }
 
             const detailContent = await readTextFile(profileDetailPath);
             const oldDetail = MigrationUtils.safeParseJson(detailContent, {

@@ -168,20 +168,25 @@ export function MintCatSettings() {
         setTheme(theme);
     });
 
-    React.useEffect(() => {
-        const fetchData = async () => {
-            const settings = await StorageAPI.getSettings();
-            setLanguage(await settings.getLanguage());
-            setTheme(await settings.getGuiTheme());
-            setConfigDirectory(await settings.getConfigPath());
-            setCacheDirectory(await settings.getCachePath());
-            const ue4ssValue = await settings.getValue('ue4ss');
-            setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
-            setClipboardMonitor(await settings.getClipboardMonitorEnabled());
-            setNetworkProxy((await settings.getValue('network.proxy')) || "");
-        }
-        fetchData().then();
+    const fetchSettings = React.useCallback(async () => {
+        const settings = await StorageAPI.getSettings();
+        setLanguage(await settings.getLanguage());
+        setTheme(await settings.getGuiTheme());
+        setConfigDirectory(await settings.getConfigPath());
+        setCacheDirectory(await settings.getCachePath());
+        const ue4ssValue = await settings.getValue('ue4ss');
+        setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
+        setClipboardMonitor(await settings.getClipboardMonitorEnabled());
+        setNetworkProxy((await settings.getValue('network.proxy')) || "");
     }, []);
+
+    React.useEffect(() => {
+        fetchSettings().then();
+    }, [fetchSettings]);
+
+    useEventListener("config-imported", () => {
+        fetchSettings().then();
+    });
 
     return (
         <>

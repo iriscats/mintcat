@@ -59,15 +59,14 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             // 检查OAuth是否有效
             await vm.checkOauth();
 
-            // 加载各平台 OAuth
+            // 加载各平台 OAuth（始终从 DB 拉取并展示，即使用户信息接口失败如 token 过期）
             const mintcatOAuth = await this.appService.getOAuthByPlatform('mintcat');
             const modcatOAuth = await this.appService.getOAuthByPlatform(MODCAT_PLATFORM);
-            
+            const modioOAuth = await this.appService.getOAuthByPlatform('mod.io');
+
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
                 const url = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
-                const modioOAuth = await this.appService.getOAuthByPlatform('mod.io');
-
                 this.setState({
                     profileUrl: url,
                     username: userInfo.username,
@@ -78,8 +77,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     modcatOAuth: modcatOAuth?.oauth || "",
                 })
             } else {
-                // 即使没有 mod.io 用户信息，也要加载其他平台 OAuth 状态
+                // 即使没有 mod.io 用户信息（如 token 过期），也展示 DB 中已有的 OAuth，方便用户查看或重新粘贴
                 this.setState({
+                    modioOAuth: modioOAuth?.oauth || "",
                     mintcatOAuth: mintcatOAuth?.oauth || "",
                     modcatOAuth: modcatOAuth?.oauth || "",
                 })
