@@ -378,7 +378,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
             if (errors.length > 0) {
                 const failedNames = errors.map(e => e.mod.displayName).slice(0, 3).join(', ');
                 const suffix = errors.length > 3 ? ` (+${errors.length - 3} more)` : '';
-                message.error(`${t("Download Failed")}: ${failedNames}${suffix}`);
+                const firstReason = errors[0]?.error?.message;
+                const reasonHint = firstReason ? ` — ${firstReason}` : '';
+                message.error(`${t("Download Failed")}: ${failedNames}${suffix}${reasonHint}`);
             } else if (successCount > 0) {
                 message.success(`${t("Update Finish")} (${successCount} mods)`);
             }

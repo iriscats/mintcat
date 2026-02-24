@@ -184,7 +184,9 @@ export class ModInstallTask implements ITask {
 
             if (errors.length > 0) {
                 const failedNames = errors.map(e => e.mod.displayName).join(', ');
-                throw new Error(`${t("Download Failed")}: ${failedNames}`);
+                const firstReason = errors[0]?.error?.message;
+                const reasonSuffix = firstReason ? ` (${firstReason})` : '';
+                throw new Error(`${t("Download Failed")}: ${failedNames}${reasonSuffix}`);
             }
 
             // Refresh enabledMods from DB so subsequent steps use updated cache paths
