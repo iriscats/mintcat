@@ -14,13 +14,29 @@ pub fn get_system_proxy_url() -> Option<String> {
     }
 }
 
+/// 通过 Windows 注册表读取 IE/系统代理设置，兼容所有 Windows 版本。
+/// 注册表路径: HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings
 #[cfg(windows)]
 fn get_system_proxy_url_windows() -> Option<String> {
-    let config = winhttp::get_ie_proxy_config().ok()?;
-    let raw = config.proxy?.trim().to_string();
+    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::RegKey;
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let inet = hkcu
+        .open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings")
+        .ok()?;
+
+    let enabled: u32 = inet.get_value("ProxyEnable").unwrap_or(0);
+    if enabled == 0 {
+        return None;
+    }
+
+    let raw: String = inet.get_value("ProxyServer").ok()?;
+    let raw = raw.trim().to_string();
     if raw.is_empty() {
         return None;
     }
+
     // IE 格式可能为 "http=127.0.0.1:7890;https=127.0.0.1:7890" 或 "127.0.0.1:7890"
     let first = raw.split(';').next()?.trim();
     let host_port = if let Some((_, right)) = first.split_once('=') {
@@ -31,7 +47,7 @@ fn get_system_proxy_url_windows() -> Option<String> {
     if host_port.is_empty() {
         return None;
     }
-    let lower = to_ascii_lowercase(host_port);
+    let lower = host_port.to_ascii_lowercase();
     if lower.starts_with("http://")
         || lower.starts_with("https://")
         || lower.starts_with("socks4://")
@@ -40,19 +56,6 @@ fn get_system_proxy_url_windows() -> Option<String> {
         return Some(host_port.to_string());
     }
     Some(format!("http://{}", host_port))
-}
-
-#[cfg(windows)]
-fn to_ascii_lowercase(s: &str) -> String {
-    s.chars()
-        .map(|c| {
-            if ('A'..='Z').contains(&c) {
-                ((c as u8) + 32) as char
-            } else {
-                c
-            }
-        })
-        .collect::<String>()
 }
 
 #[cfg(not(windows))]
@@ -73,4 +76,3 @@ fn get_system_proxy_url_env() -> Option<String> {
             }
         })
 }
-
