@@ -294,12 +294,26 @@ export class ModioApi {
         }
     }
 
+    /**
+     * 下载 mod 文件。先用数据库中的下载地址尝试，失败（如链接过期）后再拉取最新 binary_url 重试一次。
+     */
     public static async downloadModFile(modInfo: CompleteModData,
                                         onProgress?: (loaded: number, total: number) => void) {
         const fileName = modInfo.nameId;
         const version = modInfo.version?.currentVersion || "-";
-        const fileSize = modInfo.download?.fileSize || 0;
-        const downloadUrl = modInfo.download?.downloadUrl || "";
+        let fileSize = modInfo.download?.fileSize || 0;
+        let downloadUrl = modInfo.download?.downloadUrl || "";
+
+        // 数据库没有链接时必须先拉取一次
+        if (!downloadUrl) {
+            const freshInfo = await ModioApi.getModInfoByName(modInfo.nameId);
+            if (freshInfo?.modfile?.download?.binary_url) {
+                downloadUrl = freshInfo.modfile.download.binary_url;
+                if (freshInfo.modfile.filesize) fileSize = freshInfo.modfile.filesize;
+            } else {
+                throw new Error(t("Fetch Mod Info Error") || "无法获取模组信息，请检查模组链接或网络");
+            }
+        }
 
         if (await CacheApi.checkCacheFile(fileName, version, fileSize)) {
             const cachePath = await CacheApi.getModCachePath(fileName, version);
@@ -307,16 +321,28 @@ export class ModioApi {
             return { ...modInfo, download: { ...modInfo.download!, cachePath, downloadProgress: 100 } };
         }
 
-        // Use unified download API for all file sizes
         const cachePath = await CacheApi.getModCachePath(fileName, version);
-        await DownloadApi.downloadFile(
-            downloadUrl,
-            cachePath,
-            { resume: true, retryCount: 3 },
-            (downloaded, total) => {
-                onProgress?.(downloaded, total);
+        const doDownload = (url: string) =>
+            DownloadApi.downloadFile(
+                url,
+                cachePath,
+                { resume: true, retryCount: 3 },
+                (downloaded, total) => onProgress?.(downloaded, total)
+            );
+
+        try {
+            await doDownload(downloadUrl);
+        } catch (firstError) {
+            // 先用数据库地址试一次，失败后再获取最新链接重试（mod.io binary_url 会过期）
+            const freshInfo = await ModioApi.getModInfoByName(modInfo.nameId);
+            const freshUrl = freshInfo?.modfile?.download?.binary_url;
+            if (freshUrl) {
+                if (freshInfo.modfile.filesize) fileSize = freshInfo.modfile.filesize;
+                await doDownload(freshUrl);
+            } else {
+                throw firstError;
             }
-        );
+        }
 
         onProgress?.(fileSize, fileSize);
         return { ...modInfo, download: { ...modInfo.download!, cachePath, downloadProgress: 100 } };

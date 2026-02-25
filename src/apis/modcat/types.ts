@@ -243,6 +243,15 @@ export interface ModcatModDetailRequest {
 }
 
 /**
+ * 根据 ModId 列表批量获取版本请求参数
+ * Since 可选，仅返回该时间之后创建的版本（格式 YYYY-MM-DD HH:mm:ss）
+ */
+export interface ModcatGetVersionsByModIdsRequest {
+    ModIds: string[];
+    Since?: string;
+}
+
+/**
  * 订阅请求参数
  */
 export interface ModcatSubscribeRequest {

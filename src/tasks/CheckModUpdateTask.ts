@@ -5,9 +5,33 @@ import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { ModioApi } from '@/apis/modio';
 import { ModcatApi, MODCAT_PLATFORM } from '@/apis/modcat';
+import type { ModcatModVersionEntity } from '@/apis/modcat/types';
 import { ModSourceType } from '@/models/mod/types';
 import { t } from 'i18next';
 import { ensureInternalAssets } from '@/services/InternalAssetService';
+
+/** 将秒级时间戳格式化为 ModCat API Since 参数格式 "YYYY-MM-DD HH:mm:ss" */
+function formatSinceForModcat(seconds: number): string {
+    const d = new Date(seconds * 1000);
+    const Y = d.getFullYear();
+    const M = String(d.getMonth() + 1).padStart(2, '0');
+    const D = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+}
+
+/** 将批量返回的版本列表按 ModId 分组 */
+function groupVersionsByModId(versions: ModcatModVersionEntity[]): Map<string, ModcatModVersionEntity[]> {
+    const map = new Map<string, ModcatModVersionEntity[]>();
+    for (const v of versions) {
+        const id = v.ModId ?? '';
+        if (!map.has(id)) map.set(id, []);
+        map.get(id)!.push(v);
+    }
+    return map;
+}
 
 @Task({
     type: 'check_mod_update',
@@ -128,67 +152,59 @@ export class CheckModUpdateTask implements ITask {
             }
         }
 
-        // Step 4: Check ModCat mods by fetching latest version
+        // Step 4: Check ModCat mods via batch GetVersionsByModIds（批量获取版本，仅 Since 之后的新版本）
         await context.setStep(t('Check ModCat updates'), 4, TOTAL_STEPS);
         
         if (modcatMods.length > 0) {
             await context.setMessage(`${t('Checking ModCat mods...')} (${modcatMods.length} ${t('mods')})`);
-            
+            if (context.checkCancelled()) {
+                throw new Error('Task cancelled');
+            }
+
+            const modcatModIds = modcatMods.map(m => m.nameId).filter((id): id is string => !!id);
+            const sinceStr = formatSinceForModcat(updateTime);
+
+            const allVersions = await ModcatApi.getVersionsByModIds(modcatModIds, sinceStr);
+            const versionsByModId = groupVersionsByModId(allVersions);
+
             for (let i = 0; i < modcatMods.length; i++) {
                 if (context.checkCancelled()) {
                     throw new Error('Task cancelled');
                 }
-
-                const mod = modcatMods[i];
-                await context.setMessage(`检查 ModCat 模组 (${i + 1}/${modcatMods.length}): ${mod.displayName}`);
                 await context.updateProgress(Math.floor((i / modcatMods.length) * 50) + 50);
 
-                try {
-                    const modId = mod.nameId;
-                    if (!modId) continue;
+                const mod = modcatMods[i];
+                const modId = mod.nameId;
+                if (!modId) continue;
 
-                    // 获取在线详情
-                    const modDetail = await ModcatApi.getModDetail(modId);
-                    if (!modDetail) {
+                const versions = versionsByModId.get(modId) ?? [];
+                const latestVersion = versions
+                    .filter(v => v.Status === "Approved" && v.FilesId)
+                    .sort((a, b) => {
+                        const dateA = new Date(a.CreatedAt || 0).getTime();
+                        const dateB = new Date(b.CreatedAt || 0).getTime();
+                        return dateB - dateA;
+                    })[0];
+
+                if (latestVersion) {
+                    const onlineUpdateDate = latestVersion.UpdatedAt
+                        ? new Date(latestVersion.UpdatedAt).getTime()
+                        : TimeUtils.now();
+                    const currentLastUpdate = mod.status?.lastUpdateDate || 0;
+                    if (onlineUpdateDate > currentLastUpdate) {
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
-                            isOnlineAvailable: false
+                            onlineUpdateDate: onlineUpdateDate,
+                            isOnlineAvailable: true
                         });
-                        continue;
+                    } else {
+                        await modsApi.upsertModStatus({
+                            modId: mod.modId!,
+                            isOnlineAvailable: true
+                        });
                     }
-
-                    // 获取最新版本
-                    const latestVersion = modDetail.ModVersionEntities
-                        ?.filter(v => v.Status === "Approved" && v.FilesId)
-                        .sort((a, b) => {
-                            const dateA = new Date(a.CreatedAt || 0).getTime();
-                            const dateB = new Date(b.CreatedAt || 0).getTime();
-                            return dateB - dateA;
-                        })[0];
-
-                    if (latestVersion) {
-                        const onlineUpdateDate = latestVersion.UpdatedAt
-                            ? new Date(latestVersion.UpdatedAt).getTime()
-                            : TimeUtils.now();
-                        const currentLastUpdate = mod.status?.lastUpdateDate || 0;
-
-                        // 如果在线更新时间比本地更新时间新，标记为有更新
-                        if (onlineUpdateDate > currentLastUpdate) {
-                            await modsApi.upsertModStatus({
-                                modId: mod.modId!,
-                                onlineUpdateDate: onlineUpdateDate,
-                                isOnlineAvailable: true
-                            });
-                        } else {
-                            await modsApi.upsertModStatus({
-                                modId: mod.modId!,
-                                isOnlineAvailable: true
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.error(`检查 ModCat 模组更新失败: ${mod.displayName}`, e);
                 }
+                // 若批量结果中无该 mod 的新版本，不修改状态（表示自 Since 以来无新版本）
             }
         }
 

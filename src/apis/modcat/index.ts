@@ -20,6 +20,7 @@ import type {
     ModcatModListRequest,
     ModcatTypesEntity,
     ModcatDownloadProgressCallback,
+    ModcatModVersionEntity,
 } from "./types";
 
 /** ModCat API 基础 URL */
@@ -328,6 +329,40 @@ export class ModcatApi {
             console.error("[ModcatApi] Get mod detail failed:", error);
             message.error(`${t("Fetch Mod Info Error")}: ${error}`);
             return null;
+        }
+    }
+
+    /**
+     * 根据 ModId 列表批量查询版本信息（可选 Since，仅返回该时间之后创建的版本）
+     * 用于检查更新时一次性获取多个 Mod 的新版本，避免逐条请求。
+     * @param modIds Mod 的 nameId 列表
+     * @param since 可选，格式 "YYYY-MM-DD HH:mm:ss"，仅返回此时间之后创建的版本
+     * @returns 版本列表（每项含 ModId），按 ModId 分组即可得到每个 Mod 的版本
+     */
+    public static async getVersionsByModIds(
+        modIds: string[],
+        since?: string
+    ): Promise<ModcatModVersionEntity[]> {
+        if (modIds.length === 0) {
+            return [];
+        }
+        try {
+            const body: { ModIds: string[]; Since?: string } = { ModIds: modIds };
+            if (since) {
+                body.Since = since;
+            }
+            const result = await ModcatApi.postRequest<ModcatModVersionEntity[]>(
+                "/api/Mod/GetVersionsByModIds",
+                body
+            );
+            if (!ModcatApi.isSuccess(result)) {
+                throw new Error(result.ResultMsg || "Get versions by mod ids failed");
+            }
+            const list = result.ResultData;
+            return Array.isArray(list) ? list : [];
+        } catch (error) {
+            console.error("[ModcatApi] getVersionsByModIds failed:", error);
+            return [];
         }
     }
 
