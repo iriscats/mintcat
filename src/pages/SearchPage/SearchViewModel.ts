@@ -438,8 +438,9 @@ export class SearchViewModel {
      * 翻译指定项目
      */
     public async translateItem(itemId: string): Promise<void> {
-        const item = this.state.items.find((i) => i.id === itemId);
-        if (!item) return;
+        const itemIndex = this.state.items.findIndex((i) => i.id === itemId);
+        if (itemIndex === -1) return;
+        const item = this.state.items[itemIndex];
 
         try {
             const [nameTrans, summaryTrans] = await Promise.all([
@@ -447,9 +448,10 @@ export class SearchViewModel {
                 TranslateApi.translate(item.summary),
             ]);
 
-            item.nameTrans = nameTrans;
-            item.summaryTrans = summaryTrans;
-            this.notifyListeners();
+            const updatedItem = {...item, nameTrans, summaryTrans};
+            const newItems = [...this.state.items];
+            newItems[itemIndex] = updatedItem;
+            this.setState({items: newItems});
         } catch (error) {
             console.error('Translation failed:', error);
         }
@@ -459,12 +461,14 @@ export class SearchViewModel {
      * 恢复原始文本
      */
     public restoreItem(itemId: string): void {
-        const item = this.state.items.find((i) => i.id === itemId);
-        if (!item) return;
+        const itemIndex = this.state.items.findIndex((i) => i.id === itemId);
+        if (itemIndex === -1) return;
 
-        item.nameTrans = undefined;
-        item.summaryTrans = undefined;
-        this.notifyListeners();
+        const item = this.state.items[itemIndex];
+        const updatedItem = {...item, nameTrans: undefined, summaryTrans: undefined};
+        const newItems = [...this.state.items];
+        newItems[itemIndex] = updatedItem;
+        this.setState({items: newItems});
     }
 
     /**

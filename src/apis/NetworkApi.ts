@@ -7,8 +7,9 @@ export class NetworkApi {
 
     static IS_PROXY = false;
 
-    public static getUrl(path: string) {
-        return NetworkApi.IS_PROXY ? PROXY_API_URL + path : path;
+    public static getUrl(path: string, forceProxy?: boolean) {
+        const useProxy = forceProxy ?? NetworkApi.IS_PROXY;
+        return useProxy ? PROXY_API_URL + path : path;
     }
 
     private static async fetchWithTimeout(url, options = {}, timeout = 5000) {
@@ -21,17 +22,19 @@ export class NetworkApi {
         }).finally(() => clearTimeout(id));
     }
 
-    private static async retryFetch(url: string, headers?: Record<string, string>) {
+    private static async retryFetch(url: string, headers?: Record<string, string>, forceProxy?: boolean) {
         let resp: Response;
         try {
             resp = await retry(
                 async () => {
                     try {
-                        return await NetworkApi.fetchWithTimeout(NetworkApi.getUrl(url), {
+                        return await NetworkApi.fetchWithTimeout(NetworkApi.getUrl(url, forceProxy), {
                             headers: headers,
                         });
                     } catch (e) {
-                        NetworkApi.IS_PROXY = true;
+                        if (!forceProxy) {
+                            NetworkApi.IS_PROXY = true;
+                        }
                         throw e;
                     }
                 },
@@ -43,8 +46,8 @@ export class NetworkApi {
         return resp;
     }
 
-    public static async get(url: string, headers?: Record<string, string>): Promise<Response> {
-        return await NetworkApi.retryFetch(url, headers);
+    public static async get(url: string, headers?: Record<string, string>, forceProxy?: boolean): Promise<Response> {
+        return await NetworkApi.retryFetch(url, headers, forceProxy);
     }
 
 
