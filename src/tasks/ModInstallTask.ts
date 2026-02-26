@@ -14,7 +14,7 @@ import { exists, stat } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { ModSourceType } from '@/models/mod/types';
 import { MODCAT_PLATFORM } from '@/apis/modcat';
-import { ensureInternalAssets, getInternalAssetPaths } from '@/services/InternalAssetService';
+import { ensureInternalAssets } from '@/services/InternalAssetService';
 
 /**
  * Check if a path is a valid unpacked mod directory
@@ -277,20 +277,17 @@ export class ModInstallTask implements ITask {
         await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
 
         // Step 7: Ensure internal assets - DRG: UE4SSL.zip + DRG.zip；RC: UE4SSL.zip + RC.zip
+        // Always run ensureInternalAssets so we check for updates and download latest (e.g. 0.2.0) when cache has older version (e.g. 0.1.0).
         const isRc = activeGame?.name?.toLowerCase() === 'rc';
         const assetGame = isRc ? 'rc' : 'drg';
         await context.setStep(t('Check internal assets'), 7, TOTAL_STEPS);
-        let assetPaths = await getInternalAssetPaths(assetGame);
-        if (!assetPaths) {
-            await context.setMessage(t('Downloading mod manager assets...'));
-            assetPaths = await ensureInternalAssets({
-                setStep: context.setStep.bind(context),
-                setMessage: context.setMessage.bind(context),
-                updateProgress: context.updateProgress.bind(context),
-                checkCancelled: context.checkCancelled.bind(context),
-                game: assetGame,
-            });
-        }
+        const assetPaths = await ensureInternalAssets({
+            setStep: context.setStep.bind(context),
+            setMessage: context.setMessage.bind(context),
+            updateProgress: context.updateProgress.bind(context),
+            checkCancelled: context.checkCancelled.bind(context),
+            game: assetGame,
+        });
 
         // Step 8: Install mods
         await context.setStep(t('Install mods'), 8, TOTAL_STEPS);
