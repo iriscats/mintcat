@@ -21,7 +21,11 @@ impl fmt::Display for DownloadError {
             }
             DownloadError::InvalidUrl(url) => write!(f, "Invalid URL: {}", url),
             DownloadError::Cancelled => write!(f, "Download cancelled"),
-            DownloadError::Timeout => write!(f, "Download timeout"),
+            // 连接/读取超时与“无法访问 URL”都会走 timeout，提示用户可能原因
+            DownloadError::Timeout => write!(
+                f,
+                "Download timeout (may be unreachable URL or slow network)"
+            ),
             DownloadError::HttpError(code, msg) => write!(f, "HTTP error {}: {}", code, msg),
         }
     }

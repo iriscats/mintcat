@@ -452,7 +452,7 @@ export class ModcatApi {
         await DownloadApi.downloadFile(
             downloadUrl,
             cachePath,
-            { resume: true, retryCount: 3, headers },
+            { resume: true, retryCount: 3, timeoutSecs: 900, headers },
             (downloaded, total) => {
                 onProgress?.(downloaded, total);
             }

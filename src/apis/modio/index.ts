@@ -322,11 +322,12 @@ export class ModioApi {
         }
 
         const cachePath = await CacheApi.getModCachePath(fileName, version);
+        // mod 文件可能较大或网络较慢，使用 15 分钟超时，减少 Download timeout
         const doDownload = (url: string) =>
             DownloadApi.downloadFile(
                 url,
                 cachePath,
-                { resume: true, retryCount: 3 },
+                { resume: true, retryCount: 3, timeoutSecs: 900 },
                 (downloaded, total) => onProgress?.(downloaded, total)
             );
 

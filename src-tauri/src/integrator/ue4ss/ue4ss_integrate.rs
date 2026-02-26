@@ -60,78 +60,31 @@ fn sanitize_dir_name(input: &str) -> String {
     }
 }
 
-/// UE4SSL.zip entry names (path inside zip). Used as fallback and for matching.
-const UE4SSL_DLL: &str = "UE4SSL.dll";
-const UE4SSL_JAVASCRIPT_DLL: &str = "UE4SSL.JavaScript.dll";
-const DWMAPI_DLL: &str = "dwmapi.dll";
-
-/// Returns true if the zip entry name matches the expected file name (last path component, case-insensitive).
-fn zip_entry_matches(entry_name: &str, expected_file_name: &str) -> bool {
-    let normalized = entry_name.replace('\\', "/");
-    let last = normalized.rsplit('/').next().unwrap_or(&normalized);
-    last.eq_ignore_ascii_case(expected_file_name)
-}
-
-/// Find an entry in the zip by exact name or by filename (with optional path prefix, case-insensitive), then read its content.
-fn read_zip_entry(archive: &mut ZipArchive<File>, expected_name: &str) -> Result<Vec<u8>> {
-    // Try exact match first (e.g. "UE4SSL.dll" at root)
-    if let Ok(mut entry) = archive.by_name(expected_name) {
-        if !entry.is_dir() {
-            let mut content = Vec::new();
-            entry.read_to_end(&mut content).context("Failed to read zip entry")?;
-            return Ok(content);
-        }
-    }
-
-    // Search by filename: zip may have paths like "UE4SSL/UE4SSL.dll" or "ue4ssl.dll"
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i).context("Failed to get zip entry by index")?;
-        let name = file.name().to_string();
-        if zip_entry_matches(&name, expected_name) && !file.is_dir() {
-            let mut content = Vec::new();
-            file.read_to_end(&mut content).context("Failed to read zip entry")?;
-            return Ok(content);
-        }
-    }
-
-    anyhow::bail!(
-        "Missing {} in UE4SSL zip: specified file not found in archive",
-        expected_name
-    )
-}
-
+/// Install UE4SSL by extracting the entire zip to the game directory.
+/// Preserves the archive's directory structure. Ensures ue4ss/mods exists for mod loading.
 pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> Result<()> {
     let zip_path = ue4ss_zip_path
         .ok_or_else(|| anyhow::anyhow!("UE4SSL asset zip path is required (UE4SSL.zip)"))?;
 
-    let ue4ss_path = install_path.join("ue4ss");
-    println!("Installing UE4SS to: {:?}", ue4ss_path);
+    let install_path_str = install_path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Invalid install path"))?;
+    let zip_path_str = zip_path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Invalid zip path"))?;
 
-    if !ue4ss_path.exists() {
-        fs::create_dir(&ue4ss_path)
-            .with_context(|| format!("Failed to create ue4ss directory {:?}", ue4ss_path))?;
+    log::info!("Installing UE4SS: extracting zip to {:?}", install_path);
+
+    extract_zip_to_directory(zip_path_str, install_path_str).map_err(|e| {
+        anyhow::anyhow!("Failed to extract UE4SSL zip to game directory: {}", e)
+    })?;
+
+    // Ensure ue4ss/mods exists for install_ue4ss_mod and mod loading
+    let mods_path = install_path.join("ue4ss").join("mods");
+    if !mods_path.exists() {
+        fs::create_dir_all(&mods_path)
+            .with_context(|| format!("Failed to create ue4ss mods directory: {:?}", mods_path))?;
     }
-
-    let file = File::open(zip_path).with_context(|| format!("Failed to open UE4SSL zip: {:?}", zip_path))?;
-    let mut archive = ZipArchive::new(file).context("Failed to parse UE4SSL zip")?;
-
-    let dll_path = ue4ss_path.join("UE4SSL.dll");
-    let dll_content = read_zip_entry(&mut archive, UE4SSL_DLL)?;
-    fs::write(&dll_path, &dll_content).context("Failed to write UE4SSL.dll")?;
-
-    let js_dll_path = ue4ss_path.join("UE4SSL.JavaScript.dll");
-    let js_dll_content = read_zip_entry(&mut archive, UE4SSL_JAVASCRIPT_DLL)?;
-    fs::write(&js_dll_path, &js_dll_content).context("Failed to write UE4SSL.JavaScript.dll")?;
-
-    let proxy_dll_path = install_path.join("dwmapi.dll");
-    let proxy_content = read_zip_entry(&mut archive, DWMAPI_DLL)?;
-    fs::write(&proxy_dll_path, &proxy_content).context("Failed to write dwmapi.dll")?;
-
-    let mods_path = ue4ss_path.join("mods");
-    if mods_path.exists() {
-        fs::remove_dir_all(&mods_path)?;
-    }
-    fs::create_dir(&mods_path).context("Failed to create mods directory")?;
 
     Ok(())
 }

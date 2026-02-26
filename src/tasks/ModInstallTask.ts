@@ -7,6 +7,8 @@ import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { MessageBox } from '@/components/MessageBox';
+import { ForeignPaksConfirmContent } from '@/components/ForeignPaksConfirmContent';
+import React from 'react';
 import { t } from 'i18next';
 import { exists, stat } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
@@ -84,7 +86,10 @@ export class ModInstallTask implements ITask {
             if (hasForeign) {
                 const confirm = await MessageBox.confirm({
                     title: t('Foreign paks in game dir title'),
-                    content: `${t('Foreign paks in game dir message')}\n\n${t('Detected files')}: ${fileNames.join(', ')}`,
+                    content: React.createElement(ForeignPaksConfirmContent, {
+                        message: t('Foreign paks in game dir message'),
+                        fileNames,
+                    }),
                     okText: t('Install anyway'),
                     cancelText: t('Cancel'),
                 });

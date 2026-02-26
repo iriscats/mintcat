@@ -2,6 +2,9 @@ import {invoke} from '@tauri-apps/api/core';
 import {listenEvent} from "@/events";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
 
+/** 直连失败时用此代理重试一次（与 NetworkApi 保持一致） */
+const PROXY_API_URL = "https://proxy.mintcat.work/";
+
 export type DownloadProgressCallBack = (downloaded: number, total: number, speed: number, eta: number) => void
 export type DownloadStatusCallBack = (status: string, error?: string, filePath?: string) => void
 
@@ -36,11 +39,50 @@ export type DownloadOptions = {
 
 export class DownloadApi {
 
+    /** 单次下载：用给定 URL 调后端，根据 download-status 完成或拒绝 */
+    private static async downloadFileOnce(
+        urlToTry: string,
+        filePath: string,
+        options: DownloadOptions | null,
+        progressCallback?: DownloadProgressCallBack,
+        statusCallback?: DownloadStatusCallBack
+    ): Promise<string> {
+        const result = await invoke<DownloadResult>('download_file', {
+            url: urlToTry,
+            filePath,
+            options,
+        });
+        const downloadId = result.downloadId;
+        const unlisten1 = await listenEvent('download-progress', (payload: DownloadProgress) => {
+            if (payload.downloadId === downloadId && progressCallback) {
+                progressCallback(
+                    payload.downloadedBytes,
+                    payload.totalBytes,
+                    payload.speedBytesPerSec,
+                    payload.etaSecs
+                );
+            }
+        });
+        return new Promise<string>((resolve, reject) => {
+            let unlisten2: (() => void) | null = null;
+            listenEvent('download-status', (payload: DownloadStatus) => {
+                if (payload.downloadId !== downloadId) return;
+                unlisten1();
+                if (unlisten2) unlisten2();
+                if (statusCallback) statusCallback(payload.status, payload.error, payload.filePath);
+                if (payload.status === 'completed') resolve(downloadId);
+                else if (payload.status === 'failed') reject(new Error(payload.error || 'Download failed'));
+                else if (payload.status === 'cancelled') reject(new Error('Download cancelled'));
+            }).then((fn) => { unlisten2 = fn; });
+        });
+    }
+
     /**
-     * Download a file using the backend download manager
+     * Download a file using the backend download manager.
+     * 直连失败时会用 proxy.mintcat.work 重试一次。
      * @param url - The URL to download from (will be transformed with proxy if needed)
      * @param filePath - The local file path to save to
-     * @param options - Download options (checksum, retry, etc.)
+     * @param options - Download options (checksum, retry, timeout, etc.)
      * @param progressCallback - Called with progress updates
      * @param statusCallback - Called when download completes/fails
      * @returns Promise that resolves with the download ID
@@ -52,57 +94,30 @@ export class DownloadApi {
         progressCallback?: DownloadProgressCallBack,
         statusCallback?: DownloadStatusCallBack
     ): Promise<string> {
-        return new Promise<string>(async (resolve, reject) => {
-            // Transform URL with proxy if needed
-            const transformedUrl = NetworkApi.getUrl(url);
-
-            // Invoke backend download command
-            let result: DownloadResult;
+        const opts = options || null;
+        const transformedUrl = NetworkApi.getUrl(url);
+        try {
+            return await DownloadApi.downloadFileOnce(
+                transformedUrl,
+                filePath,
+                opts,
+                progressCallback,
+                statusCallback
+            );
+        } catch (firstErr) {
+            if (transformedUrl.startsWith(PROXY_API_URL)) throw firstErr;
             try {
-                result = await invoke('download_file', {
-                    url: transformedUrl,
-                    filePath: filePath,
-                    options: options || null,
-                });
-            } catch (error) {
-                reject(error);
-                return;
+                return await DownloadApi.downloadFileOnce(
+                    PROXY_API_URL + url,
+                    filePath,
+                    opts,
+                    progressCallback,
+                    statusCallback
+                );
+            } catch (_) {
+                throw firstErr;
             }
-
-            const downloadId = result.downloadId;
-
-            // Listen for progress events
-            const unlisten1 = await listenEvent('download-progress', (payload: DownloadProgress) => {
-                if (payload.downloadId === downloadId && progressCallback) {
-                    progressCallback(
-                        payload.downloadedBytes,
-                        payload.totalBytes,
-                        payload.speedBytesPerSec,
-                        payload.etaSecs
-                    );
-                }
-            });
-
-            // Listen for status events
-            const unlisten2 = await listenEvent('download-status', (payload: DownloadStatus) => {
-                if (payload.downloadId === downloadId) {
-                    unlisten1();
-                    unlisten2();
-
-                    if (statusCallback) {
-                        statusCallback(payload.status, payload.error, payload.filePath);
-                    }
-
-                    if (payload.status === 'completed') {
-                        resolve(downloadId);
-                    } else if (payload.status === 'failed') {
-                        reject(new Error(payload.error || 'Download failed'));
-                    } else if (payload.status === 'cancelled') {
-                        reject(new Error('Download cancelled'));
-                    }
-                }
-            });
-        });
+        }
     }
 
     /**
