@@ -224,6 +224,50 @@ export class CloudBackupApi {
         await throwIfNotOk(response);
     }
 
+    /**
+     * 判断是否为「文件被占用」类错误（Windows ERROR_SHARING_VIOLATION 32、EBUSY、EACCES 等）
+     */
+    private static isFileInUseError(e: unknown): boolean {
+        const msg = e instanceof Error ? e.message : String(e);
+        return (
+            /os error 32/i.test(msg) ||
+            /另一个程序正在使用|文件正在使用|the process cannot access/i.test(msg) ||
+            /EBUSY|EACCES|EPERM|ETXTBSY/i.test(msg) ||
+            /being used by another process|sharing violation/i.test(msg)
+        );
+    }
+
+    /**
+     * 带重试的删除：恢复时若数据库被占用（如上一进程未完全退出），重试几次并间隔等待。
+     */
+    private static async removeWithRetry(
+        filePath: string,
+        maxAttempts = 4,
+        delayMs = 1500,
+    ): Promise<void> {
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await remove(filePath);
+                return;
+            } catch (e) {
+                lastError = e;
+                if (attempt < maxAttempts && CloudBackupApi.isFileInUseError(e)) {
+                    await new Promise((r) => setTimeout(r, delayMs));
+                    continue;
+                }
+                if (CloudBackupApi.isFileInUseError(e)) {
+                    const raw = e instanceof Error ? e.message : String(e);
+                    throw new Error(
+                        `${raw}\n\n请完全退出 MintCat 后重新打开，或稍后点击「重试」。`,
+                    );
+                }
+                throw e;
+            }
+        }
+        throw lastError;
+    }
+
     public static async applyPendingRestore(): Promise<boolean> {
         const restorePath = await getRestorePath();
         if (!(await exists(restorePath))) {
@@ -238,7 +282,7 @@ export class CloudBackupApi {
         }
         if (await exists(dbPath)) {
             await copyFile(dbPath, backupPath);
-            await remove(dbPath);
+            await CloudBackupApi.removeWithRetry(dbPath);
         }
 
         await copyFile(restorePath, dbPath);

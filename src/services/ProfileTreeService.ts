@@ -305,7 +305,10 @@ export class ProfileTreeService {
                     } else if (field === 'time') {
                         const timeA = modAData.status?.lastUpdateDate || 0;
                         const timeB = modBData.status?.lastUpdateDate || 0;
-                        return direction === 'asc' ? timeA - timeB : timeB - timeA;
+                        const cmp = direction === 'asc' ? timeA - timeB : timeB - timeA;
+                        // 稳定排序：时间相同时（如 lastUpdateDate 均为 0）按 modId 排序，避免新加 mod 或未下载 mod 之间顺序乱序
+                        if (cmp !== 0) return cmp;
+                        return (modAData.modId ?? 0) - (modBData.modId ?? 0);
                     }
                 } else if (a.type === ProfileTreeType.ITEM && b.type === ProfileTreeType.FOLDER) {
                     return -1;

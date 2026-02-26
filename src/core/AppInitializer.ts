@@ -4,6 +4,7 @@ import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { MigrationBase } from '@/storage/migration';
 import { CloudBackupApi } from '@/apis/mintcat';
+import { closeDb } from '@/storage/db/Client';
 
 /**
  * Application initialization phases
@@ -101,11 +102,13 @@ export class AppInitializer {
 
     /**
      * Reset state so that initializeCore() can be retried after a failure.
-     * Clears IoC so that StorageAPI and AppViewModel are re-created on next init.
+     * Closes DB connection to release file handle, then clears IoC so that
+     * StorageAPI and AppViewModel are re-created on next init.
      */
     static resetForRetry(): void {
         this.currentPhase = InitPhase.NotStarted;
         this.error = null;
+        void closeDb();
         IoC.clear();
     }
 

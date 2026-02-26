@@ -4,8 +4,25 @@ import {path} from "@tauri-apps/api";
 import {configDir} from "@tauri-apps/api/path";
 
 
-let dbInstance: Awaited<ReturnType<typeof Database.load>>;
+let dbInstance: Awaited<ReturnType<typeof Database.load>> | undefined;
 let dbInitPromise: Promise<Awaited<ReturnType<typeof Database.load>>> | null = null;
+
+/**
+ * 关闭数据库连接并清空单例，便于恢复流程或重试前释放文件句柄。
+ * 下次 getDb() 会重新打开。
+ */
+export async function closeDb(): Promise<void> {
+    if (dbInstance) {
+        try {
+            await dbInstance.close();
+        } finally {
+            dbInstance = undefined;
+            dbInitPromise = null;
+        }
+    } else {
+        dbInitPromise = null;
+    }
+}
 
 export async function initDb() {
     // If instance exists, return it immediately
