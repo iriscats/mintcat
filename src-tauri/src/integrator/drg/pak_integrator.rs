@@ -10,7 +10,7 @@ use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
 use crate::integrator::drg::raw_asset::RawAsset;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::ue4ss::ue4ss_integrate::{
-    install_ue4ss, install_ue4ss_mod, uninstall_ue4ss,
+    install_ue4ss, install_ue4ss_js_mod, install_ue4ss_mod, uninstall_ue4ss, zip_contains_js_mod,
 };
 use crate::integrator::{ModInfo, ReadSeek};
 use anyhow::{Context, Result};
@@ -230,7 +230,8 @@ impl PakIntegrator {
     }
 
     fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
-        let pak_path = mod_info.pak_path.as_ref();
+        let pak_path_str = mod_info.pak_path.clone();
+        let pak_path = Path::new(&pak_path_str);
 
         // Check if this is an unpacked mod directory
         if mod_info.is_unpacked {
@@ -249,6 +250,11 @@ impl PakIntegrator {
         if let Some(ref mut dll) = dll_buf {
             self.process_dll_files(mod_info, dll)
                 .with_context(|| format!("Failed to process dll for mod: {}", mod_info.name))?;
+        }
+        // Zip with no .pak and no .dll: treat as JS script mod if it contains js/main.js
+        if pak_buf.is_none() && dll_buf.is_none() && zip_contains_js_mod(pak_path) {
+            install_ue4ss_js_mod(&self.installation.binaries_directory(), pak_path)
+                .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
         }
         Ok(())
     }

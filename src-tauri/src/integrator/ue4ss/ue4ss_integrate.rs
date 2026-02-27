@@ -89,6 +89,54 @@ pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> R
     Ok(())
 }
 
+/// Returns true if the zip contains a JS script mod (e.g. path ending with `js/main.js`).
+pub fn zip_contains_js_mod(path: &Path) -> bool {
+    let file = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return false,
+    };
+    let mut archive = match ZipArchive::new(file) {
+        Ok(a) => a,
+        Err(_) => return false,
+    };
+    for i in 0..archive.len() {
+        let entry = match archive.by_index(i) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let name = entry.name().replace('\\', "/").to_lowercase();
+        if name.ends_with("js/main.js") {
+            return true;
+        }
+    }
+    false
+}
+
+/// Install a JS script mod by extracting the zip to ue4ss/mods/.
+/// The zip may have a top-level folder (e.g. mymod/js/main.js); structure is preserved.
+pub fn install_ue4ss_js_mod(install_path: &PathBuf, zip_path: &Path) -> Result<()> {
+    let mods_dir = install_path.join("ue4ss").join("mods");
+    if !mods_dir.exists() {
+        fs::create_dir_all(&mods_dir)
+            .with_context(|| format!("Failed to create ue4ss mods directory: {:?}", mods_dir))?;
+    }
+    let mods_dir_str = mods_dir
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Invalid ue4ss mods path"))?;
+    let zip_path_str = zip_path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Invalid zip path"))?;
+    log::info!(
+        "Installing UE4SS JS mod: extracting {:?} to {:?}",
+        zip_path,
+        mods_dir
+    );
+    extract_zip_to_directory(zip_path_str, mods_dir_str).map_err(|e| {
+        anyhow::anyhow!("Failed to extract JS mod zip to ue4ss/mods: {}", e)
+    })?;
+    Ok(())
+}
+
 pub fn install_ue4ss_mod(
     install_path: &PathBuf,
     mod_name: &String,

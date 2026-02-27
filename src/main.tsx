@@ -8,6 +8,7 @@ import {useEventListener, enableEventDebugger} from "@/events";
 
 import App from "@/App";
 import {AddModDialog} from "@/dialogs/AddModDialog";
+import {MessageBoxThemeBridge} from "@/components/MessageBox.ts";
 import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
 import i18n from "@/locales/i18n"
 import packageJson from '../package.json';
@@ -61,6 +62,7 @@ const Main = () => {
         <I18nextProvider i18n={i18n}>
             <ConfigProvider theme={theme}>
                 <AntdApp>
+                    <MessageBoxThemeBridge/>
                     <HashRouter>
                         <Routes>
                             <Route path="/*" element={<App/>}/>

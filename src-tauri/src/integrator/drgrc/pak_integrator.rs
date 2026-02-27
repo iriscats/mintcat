@@ -294,6 +294,16 @@ impl RcPakIntegrator {
                 dll,
             )?;
         }
+        // Zip with no .pak and no .dll: treat as JS script mod if it contains js/main.js
+        if pak_buf.is_none() && dll_buf.is_none() {
+            if crate::integrator::ue4ss::ue4ss_integrate::zip_contains_js_mod(path) {
+                crate::integrator::ue4ss::ue4ss_integrate::install_ue4ss_js_mod(
+                    &self.installation.binaries_directory(),
+                    path,
+                )
+                .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+            }
+        }
         Ok(())
     }
 
