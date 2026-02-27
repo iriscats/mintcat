@@ -25,6 +25,45 @@ import { asyncPoolAll } from "@/utils/AsyncPool";
 export class ModUpdateService {
 
     private static loading = false;
+    private static lastEmittedProgress = new Map<number, number>();
+
+    private static async emitDownloadProgress(mod: CompleteModData, loaded: number, total: number): Promise<void> {
+        if (!mod.modId) return;
+
+        const safeTotal = total > 0 ? total : (mod.download?.fileSize || 0);
+        const raw = safeTotal > 0 ? (loaded / safeTotal) * 100 : 0;
+        const progress = Math.max(0, Math.min(100, raw));
+        const currentPercent = Math.floor(progress);
+        const lastPercent = this.lastEmittedProgress.get(mod.modId);
+
+        // 避免高频事件刷屏：仅在整数百分比变化时刷新 UI
+        if (lastPercent === currentPercent && currentPercent < 100) {
+            return;
+        }
+        this.lastEmittedProgress.set(mod.modId, currentPercent);
+
+        const updatedMod: CompleteModData = {
+            ...mod,
+            download: {
+                ...(mod.download ?? {
+                    modId: mod.modId,
+                    downloadUrl: "",
+                    cachePath: "",
+                    downloadProgress: 0,
+                    fileSize: safeTotal,
+                    downloadStatus: "downloading"
+                }),
+                fileSize: safeTotal,
+                downloadProgress: progress,
+                downloadStatus: progress >= 100 ? "completed" : "downloading"
+            }
+        };
+
+        await emitEvent("mod-treeview-update", {
+            modId: updatedMod.modId!,
+            data: updatedMod
+        });
+    }
 
     /**
      * 更新单个模组（刷新元数据 + 下载）
@@ -53,7 +92,31 @@ export class ModUpdateService {
             return { successCount: 0, errors: [] };
         }
 
-        await StatusBar.info(`${t("Batch Download")} (${mods.length} mods, ${concurrency} concurrent)`);
+        await StatusBar.info(t("Batch Download Friendly", { count: mods.length, concurrency }));
+
+        // 立即将批量任务标记为 0%，避免进度条要等到首个下载回调后才出现
+        for (const mod of mods) {
+            if (!mod.modId) continue;
+            this.lastEmittedProgress.set(mod.modId, 0);
+            await emitEvent("mod-treeview-update", {
+                modId: mod.modId,
+                data: {
+                    ...mod,
+                    download: {
+                        ...(mod.download ?? {
+                            modId: mod.modId,
+                            downloadUrl: "",
+                            cachePath: "",
+                            downloadProgress: 0,
+                            fileSize: 0,
+                            downloadStatus: "downloading"
+                        }),
+                        downloadProgress: 0,
+                        downloadStatus: "downloading"
+                    }
+                }
+            });
+        }
 
         // 安装前先刷新元数据（获取最新下载链接）；Modio 批量拉取，ModCat 逐个
         const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
@@ -74,6 +137,7 @@ export class ModUpdateService {
             }
             const modInfoMap = modInfoList !== null ? new Map(modInfoList.map(m => [m.id, m])) : null;
             for (const mod of modioMods) {
+                await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
                 const modInfo = modInfoMap?.get(mod.platformId);
                 if (modInfo) {
                     // 列表接口可能不返回 tags 或需刷新，一键更新时拉取最新标签（issue #62）
@@ -96,6 +160,7 @@ export class ModUpdateService {
             }
         }
         for (const mod of modcatMods) {
+            await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
             const refreshed = await this.updateModMetadataOnly(mod);
             modsToDownload.push(refreshed ?? mod);
         }
@@ -104,6 +169,7 @@ export class ModUpdateService {
         const { errors } = await asyncPoolAll(
             modsToDownload,
             async (mod) => {
+                await StatusBar.info(t("Batch downloading mod", { name: mod.displayName }));
                 await this.updateModFile(mod);
                 return mod;
             },
@@ -117,6 +183,12 @@ export class ModUpdateService {
         } else {
             await StatusBar.success(`${t("Batch Download Finish")} (${mods.length} mods)`);
         }
+
+        // 清除进度缓存并通知 UI 刷新，避免虚拟列表下未挂载的组件遗留 "0.00%" 标签
+        for (const mod of mods) {
+            if (mod.modId) this.lastEmittedProgress.delete(mod.modId);
+        }
+        await emitEvent("batch-download-complete", { modIds: mods.map(m => m.modId!).filter(Boolean) });
 
         return {
             successCount,
@@ -289,17 +361,7 @@ export class ModUpdateService {
         } else {
             // Modio 类型的 mod (默认)
             const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
-                await StatusBar.info(`${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
-                const downloadProgress = (loaded / total) * 100;
-                // Update mod download progress and emit event
-                const updatedMod = { ...mod };
-                if (updatedMod.download) {
-                    updatedMod.download = { ...updatedMod.download, downloadProgress };
-                }
-                await emitEvent("mod-treeview-update", {
-                    modId: updatedMod.modId!,
-                    data: updatedMod
-                });
+                await this.emitDownloadProgress(mod, loaded, total);
             });
             cachePath = newItem.download?.cachePath || "";
         }
@@ -339,6 +401,9 @@ export class ModUpdateService {
                 data: updatedMod
             });
         }
+        if (mod.modId) {
+            this.lastEmittedProgress.delete(mod.modId);
+        }
 
         await StatusBar.success(`${t("Update Finish")}: ${mod.displayName}`);
     }
@@ -365,17 +430,7 @@ export class ModUpdateService {
 
         // 下载文件
         const result = await ModcatApi.downloadModFile(modDetail, async (loaded: number, total: number) => {
-            await StatusBar.info(`${t("Downloading")} [${mod.displayName}] (${loaded} / ${total})`);
-            const downloadProgress = total > 0 ? (loaded / total) * 100 : 0;
-            // Update mod download progress and emit event
-            const updatedMod = { ...mod };
-            if (updatedMod.download) {
-                updatedMod.download = { ...updatedMod.download, downloadProgress };
-            }
-            await emitEvent("mod-treeview-update", {
-                modId: updatedMod.modId!,
-                data: updatedMod
-            });
+            await this.emitDownloadProgress(mod, loaded, total);
         });
 
         return result.cachePath || "";

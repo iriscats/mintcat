@@ -182,6 +182,9 @@ export interface EventPayloads {
   /** Mod 安装完成（保存到游戏），用于通知 HomePage 清除未保存状态 */
   'mods-installed': void;
 
+  /** 批量下载完成，用于清除进度缓存并刷新树，避免遗留 "0.00%" 标签 */
+  'batch-download-complete': { modIds: number[] };
+
   /** 安装成功 (payload 为 mod pak timestamp) */
   'install-success': number;
 

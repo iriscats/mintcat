@@ -82,6 +82,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private unlistenConfigImported?: UnlistenFn;
     private unlistenModEnabledChange?: UnlistenFn;
     private unlistenModsInstalled?: UnlistenFn;
+    private unlistenBatchDownloadComplete?: UnlistenFn;
 
     public constructor(props: any) {
         super(props);
@@ -935,6 +936,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
             this.refreshUnsavedState();
         });
 
+        // 监听批量下载完成，清除进度缓存并刷新树，避免虚拟列表下遗留 "0.00%" 标签
+        this.unlistenBatchDownloadComplete = await listenEvent("batch-download-complete", async () => {
+            clearCachedDownloadProgress();
+            await this.updateTreeView();
+        });
+
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
             // 清除 mod 相关缓存，确保新 profile 使用自己的状态
@@ -986,6 +993,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
         if (this.unlistenModsInstalled) {
             this.unlistenModsInstalled();
+        }
+        if (this.unlistenBatchDownloadComplete) {
+            this.unlistenBatchDownloadComplete();
         }
     }
 
