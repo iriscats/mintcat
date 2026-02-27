@@ -1093,6 +1093,17 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                                 label: t('Time Old → New'),
                                                 icon: <FieldTimeOutlined />,
                                             },
+                                            { type: 'divider' },
+                                            {
+                                                key: 'verified_asc',
+                                                label: t('Verified → Sandbox'),
+                                                icon: <SortAscendingOutlined />,
+                                            },
+                                            {
+                                                key: 'verified_desc',
+                                                label: t('Sandbox → Verified'),
+                                                icon: <SortDescendingOutlined />,
+                                            },
                                         ],
                                         onClick: this.onSortMenuClick,
                                         selectedKeys: [this.state.sortOrder || 'name_asc'],

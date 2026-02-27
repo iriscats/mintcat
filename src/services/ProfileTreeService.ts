@@ -271,9 +271,14 @@ export class ProfileTreeService {
 
     /**
      * 递归排序节点及其所有子文件夹
-     * Supports new format: name_asc, name_desc, time_asc, time_desc
+     * Supports new format: name_asc, name_desc, time_asc, time_desc, verified_asc, verified_desc
      * Also supports legacy format: asc, desc, time
      */
+    private static approvalStatusOrder(status: string | undefined): number {
+        const order: Record<string, number> = { Verified: 0, Approved: 1, Sandbox: 2 };
+        return order[status ?? ''] ?? 2;
+    }
+
     private async sortNodeRecursive(node: ProfileTreeItem, order: string, allMods: CompleteModData[]): Promise<void> {
         // 如果是文件夹，排序其子项
         if (node.type === ProfileTreeType.FOLDER && node.children.length > 0) {
@@ -286,7 +291,7 @@ export class ProfileTreeService {
                     if (!modAData || !modBData) return 0;
 
                     // Parse sort field and direction
-                    // New format: name_asc, name_desc, time_asc, time_desc
+                    // New format: name_asc, name_desc, time_asc, time_desc, verified_asc, verified_desc
                     // Legacy format: asc, desc, time
                     let field: string;
                     let direction: string;
@@ -307,6 +312,12 @@ export class ProfileTreeService {
                         const timeB = modBData.status?.lastUpdateDate || 0;
                         const cmp = direction === 'asc' ? timeA - timeB : timeB - timeA;
                         // 稳定排序：时间相同时（如 lastUpdateDate 均为 0）按 modId 排序，避免新加 mod 或未下载 mod 之间顺序乱序
+                        if (cmp !== 0) return cmp;
+                        return (modAData.modId ?? 0) - (modBData.modId ?? 0);
+                    } else if (field === 'verified') {
+                        const priorityA = ProfileTreeService.approvalStatusOrder(modAData.approvalStatus);
+                        const priorityB = ProfileTreeService.approvalStatusOrder(modBData.approvalStatus);
+                        const cmp = direction === 'asc' ? priorityA - priorityB : priorityB - priorityA;
                         if (cmp !== 0) return cmp;
                         return (modAData.modId ?? 0) - (modBData.modId ?? 0);
                     }
