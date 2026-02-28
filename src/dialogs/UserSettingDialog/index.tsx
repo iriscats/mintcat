@@ -227,7 +227,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                         onClick={this.onVIPClick}
                                         className="user-settings-vip"
                                     >
-                                        VIP
+                                        {t("userSetting.mintcatVip")}
                                     </Button>
                                 )}
                             </Flex>
@@ -242,7 +242,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     {/* MintCat Configuration Section */}
                     <Flex vertical gap={8}>
                         <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("userSetting.mintcatVip")}</Text>
+                            <Text strong className="user-settings-config-title">{t("userSetting.mintcatConfig")}</Text>
                             <Button 
                                 color="primary"
                                 variant="link" 

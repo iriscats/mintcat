@@ -3,6 +3,7 @@ import { path } from "@tauri-apps/api";
 import { configDir } from "@tauri-apps/api/path";
 import { getVersion } from "@tauri-apps/api/app";
 import { StorageAPI } from "@/storage";
+import i18n from "@/locales/i18n";
 import type { CloudBackupConfig, CloudBackupMetadata, CloudBackupRecord } from "./types";
 
 const BASE_URL = "https://api.mintcat.work";
@@ -64,7 +65,7 @@ async function throwIfNotOk(response: Response): Promise<void> {
         return;
     }
     const data = await parseResponseJson<{ message?: string }>(response);
-    const msg = data?.message || `Request failed (${response.status})`;
+    const msg = data?.message || i18n.t("cloudBackup.error.request_failed", { status: response.status });
     throw new Error(msg);
 }
 
@@ -114,16 +115,16 @@ export class CloudBackupApi {
     public static async createBackup(note?: string): Promise<CloudBackupRecord> {
         const config = await CloudBackupApi.getConfig();
         if (!config.accessToken?.trim()) {
-            throw new Error("云备份功能需要 vip 授权，请前往 vip.mintcat.work 获取");
+            throw new Error(i18n.t("cloudBackup.error.auth_required"));
         }
         const baseUrl = normalizeBaseUrl(config.baseUrl);
         if (!baseUrl) {
-            throw new Error("Cloud backup endpoint is empty");
+            throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
 
         const dbPath = await getDatabasePath();
         if (!(await exists(dbPath))) {
-            throw new Error("Database file not found");
+            throw new Error(i18n.t("cloudBackup.error.database_not_found"));
         }
 
         const fileBytes = await readFile(dbPath);
@@ -176,7 +177,7 @@ export class CloudBackupApi {
         const config = await CloudBackupApi.getConfig();
         const baseUrl = normalizeBaseUrl(config.baseUrl);
         if (!baseUrl) {
-            throw new Error("Cloud backup endpoint is empty");
+            throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
         const response = await fetch(`${baseUrl}/v1/backups/${backupId}/download`, {
             headers: {
@@ -191,7 +192,7 @@ export class CloudBackupApi {
             if (data?.downloadUrl) {
                 return await fetchBytes(data.downloadUrl);
             }
-            throw new Error("Download URL missing");
+            throw new Error(i18n.t("cloudBackup.error.download_url_missing"));
         }
         const buffer = await response.arrayBuffer();
         return new Uint8Array(buffer);
@@ -213,7 +214,7 @@ export class CloudBackupApi {
         const config = await CloudBackupApi.getConfig();
         const baseUrl = normalizeBaseUrl(config.baseUrl);
         if (!baseUrl) {
-            throw new Error("Cloud backup endpoint is empty");
+            throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
         const response = await fetch(`${baseUrl}/v1/backups/${backupId}`, {
             method: "DELETE",
@@ -258,9 +259,7 @@ export class CloudBackupApi {
                 }
                 if (CloudBackupApi.isFileInUseError(e)) {
                     const raw = e instanceof Error ? e.message : String(e);
-                    throw new Error(
-                        `${raw}\n\n请完全退出 MintCat 后重新打开，或稍后点击「重试」。`,
-                    );
+                    throw new Error(i18n.t("cloudBackup.error.file_in_use_retry", { detail: raw }));
                 }
                 throw e;
             }

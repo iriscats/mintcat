@@ -280,7 +280,7 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
                 // Workaround for antd bug: https://github.com/ant-design/ant-design/issues/54610
                 // Disable virtual scrolling during drag to prevent auto-scroll from getting stuck
                 virtual={!this.state.isDragging}
-                height={window.innerHeight - 155}
+                height={window.innerHeight - 145}
                 checkable={this.props.isMultiSelect}
                 expandedKeys={this.props.expandedKeys}
                 selectedKeys={this.props.selectedKeys}

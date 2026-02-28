@@ -1,4 +1,4 @@
-import { ThemeConfig } from "antd";
+import { theme as antdTheme, ThemeConfig } from "antd";
 
 export const getDefaultTheme = (): ThemeConfig => {
     return {
@@ -34,10 +34,16 @@ export function renderTheme(theme: string = undefined) {
     link.rel = 'stylesheet';
 
     const defaultTheme = getDefaultTheme();
+    document.documentElement.classList.remove('dark-theme');
+    document.body.classList.remove('dark-theme');
+
     switch (theme) {
         case "Dark": {
-            defaultTheme.token.colorPrimary = "#1677FF";
+            defaultTheme.token.colorPrimary = "#E98800";
+            defaultTheme.algorithm = antdTheme.darkAlgorithm;
             link.href = '/themes/dark-theme.css';
+            document.documentElement.classList.add('dark-theme');
+            document.body.classList.add('dark-theme');
         }
             break;
         case "Pink": {

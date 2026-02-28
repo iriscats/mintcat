@@ -715,7 +715,8 @@ function ModTreeViewProgressBackground({nodeData, children, ...restProps}) {
 
     return (
         <div style={{
-            width: "calc(100% - 20px)",
+            width: "100%",
+            boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             borderRadius: "4px",

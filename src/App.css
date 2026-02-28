@@ -127,7 +127,25 @@ body::before {
 
 .ant-tree-content {
     height: 100%;
+    margin-top: 0;
+    width: 100%;
+}
+
+/* 让 Tree 节点行宽按容器铺满，而不是按内容宽度收缩 */
+.ant-tree-content .ant-tree-list,
+.ant-tree-content .ant-tree-list-holder,
+.ant-tree-content .ant-tree-list-holder-inner,
+.ant-tree-content .ant-tree-treenode {
+    width: 100% !important;
+}
+
+/* Tree 顶底各保留 10px，且不破坏整体高度对齐 */
+.ant-tree-content .ant-tree-treenode:first-child {
     margin-top: 10px;
+}
+
+.ant-tree-content .ant-tree-treenode:last-child {
+    margin-bottom: 10px;
 }
 
 .ant-tree-title {
@@ -136,6 +154,8 @@ body::before {
 }
 
 .ant-tree-node-content-wrapper {
+    flex: 1 1 auto !important;
+    min-width: 0;
     padding-inline: 4px !important;
 }
 

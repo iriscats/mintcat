@@ -140,8 +140,9 @@ function StatusBar() {
     }, []);
 
     return (
-        <Flex vertical={true} style={{ borderTop: "1px solid rgba(5, 5, 5, 0.06)" }}>
+        <Flex className="status-bar" vertical={true} style={{ borderTop: "1px solid rgba(2, 2, 2, 0.01)" }}>
             <Progress
+                className="status-bar-progress"
                 strokeColor={ProgressColors}
                 showInfo={false}
                 strokeWidth={1}
@@ -154,7 +155,7 @@ function StatusBar() {
                     borderRadius: 0
                 }}
             />
-            <div style={{
+            <div className="status-bar-message" style={{
                 lineHeight: "30px",
                 marginLeft: "10px",
                 color: getLogLevelColor(logLevel)
