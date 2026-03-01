@@ -16,6 +16,8 @@ const MODIO_GAME_ID = 2475;
 const MODIO_UID = "13595141";
 
 export class ModioApi {
+    private static platformIdByNameIdCache = new Map<string, number>();
+    private static platformIdByNameIdInFlight = new Map<string, Promise<number>>();
 
     private static async getHost() {
         const oAuthDAO = await StorageAPI.getOAuths();
@@ -115,6 +117,40 @@ export class ModioApi {
         } catch (e) {
             message.error(`${t("Fetch Mod Info Error")}: ${e}`);
             throw e;
+        }
+    }
+
+    /**
+     * 通过 nameId 解析 mod.io 平台 ID，并对结果做缓存和并发去重。
+     */
+    public static async resolvePlatformIdByNameId(nameId: string): Promise<number> {
+        const normalized = nameId?.trim();
+        if (!normalized) return 0;
+
+        const cached = this.platformIdByNameIdCache.get(normalized);
+        if (cached && cached > 0) {
+            return cached;
+        }
+
+        const inFlight = this.platformIdByNameIdInFlight.get(normalized);
+        if (inFlight) {
+            return await inFlight;
+        }
+
+        const request = (async () => {
+            const modInfo = await ModioApi.getModInfoByName(normalized);
+            const platformId = modInfo?.id || 0;
+            if (platformId > 0) {
+                this.platformIdByNameIdCache.set(normalized, platformId);
+            }
+            return platformId;
+        })();
+
+        this.platformIdByNameIdInFlight.set(normalized, request);
+        try {
+            return await request;
+        } finally {
+            this.platformIdByNameIdInFlight.delete(normalized);
         }
     }
 

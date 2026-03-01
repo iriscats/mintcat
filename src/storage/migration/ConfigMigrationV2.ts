@@ -85,7 +85,7 @@ interface V2ModData {
  */
 export class ConfigMigrationV2 {
 
-    private version = '0.2';
+    protected version = '0.2';
     private gameId: number = 0;
     private userId: number = 0;
 
@@ -101,11 +101,18 @@ export class ConfigMigrationV2 {
     private modUrlToDbId = new Map<string, number>();
 
     /**
+     * 旧版配置目录根路径（可由子类覆盖）
+     */
+    protected async getLegacyConfigPath(): Promise<string> {
+        return await path.join(await configDir(), 'drg-mod-integration', 'config');
+    }
+
+    /**
      * 检查是否存在 v0.2.0 配置
      */
     public async checkConfig(): Promise<ConfigDataType> {
         try {
-            const configPath = await path.join(await configDir(), 'drg-mod-integration', 'config');
+            const configPath = await this.getLegacyConfigPath();
 
             if (await exists(configPath)) {
                 const dirInfo = await stat(configPath);
@@ -194,12 +201,7 @@ export class ConfigMigrationV2 {
      */
     private async migrateSettings(): Promise<void> {
         try {
-            const configPath = await path.join(
-                await configDir(),
-                'drg-mod-integration',
-                'config',
-                'config.json'
-            );
+            const configPath = await path.join(await this.getLegacyConfigPath(), 'config.json');
 
             if (!await exists(configPath)) {
                 console.log('config.json 不存在，跳过设置迁移');
@@ -244,12 +246,7 @@ export class ConfigMigrationV2 {
      */
     private async migrateModsAndProfiles(): Promise<void> {
         try {
-            const modDataPath = await path.join(
-                await configDir(),
-                'drg-mod-integration',
-                'config',
-                'mod_data.json'
-            );
+            const modDataPath = await path.join(await this.getLegacyConfigPath(), 'mod_data.json');
 
             if (!await exists(modDataPath)) {
                 console.log('mod_data.json 不存在，跳过模组和配置文件迁移');

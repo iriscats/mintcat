@@ -137,6 +137,8 @@ export function clearCachedWarningState(modId?: number): void {
 
 // 模块级别缓存：下载进度，避免滚动后进度条/百分比消失或回退
 const downloadProgressCache = new Map<number, number>();
+// 模块级别缓存：解析后的 mod.io platformId，避免同一会话反复 nameId 查询
+const resolvedPlatformIdCache = new Map<number, number>();
 
 export function getCachedDownloadProgress(modId: number, defaultValue: number): number {
     return downloadProgressCache.has(modId) ? downloadProgressCache.get(modId)! : defaultValue;
@@ -308,7 +310,10 @@ function ModTreeViewVersionSelect({nodeData}) {
             clearPendingUsedVersion(nodeData.modId);
             clearPendingVersionLocked(nodeData.modId);
         }
-    }, [nodeData.usedVersion, nodeData.fileVersion, nodeData.modId]);
+        if ((nodeData.platformId || 0) > 0) {
+            resolvedPlatformIdCache.set(nodeData.modId, nodeData.platformId);
+        }
+    }, [nodeData.usedVersion, nodeData.fileVersion, nodeData.platformId, nodeData.modId]);
 
     // 同步锁定状态
     React.useEffect(() => {
@@ -326,6 +331,9 @@ function ModTreeViewVersionSelect({nodeData}) {
             if (updatedVersion && updatedVersion !== "-" && !isVersionLocked) {
                 setSelectedVersion(updatedVersion);
             }
+            if ((payload.data.platformId || 0) > 0) {
+                resolvedPlatformIdCache.set(nodeData.modId, payload.data.platformId);
+            }
         },
         [nodeData.modId, isVersionLocked]
     );
@@ -336,46 +344,74 @@ function ModTreeViewVersionSelect({nodeData}) {
     const onDropdownVisibleChange = async (visible: boolean) => {
         if (visible) {
             setFetching(true);
-            const optionList = [];
+            try {
+                const optionList = [];
 
-            if (nodeData.sourceType === MODCAT_PLATFORM) {
-                // ModCat: 通过 getModDetail 获取版本信息
-                const modDetail = await ModcatApi.getModDetail(nodeData.nameId);
-                if (modDetail?.ModVersionEntities) {
-                    modcatVersions = modDetail.ModVersionEntities
-                        .filter(v => v.FilesId) // 只要有文件 ID 就可以
-                        .sort((a, b) => {
-                            const dateA = new Date(a.CreatedAt || 0).getTime();
-                            const dateB = new Date(b.CreatedAt || 0).getTime();
-                            return dateB - dateA; // 最新版本在前
-                        });
-                    
-                    for (const version of modcatVersions) {
+                if (nodeData.sourceType === MODCAT_PLATFORM) {
+                    // ModCat: 通过 getModDetail 获取版本信息
+                    const modDetail = await ModcatApi.getModDetail(nodeData.nameId);
+                    if (modDetail?.ModVersionEntities) {
+                        modcatVersions = modDetail.ModVersionEntities
+                            .filter(v => v.FilesId) // 只要有文件 ID 就可以
+                            .sort((a, b) => {
+                                const dateA = new Date(a.CreatedAt || 0).getTime();
+                                const dateB = new Date(b.CreatedAt || 0).getTime();
+                                return dateB - dateA; // 最新版本在前
+                            });
+
+                        for (const version of modcatVersions) {
+                            optionList.push({
+                                value: JSON.stringify(version),
+                                label: version.VersionNumber || version.VersionId
+                            });
+                        }
+                    }
+                } else {
+                    // mod.io: 使用 platformId 获取版本信息（兼容 v2 导入后的 platformId=0）
+                    let platformId = resolvedPlatformIdCache.get(nodeData.modId) || nodeData.platformId || 0;
+                    if (platformId <= 0 && nodeData.nameId) {
+                        const resolvedPlatformId = await ModioApi.resolvePlatformIdByNameId(nodeData.nameId);
+                        if (resolvedPlatformId > 0) {
+                            platformId = resolvedPlatformId;
+                            resolvedPlatformIdCache.set(nodeData.modId, platformId);
+                            // 回填到数据库，避免后续继续使用无效 platformId
+                            const modsApi = await StorageAPI.getMods();
+                            await modsApi.updateMod(nodeData.modId, { platformId });
+                            const refreshed = await modsApi.getCompleteModData(nodeData.modId);
+                            if (refreshed) {
+                                await emitEvent("mod-treeview-update", {
+                                    modId: refreshed.modId!,
+                                    data: refreshed
+                                });
+                            }
+                        }
+                    }
+
+                    if (platformId <= 0) {
+                        await StatusBar.error(`${t("Fetch Mod Info Error")}: ${nodeData.title}`);
+                        setOptions([]);
+                        return;
+                    }
+
+                    fileInfos = await ModioApi.getModFiles(platformId) || [];
+                    for (const fileInfo of fileInfos) {
                         optionList.push({
-                            value: JSON.stringify(version),
-                            label: version.VersionNumber || version.VersionId
+                            value: JSON.stringify(fileInfo),
+                            label: fileInfo.version ? fileInfo.version : fileInfo.filename
                         });
                     }
+                    optionList.reverse();
                 }
-            } else {
-                // mod.io: 使用 platformId 获取版本信息
-                fileInfos = await ModioApi.getModFiles(nodeData.platformId);
-                for (const fileInfo of fileInfos) {
-                    optionList.push({
-                        value: JSON.stringify(fileInfo),
-                        label: fileInfo.version ? fileInfo.version : fileInfo.filename
-                    });
+
+                // 记录最新版本号（列表中第一个即为最新）
+                if (optionList.length > 0) {
+                    latestVersionRef.current = optionList[0].label;
                 }
-                optionList.reverse();
-            }
 
-            // 记录最新版本号（列表中第一个即为最新）
-            if (optionList.length > 0) {
-                latestVersionRef.current = optionList[0].label;
+                setOptions(optionList);
+            } finally {
+                setFetching(false);
             }
-
-            setFetching(false);
-            setOptions(optionList);
         }
     }
 

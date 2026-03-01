@@ -66,6 +66,92 @@ export class ModUpdateService {
     }
 
     /**
+     * 批量刷新 Modio 元数据（支持 platformId 与 nameId 双通道）。
+     * @param modioMods Modio 模组列表
+     * @param options.fetchTags 是否刷新标签（下载前刷新建议开启）
+     * @param options.showStatus 是否显示逐条状态栏提示
+     */
+    private static async refreshModioMetadataBatch(
+        modioMods: CompleteModData[],
+        options: { fetchTags?: boolean; showStatus?: boolean } = {}
+    ): Promise<{ refreshedMods: CompleteModData[]; errors: Array<{ mod: CompleteModData; error: Error }> }> {
+        if (modioMods.length === 0) {
+            return { refreshedMods: [], errors: [] };
+        }
+
+        const { fetchTags = false, showStatus = false } = options;
+        const modsApi = await StorageAPI.getMods();
+        const refreshedMods: CompleteModData[] = [];
+        const errors: Array<{ mod: CompleteModData; error: Error }> = [];
+
+        const validModioMods = modioMods.filter(m => (m.platformId || 0) > 0);
+        const unresolvedIdMods = modioMods.filter(m => (m.platformId || 0) <= 0);
+        const platformIds = validModioMods.map(m => m.platformId);
+        const unresolvedNameIds = unresolvedIdMods
+            .map(m => m.nameId)
+            .filter((nameId): nameId is string => !!nameId);
+
+        let modInfoList: ModInfo[] | null = null;
+        let unresolvedInfoList: ModInfo[] | null = null;
+        try {
+            modInfoList = await ModioApi.getModInfoByIdList(platformIds);
+            if (unresolvedNameIds.length > 0) {
+                unresolvedInfoList = await ModioApi.getModInfoByNameList(unresolvedNameIds);
+            }
+        } catch (e) {
+            console.error("批量获取 Modio 模组信息失败（可能是网络错误）:", e);
+            // 网络错误时不标记任何 mod 为不可用，避免误显示「无法获取或已被删除」
+        }
+
+        const modInfoMap = modInfoList !== null ? new Map(modInfoList.map(m => [m.id, m])) : null;
+        const unresolvedInfoMap = unresolvedInfoList !== null
+            ? new Map(unresolvedInfoList.map(m => [m.name_id, m]))
+            : null;
+
+        for (const mod of modioMods) {
+            try {
+                if (showStatus) {
+                    await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
+                }
+
+                const modInfoByPlatformId = mod.platformId > 0 ? modInfoMap?.get(mod.platformId) : undefined;
+                const modInfoByNameId = mod.nameId ? unresolvedInfoMap?.get(mod.nameId) : undefined;
+                const modInfo = modInfoByPlatformId || modInfoByNameId;
+                if (modInfo) {
+                    if (fetchTags) {
+                        // 列表接口可能不返回 tags 或需刷新，一键更新时拉取最新标签（issue #62）
+                        const platformId = modInfo.id || mod.platformId;
+                        const tagList = platformId > 0 ? await ModioApi.getModTags(platformId) : [];
+                        if (tagList.length > 0) {
+                            modInfo.tags = tagList;
+                        }
+                    }
+                    await this.updateModInDatabase(mod.modId!, modInfo);
+                } else if (modInfoMap !== null && mod.platformId > 0) {
+                    // 仅当 API 成功返回且该 mod 不在列表中时，才标记为不可用（被删除等）
+                    await this.markModUnavailable(mod.modId!);
+                }
+
+                const refreshed = await modsApi.getCompleteModData(mod.modId!);
+                if (refreshed) {
+                    await emitEvent("mod-treeview-update", { modId: refreshed.modId!, data: refreshed });
+                    refreshedMods.push(refreshed);
+                } else {
+                    refreshedMods.push(mod);
+                }
+            } catch (e) {
+                errors.push({
+                    mod,
+                    error: e instanceof Error ? e : new Error(String(e))
+                });
+                refreshedMods.push(mod);
+            }
+        }
+
+        return { refreshedMods, errors };
+    }
+
+    /**
      * 更新单个模组（刷新元数据 + 下载）
      * 复用 updateModMetadataOnly + updateModFile，避免重复逻辑
      */
@@ -122,42 +208,14 @@ export class ModUpdateService {
         const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
         const modcatMods = mods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
         const otherMods = mods.filter(m => !modioMods.includes(m) && !modcatMods.includes(m));
-        const modsApi = await StorageAPI.getMods();
-
         const modsToDownload: CompleteModData[] = [];
 
         if (modioMods.length > 0) {
-            const platformIds = modioMods.map(m => m.platformId);
-            let modInfoList: ModInfo[] | null = null;
-            try {
-                modInfoList = await ModioApi.getModInfoByIdList(platformIds);
-            } catch (e) {
-                console.error("批量获取 Modio 模组信息失败（可能是网络错误）:", e);
-                // 网络错误时不标记任何 mod 为不可用，避免误显示「无法获取或已被删除」
-            }
-            const modInfoMap = modInfoList !== null ? new Map(modInfoList.map(m => [m.id, m])) : null;
-            for (const mod of modioMods) {
-                await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
-                const modInfo = modInfoMap?.get(mod.platformId);
-                if (modInfo) {
-                    // 列表接口可能不返回 tags 或需刷新，一键更新时拉取最新标签（issue #62）
-                    const tagList = await ModioApi.getModTags(mod.platformId);
-                    if (tagList.length > 0) {
-                        modInfo.tags = tagList;
-                    }
-                    await this.updateModInDatabase(mod.modId!, modInfo);
-                } else if (modInfoMap !== null) {
-                    // 仅当 API 成功返回且该 mod 不在列表中时，才标记为不可用（被删除等）
-                    await this.markModUnavailable(mod.modId!);
-                }
-                const refreshed = await modsApi.getCompleteModData(mod.modId!);
-                if (refreshed) {
-                    await emitEvent("mod-treeview-update", { modId: refreshed.modId!, data: refreshed });
-                    modsToDownload.push(refreshed);
-                } else {
-                    modsToDownload.push(mod);
-                }
-            }
+            const { refreshedMods } = await this.refreshModioMetadataBatch(modioMods, {
+                fetchTags: true,
+                showStatus: true
+            });
+            modsToDownload.push(...refreshedMods);
         }
         for (const mod of modcatMods) {
             await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
@@ -228,6 +286,7 @@ export class ModUpdateService {
 
         const rawTagNames = modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : modData.tags ?? [];
         const updatePayload: any = {
+            platformId: modInfo.id || modData.platformId,
             nameId: modInfo.name_id || modData.nameId,
             url: modInfo.profile_url || modData.url,
             tags: ModMapper.filterTagsForStorage(Array.isArray(rawTagNames) ? rawTagNames : []),
@@ -300,6 +359,52 @@ export class ModUpdateService {
             await emitEvent("mod-treeview-update", { modId: updated.modId!, data: updated });
         }
         return updated;
+    }
+
+    /**
+     * 仅刷新在线模组元数据（不下载文件）
+     * 用于“更新列表”场景，确保版本号与 platformId 修复后刷新到 UI。
+     */
+    public static async refreshOnlineMetadata(
+        mods: CompleteModData[],
+        concurrency: number = 3
+    ): Promise<{ successCount: number; errors: Array<{ mod: CompleteModData; error: Error }> }> {
+        const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
+        const modcatMods = mods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
+        const totalOnlineCount = modioMods.length + modcatMods.length;
+        if (totalOnlineCount === 0) {
+            return { successCount: 0, errors: [] };
+        }
+
+        await StatusBar.info(t("Batch updating mod info", { name: `${totalOnlineCount} mods` }));
+
+        const collectedErrors: Array<{ mod: CompleteModData; error: Error }> = [];
+
+        if (modioMods.length > 0) {
+            const { errors } = await this.refreshModioMetadataBatch(modioMods, {
+                fetchTags: false,
+                showStatus: true
+            });
+            collectedErrors.push(...errors);
+        }
+
+        if (modcatMods.length > 0) {
+            const { errors } = await asyncPoolAll(
+                modcatMods,
+                async (mod) => {
+                    await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
+                    await this.updateModMetadataOnly(mod);
+                    return mod;
+                },
+                concurrency
+            );
+            collectedErrors.push(...errors.map(e => ({ mod: e.item, error: e.error })));
+        }
+
+        return {
+            successCount: totalOnlineCount - collectedErrors.length,
+            errors: collectedErrors
+        };
     }
 
     private static async updateModcatMetadataOnly(mod: CompleteModData): Promise<void> {

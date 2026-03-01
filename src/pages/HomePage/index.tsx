@@ -38,6 +38,7 @@ import {StorageAPI} from "@/storage";
 import type {CompleteModData} from "@/storage/dao/ModDAO";
 import type {ProfileData, ProfileModData} from "@/storage/dao/ProfileDAO";
 import type {ProfileTreeItem} from "@/models/profile/ProfileTreeItem";
+import {ModSourceType} from "@/models/mod/types";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
@@ -459,6 +460,21 @@ export class HomePage extends BasePage<any, ModListPageState> {
         await ModUpdateService.checkModList((loading) => {
             this.setState({ loading });
         });
+        // 更新列表时只修复当前 profile 中缺失 platformId 的 Modio 模组（主要针对 v2 导入）
+        const profilesApi = await StorageAPI.getProfiles();
+        const activeProfile = await profilesApi.getActiveProfile();
+        const profileMods = activeProfile ? await profilesApi.getProfileMods(activeProfile.id!) : [];
+        const profileModIds = profileMods.map(pm => pm.modId!).filter(id => id != null);
+        const modsApi = await StorageAPI.getMods();
+        const scopedMods = profileModIds.length > 0
+            ? await modsApi.getBatchCompleteModData(profileModIds)
+            : [];
+        const missingPlatformIdMods = scopedMods.filter(
+            m => m.sourceType === ModSourceType.Modio && (m.platformId || 0) <= 0 && !!m.nameId
+        );
+        if (missingPlatformIdMods.length > 0) {
+            await ModUpdateService.refreshOnlineMetadata(missingPlatformIdMods, 3);
+        }
         await this.updateTreeView();
         await this.updateCountLabel();
         message.success(t("Update Finish"));
