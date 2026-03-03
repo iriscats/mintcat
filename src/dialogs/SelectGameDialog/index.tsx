@@ -226,6 +226,16 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             onCancel={handleCancel}
             width={520}
             centered
+            styles={{
+                header: {
+                    borderBottom: "none",
+                    marginBottom: 0,
+                },
+                footer: {
+                    borderTop: "none",
+                    marginTop: 0,
+                },
+            }}
             footer={[
                 <Button key="cancel" onClick={handleCancel} >
                     {t("Cancel")}

@@ -138,6 +138,16 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
                    open={this.state.isModalOpen}
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
+                   styles={{
+                       header: {
+                           borderBottom: "none",
+                           marginBottom: 0
+                       },
+                       footer: {
+                           borderTop: "none",
+                           marginTop: 0
+                       }
+                   }}
             >
                 <Card size={"small"}>
                     <List size="small"

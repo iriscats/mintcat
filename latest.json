@@ -1,5 +1,5 @@
 {
-  "version": "0.4.6",
+  "version": "0.5.0",
   "notes": "**Full Changelog**: https://github.com/iriscats/mintcat/compare/v0.4.5...v0.4.6\n\n# 中文\n## 修复\n\n1. 修复游戏 7 月 1 日更新后，导致禁用游戏内部 MOD 管理补丁失效的问题。\n2. 修复配置名称过长问题。\n3. 修复切换配置后 Mod 列表数量未更新的问题。\n4. 修复主页切换主题后设置页面中主题未更新的问题。\n\n## 优化\n\n1. 禁用 WebView 自带 CTRL + F。\n\n# English\n\n## Fixes\n\n1. Fixed an issue where the internal mod management patch would become ineffective after the July 1 game update.\n2. Fixed an issue with overly long configuration names.\n3. Fixed an issue where the number of mods in the list would not update after switching configurations.\n4. Fixed an issue where the theme on the settings page did not update after changing the theme on the homepage.\n\n## Optimizations\n\n1. Disabled the default CTRL + F behavior in WebView.\n",
   "pub_date": "2025-07-02T18:27:51.555Z",
   "platforms": {

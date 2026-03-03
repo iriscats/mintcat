@@ -8,7 +8,7 @@ const ASSET_UE4SSL = 'UE4SSL.zip';
 const ASSET_DRG = 'DRG.zip';
 const ASSET_RC = 'RC.zip';
 const PLATFORM = 'windows';
-const CHANNEL = 'beta';
+const CHANNEL = 'stable';
 const MANIFEST_FILENAME = 'assets_manifest.json';
 
 function joinPath(cacheDir: string, name: string): string {
