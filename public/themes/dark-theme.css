@@ -4,6 +4,7 @@
     --mc-dark-border: #2a2f38;
     --mc-dark-text: #d8dfeb;
     --mc-dark-muted: #8e9ab1;
+    --mc-page-bg: var(--mc-dark-bg);
     --select-game-cover-bg: var(--mc-dark-bg);
     --select-game-cover-color: #a3adc2;
     --select-game-path-bg: var(--mc-dark-bg);

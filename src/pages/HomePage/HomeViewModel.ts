@@ -116,8 +116,7 @@ export class HomeViewModel extends BaseViewModel {
 
         const list = urls.join("\n") + "\n";
 
-        ClipboardApi.setLastClipboardText(list);
-        await navigator.clipboard.writeText(list);
+        await ClipboardApi.writeText(list);
         message.success(t("Copied To Clipboard"));
 
         return true;

@@ -176,7 +176,7 @@ const AppContent = () => {
                     )}
                 </Content>
             </Layout>
-            <Footer style={{height: "30px"}}>
+            <Footer className="app-footer" style={{height: "30px", position: "relative", zIndex: 5}}>
                 <StatusBar/>
             </Footer>
         </Layout>

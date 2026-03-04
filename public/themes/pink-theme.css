@@ -1,6 +1,7 @@
 :root {
     /*    --ant-primary-color: #ff69b4 !important;*/
     background-color: rgba(237, 65, 146, 0.2) !important;
+    --mc-page-bg: #fbd9e9;
 }
 
 body::before {

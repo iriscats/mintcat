@@ -257,12 +257,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
         try {
             const mod = await this.getModById(id);
             if (mod?.url) {
-                ClipboardApi.setLastClipboardText(mod.url);
-                await navigator.clipboard.writeText(mod.url);
+                await ClipboardApi.writeText(mod.url);
                 message.success(t("Copied To Clipboard") + `: ${mod.url} `);
             } else {
                 const cachePath = mod?.download?.cachePath || "";
-                await navigator.clipboard.writeText(cachePath);
+                await ClipboardApi.writeText(cachePath);
                 message.success(t("Copied To Clipboard") + `: ${cachePath} `);
             }
         } catch (err) {
@@ -407,8 +406,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         if (urls.length > 0) {
             const text = urls.join("\n");
-            ClipboardApi.setLastClipboardText(text);
-            await navigator.clipboard.writeText(text);
+            await ClipboardApi.writeText(text);
             message.success(t("Copied To Clipboard") + `: ${urls.length} URLs`);
         }
     }
@@ -1148,6 +1146,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
                         </Space>
                         <div style={{
                             height: window.innerHeight - 145,
+                            overflow: "hidden",
+                            position: "relative",
                         }}>
                             <TreeView
                                 treeData={this.state.treeData}
@@ -1169,7 +1169,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 onModListChange={() => this.refreshUnsavedState()}
                             />
                         </div>
-                        <Flex className="home-footer-bar" gap={4} align="center">
+                        <Flex className="home-footer-bar" gap={4} align="center"
+                              style={{ position: "relative", zIndex: 5 }}>
                             <Checkbox onChange={this.onMultiCheckboxChange}
                             />
                             {

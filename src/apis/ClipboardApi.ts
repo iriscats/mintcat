@@ -10,6 +10,8 @@ export class ClipboardApi {
 
     private static watcherCallback: ((text: string) => void) | null = null;
 
+    private static isWriting = false;
+
     /**
      * 安全读取剪切板文本，当剪切板为空或内容非文本格式时返回空字符串而不抛异常
      */
@@ -26,6 +28,23 @@ export class ClipboardApi {
         this.lastClipboardText = text;
     }
 
+    /**
+     * 写入剪贴板并同步 lastClipboardText，写入期间抑制监听器以避免竞态触发
+     */
+    public static async writeText(text: string) {
+        this.isWriting = true;
+        this.lastClipboardText = text;
+        try {
+            await navigator.clipboard.writeText(text);
+            const readBack = await this.safeReadText();
+            if (readBack) {
+                this.lastClipboardText = readBack;
+            }
+        } finally {
+            this.isWriting = false;
+        }
+    }
+
     public static async setClipboardWatcher(callback: (text: string) => void) {
         this.watcherCallback = callback;
 
@@ -36,7 +55,9 @@ export class ClipboardApi {
 
         this.lastClipboardText = await this.safeReadText();
         this.intervalId = setInterval(async () => {
+            if (this.isWriting) return;
             const text = await this.safeReadText();
+            if (this.isWriting) return;
             if (text && text !== this.lastClipboardText) {
                 this.lastClipboardText = text;
                 callback(text);

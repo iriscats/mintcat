@@ -46,7 +46,7 @@
         "installMode": "basicUi"
       },
       "active": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJEMTIwOUY0Rjk4MTNFOTgKUldTWVBvSDU5QWtTTGRXajcyWkczT3crNUw0N1JSYk5XWkJhS2ZHMmpoYVdOUjFNMisxcFZIeisK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwNzA1Mzg1N0U4MTQ3RkYKUldUL1I0RitoVk53WUY4MGtPMlBmcGE0NlpEdkhIWFpGUzdJZElKYU5PcXVCLzZHZ25seDFaR0EK",
       "endpoints": [
         "https://github.com/iriscats/mintcat/releases/latest/download/latest.json",
         "https://proxy.mintcat.work/https://github.com/iriscats/mintcat/releases/latest/download/latest.json"

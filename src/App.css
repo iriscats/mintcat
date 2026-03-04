@@ -10,6 +10,7 @@
 
 /* 全局变量与主题色 */
 :root {
+    --mc-page-bg: #f9f6fc;
     --select-game-accent: var(--ant-color-primary);
     --select-game-cover-bg: #f5f5f5;
     --select-game-cover-color: #8c8c8c;
@@ -265,6 +266,8 @@ body::before {
     padding: 2px 10px 0 10px;
     width: 100%;
     justify-content: space-between;
+    position: relative;
+    z-index: 5;
 }
 
 .scrollable-div {
@@ -278,7 +281,9 @@ body::before {
 }
 
 .status-bar {
-    border-top: 1px solid rgba(5, 5, 5, 0.06);
+    background-color: var(--mc-page-bg) !important;
+    position: relative;
+    z-index: 5;
 }
 
 .status-bar-progress {
@@ -609,6 +614,7 @@ body::before {
 
 .app-footer {
     height: 30px;
+    background-color: var(--mc-page-bg);
 }
 
 /* HomePage 样式 */
