@@ -126,7 +126,7 @@ export class TreeViewConverter {
             url: modItem.url || "",
             tags: modItem.tags || [],
             required: modItem.tags?.includes('RequiredByAll') || false,
-            enabled: profileMod?.isEnabled ?? true,  // Use profile-specific enabled status
+            enabled: profileMod?.isEnabled ?? item.enabled,
             sourceType: modItem.sourceType,
             approval: modItem.approvalStatus,
             versions: modItem.version?.availableVersions || [],

@@ -48,7 +48,9 @@ export class ProfileTreeService {
                 for (const modData of rootMods) {
                     const modItem = allModData.find(m => m.modId === modData.modId);
                     if (modItem) {
-                        this.addModToTree(root, modItem.modId, 0);
+                        const isEnabled = modData.isEnabled ?? true;
+                        const usedVersion = modData.usedVersion ?? "";
+                        root.add(modItem.modId, ProfileTreeType.ITEM, "", isEnabled, usedVersion);
                     }
                 }
             }

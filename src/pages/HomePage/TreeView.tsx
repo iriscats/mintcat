@@ -90,18 +90,13 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
         const activeRoot = await profileVM.getActiveProfileTreeRoot();
-        let treeData: any[];
         const modList = await this.getAllModsAsList();
         const converter = new TreeViewConverter(modList);
 
-        if (TreeViewConverter.filterList.length > 0) {
-            const filterList = TreeViewConverter.filterList;
-            TreeViewConverter.filterList = [];
-            treeData = converter.convertToFromRoot(activeRoot);
-            TreeViewConverter.filterList = filterList;
-        } else {
-            treeData = this.props.treeData ? [...this.props.treeData as any[]] : [];
-        }
+        const filterList = TreeViewConverter.filterList;
+        TreeViewConverter.filterList = [];
+        const treeData = converter.convertToFromRoot(activeRoot);
+        TreeViewConverter.filterList = filterList;
 
         // 查找源节点和目标文件夹节点
         const findNode = (nodes: any[], key: string): any | null => {
@@ -164,18 +159,13 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
         await IoC.get(TreeViewModel);
         const profileVM = await IoC.get(ProfileViewModel);
         const activeRoot = await profileVM.getActiveProfileTreeRoot();
-        let treeData: any[];
         const modList = await this.getAllModsAsList();
         const converter = new TreeViewConverter(modList);
 
-        if (TreeViewConverter.filterList.length > 0) {
-            const filterList = TreeViewConverter.filterList;
-            TreeViewConverter.filterList = [];
-            treeData = converter.convertToFromRoot(activeRoot);
-            TreeViewConverter.filterList = filterList;
-        } else {
-            treeData = this.props.treeData || [];
-        }
+        const filterList = TreeViewConverter.filterList;
+        TreeViewConverter.filterList = [];
+        const treeData = converter.convertToFromRoot(activeRoot);
+        TreeViewConverter.filterList = filterList;
 
         // 修复：对于第一个文件夹的特殊处理
         // 当目标是文件夹（非叶子节点）且拖放到间隙但位置是0时，
@@ -266,7 +256,7 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
         const modsApi = await StorageAPI.getMods();
         const allMods = await modsApi.getAllMods();
         const modIds = allMods.map(m => m.modId!);
-        return await modsApi.getBatchCompleteModData(modIds);
+        return await modsApi.getBatchCompleteModDataOptimized(modIds);
     }
 
     render() {

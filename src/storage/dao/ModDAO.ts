@@ -516,15 +516,6 @@ export class ModDAO {
     }
 
     /**
-     * 批量获取完整的模组信息
-     * @deprecated 使用 getBatchCompleteModDataOptimized 代替，性能更好
-     */
-    public async getBatchCompleteModData(modIds: number[]): Promise<CompleteModData[]> {
-        // 直接调用优化版本
-        return this.getBatchCompleteModDataOptimized(modIds);
-    }
-
-    /**
      * 批量获取完整的模组信息（优化版本）
      * 使用单次查询 + 内存关联，避免 N+1 查询问题
      */
