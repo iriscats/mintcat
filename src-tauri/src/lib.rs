@@ -109,6 +109,7 @@ pub fn run() {
             integrator::drg::install_dotnet_runtime,
             integrator::drg::is_valid_unpacked_mod,
             integrator::drg::check_mod_conflicts,
+            integrator::drg::validate_zip_file,
             capability::steam::launch_steam_game,
             capability::steam::check_steam_game,
             capability::download::download_file,

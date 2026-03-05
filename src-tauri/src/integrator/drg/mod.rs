@@ -1,3 +1,4 @@
+use crate::capability::zip::is_valid_zip_file;
 use crate::integrator::drg::installation::DRGInstallation;
 use crate::integrator::drg::pak_integrator::PakIntegrator;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
@@ -371,4 +372,9 @@ pub fn check_mod_conflicts(
         .collect();
     
     Ok(conflicts)
+}
+
+#[tauri::command]
+pub fn validate_zip_file(path: String) -> bool {
+    is_valid_zip_file(&path)
 }

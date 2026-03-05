@@ -149,6 +149,10 @@ export class IntegrateApi  {
         });
     }
 
+    public static async validateZipFile(path: string): Promise<boolean> {
+        return await invoke<boolean>('validate_zip_file', { path });
+    }
+
     public static async openDevTools() {
         return await invoke('open_devtools');
     }

@@ -1,4 +1,4 @@
-use crate::capability::zip::extract_zip_to_directory;
+use crate::capability::zip::{extract_zip_to_directory, is_valid_zip_file};
 use crate::integrator::ReadSeek;
 use anyhow::{Context, Result};
 use serde_json::json;
@@ -62,6 +62,7 @@ fn sanitize_dir_name(input: &str) -> String {
 
 /// Install UE4SSL by extracting the entire zip to the game directory.
 /// Preserves the archive's directory structure. Ensures ue4ss/mods exists for mod loading.
+/// Validates the ZIP archive before extraction to provide clear error messages.
 pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> Result<()> {
     let zip_path = ue4ss_zip_path
         .ok_or_else(|| anyhow::anyhow!("UE4SSL asset zip path is required (UE4SSL.zip)"))?;
@@ -73,13 +74,33 @@ pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> R
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("Invalid zip path"))?;
 
+    if !zip_path.exists() {
+        anyhow::bail!(
+            "UE4SS zip file not found: {:?}. Please re-download the asset.",
+            zip_path
+        );
+    }
+
+    if !is_valid_zip_file(zip_path_str) {
+        let file_size = fs::metadata(zip_path).map(|m| m.len()).unwrap_or(0);
+        log::error!(
+            "UE4SS zip is corrupted or incomplete: {:?} (size: {} bytes)",
+            zip_path,
+            file_size
+        );
+        let _ = fs::remove_file(zip_path);
+        anyhow::bail!(
+            "UE4SS zip file is corrupted (size: {} bytes). The cached file has been removed — please retry installation.",
+            file_size
+        );
+    }
+
     log::info!("Installing UE4SS: extracting zip to {:?}", install_path);
 
     extract_zip_to_directory(zip_path_str, install_path_str).map_err(|e| {
         anyhow::anyhow!("Failed to extract UE4SSL zip to game directory: {}", e)
     })?;
 
-    // Ensure ue4ss/mods exists for install_ue4ss_mod and mod loading
     let mods_path = install_path.join("ue4ss").join("mods");
     if !mods_path.exists() {
         fs::create_dir_all(&mods_path)
@@ -200,11 +221,10 @@ pub fn uninstall_ue4ss(install_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-/// Validates that a file is a valid ZIP archive by checking if it can be opened.
 fn is_valid_zip(path: &PathBuf) -> bool {
-    match File::open(path) {
-        Ok(file) => ZipArchive::new(file).is_ok(),
-        Err(_) => false,
+    match path.to_str() {
+        Some(p) => is_valid_zip_file(p),
+        None => false,
     }
 }
 

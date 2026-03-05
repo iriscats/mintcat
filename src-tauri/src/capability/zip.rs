@@ -44,6 +44,14 @@ pub fn read_files_from_zip_by_extension(
     Ok(result)
 }
 
+/// Validates that a file is a valid ZIP archive by checking if it can be parsed.
+pub fn is_valid_zip_file(path: &str) -> bool {
+    match File::open(path) {
+        Ok(file) => ZipArchive::new(file).is_ok(),
+        Err(_) => false,
+    }
+}
+
 /// Extracts all files from a ZIP archive to a specified directory
 /// preserving the directory structure.
 pub fn extract_zip_to_directory(zip_path: &str, output_dir: &str) -> Result<(), Box<dyn Error>> {
