@@ -95,9 +95,16 @@ export class IntegrateApi  {
                 await emitEvent("status-bar-percent", 0);
                 const payload = errorMsg ?? "Unknown error";
                 await emitEvent("app-error", payload as EventPayload<'app-error'>);
-                const raw = typeof payload === 'string' ? payload : payload.key;
-                const normalized =
-                    raw === 'Load failed' ? 'error.release_check_network' : raw;
+                let normalized: string;
+                if (typeof payload === 'string') {
+                    const raw = payload === 'Load failed' ? 'error.release_check_network' : payload;
+                    const translated = t(raw);
+                    normalized = translated !== raw ? translated : raw;
+                } else {
+                    const { key, ...params } = payload;
+                    const translated = t(key, params as Record<string, unknown>);
+                    normalized = translated !== key ? translated : key;
+                }
                 reject(new Error(normalized));
             });
         });

@@ -113,8 +113,10 @@ class TitleBar extends React.Component<any, any> {
                 await emitVoidEvent('mods-installed');
                 await IntegrateApi.launchGame();
             } else if (result.status === 'failed') {
-                const msg = `${t("Installation Failed")}: ${result.error || 'Unknown error'}`;
-                if (result.error && result.error.includes(t('Game Path Not Found'))) {
+                const baseError = t("Installation Failed");
+                const detail = result.error || 'Unknown error';
+                const msg = detail.startsWith(baseError) ? detail : `${baseError}: ${detail}`;
+                if (detail.includes(t('Game Path Not Found'))) {
                     await emitEvent('install-failed-game-path-not-found', msg);
                 } else {
                     message.error(msg);
