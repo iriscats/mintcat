@@ -4,6 +4,7 @@ import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { MigrationBase } from '@/storage/migration';
 import { CloudBackupApi } from '@/apis/mintcat';
+import { CacheApi } from '@/apis/CacheApi';
 import { closeDb } from '@/storage/db/Client';
 
 /**
@@ -83,6 +84,11 @@ export class AppInitializer {
 
             // 应用网络代理设置（使后端下载等请求可走 Clash 等代理）
             await this.applyNetworkProxy();
+
+            // Clean up orphaned .part files from interrupted downloads
+            CacheApi.cleanOrphanedPartFiles().catch(e =>
+                console.warn('[AppInitializer] .part cleanup failed:', e)
+            );
 
             // Phase 3: Core ViewModel
             this.currentPhase = InitPhase.CoreViewModel;

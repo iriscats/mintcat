@@ -120,7 +120,7 @@ export interface CompleteModData extends ModData {
 }
 ```
 
-**重要**: 必须使用 `getBatchCompleteModData()` 或 `getCompleteModData()` 获取完整数据，不能使用 `getAllMods()`（仅返回基础信息）。
+**重要**: 必须使用 `getBatchCompleteModDataOptimized()` 或 `getCompleteModData()` 获取完整数据，不能使用 `getAllMods()`（仅返回基础信息）。
 
 ## 2. 时间戳约定
 
@@ -435,7 +435,7 @@ const onChange = async (value: string) => {
 - `ModUpdateService.ts:114` - `checkOnlineModUpdate()`: 启用 Mod 时检测更新
 
 #### 数据获取
-- `HomePage/index.tsx:320` - **必须使用** `getBatchCompleteModData()`
+- `HomePage/index.tsx:320` - **必须使用** `getBatchCompleteModDataOptimized()`
 - `ModDAO.ts:430` - `getCompleteModData()`: 获取完整 Mod 数据（含关联）
 - `ModDAO.ts:92` - `getAllMods()`: ⚠️ 仅返回基础信息，不含 version/download/status
 

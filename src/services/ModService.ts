@@ -47,7 +47,7 @@ export class ModService {
 
         // 批量获取完整数据
         const modIds = allModsData.map(m => m.modId!);
-        return await modsDAO.getBatchCompleteModData(modIds);
+        return await modsDAO.getBatchCompleteModDataOptimized(modIds);
     }
 
     /**

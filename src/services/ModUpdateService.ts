@@ -1,5 +1,5 @@
 import { t } from "i18next";
-import { exists, stat } from "@tauri-apps/plugin-fs";
+import { exists, stat, remove } from "@tauri-apps/plugin-fs";
 import { emitEvent } from "@/events";
 import { ModioApi } from "@/apis/modio";
 import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
@@ -7,6 +7,7 @@ import { ModSourceType } from "@/models/mod/types";
 import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
 import { ModMapper } from "@/mappers/ModMapper";
+import { IntegrateApi } from "@/apis/IntegrateApi";
 import StatusBar from "@/components/StatusBar.tsx";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
 import type { ModInfo } from "@/apis/modio/ModInfo";
@@ -469,6 +470,14 @@ export class ModUpdateService {
                 await this.emitDownloadProgress(mod, loaded, total);
             });
             cachePath = newItem.download?.cachePath || "";
+        }
+
+        // Validate downloaded file is a valid ZIP before persisting
+        if (cachePath && await exists(cachePath)) {
+            if (!await IntegrateApi.validateZipFile(cachePath)) {
+                try { await remove(cachePath); } catch (_) { /* best effort */ }
+                throw new Error(`${t("Downloaded file is corrupted")}: ${mod.displayName}`);
+            }
         }
 
         // Update download information in database (cachePath, progress, status)

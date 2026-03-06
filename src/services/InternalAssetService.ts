@@ -20,7 +20,7 @@ function joinPath(cacheDir: string, name: string): string {
 
 export interface EnsureInternalAssetsOptions {
     setStep?: (name: string, current: number, total: number) => Promise<void>;
-    setMessage?: (msg: string) => Promise<void>;
+    setMessage?: (msg: string, level?: 'info' | 'warning' | 'error') => Promise<void>;
     updateProgress?: (p: number) => void;
     checkCancelled?: () => boolean;
     /** 'drg' 下载 ue4ssl + DRG.zip，'rc' 下载 ue4ssl + RC.zip */
@@ -42,6 +42,9 @@ interface AssetManifest {
 }
 
 const DEFAULT_MANIFEST: AssetManifest = { ue4ssl: '0', drg: '0', rc: '0' };
+const MAX_DOWNLOAD_RETRIES = 3;
+const RETRY_BACKOFF_MS = 1200;
+const PROGRESS_MESSAGE_INTERVAL_MS = 1000;
 
 /** 读取 manifest；若文件缺失或解析错误则返回默认值并标记 invalid */
 async function readManifest(cacheDir: string): Promise<{ manifest: AssetManifest; valid: boolean }> {
@@ -95,7 +98,30 @@ async function validateAndCleanZip(
     return true;
 }
 
-const MAX_DOWNLOAD_RETRIES = 2;
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatBytes(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = bytes;
+    let idx = 0;
+    while (value >= 1024 && idx < units.length - 1) {
+        value /= 1024;
+        idx += 1;
+    }
+    const precision = value >= 100 || idx === 0 ? 0 : value >= 10 ? 1 : 2;
+    return `${value.toFixed(precision)} ${units[idx]}`;
+}
+
+function formatEta(seconds: number): string {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '--:--';
+    const total = Math.ceil(seconds);
+    const mm = String(Math.floor(total / 60)).padStart(2, '0');
+    const ss = String(total % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+}
 
 /**
  * Ensure internal asset zips exist in cache, downloading with MD5 check if missing or outdated.
@@ -145,10 +171,16 @@ export async function ensureInternalAssets(
 
     await setMessage(t('Checking internal assets for updates...'));
     const secondAppType = game === 'rc' ? 'rc' : 'drg';
-    const results = await checkUpdatesBatch([
-        { currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel: CHANNEL },
-        { currentVersion: secondVersionForCheck, appType: secondAppType, platform: PLATFORM, channel: CHANNEL },
-    ]);
+    let results;
+    try {
+        results = await checkUpdatesBatch([
+            { currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel: CHANNEL },
+            { currentVersion: secondVersionForCheck, appType: secondAppType, platform: PLATFORM, channel: CHANNEL },
+        ]);
+    } catch (error) {
+        console.error('[InternalAssets] Failed to check update metadata:', error);
+        throw new Error(t('Failed to check internal assets updates. Please check network and retry.'));
+    }
 
     const needUe4ssl =
         forceRedownload ||
@@ -159,23 +191,60 @@ export async function ensureInternalAssets(
         !secondValid ||
         (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null);
 
+    const downloadQueue: Array<{
+        result: { latestVersion?: string; md5?: string; downloadUrl?: string };
+        appType: string;
+        destPath: string;
+        manifestKey: keyof AssetManifest;
+    }> = [];
+
     if (needUe4ssl) {
-        if (checkCancelled()) throw new Error('Task cancelled');
         const r = results[0];
         if (!r.latestVersion || !r.md5) throw new Error('Missing version or MD5 for UE4SSL');
-        await downloadAndValidateZip(
-            r, 'ue4ssl', ue4ssZipPath, cacheDir, 'ue4ssl', setMessage, checkCancelled,
-        );
+        downloadQueue.push({ result: r, appType: 'ue4ssl', destPath: ue4ssZipPath, manifestKey: 'ue4ssl' });
     }
 
     if (needSecond) {
-        if (checkCancelled()) throw new Error('Task cancelled');
         const r = results[1];
         const label = game === 'rc' ? 'RC' : 'DRG';
         if (!r.latestVersion || !r.md5) throw new Error(`Missing version or MD5 for ${label}`);
-        await downloadAndValidateZip(
-            r, secondAppType, secondZipPath, cacheDir, secondManifestKey, setMessage, checkCancelled,
-        );
+        downloadQueue.push({
+            result: r,
+            appType: secondAppType,
+            destPath: secondZipPath,
+            manifestKey: secondManifestKey,
+        });
+    }
+
+    if (downloadQueue.length === 0) {
+        await setMessage(t('Internal assets are up to date.'));
+    } else {
+        for (let i = 0; i < downloadQueue.length; i++) {
+            if (checkCancelled()) throw new Error('Task cancelled');
+            const item = downloadQueue[i];
+            const label = `${item.appType.toUpperCase()}.zip`;
+            const current = i + 1;
+            const total = downloadQueue.length;
+
+            await setMessage(t('Preparing download {{current}}/{{total}}: {{name}}', { current, total, name: label }));
+            await downloadAndValidateZip(
+                item.result,
+                item.appType,
+                item.destPath,
+                cacheDir,
+                item.manifestKey,
+                setMessage,
+                checkCancelled,
+                (percent) => {
+                    const overall = Math.floor((((current - 1) * 100) + percent) / total);
+                    updateProgress(Math.min(99, overall));
+                },
+                current,
+                total,
+            );
+            updateProgress(Math.floor((current * 100) / total));
+        }
+        await setMessage(t('Internal asset download completed.'));
     }
 
     updateProgress(100);
@@ -201,40 +270,119 @@ async function downloadAndValidateZip(
     destPath: string,
     cacheDir: string,
     manifestKey: keyof AssetManifest,
-    setMessage: (msg: string) => Promise<void>,
+    setMessage: (msg: string, level?: 'info' | 'warning' | 'error') => Promise<void>,
     checkCancelled: () => boolean,
+    onProgress: (percent: number) => void,
+    current: number,
+    total: number,
 ): Promise<void> {
     const label = appType.toUpperCase();
+    const fileName = `${label}.zip`;
+    let lastError = '';
 
     for (let attempt = 0; attempt < MAX_DOWNLOAD_RETRIES; attempt++) {
         if (checkCancelled()) throw new Error('Task cancelled');
+        let statusError = '';
+        const attemptNumber = attempt + 1;
 
-        if (attempt > 0) {
-            await setMessage(t('Retrying download {{name}} (attempt {{n}})...', { name: `${label}.zip`, n: attempt + 1 }));
-            console.warn(`[InternalAssets] Retry ${attempt + 1} for ${label}.zip`);
+        if (attemptNumber > 1) {
+            await setMessage(t('Retrying {{name}} ({{current}}/{{total}}), attempt {{n}}/{{max}}...', {
+                name: fileName,
+                current,
+                total,
+                n: attemptNumber,
+                max: MAX_DOWNLOAD_RETRIES,
+            }), 'warning');
+            console.warn(`[InternalAssets] Retry ${attemptNumber}/${MAX_DOWNLOAD_RETRIES} for ${fileName}`);
         } else {
-            await setMessage(t(`Downloading ${label}.zip...`));
+            await setMessage(t('Downloading {{name}} ({{current}}/{{total}})...', { name: fileName, current, total }));
         }
 
         const downloadUrl = result.downloadUrl
             ? getDownloadUrl(result.downloadUrl)
             : getReleaseDownloadUrl(result.latestVersion!, appType, PLATFORM, CHANNEL);
 
-        await DownloadApi.downloadFile(downloadUrl, destPath, { checksum: result.md5!, checksumType: 'md5' });
+        let lastReportedPercent = -1;
+        let lastReportedAt = 0;
+        try {
+            await DownloadApi.downloadFile(
+                downloadUrl,
+                destPath,
+                { checksum: result.md5!, checksumType: 'md5' },
+                (downloaded, totalBytes, speedBytesPerSec, etaSecs) => {
+                    const percent = totalBytes > 0
+                        ? Math.min(100, Math.floor((downloaded / totalBytes) * 100))
+                        : 0;
+                    onProgress(percent);
+
+                    const now = Date.now();
+                    const shouldReport =
+                        percent === 100 ||
+                        percent >= lastReportedPercent + 5 ||
+                        now - lastReportedAt >= PROGRESS_MESSAGE_INTERVAL_MS;
+                    if (!shouldReport) return;
+
+                    lastReportedPercent = percent;
+                    lastReportedAt = now;
+                    const speed = speedBytesPerSec > 0 ? `${formatBytes(speedBytesPerSec)}/s` : '--';
+                    const detail = totalBytes > 0
+                        ? `${formatBytes(downloaded)}/${formatBytes(totalBytes)} · ${speed} · ETA ${formatEta(etaSecs)}`
+                        : `${formatBytes(downloaded)} · ${speed}`;
+                    void setMessage(t('Downloading {{name}} ({{current}}/{{total}}) {{percent}}% - {{detail}}', {
+                        name: fileName,
+                        current,
+                        total,
+                        percent,
+                        detail,
+                    }));
+                },
+                (status, error) => {
+                    if (status === 'failed') {
+                        statusError = error || '';
+                    }
+                },
+            );
+        } catch (error) {
+            lastError = statusError || ((error as Error)?.message || t('Network error'));
+            console.error(`[InternalAssets] Download failed for ${fileName} (attempt ${attemptNumber}):`, error);
+            try { await remove(destPath); } catch (_) { /* best effort */ }
+            if (attemptNumber < MAX_DOWNLOAD_RETRIES) {
+                await setMessage(t('Download failed for {{name}}: {{error}}. Waiting to retry...', {
+                    name: fileName,
+                    error: lastError,
+                }), 'warning');
+                await sleep(RETRY_BACKOFF_MS * attemptNumber);
+                continue;
+            }
+            throw new Error(t('Failed to download valid {{name}} after {{n}} attempts', {
+                name: fileName,
+                n: MAX_DOWNLOAD_RETRIES,
+            }) + `: ${lastError}`);
+        }
+        onProgress(100);
 
         if (await IntegrateApi.validateZipFile(destPath)) {
             await writeManifest(cacheDir, { [manifestKey]: result.latestVersion! });
+            await setMessage(t('Downloaded {{name}} successfully.', { name: fileName }));
             return;
         }
 
-        console.error(`[InternalAssets] Downloaded ${label}.zip is corrupted (attempt ${attempt + 1})`);
+        lastError = statusError || t('Downloaded file is corrupted');
+        console.error(`[InternalAssets] Downloaded ${fileName} is corrupted (attempt ${attemptNumber})`);
         try { await remove(destPath); } catch (_) { /* best effort */ }
+        if (attemptNumber < MAX_DOWNLOAD_RETRIES) {
+            await setMessage(t('Download failed for {{name}}: {{error}}. Waiting to retry...', {
+                name: fileName,
+                error: lastError,
+            }), 'warning');
+            await sleep(RETRY_BACKOFF_MS * attemptNumber);
+        }
     }
 
     throw new Error(t('Failed to download valid {{name}} after {{n}} attempts', {
-        name: `${label}.zip`,
+        name: fileName,
         n: MAX_DOWNLOAD_RETRIES,
-    }));
+    }) + (lastError ? `: ${lastError}` : ''));
 }
 
 /**

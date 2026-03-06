@@ -205,7 +205,7 @@ export class ProfileTreeService {
         traverse(root);
 
         const modsDAO = await StorageAPI.getMods();
-        return await modsDAO.getBatchCompleteModData(modIds);
+        return await modsDAO.getBatchCompleteModDataOptimized(modIds);
     }
 
     // ====================================

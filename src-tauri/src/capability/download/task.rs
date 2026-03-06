@@ -198,7 +198,27 @@ impl DownloadTask {
             ));
         }
 
-        let total_size = response.content_length().unwrap_or(0) + start_byte;
+        // If we sent a Range request but server returned 200 (full body) instead
+        // of 206, the partial file is no longer useful — delete it and restart
+        // from byte 0 to avoid appending the full body to existing data.
+        let start_byte = if start_byte > 0 && status.as_u16() == 200 {
+            log::warn!(
+                "Server returned 200 instead of 206 for Range request; restarting full download (download_id={})",
+                self.id
+            );
+            let _ = tokio::fs::remove_file(&part_path).await;
+            0
+        } else {
+            start_byte
+        };
+
+        let total_size = if start_byte > 0 {
+            // 206: content_length is partial body size
+            response.content_length().unwrap_or(0) + start_byte
+        } else {
+            // 200: content_length is the full file size
+            response.content_length().unwrap_or(0)
+        };
 
         // Initialize checksum calculator if needed
         let mut checksum_calculator = if let Some(checksum_type) = &self.options.checksum_type {
@@ -226,7 +246,7 @@ impl DownloadTask {
             }
         }
 
-        // Open file for writing (append when resuming)
+        // Open file for writing (append when resuming, create fresh otherwise)
         let mut file = if start_byte > 0 {
             OpenOptions::new()
                 .append(true)
@@ -364,7 +384,9 @@ impl DownloadTask {
             }
         }
 
-        // All retries failed
+        // All retries failed — clean up .part to avoid corrupt resume on next attempt
+        let _ = tokio::fs::remove_file(self.file_path.with_extension("part")).await;
+
         if let Some(error) = last_error {
             self.emit_status("failed", Some(error.to_string()), None);
             Err(error)

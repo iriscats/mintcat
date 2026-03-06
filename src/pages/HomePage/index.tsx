@@ -465,7 +465,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         const profileModIds = profileMods.map(pm => pm.modId!).filter(id => id != null);
         const modsApi = await StorageAPI.getMods();
         const scopedMods = profileModIds.length > 0
-            ? await modsApi.getBatchCompleteModData(profileModIds)
+            ? await modsApi.getBatchCompleteModDataOptimized(profileModIds)
             : [];
         const missingPlatformIdMods = scopedMods.filter(
             m => m.sourceType === ModSourceType.Modio && (m.platformId || 0) <= 0 && !!m.nameId
@@ -727,7 +727,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         // Get all mods with complete data (version, download, status)
         const basicMods = await modsApi.getAllMods();
         const modIds = basicMods.map(m => m.modId!);
-        const allMods = await modsApi.getBatchCompleteModData(modIds);
+        const allMods = await modsApi.getBatchCompleteModDataOptimized(modIds);
 
         // Get active profile tree root
         const activeRoot = await profileVM.getActiveProfileTreeRoot();

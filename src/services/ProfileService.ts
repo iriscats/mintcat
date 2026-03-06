@@ -206,7 +206,7 @@ export class ProfileService {
 
         // Get mod IDs and fetch mod information
         const modIds = profileMods.map(pm => pm.modId);
-        const modDataList = await modsApi.getBatchCompleteModData(modIds);
+        const modDataList = await modsApi.getBatchCompleteModDataOptimized(modIds);
 
         // Filter and collect URLs
         const urls: string[] = [];

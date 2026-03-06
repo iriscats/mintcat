@@ -10,6 +10,7 @@ import { t } from "i18next";
 import { StorageAPI } from "@/storage";
 import { CacheApi } from "@/apis/CacheApi";
 import { DownloadApi } from "@/apis/DownloadApi";
+import { IntegrateApi } from "@/apis/IntegrateApi";
 import type { CompleteModData } from "@/storage/dao/ModDAO";
 import { ModMapper } from "@/mappers/ModMapper";
 import type {
@@ -457,6 +458,13 @@ export class ModcatApi {
                 onProgress?.(downloaded, total);
             }
         );
+
+        // Validate downloaded ZIP integrity
+        if (!await IntegrateApi.validateZipFile(cachePath)) {
+            const { remove } = await import('@tauri-apps/plugin-fs');
+            try { await remove(cachePath); } catch (_) { /* best effort */ }
+            throw new Error(`${t("Downloaded file is corrupted")}: ${mod.Name || mod.ModId}`);
+        }
         
         onProgress?.(fileSize, fileSize);
         return { ...mod, cachePath };

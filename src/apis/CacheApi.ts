@@ -1,9 +1,10 @@
-import {writeFile, size, exists, mkdir, remove} from "@tauri-apps/plugin-fs";
+import {writeFile, size, exists, mkdir, remove, readDir} from "@tauri-apps/plugin-fs";
 import {cacheDir} from '@tauri-apps/api/path';
 import {path} from "@tauri-apps/api";
 import {convertFileSrc} from "@tauri-apps/api/core";
 import {md5} from "@/utils/CryptApi.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
+import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
 
 export class CacheApi {
@@ -117,11 +118,18 @@ export class CacheApi {
         try {
             const fileName = await CacheApi.getModCachePath(modName, version);
             const _fileSize = await size(fileName);
-            if (_fileSize === fileSize) {
-                return true;
+            if (_fileSize !== fileSize) {
+                return false;
             }
+            // Size matches — validate ZIP integrity to catch corrupt files
+            if (!await IntegrateApi.validateZipFile(fileName)) {
+                console.warn(`[CacheApi] Cached file has correct size but is not a valid ZIP: ${fileName}`);
+                try { await remove(fileName); } catch (_) { /* best effort */ }
+                return false;
+            }
+            return true;
         } catch (_) {
-            //console.error(error);
+            // File doesn't exist or can't be read
         }
         return false;
     }
@@ -142,6 +150,33 @@ export class CacheApi {
             console.error(`Failed to remove file : ${error}`);
             return false;
         }
+    }
+
+    /**
+     * Remove orphaned .part files left by interrupted downloads.
+     * Called at app startup to prevent corrupt resumes.
+     */
+    public static async cleanOrphanedPartFiles(): Promise<number> {
+        let cleaned = 0;
+        try {
+            const cacheDirPath = await this.getCacheDir();
+            const entries = await readDir(cacheDirPath);
+            for (const entry of entries) {
+                if (entry.isFile && entry.name?.endsWith('.part')) {
+                    try {
+                        const filePath = await path.join(cacheDirPath, entry.name);
+                        await remove(filePath);
+                        cleaned++;
+                    } catch (_) { /* best effort */ }
+                }
+            }
+            if (cleaned > 0) {
+                console.log(`[CacheApi] Cleaned ${cleaned} orphaned .part file(s)`);
+            }
+        } catch (error) {
+            console.warn('[CacheApi] Failed to clean orphaned .part files:', error);
+        }
+        return cleaned;
     }
 
     /**

@@ -196,7 +196,7 @@ export class ProfileService {
 
         // 2. 批量获取 mod 信息
         const modIds = profileMods.map(pm => pm.modId);
-        const modDataList = await modsApi.getBatchCompleteModData(modIds);
+        const modDataList = await modsApi.getBatchCompleteModDataOptimized(modIds);
 
         // 3. 过滤并提取 URL
         const urls: string[] = [];
@@ -411,7 +411,7 @@ class HomePage {
         const profileMods = await profilesApi.getProfileMods(activeProfile.id);
         const modIds = profileMods.map(pm => pm.modId);
         const modsApi = await StorageAPI.getMods();
-        const modDataList = await modsApi.getBatchCompleteModData(modIds);
+        const modDataList = await modsApi.getBatchCompleteModDataOptimized(modIds);
         let list = "";
         for (const mod of modDataList) {
             if (mod.sourceType === 'Modio' && mod.url) {
@@ -432,7 +432,7 @@ class ProfileService {
         const profileMods = await profilesApi.getProfileMods(activeProfile.id);
         const modIds = profileMods.map(pm => pm.modId);
         const modsApi = await StorageAPI.getMods();
-        const modDataList = await modsApi.getBatchCompleteModData(modIds);
+        const modDataList = await modsApi.getBatchCompleteModDataOptimized(modIds);
         return modDataList
             .filter(mod => mod.sourceType === 'Modio' && mod.url)
             .map(mod => mod.url!);

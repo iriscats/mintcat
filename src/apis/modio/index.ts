@@ -7,6 +7,7 @@ import {EventInfo} from "@/apis/modio/EventInfo.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {DownloadApi} from "@/apis/DownloadApi.ts";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
+import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ModFile, ModInfo, Tags} from "@/apis/modio/ModInfo.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
 import {StorageAPI} from "@/storage";
@@ -379,6 +380,13 @@ export class ModioApi {
             } else {
                 throw firstError;
             }
+        }
+
+        // Validate downloaded ZIP integrity
+        if (!await IntegrateApi.validateZipFile(cachePath)) {
+            const { remove } = await import('@tauri-apps/plugin-fs');
+            try { await remove(cachePath); } catch (_) { /* best effort */ }
+            throw new Error(`${t("Downloaded file is corrupted")}: ${modInfo.displayName}`);
         }
 
         onProgress?.(fileSize, fileSize);

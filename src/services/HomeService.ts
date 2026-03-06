@@ -345,7 +345,7 @@ export class HomeService {
         const modIds = profileMods.map(pm => pm.modId!);
         
         // 获取这些 mod 的完整数据
-        const completeMods = await modsApi.getBatchCompleteModData(modIds);
+        const completeMods = await modsApi.getBatchCompleteModDataOptimized(modIds);
 
         // 筛选出 sourceType === "Local" 且 isLocalNotFound === true 的 mod
         const missingLocalMods = completeMods.filter(mod => 

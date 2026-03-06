@@ -81,7 +81,7 @@ export class CheckModUpdateTask implements ITask {
             return;
         }
         
-        const allMods = await modsApi.getBatchCompleteModData(modIds);
+        const allMods = await modsApi.getBatchCompleteModDataOptimized(modIds);
         
         // 分类 mod
         const modioMods = allMods.filter(m => m.sourceType === ModSourceType.Modio);
