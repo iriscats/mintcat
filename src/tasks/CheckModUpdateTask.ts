@@ -125,7 +125,6 @@ export class CheckModUpdateTask implements ITask {
                                 await modsApi.upsertModStatus({
                                     modId: mod.modId!,
                                     onlineUpdateDate: TimeUtils.fromModio(event.date_added),
-                                    lastUpdateDate: 0
                                 });
                             }
                             break;
