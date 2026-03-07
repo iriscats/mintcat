@@ -1,5 +1,5 @@
 import {t} from "i18next";
-import {emitEvent, onceEvent} from "@/events";
+import {emitEvent, emitVoidEvent, onceEvent} from "@/events";
 import {ModioApi} from "@/apis/modio";
 import {ModcatApi} from "@/apis/modcat";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
@@ -101,6 +101,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         }
 
         await StatusBar.success(t("Add Complete"));
+        await emitVoidEvent('mods-added');
         if (onUpdated) {
             await onUpdated();
         }

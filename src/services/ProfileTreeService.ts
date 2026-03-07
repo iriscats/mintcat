@@ -44,8 +44,9 @@ export class ProfileTreeService {
                     await this.addFolderToTree(root, folder, allMods, allModData);
                 }
 
-                const rootMods = treeData.mods.filter(mod => !mod.parentFolderId);
-                for (const modData of rootMods) {
+                // treeData.mods already includes both true root mods and orphaned mods
+                // (parentFolderId references a deleted folder), no further filtering needed
+                for (const modData of treeData.mods) {
                     const modItem = allModData.find(m => m.modId === modData.modId);
                     if (modItem) {
                         const isEnabled = modData.isEnabled ?? true;

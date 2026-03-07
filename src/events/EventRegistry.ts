@@ -182,6 +182,9 @@ export interface EventPayloads {
   /** Mod 安装完成（保存到游戏），用于通知 HomePage 清除未保存状态 */
   'mods-installed': void;
 
+  /** Mod 列表变更（添加/导入），用于通知 HomePage 刷新树视图和计数 */
+  'mods-added': void;
+
   /** 批量下载完成，用于清除进度缓存并刷新树，避免遗留 "0.00%" 标签 */
   'batch-download-complete': { modIds: number[] };
 

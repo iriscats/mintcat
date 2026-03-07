@@ -594,7 +594,12 @@ export class ProfileDAO {
             // Return raw data - tree building is now done in ProfileViewModel
             // Use the buildFolderTree helper to organize folders hierarchically
             const folderTree = this.buildFolderTree(folders, mods);
-            const rootMods = mods.filter(mod => !mod.parentFolderId);
+
+            // Collect root mods: no folder assignment, OR orphaned (parentFolderId references a deleted folder)
+            const folderIds = new Set(folders.map(f => f.id));
+            const rootMods = mods.filter(mod =>
+                !mod.parentFolderId || !folderIds.has(mod.parentFolderId)
+            );
 
             return {
                 ...profile,

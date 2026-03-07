@@ -84,6 +84,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private unlistenModEnabledChange?: UnlistenFn;
     private unlistenModsInstalled?: UnlistenFn;
     private unlistenBatchDownloadComplete?: UnlistenFn;
+    private unlistenModsAdded?: UnlistenFn;
 
     public constructor(props: any) {
         super(props);
@@ -420,10 +421,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
     @autoBind
     private async onMenuBarAddModClick() {
-        openWindow(AddModType.LOCAL, 0, "", async () => {
-            await this.updateTreeView();
-            await this.updateCountLabel();
-        }).then();
+        openWindow(AddModType.LOCAL, 0, "").then();
     }
 
     @autoBind
@@ -860,10 +858,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 break;
             case "add_mod": {
                 // id 就是 folder ID，直接使用
-                await openWindow(AddModType.LOCAL, id, "", async () => {
-                    await this.updateTreeView();
-                    await this.updateCountLabel();
-                });
+                await openWindow(AddModType.LOCAL, id, "");
             }
                 break;
             case "rename":
@@ -958,6 +953,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await this.updateTreeView();
         });
 
+        // 监听 mod 列表变更（剪切板添加、SearchPage 添加等无直接回调的路径）
+        this.unlistenModsAdded = await listenEvent("mods-added", async () => {
+            await this.updateTreeView();
+            await this.updateCountLabel();
+        });
+
         // 监听游戏切换事件，切换时更新 TreeView 和 Profile 列表
         this.unlistenActiveGameChange = await listenEvent("active-game-change", async () => {
             // 清除 mod 相关缓存，确保新 profile 使用自己的状态
@@ -1012,6 +1013,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
         }
         if (this.unlistenBatchDownloadComplete) {
             this.unlistenBatchDownloadComplete();
+        }
+        if (this.unlistenModsAdded) {
+            this.unlistenModsAdded();
         }
     }
 
