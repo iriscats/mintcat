@@ -194,6 +194,10 @@ export class ModInstallTask implements ITask {
                 throw new Error(`${t("Download Failed")}: ${failedNames}${reasonSuffix}`);
             }
 
+            // Mod files changed; bump editTime so check_installed won't skip
+            editTime = TimeUtils.nowSeconds();
+            await profileVM.setActiveProfileEditTime(editTime);
+
             // Refresh enabledMods from DB so subsequent steps use updated cache paths
             for (let i = 0; i < enabledMods.length; i++) {
                 const modsDAO = await StorageAPI.getMods();

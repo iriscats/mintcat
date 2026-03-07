@@ -4,7 +4,11 @@ use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
 use zip::read::ZipArchive;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
-use crate::integrator::ue4ss::ue4ss_integrate::{install_ue4ss, uninstall_ue4ss};
+use crate::integrator::ue4ss::ue4ss_integrate::{
+    dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
+    install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
+    zip_contains_js_mod,
+};
 use crate::integrator::{ModInfo, ReadSeek};
 use anyhow::{Context, Result};
 use serde_json::json;
@@ -272,12 +276,13 @@ impl RcPakIntegrator {
     }
 
     fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
-        let path = Path::new(&mod_info.pak_path);
+        let pak_path_str = mod_info.pak_path.clone();
+        let path = Path::new(&pak_path_str);
 
         if mod_info.is_unpacked {
             return self
-                .process_unpacked_mod(path)
-                .with_context(|| format!("Failed to process unpacked mod: {}", mod_info.name));
+                .process_directory_mod(mod_info, path)
+                .with_context(|| format!("Failed to process directory mod: {}", mod_info.name));
         }
 
         let (mut pak_buf, mut dll_buf) = self
@@ -288,22 +293,98 @@ impl RcPakIntegrator {
                 .with_context(|| format!("Failed to process pak for mod: {}", mod_info.name))?;
         }
         if let Some(ref mut dll) = dll_buf {
-            crate::integrator::ue4ss::ue4ss_integrate::install_ue4ss_mod(
+            install_ue4ss_mod(
                 &self.installation.binaries_directory(),
                 &mod_info.name,
                 dll,
             )?;
         }
-        // Zip with no .pak and no .dll: treat as JS script mod if it contains js/main.js
-        if pak_buf.is_none() && dll_buf.is_none() {
-            if crate::integrator::ue4ss::ue4ss_integrate::zip_contains_js_mod(path) {
-                crate::integrator::ue4ss::ue4ss_integrate::install_ue4ss_js_mod(
-                    &self.installation.binaries_directory(),
-                    path,
-                )
-                .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+        if zip_contains_js_mod(path) {
+            install_ue4ss_js_mod_from_zip_targeted(
+                &self.installation.binaries_directory(),
+                &mod_info.name,
+                path,
+            )
+            .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+        }
+        Ok(())
+    }
+
+    /// Process a directory-based mod that may contain multiple content types:
+    /// Content/ (unpacked UE assets), pak/ (.pak files), js/ (UE4SS scripts), dll/ (UE4SS native mods)
+    fn process_directory_mod(&mut self, mod_info: &mut ModInfo, path: &Path) -> Result<()> {
+        let mut processed_any = false;
+
+        if UnpackedMod::is_valid_unpacked_mod(path) {
+            self.process_unpacked_mod(path)
+                .with_context(|| format!("Failed to process unpacked content: {}", mod_info.name))?;
+            processed_any = true;
+        }
+
+        let pak_dir = path.join("pak");
+        if pak_dir.is_dir() {
+            for entry in fs::read_dir(&pak_dir)
+                .with_context(|| format!("Failed to read pak directory: {:?}", pak_dir))?
+            {
+                let entry = entry?;
+                let entry_path = entry.path();
+                if entry_path.is_file()
+                    && entry_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map_or(false, |e| e.eq_ignore_ascii_case("pak"))
+                {
+                    let file = fs::File::open(&entry_path)
+                        .with_context(|| format!("Failed to open pak: {:?}", entry_path))?;
+                    let mut reader: Box<dyn ReadSeek> = Box::new(BufReader::new(file));
+                    self.process_pak_files(&mut reader)
+                        .with_context(|| format!("Failed to process pak: {:?}", entry_path))?;
+                    processed_any = true;
+                }
             }
         }
+
+        if dir_contains_js_mod(path) {
+            install_ue4ss_js_mod_from_dir(
+                &self.installation.binaries_directory(),
+                &mod_info.name,
+                path,
+            )
+            .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+            processed_any = true;
+        }
+
+        let dll_dir = path.join("dll");
+        if dll_dir.is_dir() {
+            for entry in fs::read_dir(&dll_dir)
+                .with_context(|| format!("Failed to read dll directory: {:?}", dll_dir))?
+            {
+                let entry = entry?;
+                let entry_path = entry.path();
+                if entry_path.is_file()
+                    && entry_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map_or(false, |e| e.eq_ignore_ascii_case("dll"))
+                {
+                    let file = fs::File::open(&entry_path)
+                        .with_context(|| format!("Failed to open dll: {:?}", entry_path))?;
+                    let mut reader: Box<dyn ReadSeek> = Box::new(BufReader::new(file));
+                    install_ue4ss_mod(
+                        &self.installation.binaries_directory(),
+                        &mod_info.name,
+                        &mut reader,
+                    )?;
+                    processed_any = true;
+                    break;
+                }
+            }
+        }
+
+        if !processed_any {
+            anyhow::bail!("No recognized mod content in directory: {:?}", path);
+        }
+
         Ok(())
     }
 

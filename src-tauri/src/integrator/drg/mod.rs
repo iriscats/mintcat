@@ -197,11 +197,20 @@ pub async fn install_dotnet_runtime(app: AppHandle, game_path: String) -> Result
     .map_err(|_| "backend.error.task_join".to_string())?
 }
 
-/// Check if a directory is a valid unpacked mod directory
-/// Returns true if the directory contains a Content folder with uasset/uexp files
+/// Check if a directory is a valid mod directory.
+/// Returns true for: Content/ (unpacked UE assets), pak/ (.pak files), js/ (scripts), dll/ (native mods)
 #[tauri::command]
 pub fn is_valid_unpacked_mod(path: String) -> bool {
-    UnpackedMod::is_valid_unpacked_mod(&path)
+    let p = std::path::Path::new(&path);
+    if !p.is_dir() {
+        return false;
+    }
+    if UnpackedMod::is_valid_unpacked_mod(&path) {
+        return true;
+    }
+    p.join("pak").is_dir()
+        || p.join("js").join("main.js").exists()
+        || p.join("dll").is_dir()
 }
 
 /// Input structure for conflict check
@@ -297,6 +306,42 @@ fn get_unpacked_mod_files(dir_path: &str, content_prefix: &str) -> anyhow::Resul
     Ok(files)
 }
 
+/// Get pak-style file list from a directory mod, supporting both Content/ and pak/ subdirectories.
+fn get_directory_mod_pak_files(dir_path: &str, content_prefix: &str) -> anyhow::Result<Vec<String>> {
+    let path = std::path::Path::new(dir_path);
+    let mut all_files = Vec::new();
+
+    let content_path = path.join("Content");
+    if content_path.is_dir() {
+        if let Ok(files) = get_unpacked_mod_files(dir_path, content_prefix) {
+            all_files.extend(files);
+        }
+    }
+
+    let pak_dir = path.join("pak");
+    if pak_dir.is_dir() {
+        if let Ok(entries) = fs::read_dir(&pak_dir) {
+            for entry in entries.flatten() {
+                let entry_path = entry.path();
+                if entry_path.is_file()
+                    && entry_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map_or(false, |e| e.eq_ignore_ascii_case("pak"))
+                {
+                    if let Some(p) = entry_path.to_str() {
+                        if let Ok(files) = get_pak_files(p) {
+                            all_files.extend(files);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(all_files)
+}
+
 /// Check for file conflicts between mods
 /// Returns a list of mods that have conflicts with other mods
 /// `game_name`: current active game name (e.g. "drg" or "rc") for unpacked mod path prefix
@@ -316,7 +361,7 @@ pub fn check_mod_conflicts(
     // Process each mod
     for mod_info in &mods {
         let files = if mod_info.is_unpacked {
-            get_unpacked_mod_files(&mod_info.cache_path, content_prefix)
+            get_directory_mod_pak_files(&mod_info.cache_path, content_prefix)
         } else {
             get_pak_files(&mod_info.cache_path)
         };

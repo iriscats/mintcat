@@ -133,8 +133,9 @@ pub fn zip_contains_js_mod(path: &Path) -> bool {
     false
 }
 
-/// Install a JS script mod by extracting the zip to ue4ss/mods/.
-/// The zip may have a top-level folder (e.g. mymod/js/main.js); structure is preserved.
+/// Install a JS script mod by extracting the entire zip to ue4ss/mods/.
+/// Prefer `install_ue4ss_js_mod_from_zip_targeted` for mixed zips (pak + js).
+#[allow(dead_code)]
 pub fn install_ue4ss_js_mod(install_path: &PathBuf, zip_path: &Path) -> Result<()> {
     let mods_dir = install_path.join("ue4ss").join("mods");
     if !mods_dir.exists() {
@@ -155,6 +156,114 @@ pub fn install_ue4ss_js_mod(install_path: &PathBuf, zip_path: &Path) -> Result<(
     extract_zip_to_directory(zip_path_str, mods_dir_str).map_err(|e| {
         anyhow::anyhow!("Failed to extract JS mod zip to ue4ss/mods: {}", e)
     })?;
+    Ok(())
+}
+
+/// Install JS mod from a zip, extracting only the js/ content to ue4ss/mods/{name}/js/.
+/// Works for both pure JS zips and mixed zips (containing pak + js).
+pub fn install_ue4ss_js_mod_from_zip_targeted(
+    install_path: &PathBuf,
+    mod_name: &str,
+    zip_path: &Path,
+) -> Result<()> {
+    let mods_dir = install_path.join("ue4ss").join("mods");
+    let sanitized = sanitize_dir_name(mod_name);
+    let mod_dir = mods_dir.join(&sanitized);
+
+    let file = File::open(zip_path)
+        .with_context(|| format!("Failed to open zip: {:?}", zip_path))?;
+    let mut archive = ZipArchive::new(file).context("Failed to parse zip")?;
+
+    let mut js_base = String::new();
+    for i in 0..archive.len() {
+        let entry = archive
+            .by_index(i)
+            .with_context(|| format!("Failed to read zip entry at index {}", i))?;
+        let name = entry.name().replace('\\', "/");
+        let lower = name.to_lowercase();
+        if lower.ends_with("js/main.js") {
+            if let Some(pos) = lower.rfind("js/main.js") {
+                js_base = name[..pos].to_string();
+            }
+            break;
+        }
+    }
+
+    let js_prefix = format!("{}js/", js_base);
+    for i in 0..archive.len() {
+        let mut entry = archive
+            .by_index(i)
+            .with_context(|| format!("Failed to read zip entry at index {}", i))?;
+        let name = entry.name().replace('\\', "/");
+        if !name.starts_with(&js_prefix) {
+            continue;
+        }
+        let relative = &name[js_base.len()..];
+        let target = mod_dir.join(relative);
+        if entry.is_dir() {
+            fs::create_dir_all(&target)?;
+        } else {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut content = Vec::new();
+            entry.read_to_end(&mut content)?;
+            let mut out = File::create(&target)?;
+            out.write_all(&content)?;
+        }
+    }
+
+    log::info!("Installed JS mod from zip: {:?} -> {:?}", zip_path, mod_dir);
+    Ok(())
+}
+
+/// Check if a directory contains a JS script mod (js/main.js).
+pub fn dir_contains_js_mod(path: &Path) -> bool {
+    path.join("js").join("main.js").exists()
+}
+
+/// Install JS mod from a directory by copying the js/ subfolder to ue4ss/mods/{name}/js/.
+pub fn install_ue4ss_js_mod_from_dir(
+    install_path: &PathBuf,
+    mod_name: &str,
+    mod_dir: &Path,
+) -> Result<()> {
+    let mods_dir = install_path.join("ue4ss").join("mods");
+    let sanitized = sanitize_dir_name(mod_name);
+    let target_mod_dir = mods_dir.join(&sanitized);
+    let target_js_dir = target_mod_dir.join("js");
+    let source_js_dir = mod_dir.join("js");
+
+    fs::create_dir_all(&target_js_dir)
+        .with_context(|| format!("Failed to create JS mod directory: {:?}", target_js_dir))?;
+    copy_dir_recursive(&source_js_dir, &target_js_dir)
+        .with_context(|| format!("Failed to copy JS mod from {:?}", source_js_dir))?;
+
+    log::info!(
+        "Installed JS mod from directory: {:?} -> {:?}",
+        source_js_dir,
+        target_js_dir
+    );
+    Ok(())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    if !dst.exists() {
+        fs::create_dir_all(dst)?;
+    }
+    for entry in
+        fs::read_dir(src).with_context(|| format!("Failed to read directory: {:?}", src))?
+    {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)
+                .with_context(|| format!("Failed to copy {:?} to {:?}", src_path, dst_path))?;
+        }
+    }
     Ok(())
 }
 

@@ -13,6 +13,8 @@ import type { CompleteModData } from "@/storage/dao/ModDAO";
 import type { ModInfo } from "@/apis/modio/ModInfo";
 import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue";
 import { asyncPoolAll } from "@/utils/AsyncPool";
+import { ProfileService } from "@/services/ProfileService";
+import { IoC } from "@/core/IoC";
 
 /**
  * ModUpdateService 服务层
@@ -518,6 +520,12 @@ export class ModUpdateService {
         if (mod.modId) {
             this.lastEmittedProgress.delete(mod.modId);
         }
+
+        // Mark profile as dirty so check_installed won't skip reinstallation
+        try {
+            const profileService = await IoC.get(ProfileService);
+            await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
+        } catch (_) { /* IoC may not be ready during early init */ }
 
         await StatusBar.success(`${t("Update Finish")}: ${mod.displayName}`);
     }
