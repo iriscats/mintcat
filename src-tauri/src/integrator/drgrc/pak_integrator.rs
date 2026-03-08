@@ -608,8 +608,14 @@ impl RcPakIntegrator {
     }
 
     pub fn check_installed(game_pak_path: String, _timestamp: u64) -> Result<String> {
-        let _installation = RcInstallation::from_pak_path(&game_pak_path)
+        let installation = RcInstallation::from_pak_path(&game_pak_path)
             .context("Failed to determine RC installation")?;
+
+        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
+        if mod_pak_path.exists() {
+            return Ok("mintcat_installed".to_string());
+        }
+
         Ok("no_installed".to_string())
     }
 

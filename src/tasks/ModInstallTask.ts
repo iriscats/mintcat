@@ -316,11 +316,11 @@ export class ModInstallTask implements ITask {
             game: assetGame,
         });
 
-        // Step 7: Manifest hash comparison — skip install when nothing changed
+        // Step 7: Manifest hash comparison — skip only when pak exists AND nothing changed
         await context.setStep(t('Check installation status'), 7, TOTAL_STEPS);
         const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
         const savedHash = await profileVM.getActiveProfileInstallHash();
-        if (installType !== "old_version_mint_installed" && currentHash === savedHash) {
+        if (installType === "mintcat_installed" && currentHash === savedHash) {
             await context.setMessage(t("Mod Already Install"));
             await context.updateProgress(100);
             return;

@@ -734,9 +734,13 @@ impl PakIntegrator {
             .context("Failed to determine DRG installation")?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
-
         if old_mod_pak_path.exists() {
             return Ok("old_version_mint_installed".to_string());
+        }
+
+        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
+        if mod_pak_path.exists() {
+            return Ok("mintcat_installed".to_string());
         }
 
         Ok("no_installed".to_string())
