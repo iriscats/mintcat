@@ -51,6 +51,8 @@ import {
     clearCachedWarningState,
     clearCachedDownloadProgress,
 } from "./TreeViewItem.tsx";
+import { computeInstallManifestHash } from "@/tasks/ModInstallTask";
+import { getInternalAssetPaths, type InternalAssetGame } from "@/services/InternalAssetService";
 
 
 interface ModListPageState {
@@ -107,14 +109,41 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     /**
-     * 根据 profile 的 editTime 与 installTime 刷新「未保存变更」状态（与安装逻辑同源，避免双轨）
+     * Compare manifest hash of current mod configuration against the saved hash
+     * to determine whether there are unsaved changes since the last installation.
      */
     private async refreshUnsavedState(): Promise<void> {
         try {
             const profileVM = await IoC.get(ProfileViewModel);
-            const editTime = await profileVM.getActiveProfileEditTime();
-            const installTime = await profileVM.getActiveProfileInstallTime();
-            const hasUnsaved = editTime > installTime;
+            const savedHash = await profileVM.getActiveProfileInstallHash();
+            if (!savedHash) {
+                this.setState({ hasUnsavedChanges: true });
+                return;
+            }
+
+            const profilesDAO = await StorageAPI.getProfiles();
+            const activeProfile = await profileVM.getActiveProfileData();
+            const profileMods = await profilesDAO.getProfileMods(activeProfile.id!);
+            const enabledProfileMods = profileMods.filter(pm => pm.isEnabled);
+
+            const modsDAO = await StorageAPI.getMods();
+            const enabledMods: CompleteModData[] = [];
+            for (const pm of enabledProfileMods) {
+                const modData = await modsDAO.getCompleteModData(pm.modId);
+                if (modData) enabledMods.push(modData);
+            }
+
+            const settings = await StorageAPI.getSettings();
+            const ue4ss = await settings.getValue('ue4ss');
+            const isCustomMode = ue4ss === "Custom";
+
+            const gamesDAO = await StorageAPI.getGames();
+            const activeGame = await gamesDAO.getActiveGame();
+            const isRc = activeGame?.name?.toLowerCase() === 'rc';
+            const assetPaths = await getInternalAssetPaths(isRc ? 'rc' : 'drg');
+
+            const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
+            const hasUnsaved = currentHash !== savedHash;
             if (this.state.hasUnsavedChanges !== hasUnsaved) {
                 this.setState({ hasUnsavedChanges: hasUnsaved });
             }

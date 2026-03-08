@@ -4,7 +4,6 @@ import {ProfileTreeItem} from "@/storage/db/Schema.ts";
 import type {ProfileData} from "@/storage/dao/ProfileDAO.ts";
 import { ProfileService } from "@/services/ProfileService";
 import { IoC } from "@/core/IoC";
-import { TimeUtils } from "@/utils/TimeUtils";
 
 /**
  * ProfileViewModel manages profile-level operations
@@ -80,24 +79,14 @@ export class ProfileViewModel {
         await profileService.setActiveProfileLastUpdate(timestamp);
     }
 
-    public async getActiveProfileEditTime(): Promise<number> {
+    public async getActiveProfileInstallHash(): Promise<string> {
         const profileService = await this.getProfileService();
-        return await profileService.getActiveProfileEditTime();
+        return await profileService.getActiveProfileInstallHash();
     }
 
-    public async setActiveProfileEditTime(timestamp: number): Promise<void> {
+    public async setActiveProfileInstallHash(hash: string): Promise<void> {
         const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(timestamp);
-    }
-
-    public async getActiveProfileInstallTime(): Promise<number> {
-        const profileService = await this.getProfileService();
-        return await profileService.getActiveProfileInstallTime();
-    }
-
-    public async setActiveProfileInstallTime(timestamp: number): Promise<void> {
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileInstallTime(timestamp);
+        await profileService.setActiveProfileInstallHash(hash);
     }
 
     // ====================================
@@ -218,9 +207,6 @@ export class ProfileViewModel {
         const profileData = await profileService.getActiveProfileData();
         const treeService = profileService.getTreeService();
         await treeService.saveProfileTree(root, profileData.id!);
-
-        // 更新 editTime（排序/拖拽改变了列表），使下次安装会重新打包而非误判为已安装
-        await this.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     /**

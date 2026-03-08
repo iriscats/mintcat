@@ -7,7 +7,6 @@ import { ModService } from "@/services/ModService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
 import { IoC } from "@/core/IoC";
 import type { ProfileData } from "@/storage/dao/ProfileDAO";
-import { TimeUtils } from "@/utils/TimeUtils";
 
 export type AddModFromUrlResult = {
     status: "invalid" | "exists" | "added";
@@ -64,9 +63,6 @@ export class HomeService {
             usedVersion: options.usedVersion,
         });
 
-        // 更新 editTime，标记 profile 配置已变更（列表新增了 mod）
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
@@ -137,7 +133,6 @@ export class HomeService {
         // 添加新 mod（仅元数据，不下载；安装时再下载）
         await ModService.addModFromModcat(modInfoResp, profile.id!, groupId);
 
-        await this.updateProfileEditTimeAfterAddMod();
         return { status: "added" };
     }
 
@@ -213,7 +208,6 @@ export class HomeService {
             await this.addModDependencies(modInfoResp.id, groupId, profile.id!);
         }
 
-        await this.updateProfileEditTimeAfterAddMod();
         return { status: "added" };
     }
 
@@ -252,25 +246,13 @@ export class HomeService {
             await modsApi.upsertModStatus(addedMod.status);
         }
 
-        await this.updateProfileEditTimeAfterAddMod();
         return { status: "added" };
-    }
-
-    /** 添加 mod 后更新 profile editTime，使下次安装会重新打包而非误判为已安装 */
-    private async updateProfileEditTimeAfterAddMod(): Promise<void> {
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async removeModFromActiveProfile(modId: number): Promise<void> {
         const profile = await this.getActiveProfile();
         const profiles = await StorageAPI.getProfiles();
         await profiles.removeModFromProfile(profile.id!, modId);
-
-        // 更新 editTime，标记 profile 配置已变更（列表删除了 mod）
-        // 这样下次安装时 check_installed 不会误判为「已安装」，会重新打包
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async updateModDisplayName(modId: number, name: string): Promise<void> {
@@ -296,20 +278,11 @@ export class HomeService {
             await profiles.setModEnabled(profile.id!, modId, enable);
         }
 
-        // 更新 editTime，标记 profile 配置已变更
-        // 这样下次安装时 check_installed 不会误判为 "已安装"
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.updateProfileMod(profileModId, { usedVersion: version });
-
-        // 更新 editTime，标记 profile 配置已变更
-        // 这样下次安装时 check_installed 不会误判为 "已安装"
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     public async addGroup(parentGroupId: number, groupName: string): Promise<void> {
@@ -327,8 +300,6 @@ export class HomeService {
     public async removeGroup(groupId: number): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.deleteFolder(groupId);
-        const profileService = await this.getProfileService();
-        await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
     }
 
     /**
@@ -355,10 +326,6 @@ export class HomeService {
         // 从当前 profile 中移除这些 mod
         for (const mod of missingLocalMods) {
             await profiles.removeModFromProfile(profile.id!, mod.modId!);
-        }
-        if (missingLocalMods.length > 0) {
-            const profileService = await this.getProfileService();
-            await profileService.setActiveProfileEditTime(TimeUtils.nowSeconds());
         }
         return missingLocalMods.length;
     }

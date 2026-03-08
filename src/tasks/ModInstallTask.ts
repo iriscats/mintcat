@@ -5,7 +5,6 @@ import { ModUpdateService } from '@/services/ModUpdateService';
 import { IntegrateApi } from '@/apis/IntegrateApi';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { StorageAPI } from '@/storage';
-import { TimeUtils } from '@/utils/TimeUtils';
 import { MessageBox } from '@/components/MessageBox';
 import { ForeignPaksConfirmContent } from '@/components/ForeignPaksConfirmContent';
 import React from 'react';
@@ -15,13 +14,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { ModSourceType } from '@/models/mod/types';
 import { MODCAT_PLATFORM } from '@/apis/modcat';
 import { ensureInternalAssets } from '@/services/InternalAssetService';
+import { md5 } from '@/utils/CryptApi';
 
 /**
  * Check if a path is a valid unpacked mod directory
  */
 async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
     try {
-        // First check if it's a directory
         const fileInfo = await stat(dirPath);
         if (!fileInfo.isDirectory) {
             return false;
@@ -30,6 +29,57 @@ async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
     } catch (e) {
         return false;
     }
+}
+
+/**
+ * Compute a deterministic hash from the full set of install inputs.
+ * Any change in the mod list, cache files, UE4SS mode, or asset zips
+ * produces a different hash, automatically triggering reinstallation.
+ */
+async function fileSizeAndMtime(filePath: string): Promise<{ size: number; mtime: number }> {
+    try {
+        if (filePath && await exists(filePath)) {
+            const info = await stat(filePath);
+            return {
+                size: info.size ?? 0,
+                mtime: info.mtime?.getTime() ?? 0,
+            };
+        }
+    } catch { /* file missing or inaccessible */ }
+    return { size: 0, mtime: 0 };
+}
+
+export async function computeInstallManifestHash(
+    enabledMods: CompleteModData[],
+    isCustomMode: boolean,
+    assetPaths?: { ue4ssZipPath?: string; drgZipPath?: string; rcZipPath?: string } | null
+): Promise<string> {
+    const modEntries = [];
+    for (const mod of enabledMods) {
+        const cachePath = mod.download?.cachePath || "";
+        const { size, mtime } = await fileSizeAndMtime(cachePath);
+        modEntries.push({
+            modId: mod.modId,
+            nameId: mod.nameId || "",
+            cachePath,
+            fileSize: size,
+            mtime,
+            isUnpacked: cachePath ? await isValidUnpackedMod(cachePath) : false,
+        });
+    }
+
+    const ue4ssStat = await fileSizeAndMtime(assetPaths?.ue4ssZipPath || "");
+    const drgStat   = await fileSizeAndMtime(assetPaths?.drgZipPath || "");
+    const rcStat    = await fileSizeAndMtime(assetPaths?.rcZipPath || "");
+
+    const manifest = {
+        mods: modEntries,
+        ue4ssMode: isCustomMode ? "Custom" : "Normal",
+        ue4ssZip: { path: assetPaths?.ue4ssZipPath || "", ...ue4ssStat },
+        drgZip:   { path: assetPaths?.drgZipPath || "",   ...drgStat },
+        rcZip:    { path: assetPaths?.rcZipPath || "",     ...rcStat },
+    };
+    return md5(JSON.stringify(manifest));
 }
 
 /**
@@ -58,7 +108,7 @@ async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
 export class ModInstallTask implements ITask {
 
     async run(context: ITaskContext): Promise<void> {
-        const TOTAL_STEPS = 9;
+        const TOTAL_STEPS = 10;
         await context.setMessage(t("Start installation"));
 
         // Get profile view model and settings
@@ -128,7 +178,6 @@ export class ModInstallTask implements ITask {
 
         // Step 3: Check and update mods (parallel download)
         await context.setStep(t('Check Mod Updates'), 3, TOTAL_STEPS);
-        let editTime = await profileVM.getActiveProfileEditTime();
         const totalMods = enabledMods.length;
 
         // First pass: check mod path existence and identify mods that need re-download
@@ -174,11 +223,8 @@ export class ModInstallTask implements ITask {
                 }
             }
 
-            // Check if mod was modified (for local mods)
-            if (await ModUpdateService.checkLocalModModify(item, true)) {
-                editTime = TimeUtils.nowSeconds();
-                await profileVM.setActiveProfileEditTime(editTime);
-            }
+            // Check if mod was modified (for local mods) — updates DB timestamps
+            await ModUpdateService.checkLocalModModify(item, true);
         }
 
         // Parallel download all mods that need updating
@@ -193,10 +239,6 @@ export class ModInstallTask implements ITask {
                 const reasonSuffix = firstReason ? ` (${firstReason})` : '';
                 throw new Error(`${t("Download Failed")}: ${failedNames}${reasonSuffix}`);
             }
-
-            // Mod files changed; bump editTime so check_installed won't skip
-            editTime = TimeUtils.nowSeconds();
-            await profileVM.setActiveProfileEditTime(editTime);
 
             // Refresh enabledMods from DB so subsequent steps use updated cache paths
             for (let i = 0; i < enabledMods.length; i++) {
@@ -239,11 +281,6 @@ export class ModInstallTask implements ITask {
         await context.setStep(t('Check installation status'), 5, TOTAL_STEPS);
         await context.setMessage(t('Checking existing installation...'));
 
-        let installTime = await profileVM.getActiveProfileInstallTime();
-        if (installTime < editTime) {
-            installTime = editTime;
-        }
-
         gameDAO = await StorageAPI.getGames();
         activeGame = await gameDAO.getActiveGame();
         drgPakPath = activeGame?.installPath;
@@ -252,12 +289,10 @@ export class ModInstallTask implements ITask {
         }
 
         const ue4ss = await settings.getValue('ue4ss');
-        // Custom mode: user manages UE4SS themselves, skip install/uninstall
         const isCustomMode = ue4ss === "Custom";
 
-        const installType = await IntegrateApi.checkInstalled(drgPakPath, installTime);
+        const installType = await IntegrateApi.checkInstalled(drgPakPath, 0);
 
-        // Handle old version detection
         if (installType === "old_version_mint_installed") {
             await context.setMessage(t('Detected old version installation'), 'warning');
             const result = await MessageBox.confirm({
@@ -267,24 +302,12 @@ export class ModInstallTask implements ITask {
             if (!result) {
                 throw new Error(t("User Cancels Installation"));
             }
-        } else if (installType === "mintcat_installed") {
-            await context.setMessage(t("Mod Already Install"));
-            await context.updateProgress(100);
-            return;
         }
 
-        // Step 6: Uninstall old mods
-        await context.setStep(t('Uninstall old version'), 6, TOTAL_STEPS);
-        await context.setMessage(t('Uninstalling old mods...'));
-
-        // In Custom mode, don't delete UE4SS; otherwise delete it
-        await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
-
-        // Step 7: Ensure internal assets - DRG: UE4SSL.zip + DRG.zip；RC: UE4SSL.zip + RC.zip
-        // Always run ensureInternalAssets so we check for updates and download latest (e.g. 0.2.0) when cache has older version (e.g. 0.1.0).
+        // Step 6: Ensure internal assets (before hash comparison so asset paths are available)
         const isRc = activeGame?.name?.toLowerCase() === 'rc';
         const assetGame = isRc ? 'rc' : 'drg';
-        await context.setStep(t('Check internal assets'), 7, TOTAL_STEPS);
+        await context.setStep(t('Check internal assets'), 6, TOTAL_STEPS);
         const assetPaths = await ensureInternalAssets({
             setStep: context.setStep.bind(context),
             setMessage: context.setMessage.bind(context),
@@ -293,18 +316,30 @@ export class ModInstallTask implements ITask {
             game: assetGame,
         });
 
-        // Step 8: Install mods
-        await context.setStep(t('Install mods'), 8, TOTAL_STEPS);
+        // Step 7: Manifest hash comparison — skip install when nothing changed
+        await context.setStep(t('Check installation status'), 7, TOTAL_STEPS);
+        const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
+        const savedHash = await profileVM.getActiveProfileInstallHash();
+        if (installType !== "old_version_mint_installed" && currentHash === savedHash) {
+            await context.setMessage(t("Mod Already Install"));
+            await context.updateProgress(100);
+            return;
+        }
+
+        // Step 8: Uninstall old mods
+        await context.setStep(t('Uninstall old version'), 8, TOTAL_STEPS);
+        await context.setMessage(t('Uninstalling old mods...'));
+        await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
+
+        // Step 9: Install mods
+        await context.setStep(t('Install mods'), 9, TOTAL_STEPS);
         await context.setMessage(`${t('Preparing to install mods...')} (${enabledMods.length} ${t('mods')})`);
 
         const installModList = [];
         for (const item of enabledMods) {
             const modName = item.nameId === "" ? item.displayName : item.nameId;
             const cachePath = item.download?.cachePath || "";
-            
-            // Check if this is an unpacked mod directory
             const isUnpacked = await isValidUnpackedMod(cachePath);
-            
             installModList.push({
                 name: modName,
                 modio_id: item.platformId,
@@ -326,6 +361,9 @@ export class ModInstallTask implements ITask {
         if (!result) {
             throw new Error(t("Installation Failed"));
         }
+
+        // Persist manifest hash so the next install can detect "nothing changed"
+        await profileVM.setActiveProfileInstallHash(currentHash);
 
         // Complete
         await context.setMessage(t("Installation Finish"));

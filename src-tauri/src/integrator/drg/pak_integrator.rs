@@ -729,30 +729,14 @@ impl PakIntegrator {
         Ok(())
     }
 
-    pub fn check_installed(fsd_path_pak: String, timestamp: u64) -> Result<String> {
+    pub fn check_installed(fsd_path_pak: String, _timestamp: u64) -> Result<String> {
         let installation = DRGInstallation::from_pak_path(&fsd_path_pak)
             .context("Failed to determine DRG installation")?;
 
         let old_mod_pak_path = installation.paks_path().join("mods_P.pak");
-        //let hook_dll_path = installation.binaries_directory().join("x3daudio1_7.dll");
 
         if old_mod_pak_path.exists() {
             return Ok("old_version_mint_installed".to_string());
-        }
-
-        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
-        if mod_pak_path.exists() {
-            let metadata = fs::metadata(&mod_pak_path)
-                .with_context(|| format!("Failed to get metadata for: {:?}", mod_pak_path))?;
-            let mod_pak_timestamp = metadata
-                .modified()
-                .context("Failed to get mod pak modified time")?
-                .duration_since(std::time::UNIX_EPOCH)
-                .context("Failed to calculate timestamp")?
-                .as_secs();
-            if mod_pak_timestamp == timestamp {
-                return Ok("mintcat_installed".to_string());
-            }
         }
 
         Ok("no_installed".to_string())

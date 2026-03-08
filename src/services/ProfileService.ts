@@ -5,8 +5,7 @@ import { ProfileTreeItem } from '@/models/profile/ProfileTreeItem';
 
 type ProfileRuntimeState = {
     lastUpdate?: number;
-    editTime?: number;
-    installTime?: number;
+    installHash?: string;
 };
 
 /**
@@ -296,26 +295,19 @@ export class ProfileService {
         return `profile_${profileId}_${field}`;
     }
 
-    /**
-     * 从 settings 表读取持久化的时间戳（仅在 runtimeState 缺失时使用）
-     */
-    private async getPersistedTime(profileId: number, field: string): Promise<number> {
+    private async getPersistedString(profileId: number, field: string): Promise<string> {
         try {
             const settings = await StorageAPI.getSettings();
-            const value = await settings.getValue(this.settingsKey(profileId, field));
-            return value ? parseInt(value, 10) || 0 : 0;
+            return (await settings.getValue(this.settingsKey(profileId, field))) || "";
         } catch {
-            return 0;
+            return "";
         }
     }
 
-    /**
-     * 将时间戳持久化到 settings 表
-     */
-    private async persistTime(profileId: number, field: string, timestamp: number): Promise<void> {
+    private async persistString(profileId: number, field: string, value: string): Promise<void> {
         try {
             const settings = await StorageAPI.getSettings();
-            await settings.setValue(this.settingsKey(profileId, field), String(timestamp));
+            await settings.setValue(this.settingsKey(profileId, field), value);
         } catch (e) {
             console.error(`[ProfileService] Failed to persist ${field} for profile ${profileId}:`, e);
         }
@@ -332,42 +324,21 @@ export class ProfileService {
         this.updateRuntimeState(activeProfile.id!, { lastUpdate: timestamp });
     }
 
-    public async getActiveProfileEditTime(): Promise<number> {
+    public async getActiveProfileInstallHash(): Promise<string> {
         const activeProfile = await this.ensureActiveProfile();
         const state = this.runtimeState.get(activeProfile.id!);
-        if (state?.editTime !== undefined) {
-            return state.editTime;
+        if (state?.installHash !== undefined) {
+            return state.installHash;
         }
-        // 内存中未初始化，从数据库恢复（应用重启后的首次读取）
-        const persisted = await this.getPersistedTime(activeProfile.id!, 'editTime');
-        this.updateRuntimeState(activeProfile.id!, { editTime: persisted });
+        const persisted = await this.getPersistedString(activeProfile.id!, 'installHash');
+        this.updateRuntimeState(activeProfile.id!, { installHash: persisted });
         return persisted;
     }
 
-    public async setActiveProfileEditTime(timestamp: number): Promise<void> {
+    public async setActiveProfileInstallHash(hash: string): Promise<void> {
         const activeProfile = await this.ensureActiveProfile();
-        this.updateRuntimeState(activeProfile.id!, { editTime: timestamp });
-        // 同步持久化到数据库，确保重启后可恢复
-        await this.persistTime(activeProfile.id!, 'editTime', timestamp);
-    }
-
-    public async getActiveProfileInstallTime(): Promise<number> {
-        const activeProfile = await this.ensureActiveProfile();
-        const state = this.runtimeState.get(activeProfile.id!);
-        if (state?.installTime !== undefined) {
-            return state.installTime;
-        }
-        // 内存中未初始化，从数据库恢复（应用重启后的首次读取）
-        const persisted = await this.getPersistedTime(activeProfile.id!, 'installTime');
-        this.updateRuntimeState(activeProfile.id!, { installTime: persisted });
-        return persisted;
-    }
-
-    public async setActiveProfileInstallTime(timestamp: number): Promise<void> {
-        const activeProfile = await this.ensureActiveProfile();
-        this.updateRuntimeState(activeProfile.id!, { installTime: timestamp });
-        // 同步持久化到数据库，确保重启后可恢复
-        await this.persistTime(activeProfile.id!, 'installTime', timestamp);
+        this.updateRuntimeState(activeProfile.id!, { installHash: hash });
+        await this.persistString(activeProfile.id!, 'installHash', hash);
     }
 
     // ====================================

@@ -4,8 +4,6 @@ import { emitEvent, onceEvent } from "@/events";
 import type { EventPayload } from "@/events";
 import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
-import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
-import { IoC } from "@/core/IoC.ts";
 import {StorageAPI} from "@/storage";
 import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue";
 
@@ -86,9 +84,7 @@ export class IntegrateApi  {
                 rcZipPath: rcZipPath ?? null,
             });
 
-            await onceEvent('install-success', async (installTime) => {
-                const profileVM = await IoC.get(ProfileViewModel);
-                await profileVM.setActiveProfileInstallTime(installTime);
+            await onceEvent('install-success', async () => {
                 resolve(true);
             });
             await onceEvent('install-error', async (errorMsg) => {

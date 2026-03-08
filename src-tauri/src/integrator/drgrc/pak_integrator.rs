@@ -607,23 +607,9 @@ impl RcPakIntegrator {
         Ok(())
     }
 
-    pub fn check_installed(game_pak_path: String, timestamp: u64) -> Result<String> {
-        let installation = RcInstallation::from_pak_path(&game_pak_path)
+    pub fn check_installed(game_pak_path: String, _timestamp: u64) -> Result<String> {
+        let _installation = RcInstallation::from_pak_path(&game_pak_path)
             .context("Failed to determine RC installation")?;
-        let mod_pak_path = installation.paks_path().join(installation.mod_pak_name());
-        if mod_pak_path.exists() {
-            let metadata = fs::metadata(&mod_pak_path)
-                .with_context(|| format!("Failed to get metadata for: {:?}", mod_pak_path))?;
-            let mod_pak_timestamp = metadata
-                .modified()
-                .context("Failed to get mod pak modified time")?
-                .duration_since(std::time::UNIX_EPOCH)
-                .context("Failed to calculate timestamp")?
-                .as_secs();
-            if mod_pak_timestamp == timestamp {
-                return Ok("mintcat_installed".to_string());
-            }
-        }
         Ok("no_installed".to_string())
     }
 
