@@ -57,19 +57,18 @@ class UpdateDialog extends React.Component<any, any> {
     }
 
     componentDidMount() {
-        try {
-            check().then((update) => {
-                if (update) {
-                    this.update = update;
-                    this.setState({
-                        isModalOpen: true,
-                        version: update.version,
-                        changelog: update.body,
-                    });
-                }
-            });
-        } catch (e) {
-        }
+        check().then((update) => {
+            if (update) {
+                this.update = update;
+                this.setState({
+                    isModalOpen: true,
+                    version: update.version,
+                    changelog: update.body,
+                });
+            }
+        }).catch((e) => {
+            console.warn('[UpdateDialog] Update check failed:', e);
+        });
     }
 
     render() {

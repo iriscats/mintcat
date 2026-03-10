@@ -7,6 +7,7 @@ import {open as openShell} from "@tauri-apps/plugin-shell";
 import {ModioApi} from "@/apis/modio";
 import {MODCAT_PLATFORM} from "@/apis/modcat";
 import {CacheApi} from "@/apis/CacheApi";
+import {validateVipStatus} from "@/apis/mintcat";
 import {AppViewModel} from "@/AppViewModel";
 import {IoC} from "@/core/IoC.ts";
 import {AppService} from "@/services/AppService.ts";
@@ -24,6 +25,9 @@ interface UserSettingDialogStates {
     modioOAuth?: string;
     mintcatOAuth?: string;
     modcatOAuth?: string;
+    vipStatus?: 'Active' | 'Expired' | 'None';
+    vipType?: string | null;
+    vipExpirationTime?: string | null;
 }
 
 class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
@@ -40,6 +44,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             modioOAuth: "",
             mintcatOAuth: "",
             modcatOAuth: "",
+            vipStatus: "None",
+            vipType: null,
+            vipExpirationTime: null,
         }
 
     }
@@ -64,6 +71,9 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             const modcatOAuth = await this.appService.getOAuthByPlatform(MODCAT_PLATFORM);
             const modioOAuth = await this.appService.getOAuthByPlatform('mod.io');
 
+            // 通过后端接口验证真实 VIP 状态
+            const vipInfo = await validateVipStatus();
+
             const userInfo = await ModioApi.getUserInfo();
             if (userInfo) {
                 const url = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
@@ -75,13 +85,18 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     modioOAuth: modioOAuth?.oauth || "",
                     mintcatOAuth: mintcatOAuth?.oauth || "",
                     modcatOAuth: modcatOAuth?.oauth || "",
+                    vipStatus: vipInfo?.vipStatus ?? "None",
+                    vipType: vipInfo?.vipType ?? null,
+                    vipExpirationTime: vipInfo?.vipExpirationTime ?? null,
                 })
             } else {
-                // 即使没有 mod.io 用户信息（如 token 过期），也展示 DB 中已有的 OAuth，方便用户查看或重新粘贴
                 this.setState({
                     modioOAuth: modioOAuth?.oauth || "",
                     mintcatOAuth: mintcatOAuth?.oauth || "",
                     modcatOAuth: modcatOAuth?.oauth || "",
+                    vipStatus: vipInfo?.vipStatus ?? "None",
+                    vipType: vipInfo?.vipType ?? null,
+                    vipExpirationTime: vipInfo?.vipExpirationTime ?? null,
                 })
             }
         } catch (error) {
@@ -145,6 +160,11 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                 content: t("userSetting.invalidOAuth"),
                 key: "mintcat-oauth-invalid"
             });
+            this.setState({
+                vipStatus: "None",
+                vipType: null,
+                vipExpirationTime: null,
+            });
             return;
         }
 
@@ -153,6 +173,22 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             if (activeUser) {
                 await this.appService.setOAuth(activeUser.id, 'mintcat', value);
             }
+
+            if (!value.trim()) {
+                this.setState({
+                    vipStatus: "None",
+                    vipType: null,
+                    vipExpirationTime: null,
+                });
+                return;
+            }
+
+            const vipInfo = await validateVipStatus();
+            this.setState({
+                vipStatus: vipInfo?.vipStatus ?? "None",
+                vipType: vipInfo?.vipType ?? null,
+                vipExpirationTime: vipInfo?.vipExpirationTime ?? null,
+            });
         } catch (error) {
             console.error('Failed to save MintCat OAuth:', error);
             message.error(t("userSetting.saveOAuthFailed"));
@@ -219,7 +255,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                 <Title level={4} className="user-settings-title">
                                     {this.state.username || t("userSetting.guestUser")}
                                 </Title>
-                                {this.state.mintcatOAuth && (
+                                {this.state.vipStatus === 'Active' && (
                                     <Button
                                         size="small"
                                         type="primary"
@@ -230,10 +266,32 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                                         {t("userSetting.mintcatVip")}
                                     </Button>
                                 )}
+                                {this.state.vipStatus === 'Expired' && (
+                                    <Button
+                                        size="small"
+                                        type="default"
+                                        icon={<CrownOutlined style={{ color: "#8c8c8c" }} />}
+                                        onClick={this.onVIPClick}
+                                        className="user-settings-vip"
+                                        style={{ color: "#8c8c8c", borderColor: "#d9d9d9" }}
+                                    >
+                                        {t("userSetting.vipExpired")}
+                                    </Button>
+                                )}
                             </Flex>
                             <Text type="secondary">
                                 ID: {this.state.modioId || "N/A"}
                             </Text>
+                            {this.state.vipStatus === 'Active' && this.state.vipExpirationTime && (
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    {t("userSetting.vipExpiration", { date: new Date(this.state.vipExpirationTime).toLocaleDateString() })}
+                                </Text>
+                            )}
+                            {this.state.vipStatus === 'Expired' && this.state.vipExpirationTime && (
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    {t("userSetting.vipExpiredAt", { date: new Date(this.state.vipExpirationTime).toLocaleDateString() })}
+                                </Text>
+                            )}
                         </Flex>
                     </Flex>
 

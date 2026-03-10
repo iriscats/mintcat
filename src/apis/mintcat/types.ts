@@ -45,3 +45,13 @@ export interface CloudBackupMetadata {
 export interface CloudBackupRecord extends CloudBackupMetadata {
     id: string;
 }
+
+/**
+ * Types for MintCat VIP API.
+ */
+
+export interface VipInfo {
+    vipType: string | null;
+    vipStatus: 'Active' | 'Expired' | 'None';
+    vipExpirationTime: string | null;
+}
