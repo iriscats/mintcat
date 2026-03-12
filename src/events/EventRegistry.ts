@@ -65,6 +65,7 @@ export interface EventPayloads {
     addModType: string;
     groupId: number;
     list: string[];
+    modInfoList?: any[];
   };
 
   /** 添加模组对话框关闭 */

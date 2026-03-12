@@ -67,8 +67,19 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
         result.list = [...new Set(result.list)];
 
         switch (result.addModType) {
-            case AddModType.ONLINE:
             case AddModType.SUBSCRIBED: {
+                if (result.modInfoList && result.modInfoList.length > 0) {
+                    const batchResult = await vm.addModsFromSubscribed(result.modInfoList, result.groupId);
+                    if (batchResult.existsCount > 0) {
+                        message.warning(t("Mod Already Exists") + ` (${batchResult.existsCount} ${t("in current list")})`);
+                    }
+                    if (batchResult.errorCount > 0) {
+                        message.warning(t("Some mods failed to add") + `: ${batchResult.errorCount}/${result.modInfoList.length}`);
+                    }
+                }
+                break;
+            }
+            case AddModType.ONLINE: {
                 const list = result.list;
                 const { results, errors } = await asyncPoolAll(
                     list,

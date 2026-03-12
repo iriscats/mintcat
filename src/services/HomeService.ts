@@ -7,6 +7,8 @@ import { ModService } from "@/services/ModService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
 import { IoC } from "@/core/IoC";
 import type { ProfileData } from "@/storage/dao/ProfileDAO";
+import type { ModInfo } from "@/apis/modio/ModInfo.ts";
+import { asyncPoolAll } from "@/utils/AsyncPool";
 
 export type AddModFromUrlResult = {
     status: "invalid" | "exists" | "added";
@@ -16,6 +18,12 @@ export type AddModFromUrlResult = {
 export type AddModFromPathResult = {
     status: "missing" | "exists" | "added";
     modPath?: string;
+};
+
+export type BatchAddModResult = {
+    addedCount: number;
+    existsCount: number;
+    errorCount: number;
 };
 
 export class HomeService {
@@ -209,6 +217,63 @@ export class HomeService {
         }
 
         return { status: "added" };
+    }
+
+    /**
+     * 批量导入 mod.io 订阅的 mod（使用已获取的 ModInfo，避免逐个请求 API）
+     */
+    public async addModsFromSubscribed(modInfos: ModInfo[], groupId: number): Promise<BatchAddModResult> {
+        const profile = await this.getActiveProfile();
+        const modsApi = await StorageAPI.getMods();
+        const profiles = await StorageAPI.getProfiles();
+
+        let addedCount = 0;
+        let existsCount = 0;
+        let errorCount = 0;
+
+        const depModIds: number[] = [];
+
+        for (const modInfo of modInfos) {
+            try {
+                const existingMod = await modsApi.getModByPlatformId(modInfo.id, "Modio");
+                if (existingMod) {
+                    const existingProfileMod = await profiles.getProfileMod(profile.id!, existingMod.modId!);
+                    if (existingProfileMod) {
+                        existsCount++;
+                    } else {
+                        await this.addModToProfile({
+                            profileId: profile.id!,
+                            modId: existingMod.modId!,
+                            groupId,
+                            usedVersion: "",
+                        });
+                        addedCount++;
+                    }
+                } else {
+                    await ModService.addModFromModio(modInfo, profile.id!, groupId);
+                    addedCount++;
+                }
+
+                if (modInfo.dependencies) {
+                    depModIds.push(modInfo.id);
+                }
+            } catch (e) {
+                console.error(`[addModsFromSubscribed] Failed to add mod ${modInfo.name}:`, e);
+                errorCount++;
+            }
+        }
+
+        // 依赖去重后批量解析，低并发避免风控
+        const uniqueDepIds = [...new Set(depModIds)];
+        if (uniqueDepIds.length > 0) {
+            await asyncPoolAll(
+                uniqueDepIds,
+                (depModId) => this.addModDependencies(depModId, groupId, profile.id!),
+                2
+            );
+        }
+
+        return { addedCount, existsCount, errorCount };
     }
 
     public async addModFromPath(modPath: string, groupId: number): Promise<AddModFromPathResult> {

@@ -6,7 +6,8 @@ import { IoC } from "@/core/IoC.ts";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileService} from "@/services/ProfileService.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
-import {HomeService, type AddModFromUrlResult, type AddModFromPathResult} from "@/services/HomeService.ts";
+import {HomeService, type AddModFromUrlResult, type AddModFromPathResult, type BatchAddModResult} from "@/services/HomeService.ts";
+import type {ModInfo} from "@/apis/modio/ModInfo.ts";
 
 /**
  * HomeViewModel handles mod operations and business logic
@@ -43,6 +44,17 @@ export class HomeViewModel extends BaseViewModel {
             console.error(`[addModFromPath] Failed to add mod to database: ${modPath}`, error);
             message.error(t("Failed to add mod to database"));
             return { status: "missing", modPath };
+        }
+    }
+
+    public async addModsFromSubscribed(modInfos: ModInfo[], groupId: number): Promise<BatchAddModResult> {
+        await StatusBar.log(t("Fetch Mod Info"), 'info');
+        try {
+            return await this.homeService.addModsFromSubscribed(modInfos, groupId);
+        } catch (error) {
+            console.error('Failed to batch add subscribed mods:', error);
+            message.error(t("Failed to add mod to database"));
+            return { addedCount: 0, existsCount: 0, errorCount: modInfos.length };
         }
     }
 

@@ -36,10 +36,8 @@ export const SubscribedTab = React.forwardRef((_: any, ref) => {
     }, []);
 
     React.useImperativeHandle(ref, () => ({
-        submit: (): string[] => {
-            return mods
-                .filter(m => selectedIds.has(m.id))
-                .map(m => m.profile_url);
+        submit: (): ModInfo[] => {
+            return mods.filter(m => selectedIds.has(m.id));
         }
     }));
 

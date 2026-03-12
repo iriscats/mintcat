@@ -31,6 +31,7 @@ export interface AddModDialogResult {
     addModType?: string;
     groupId?: number;
     list?: string[];
+    modInfoList?: any[];
 }
 
 export class AddModDialog extends BasePage<any, AddModDialogStates> {
@@ -54,7 +55,9 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
     @autoBind
     private async handleOk() {
-        let list = [];
+        let list: string[] = [];
+        let modInfoList: any[] | undefined;
+
         switch (this.state.addModType) {
             case AddModType.ONLINE: {
                 list = this.onlineFormRef.current?.submit();
@@ -65,14 +68,16 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
                 break;
             }
             case AddModType.SUBSCRIBED: {
-                list = this.subscribedFormRef.current?.submit() ?? [];
+                const selected = this.subscribedFormRef.current?.submit() ?? [];
+                modInfoList = selected;
+                list = selected.map((m: any) => m.profile_url);
                 break;
             }
             default:
                 break;
         }
 
-        if (list.length === 0) {
+        if (list.length === 0 && (!modInfoList || modInfoList.length === 0)) {
             message.warning(t("Please input mod"));
             return;
         }
@@ -80,7 +85,8 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         await emitEvent('add-mod-dialog-ok', {
             groupId: this.state.groupId!,
             addModType: this.state.addModType!,
-            list: list
+            list: list,
+            modInfoList: modInfoList,
         });
     }
 
