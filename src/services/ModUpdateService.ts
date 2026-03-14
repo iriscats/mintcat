@@ -238,9 +238,15 @@ export class ModUpdateService {
         const successCount = mods.length - errors.length;
 
         if (errors.length > 0) {
-            await StatusBar.error(`${t("Batch Download")} ${successCount}/${mods.length} (${errors.length} failed)`);
+            await StatusBar.error(
+                t("Batch Download Failed Summary", {
+                    success: successCount,
+                    total: mods.length,
+                    failed: errors.length
+                })
+            );
         } else {
-            await StatusBar.success(`${t("Batch Download Finish")} (${mods.length} mods)`);
+            await StatusBar.success(t("Batch Download Finish With Count", { count: mods.length }));
         }
 
         // 清除进度缓存并通知 UI 刷新，避免虚拟列表下未挂载的组件遗留 "0.00%" 标签
@@ -377,7 +383,7 @@ export class ModUpdateService {
             return { successCount: 0, errors: [] };
         }
 
-        await StatusBar.info(t("Batch updating mod info", { name: `${totalOnlineCount} mods` }));
+        await StatusBar.info(t("Batch updating mod count", { count: totalOnlineCount }));
 
         const collectedErrors: Array<{ mod: CompleteModData; error: Error }> = [];
 

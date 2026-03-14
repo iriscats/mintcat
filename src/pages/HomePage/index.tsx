@@ -408,12 +408,14 @@ export class HomePage extends BasePage<any, ModListPageState> {
             const { successCount, errors } = await ModUpdateService.batchDownloadModFiles(mods, 3);
             if (errors.length > 0) {
                 const failedNames = errors.map(e => e.mod.displayName).slice(0, 3).join(', ');
-                const suffix = errors.length > 3 ? ` (+${errors.length - 3} more)` : '';
+                const suffix = errors.length > 3
+                    ? t("Batch Download More Errors", { count: errors.length - 3 })
+                    : '';
                 const firstReason = errors[0]?.error?.message;
                 const reasonHint = firstReason ? ` — ${firstReason}` : '';
                 message.error(`${t("Download Failed")}: ${failedNames}${suffix}${reasonHint}`);
             } else if (successCount > 0) {
-                message.success(`${t("Update Finish")} (${successCount} mods)`);
+                message.success(t("Update Finish With Count", { count: successCount }));
             }
         }
     }
@@ -437,7 +439,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
         if (urls.length > 0) {
             const text = urls.join("\n");
             await ClipboardApi.writeText(text);
-            message.success(t("Copied To Clipboard") + `: ${urls.length} URLs`);
+            message.success(t("Copied URL Count", { count: urls.length }));
         }
     }
 
@@ -1191,6 +1193,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 selectedKeys={this.state.selectedKeys}
                                 checkedKeys={this.state.checkedKeys}
                                 virtual={this.state.virtual}
+                                height={window.innerHeight - 145}
                                 onMenuClick={this.onMenuClick}
                                 onUpdateTreeView={this.updateTreeView}
                                 onCountLabelUpdate={this.updateCountLabel}

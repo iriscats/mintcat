@@ -23,6 +23,7 @@ export interface TreeViewProps {
     selectedKeys?: any[];
     checkedKeys?: any[];
     virtual?: boolean;
+    height?: number;
     onMenuClick: (key: string, nodeKey: string) => void;
     onUpdateTreeView?: () => void;
     onCountLabelUpdate?: () => Promise<void>;
@@ -51,6 +52,7 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
             nextProps.checkedKeys !== this.props.checkedKeys ||
             nextProps.isMultiSelect !== this.props.isMultiSelect ||
             nextProps.virtual !== this.props.virtual ||
+            nextProps.height !== this.props.height ||
             nextState.isDragging !== this.state.isDragging
         );
     }
@@ -270,7 +272,7 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
                 // Workaround for antd bug: https://github.com/ant-design/ant-design/issues/54610
                 // Disable virtual scrolling during drag to prevent auto-scroll from getting stuck
                 virtual={!this.state.isDragging}
-                height={window.innerHeight - 145}
+                height={this.props.height ?? window.innerHeight - 145}
                 checkable={this.props.isMultiSelect}
                 expandedKeys={this.props.expandedKeys}
                 selectedKeys={this.props.selectedKeys}

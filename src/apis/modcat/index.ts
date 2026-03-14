@@ -443,9 +443,13 @@ export class ModcatApi {
         const downloadUrl = ModcatApi.getDownloadUrl(latestVersion.FilesId);
         const cachePath = await CacheApi.getModCachePath(fileName, version);
         
-        // 获取认证token
+        // 获取认证token；同时带上 Origin/Referer 以通过服务端跨域校验
+        // （reqwest 不会自动发送这些头，而 modcat.top 只允许 localhost:1420 / tauri.localhost）
         const token = await ModcatApi.getToken();
-        const headers: Record<string, string> = {};
+        const headers: Record<string, string> = {
+            "Origin": "http://tauri.localhost",
+            "Referer": "http://tauri.localhost/",
+        };
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
         }

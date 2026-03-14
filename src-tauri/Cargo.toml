@@ -1,6 +1,6 @@
 [package]
 name = "mintcat"
-version = "0.5.1"
+version = "0.5.2"
 description = "Mod Integrate Tool"
 authors = ["iriscat"]
 edition = "2021"

@@ -200,14 +200,18 @@ export async function ensureInternalAssets(
 
     if (needUe4ssl) {
         const r = results[0];
-        if (!r.latestVersion || !r.md5) throw new Error('Missing version or MD5 for UE4SSL');
+        if (!r.latestVersion || !r.md5) {
+            throw new Error(t('Missing version or MD5 for {{name}}', { name: 'UE4SSL' }));
+        }
         downloadQueue.push({ result: r, appType: 'ue4ssl', destPath: ue4ssZipPath, manifestKey: 'ue4ssl' });
     }
 
     if (needSecond) {
         const r = results[1];
         const label = game === 'rc' ? 'RC' : 'DRG';
-        if (!r.latestVersion || !r.md5) throw new Error(`Missing version or MD5 for ${label}`);
+        if (!r.latestVersion || !r.md5) {
+            throw new Error(t('Missing version or MD5 for {{name}}', { name: label }));
+        }
         downloadQueue.push({
             result: r,
             appType: secondAppType,
@@ -220,7 +224,7 @@ export async function ensureInternalAssets(
         await setMessage(t('Internal assets are up to date.'));
     } else {
         for (let i = 0; i < downloadQueue.length; i++) {
-            if (checkCancelled()) throw new Error('Task cancelled');
+            if (checkCancelled()) throw new Error(t('Task Cancelled'));
             const item = downloadQueue[i];
             const label = `${item.appType.toUpperCase()}.zip`;
             const current = i + 1;
@@ -281,7 +285,7 @@ async function downloadAndValidateZip(
     let lastError = '';
 
     for (let attempt = 0; attempt < MAX_DOWNLOAD_RETRIES; attempt++) {
-        if (checkCancelled()) throw new Error('Task cancelled');
+        if (checkCancelled()) throw new Error(t('Task Cancelled'));
         let statusError = '';
         const attemptNumber = attempt + 1;
 
@@ -326,8 +330,16 @@ async function downloadAndValidateZip(
                     lastReportedAt = now;
                     const speed = speedBytesPerSec > 0 ? `${formatBytes(speedBytesPerSec)}/s` : '--';
                     const detail = totalBytes > 0
-                        ? `${formatBytes(downloaded)}/${formatBytes(totalBytes)} · ${speed} · ETA ${formatEta(etaSecs)}`
-                        : `${formatBytes(downloaded)} · ${speed}`;
+                        ? t('Download detail with total', {
+                            downloaded: formatBytes(downloaded),
+                            total: formatBytes(totalBytes),
+                            speed,
+                            eta: formatEta(etaSecs),
+                        })
+                        : t('Download detail without total', {
+                            downloaded: formatBytes(downloaded),
+                            speed,
+                        });
                     void setMessage(t('Downloading {{name}} ({{current}}/{{total}}) {{percent}}% - {{detail}}', {
                         name: fileName,
                         current,
@@ -343,7 +355,7 @@ async function downloadAndValidateZip(
                 },
             );
         } catch (error) {
-            lastError = statusError || ((error as Error)?.message || t('Network error'));
+            lastError = statusError || ((error as Error)?.message || t('Network Error'));
             console.error(`[InternalAssets] Download failed for ${fileName} (attempt ${attemptNumber}):`, error);
             try { await remove(destPath); } catch (_) { /* best effort */ }
             if (attemptNumber < MAX_DOWNLOAD_RETRIES) {
