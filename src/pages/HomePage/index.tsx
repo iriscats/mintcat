@@ -325,8 +325,9 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private isAllSelected(): boolean {
         const treeData = this.state.treeData as DataNode[] | undefined;
         const allKeys = this.getAllLeafKeys(treeData);
-        const keys = this.getBulkOpKeys();
-        return allKeys.length > 0 && keys.length === allKeys.length;
+        if (allKeys.length === 0) return false;
+        const checkedSet = new Set(this.getBulkOpKeys());
+        return allKeys.every(key => checkedSet.has(key));
     }
 
     @autoBind
