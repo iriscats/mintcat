@@ -317,9 +317,19 @@ export class ModInstallTask implements ITask {
 
         // Step 7: Manifest hash comparison — skip only when pak exists AND nothing changed
         await context.setStep(t('Check installation status'), 7, TOTAL_STEPS);
+
+        let hasUnpackedMod = false;
+        for (const mod of enabledMods) {
+            const cachePath = mod.download?.cachePath || "";
+            if (cachePath && await isValidUnpackedMod(cachePath)) {
+                hasUnpackedMod = true;
+                break;
+            }
+        }
+
         const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
         const savedHash = await profileVM.getActiveProfileInstallHash();
-        if (installType === "mintcat_installed" && currentHash === savedHash) {
+        if (!hasUnpackedMod && installType === "mintcat_installed" && currentHash === savedHash) {
             await context.setMessage(t("Mod Already Install"));
             await context.updateProgress(100);
             return;
