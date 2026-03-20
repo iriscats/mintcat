@@ -159,12 +159,11 @@ export class ModInstallTask implements ITask {
         // Get profile mods (with enabled status)
         const profileMods = await profilesDAO.getProfileMods(activeProfileData.id!);
         const enabledProfileMods = profileMods.filter(pm => pm.isEnabled);
+        const isEmptyProfile = enabledProfileMods.length === 0;
 
-        if (enabledProfileMods.length === 0) {
-            throw new Error(t('No mods to install'));
+        if (!isEmptyProfile) {
+           await context.setMessage(`${t('Found')} ${enabledProfileMods.length} ${t('enabled mods')}`);
         }
-
-        await context.setMessage(`${t('Found')} ${enabledProfileMods.length} ${t('enabled mods')}`);
 
         // Get complete mod data for enabled mods
         const modsDAO = await StorageAPI.getMods();
