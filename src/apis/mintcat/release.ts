@@ -1,10 +1,11 @@
 import type { UpdateCheckItem, UpdateCheckResult } from './types';
-
-const RELEASE_API_BASE_URL = 'https://api.mintcat.work';
-
-function getBaseUrl(): string {
-    return RELEASE_API_BASE_URL;
-}
+import {
+    getMintcatApiOrigin,
+    MintCatApiPaths,
+    mintcatApiUrl,
+    mintcatReleaseDownloadUrl,
+    normalizeMintcatApiOrigin,
+} from './urls';
 
 /**
  * Build full download URL from relative path returned by API.
@@ -13,9 +14,8 @@ export function getDownloadUrl(relativeOrFull: string): string {
     if (relativeOrFull.startsWith('http://') || relativeOrFull.startsWith('https://')) {
         return relativeOrFull;
     }
-    const base = getBaseUrl().replace(/\/$/, '');
     const path = relativeOrFull.startsWith('/') ? relativeOrFull : `/${relativeOrFull}`;
-    return `${base}${path}`;
+    return mintcatApiUrl(getMintcatApiOrigin(), path);
 }
 
 /**
@@ -27,11 +27,9 @@ export function getReleaseDownloadUrl(
     appType: string,
     platform: string = 'windows',
     channel: string = 'beta',
-    baseUrl?: string
+    baseUrl?: string,
 ): string {
-    const base = (baseUrl ?? getBaseUrl()).replace(/\/$/, '');
-    const params = new URLSearchParams({ appType, platform, channel });
-    return `${base}/releases/${encodeURIComponent(version)}/download?${params.toString()}`;
+    return mintcatReleaseDownloadUrl(baseUrl ?? getMintcatApiOrigin(), version, appType, platform, channel);
 }
 
 /**
@@ -43,10 +41,10 @@ export const RELEASE_CHECK_NETWORK_ERROR_KEY = 'error.release_check_network';
 
 export async function checkUpdatesBatch(
     items: UpdateCheckItem[],
-    baseUrl?: string
+    baseUrl?: string,
 ): Promise<UpdateCheckResult[]> {
-    const base = baseUrl ?? getBaseUrl();
-    const url = `${base.replace(/\/$/, '')}/releases/check-update`;
+    const origin = normalizeMintcatApiOrigin(baseUrl ?? getMintcatApiOrigin());
+    const url = mintcatApiUrl(origin, MintCatApiPaths.releasesCheckUpdate);
     let response: Response;
     try {
         response = await fetch(url, {
@@ -60,7 +58,7 @@ export async function checkUpdatesBatch(
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(
-            (err as { message?: string }).message || `Release API error: ${response.status}`
+            (err as { message?: string }).message || `Release API error: ${response.status}`,
         );
     }
     const data = (await response.json()) as { items: UpdateCheckResult[] };

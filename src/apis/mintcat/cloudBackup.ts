@@ -5,8 +5,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { StorageAPI } from "@/storage";
 import i18n from "@/locales/i18n";
 import type { CloudBackupConfig, CloudBackupMetadata, CloudBackupRecord } from "./types";
+import { getMintcatApiOrigin, MintCatApiPaths, mintcatApiUrl, normalizeMintcatApiOrigin } from "./urls";
 
-const BASE_URL = "https://api.mintcat.work";
 const DB_FILE_NAME = "mintcat.sqlite";
 const RESTORE_SUFFIX = ".restore";
 const BACKUP_SUFFIX = ".bak";
@@ -21,10 +21,6 @@ async function getRestorePath(): Promise<string> {
 
 async function getBackupPath(): Promise<string> {
     return `${await getDatabasePath()}${BACKUP_SUFFIX}`;
-}
-
-function normalizeBaseUrl(url: string): string {
-    return url.trim().replace(/\/+$/, "");
 }
 
 function buildAuthHeaders(accessToken: string): HeadersInit {
@@ -85,21 +81,21 @@ export class CloudBackupApi {
         const mintcatOAuth = await oauthDAO.getActiveUserOAuthByPlatform("mintcat");
 
         return {
-            baseUrl: BASE_URL,
+            baseUrl: getMintcatApiOrigin(),
             accessToken: mintcatOAuth?.oauth ?? "",
         };
     }
 
     public static async listBackups(): Promise<CloudBackupRecord[]> {
         const config = await CloudBackupApi.getConfig();
-        const baseUrl = normalizeBaseUrl(config.baseUrl);
+        const baseUrl = normalizeMintcatApiOrigin(config.baseUrl);
         if (!baseUrl) {
             return [];
         }
         if (!config.accessToken) {
             return [];
         }
-        const response = await fetch(`${baseUrl}/v1/backups`, {
+        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backups), {
             headers: {
                 ...buildAuthHeaders(config.accessToken),
             },
@@ -117,7 +113,7 @@ export class CloudBackupApi {
         if (!config.accessToken?.trim()) {
             throw new Error(i18n.t("cloudBackup.error.auth_required"));
         }
-        const baseUrl = normalizeBaseUrl(config.baseUrl);
+        const baseUrl = normalizeMintcatApiOrigin(config.baseUrl);
         if (!baseUrl) {
             throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
@@ -149,7 +145,7 @@ export class CloudBackupApi {
             DB_FILE_NAME,
         );
 
-        const response = await fetch(`${baseUrl}/v1/backups`, {
+        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backups), {
             method: "POST",
             headers: {
                 ...buildAuthHeaders(config.accessToken),
@@ -175,11 +171,11 @@ export class CloudBackupApi {
 
     public static async downloadBackupBytes(backupId: string): Promise<Uint8Array> {
         const config = await CloudBackupApi.getConfig();
-        const baseUrl = normalizeBaseUrl(config.baseUrl);
+        const baseUrl = normalizeMintcatApiOrigin(config.baseUrl);
         if (!baseUrl) {
             throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
-        const response = await fetch(`${baseUrl}/v1/backups/${backupId}/download`, {
+        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backupDownload(backupId)), {
             headers: {
                 ...buildAuthHeaders(config.accessToken),
                 Accept: "application/octet-stream",
@@ -212,11 +208,11 @@ export class CloudBackupApi {
 
     public static async deleteBackup(backupId: string): Promise<void> {
         const config = await CloudBackupApi.getConfig();
-        const baseUrl = normalizeBaseUrl(config.baseUrl);
+        const baseUrl = normalizeMintcatApiOrigin(config.baseUrl);
         if (!baseUrl) {
             throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
-        const response = await fetch(`${baseUrl}/v1/backups/${backupId}`, {
+        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backupById(backupId)), {
             method: "DELETE",
             headers: {
                 ...buildAuthHeaders(config.accessToken),

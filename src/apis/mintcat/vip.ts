@@ -1,7 +1,6 @@
 import { StorageAPI } from "@/storage";
 import type { VipInfo } from "./types";
-
-const BASE_URL = "https://api.mintcat.work";
+import { getMintcatApiOrigin, MintCatApiPaths, mintcatApiUrl } from "./urls";
 
 export async function validateVipStatus(): Promise<VipInfo | null> {
     const oauthDAO = await StorageAPI.getOAuths();
@@ -13,7 +12,7 @@ export async function validateVipStatus(): Promise<VipInfo | null> {
     }
 
     try {
-        const response = await fetch(`${BASE_URL}/v1/validate-access-token`, {
+        const response = await fetch(mintcatApiUrl(getMintcatApiOrigin(), MintCatApiPaths.validateAccessToken), {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
 

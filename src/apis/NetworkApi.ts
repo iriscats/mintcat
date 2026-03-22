@@ -1,7 +1,10 @@
 import {retry} from "ts-retry";
 import {t} from "i18next";
+import {getMintcatApiOrigin} from "@/apis/mintcat/urls";
 
-const PROXY_API_URL = "https://proxy.mintcat.work/";
+function getProxyApiUrl(): string {
+    return `${getMintcatApiOrigin()}/proxy/`;
+}
 
 export class NetworkApi {
 
@@ -9,7 +12,7 @@ export class NetworkApi {
 
     public static getUrl(path: string, forceProxy?: boolean) {
         const useProxy = forceProxy ?? NetworkApi.IS_PROXY;
-        return useProxy ? PROXY_API_URL + path : path;
+        return useProxy ? getProxyApiUrl() + path : path;
     }
 
     private static async fetchWithTimeout(url, options = {}, timeout = 5000) {
