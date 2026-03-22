@@ -14,7 +14,10 @@ use crate::integrator::ue4ss::ue4ss_integrate::{
     install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
     zip_contains_js_mod,
 };
-use crate::integrator::{ModInfo, ReadSeek};
+use crate::integrator::{
+    audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
+    verify_audio_only_pak_file, ModInfo, ReadSeek,
+};
 use anyhow::{Context, Result};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -231,6 +234,63 @@ impl PakIntegrator {
         Ok(())
     }
 
+    /// Direct-copy an audio-only mod pak to the game Paks directory, bypassing the full
+    /// repackaging pipeline. Returns `Ok(true)` if direct copy succeeded, `Ok(false)` if
+    /// verification failed and the mod should fall back to normal processing.
+    fn game_pak_stem(&self) -> &str {
+        self.installation
+            .pak_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("FSD-WindowsNoEditor")
+    }
+
+    fn try_direct_copy_audio_mod(&self, mod_info: &ModInfo) -> Result<bool> {
+        let pak_path = Path::new(&mod_info.pak_path);
+        let target_path = self
+            .installation
+            .paks_path()
+            .join(audio_pak_filename(self.game_pak_stem(), &mod_info.name));
+
+        let mut header_buf = [0u8; 4];
+        let mut file = fs::File::open(pak_path)
+            .with_context(|| format!("Failed to open mod file: {:?}", pak_path))?;
+        file.read_exact(&mut header_buf)
+            .with_context(|| format!("Failed to read mod file header: {:?}", pak_path))?;
+        drop(file);
+
+        if header_buf == [0x50, 0x4B, 0x03, 0x04] {
+            if let Ok(dlls) = read_files_from_zip_by_extension(pak_path.to_str().unwrap(), "dll") {
+                if !dlls.is_empty() {
+                    return Ok(false);
+                }
+            }
+            if zip_contains_js_mod(pak_path) {
+                return Ok(false);
+            }
+            if let Ok(paks) = read_files_from_zip_by_extension(pak_path.to_str().unwrap(), "pak") {
+                if let Some((_, pak_data)) = paks.first() {
+                    if !verify_audio_only_from_bytes(pak_data)? {
+                        return Ok(false);
+                    }
+                    fs::write(&target_path, pak_data).with_context(|| {
+                        format!("Failed to write audio pak: {:?}", target_path)
+                    })?;
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        } else {
+            if !verify_audio_only_pak_file(pak_path)? {
+                return Ok(false);
+            }
+            fs::copy(pak_path, &target_path).with_context(|| {
+                format!("Failed to copy audio pak to: {:?}", target_path)
+            })?;
+            Ok(true)
+        }
+    }
+
     fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
         let pak_path_str = mod_info.pak_path.clone();
         let pak_path = Path::new(&pak_path_str);
@@ -239,6 +299,25 @@ impl PakIntegrator {
             return self
                 .process_directory_mod(mod_info, pak_path)
                 .with_context(|| format!("Failed to process directory mod: {}", mod_info.name));
+        }
+
+        if mod_info.is_audio_only {
+            match self.try_direct_copy_audio_mod(mod_info) {
+                Ok(true) => return Ok(()),
+                Ok(false) => {
+                    log::info!(
+                        "Audio-only verification failed for '{}', falling back to normal processing",
+                        mod_info.name
+                    );
+                }
+                Err(e) => {
+                    log::warn!(
+                        "Audio direct copy failed for '{}', falling back: {:#}",
+                        mod_info.name,
+                        e
+                    );
+                }
+            }
         }
 
         let (mut pak_buf, mut dll_buf) = self
@@ -763,6 +842,8 @@ impl PakIntegrator {
             fs::remove_file(&mod_pak_path)
                 .with_context(|| format!("Failed to remove mod pak: {:?}", mod_pak_path))?;
         }
+
+        cleanup_audio_paks(&installation.paks_path())?;
 
         if hook_dll_path.exists() {
             fs::remove_file(&hook_dll_path)

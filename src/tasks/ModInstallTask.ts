@@ -344,16 +344,23 @@ export class ModInstallTask implements ITask {
         await context.setStep(t('Install mods'), 9, TOTAL_STEPS);
         await context.setMessage(`${t('Preparing to install mods...')} (${enabledMods.length} ${t('mods')})`);
 
+        const AUDIO_TAG = 'Audio';
+        const AUDIO_DIRECT_COPY_MIN_SIZE = 10 * 1024 * 1024; // 10 MB
         const installModList = [];
         for (const item of enabledMods) {
             const modName = item.nameId === "" ? item.displayName : item.nameId;
             const cachePath = item.download?.cachePath || "";
             const isUnpacked = await isValidUnpackedMod(cachePath);
+            const fileSize = item.download?.fileSize ?? 0;
+            const isAudioOnly = !isUnpacked
+                && (item.tags?.includes(AUDIO_TAG) ?? false)
+                && fileSize >= AUDIO_DIRECT_COPY_MIN_SIZE;
             installModList.push({
                 name: modName,
                 modio_id: item.platformId,
                 pak_path: cachePath,
                 is_unpacked: isUnpacked,
+                is_audio_only: isAudioOnly,
             });
         }
 

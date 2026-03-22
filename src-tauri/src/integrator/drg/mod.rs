@@ -4,7 +4,7 @@ use crate::integrator::drg::pak_integrator::PakIntegrator;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::drgrc;
 use crate::integrator::ue4ss::ue4ss_integrate;
-use crate::integrator::ModInfo;
+use crate::integrator::{is_mintcat_audio_pak, ModInfo};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -172,7 +172,10 @@ pub fn check_foreign_paks_in_paks_dir(game_path: String) -> Result<Vec<String>, 
         let path = entry.path();
         if path.is_file() {
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if name.ends_with(".pak") && !allowed_names.contains(name) {
+                if name.ends_with(".pak")
+                    && !allowed_names.contains(name)
+                    && !is_mintcat_audio_pak(name)
+                {
                     foreign.push(name.to_string());
                 }
             }
