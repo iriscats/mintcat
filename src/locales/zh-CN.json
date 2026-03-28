@@ -371,6 +371,8 @@
 	"Translation failed": "翻译失败",
 	"UE4SS": "UE4SS",
 	"Uninstall Mods": "卸载 Mod",
+	"Uninstall Mods From Game": "从游戏卸载 Mod",
+	"Are you sure you want to uninstall mods from the game? This will remove integrated mod files from the game installation.": "确定要从游戏中卸载已集成的 Mod 吗？此操作将从游戏安装目录移除相关模组文件。",
 	"Internal asset download completed.": "内置资源下载完成。",
 	"Internal assets are up to date.": "内置资源已是最新。",
 	"Uninstall old version": "卸载旧版本",

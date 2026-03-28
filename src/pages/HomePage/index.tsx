@@ -550,8 +550,10 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private async onMenuBarUninstallModsClick() {
         try {
             const confirm = await MessageBox.confirm({
-                title: t("Uninstall Mods"),
-                content: t("Are you sure you want to uninstall the selected mods?"),
+                title: t("Uninstall Mods From Game"),
+                content: t(
+                    "Are you sure you want to uninstall mods from the game? This will remove integrated mod files from the game installation.",
+                ),
             });
             if (!confirm) {
                 return;
@@ -1087,7 +1089,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                             className={`tour-step-save ${this.state.hasUnsavedChanges ? "save-btn-unsaved" : ""}`}
                                             onClick={this.onMenuBarSaveChangesClick}/>
                                 </Tooltip>
-                                <Tooltip title={t("Uninstall Mods")}>
+                                <Tooltip title={t("Uninstall Mods From Game")}>
                                     <Button icon={<DeleteOutlined/>} type={"text"}
                                             onClick={this.onMenuBarUninstallModsClick}/>
                                 </Tooltip>

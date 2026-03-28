@@ -371,6 +371,8 @@
     "Translation failed": "Translation failed",
     "UE4SS": "UE4SS",
     "Uninstall Mods": "Uninstall Mods",
+    "Uninstall Mods From Game": "Uninstall Mods from Game",
+    "Are you sure you want to uninstall mods from the game? This will remove integrated mod files from the game installation.": "Are you sure you want to uninstall mods from the game? This will remove integrated mod files from the game installation.",
     "Internal asset download completed.": "Internal asset download completed.",
     "Internal assets are up to date.": "Internal assets are up to date.",
     "Uninstall old version": "Uninstall old version",
