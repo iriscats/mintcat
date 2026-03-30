@@ -1,6 +1,11 @@
 import {settings} from '@/storage/db/Schema';
 import {eq, and, desc, asc} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
+import {
+    clampBackgroundOpacity,
+    DEFAULT_BACKGROUND_OPACITY,
+    type BackgroundSourceType,
+} from "@/types/ThemePackage.ts";
 
 
 export interface SettingData {
@@ -54,6 +59,47 @@ export class SettingDAO {
         await this.setValue('appVersion', value);
     }
 
+    public async getActiveThemePackageId(): Promise<string> {
+        return this.getValue('ui.activeThemePackageId');
+    }
+
+    public async setActiveThemePackageId(value: string): Promise<void> {
+        await this.setValue('ui.activeThemePackageId', value);
+    }
+
+    public async getBackgroundSourceType(): Promise<BackgroundSourceType> {
+        const value = await this.getValue('ui.background.sourceType');
+        if (value === '') {
+            return 'none';
+        }
+        return value as BackgroundSourceType;
+    }
+
+    public async setBackgroundSourceType(value: BackgroundSourceType): Promise<void> {
+        await this.setValue('ui.background.sourceType', value);
+    }
+
+    public async getBackgroundSourceValue(): Promise<string> {
+        return this.getValue('ui.background.sourceValue');
+    }
+
+    public async setBackgroundSourceValue(value: string): Promise<void> {
+        await this.setValue('ui.background.sourceValue', value);
+    }
+
+    public async getBackgroundOpacity(): Promise<number> {
+        const value = await this.getValue('ui.background.opacity');
+        if (value === '') {
+            return DEFAULT_BACKGROUND_OPACITY;
+        }
+
+        return clampBackgroundOpacity(Number(value));
+    }
+
+    public async setBackgroundOpacity(value: number): Promise<void> {
+        await this.setValue('ui.background.opacity', String(clampBackgroundOpacity(value)));
+    }
+
     public async getClipboardMonitorEnabled(): Promise<boolean> {
         const value = await this.getValue('clipboardMonitor');
         // 默认启用
@@ -104,5 +150,3 @@ export class SettingDAO {
 
 
 }
-
-

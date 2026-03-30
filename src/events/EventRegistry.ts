@@ -8,6 +8,7 @@ import type { UserData } from '@/storage/dao/UserDAO';
 import type { CompleteModData } from '@/storage/dao/ModDAO';
 import type { GameData } from '@/storage/dao/GameDAO';
 import type { TaskData, TaskTypeInfo } from 'tauri-plugin-task-queue';
+import type { BackgroundSettings } from '@/types/ThemePackage';
 
 /**
  * 事件 payload 类型映射
@@ -23,6 +24,15 @@ export interface EventPayloads {
 
   /** 主题变更 */
   'theme-change': string;
+
+  /** 激活主题包变更 */
+  'theme-package-change': string;
+
+  /** 统一背景配置变更 */
+  'background-source-change': BackgroundSettings;
+
+  /** 主题包安装完成 */
+  'theme-package-installed': string;
 
   /** 用户信息加载成功 (from database) */
   'user-info-load-success': UserData;

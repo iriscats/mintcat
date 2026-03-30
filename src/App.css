@@ -32,6 +32,15 @@ html, body {
     overflow: hidden;
 }
 
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    background: var(--mc-page-bg);
+}
+
 body::before {
     content: "";
     position: fixed;
@@ -39,9 +48,67 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
+    background-image:
+        radial-gradient(circle at top left, rgba(120, 122, 255, 0.16), transparent 36%),
+        radial-gradient(circle at top right, rgba(28, 189, 154, 0.16), transparent 32%),
+        linear-gradient(180deg, #fbfcfe 0%, #eef2f7 100%);
     background-size: cover;
     background-position: center;
     pointer-events: none;
+    z-index: 0;
+}
+
+.app-shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--mc-page-bg);
+}
+
+.app-background-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.app-background-fallback,
+.app-background-image,
+.app-background-video,
+.app-background-scrim {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.app-background-fallback {
+    background:
+        radial-gradient(circle at 16% 20%, rgba(128, 75, 204, 0.16), transparent 34%),
+        radial-gradient(circle at 82% 12%, rgba(22, 119, 255, 0.12), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(237, 242, 247, 0.9) 100%);
+}
+
+.app-background-image {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: opacity 0.25s ease;
+}
+
+.app-background-video {
+    object-fit: cover;
+    transform: none;
+    filter: saturate(1.08) contrast(1.05) brightness(0.96);
+    transition: opacity 0.25s ease;
+}
+
+.app-background-scrim {
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, rgba(246, 248, 251, 0.08) 0%, rgba(234, 239, 245, 0.18) 100%);
 }
 
 /* App Header 样式 */
@@ -54,6 +121,10 @@ body::before {
     padding: 0;
     vertical-align: center;
     margin: 0;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.42) !important;
+    backdrop-filter: blur(18px);
 }
 
 .app-header img {
@@ -85,15 +156,39 @@ body::before {
 }
 
 .app-title-bar-skin-button {
-    width: 40px;
-    height: 40px;
+    width: 88px;
+    height: 52px;
     border-radius: 8px;
     cursor: pointer;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .app {
-    background: rgba(240, 242, 245, 0.25);
+    position: relative;
+    z-index: 1;
+    min-height: 100%;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.1), rgba(239, 243, 247, 0.05));
     overflow: hidden;
+}
+
+.app-body {
+    min-height: 0;
+    background: transparent !important;
+}
+
+.app-sider {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-right: 1px solid rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.app-content {
+    position: relative;
+    min-height: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(247, 250, 252, 0.08));
 }
 
 .ant-layout-footer {
@@ -130,14 +225,31 @@ body::before {
     height: 100%;
     margin-top: 0;
     width: 100%;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 /* 让 Tree 节点行宽按容器铺满，而不是按内容宽度收缩 */
+.ant-tree-content.ant-tree,
 .ant-tree-content .ant-tree-list,
 .ant-tree-content .ant-tree-list-holder,
 .ant-tree-content .ant-tree-list-holder-inner,
 .ant-tree-content .ant-tree-treenode {
     width: 100% !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.ant-tree-content .ant-tree-list-holder {
+    border-radius: 14px;
+}
+
+.ant-tree-content .ant-tree-node-content-wrapper,
+.ant-tree-content .ant-tree-indent,
+.ant-tree-content .ant-tree-switcher,
+.ant-tree-content .ant-tree-checkbox {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 /* Tree 顶底各保留 10px，且不破坏整体高度对齐 */
@@ -237,9 +349,11 @@ body::before {
 }
 
 .home-menu-bar {
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
     padding-bottom: 2px;
     min-width: 1000px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.16));
+    backdrop-filter: blur(8px);
 }
 
 /* 保存按钮未保存变更文字呼吸动画 */
@@ -262,12 +376,21 @@ body::before {
 }
 
 .home-footer-bar {
-    border-top: 1px solid #eee;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
     padding: 2px 10px 0 10px;
     width: 100%;
     justify-content: space-between;
     position: relative;
     z-index: 5;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.16));
+    backdrop-filter: blur(8px);
+}
+
+.home-tree-shell {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        radial-gradient(circle at top center, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 55%);
+    backdrop-filter: blur(4px);
 }
 
 .scrollable-div {
@@ -614,7 +737,10 @@ body::before {
 
 .app-footer {
     height: 30px;
-    background-color: var(--mc-page-bg);
+    position: relative;
+    z-index: 2;
+    background-color: rgba(249, 246, 252, 0.56) !important;
+    backdrop-filter: blur(16px);
 }
 
 /* HomePage 样式 */
@@ -623,7 +749,10 @@ body::before {
     border-radius: 0;
     border: none;
     height: 100%;
-    background-color: white;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(6px) saturate(1.03);
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.45);
 }
 
 /* AddModDialog 样式 */

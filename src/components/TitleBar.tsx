@@ -22,6 +22,8 @@ import {CacheApi} from "@/apis/CacheApi.ts";
 import {ModioApi} from "@/apis/modio";
 import { CloudBackupApi } from "@/apis/mintcat";
 import StatusBar from "./StatusBar.tsx";
+import {ThemePackageService} from "@/services/ThemePackageService.ts";
+import type {ThemePackageSummary} from "@/types/ThemePackage.ts";
 
 
 class TitleBar extends React.Component<any, any> {
@@ -32,6 +34,8 @@ class TitleBar extends React.Component<any, any> {
     private unlistenUserSettingOpen: UnlistenFn | undefined;
     private unlistenModioUnauthorized: UnlistenFn | undefined;
     private unlistenInstallFailedGamePath: UnlistenFn | undefined;
+    private unlistenThemePackageInstalled: UnlistenFn | undefined;
+    private unlistenThemePackageChange: UnlistenFn | undefined;
 
     public constructor(props: any) {
         super(props);
@@ -43,6 +47,8 @@ class TitleBar extends React.Component<any, any> {
             avatarUrl: null,
             cloudBackupLoading: false,
             guidePopoverOpen: false,
+            themePackages: [] as ThemePackageSummary[],
+            activeThemePackageId: "",
         };
 
         this.onLaunchGameClick = this.onLaunchGameClick.bind(this);
@@ -160,20 +166,43 @@ class TitleBar extends React.Component<any, any> {
     }
 
     private async onThemeClick(value: string) {
-        const storage = await StorageAPI.getSettings();
-        await storage.setGuiTheme(value);
-        localStorage.setItem('theme', value);
-        await emitEvent("theme-change", value as 'Light' | 'Dark' | 'Pink');
+        const themePackage = await ThemePackageService.setActiveThemePackage(value);
+        this.setState({ activeThemePackageId: themePackage.id });
+        await emitEvent("theme-package-change", themePackage.id);
+    }
+
+    private async loadThemePackages() {
+        try {
+            const [themePackages, activeThemePackage] = await Promise.all([
+                ThemePackageService.listThemePackages(),
+                ThemePackageService.getActiveThemePackage(),
+            ]);
+            this.setState({
+                themePackages,
+                activeThemePackageId: activeThemePackage.id,
+            });
+        } catch (error) {
+            console.warn("[TitleBar] Failed to load theme packages", error);
+        }
     }
 
     async componentDidMount() {
         this.loadActiveGame();
         this.loadUserAvatar();
+        this.loadThemePackages();
         this.unlistenActiveGameChange = await listenEvent('active-game-change', (game) => {
             this.setState({ gameName: game.displayName });
         });
         this.unlistenConfigImported = await listenEvent('config-imported', () => {
             this.loadActiveGame();
+            this.loadThemePackages();
+        });
+        this.unlistenThemePackageInstalled = await listenEvent('theme-package-installed', () => {
+            this.loadThemePackages();
+        });
+        this.unlistenThemePackageChange = await listenEvent('theme-package-change', (themePackageId: string) => {
+            this.setState({ activeThemePackageId: themePackageId });
+            this.loadThemePackages();
         });
         this.unlistenUserSettingOpen = await listenEvent('user-setting-dialog-open', () => {
             this.userSettingDialogRef.current?.show();
@@ -233,6 +262,12 @@ class TitleBar extends React.Component<any, any> {
         }
         if (this.unlistenInstallFailedGamePath) {
             this.unlistenInstallFailedGamePath();
+        }
+        if (this.unlistenThemePackageInstalled) {
+            this.unlistenThemePackageInstalled();
+        }
+        if (this.unlistenThemePackageChange) {
+            this.unlistenThemePackageChange();
         }
     }
 
@@ -310,21 +345,32 @@ class TitleBar extends React.Component<any, any> {
                         title={""}
                         content={
                             <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16}}>
-                                {[
-                                    {key: 'Light', title: t('Light'), color: "#804bcc"},
-                                    {key: 'Blue', title: t('Blue'), color: "#F5F8FF"},
-                                    {key: 'Dark', title: t('Dark'), color: "black"},
-                                    {key: 'Pink', title: t('Pink'), color: "rgba(237,65,146,0.2)"},
-                                ].map((item) => (
+                                {(this.state.themePackages || []).map((item: ThemePackageSummary) => (
                                     <Button
-                                        key={item.key}
+                                        key={item.id}
                                         className={"app-title-bar-skin-button"}
-                                        title={item.title}
-                                        style={{backgroundColor: item.color}}
-                                        onClick={async () => {
-                                            await this.onThemeClick(item.key);
+                                        title={item.nameKey ? t(item.nameKey) : item.name}
+                                        style={{
+                                            backgroundColor: item.previewColor || "#f5f5f5",
+                                            border: item.id === this.state.activeThemePackageId
+                                                ? "2px solid var(--ant-color-primary)"
+                                                : undefined,
                                         }}
-                                    />
+                                        onClick={async () => {
+                                            await this.onThemeClick(item.id);
+                                        }}
+                                    >
+                                        <span style={{
+                                            fontSize: 11,
+                                            width: 72,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            color: item.tokens?.mode === 'dark' ? '#fff' : '#111',
+                                        }}>
+                                            {item.nameKey ? t(item.nameKey) : item.name}
+                                        </span>
+                                    </Button>
                                 ))}
                             </div>
                         }

@@ -10,6 +10,7 @@ import App from "@/App";
 import {AddModDialog} from "@/dialogs/AddModDialog";
 import {MessageBoxThemeBridge} from "@/components/MessageBox.ts";
 import {getDefaultTheme, renderTheme} from "@/themes/default.ts";
+import {ThemePackageService} from "@/services/ThemePackageService.ts";
 import i18n from "@/locales/i18n"
 import packageJson from '../package.json';
 import {InitLog} from "./apis/LogApi.ts";
@@ -31,9 +32,11 @@ const Main = () => {
     const [theme, setTheme] = React.useState(defaultTheme);
 
     // ✅ 使用 useEventListener 自动管理清理
-    useEventListener("theme-change", (themeValue) => {
-        const defaultTheme = renderTheme(themeValue);
-        setTheme(defaultTheme);
+    useEventListener("theme-package-change", async (themePackageId) => {
+        const themePackage = await ThemePackageService.getThemePackageById(themePackageId);
+        const cssHref = themePackage ? await ThemePackageService.resolveThemeCssHref(themePackage) : null;
+        const nextTheme = await renderTheme(themePackage ?? undefined, cssHref);
+        setTheme(nextTheme);
     });
 
     useEffect(() => {
@@ -54,7 +57,7 @@ const Main = () => {
             return () => document.removeEventListener('contextmenu', handler);
         }
 
-        renderTheme();
+        void renderTheme().then(setTheme);
 
     }, []);
 

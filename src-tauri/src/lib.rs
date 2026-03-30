@@ -115,6 +115,7 @@ pub fn run() {
             capability::download::download_file,
             capability::download::cancel_download,
             capability::network::set_network_proxy,
+            capability::theme::install_theme_package,
             open_devtools
         ])
         .run(tauri::generate_context!())

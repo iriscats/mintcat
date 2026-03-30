@@ -213,7 +213,8 @@ function ModTreeViewFolder({nodeData, onMenuClick, folders, onMoveToFolder}: {
                         display: "block",
                         paddingLeft: "6px",
                         borderRadius: "6px",
-                        backgroundColor: "rgba(238,238,238,0.2)",
+                        backgroundColor: "rgba(255,255,255,0.34)",
+                        border: "1px solid rgba(255,255,255,0.28)",
                     }}
                           onClick={(e) => e.stopPropagation()}
                           onMouseDown={(e) => e.stopPropagation()}

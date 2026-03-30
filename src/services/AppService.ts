@@ -63,6 +63,16 @@ export class AppService {
         await settings.setGuiTheme(guiTheme);
     }
 
+    public async getActiveThemePackageId(): Promise<string> {
+        const settings = await StorageAPI.getSettings();
+        return await settings.getActiveThemePackageId();
+    }
+
+    public async setActiveThemePackageId(themePackageId: string): Promise<void> {
+        const settings = await StorageAPI.getSettings();
+        await settings.setActiveThemePackageId(themePackageId);
+    }
+
     public async getAppVersion(): Promise<string> {
         const settings = await StorageAPI.getSettings();
         return await settings.getAppVersion();

@@ -9,6 +9,7 @@ import { emitEvent, emitVoidEvent } from "@/events";
 import { DeviceApi } from "@/apis/DeviceApi.ts";
 import { BaseViewModel } from "@/core/BaseViewModel";
 import { AppService } from "@/services/AppService.ts";
+import {ThemePackageService} from "@/services/ThemePackageService.ts";
 
 /**
  * AppViewModel manages application-level state and business logic
@@ -64,12 +65,8 @@ export class AppViewModel extends BaseViewModel {
     }
 
     public async loadUserGuiTheme() {
-        let guiTheme = await this.appService.getGuiTheme();
-        if (guiTheme === "") {
-            guiTheme = "Light";
-            await this.appService.setGuiTheme(guiTheme);
-        }
-        await emitEvent("theme-change", guiTheme as 'Light' | 'Dark' | 'Pink');
+        const themePackage = await ThemePackageService.getActiveThemePackage();
+        await emitEvent("theme-package-change", themePackage.id);
     }
 
     public async loadUserInfo() {

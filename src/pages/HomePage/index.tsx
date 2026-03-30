@@ -1184,11 +1184,12 @@ export class HomePage extends BasePage<any, ModListPageState> {
                                 <SearchBox onUpdateTreeView={this.updateTreeView}/>
                             </Typography.Link>
                         </Space>
-                        <div style={{
-                            height: window.innerHeight - 145,
-                            overflow: "hidden",
-                            position: "relative",
-                        }}>
+                        <div className="home-tree-shell"
+                             style={{
+                                 height: window.innerHeight - 145,
+                                 overflow: "hidden",
+                                 position: "relative",
+                             }}>
                             <TreeView
                                 treeData={this.state.treeData}
                                 isMultiSelect={this.state.isMultiSelect}

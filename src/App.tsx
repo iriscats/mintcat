@@ -27,6 +27,13 @@ import {OnboardingTour} from "@/components/OnboardingTour.tsx";
 import {DeviceApi} from "@/apis/DeviceApi.ts";
 import {IoC} from "@/core/IoC";
 import {AppViewModel} from "@/AppViewModel";
+import {BackgroundLayer} from "@/components/BackgroundLayer.tsx";
+import {
+    DEFAULT_BACKGROUND_SETTINGS,
+    type BackgroundSettings,
+    type ThemePackageSummary,
+} from "@/types/ThemePackage.ts";
+import {ThemePackageService} from "@/services/ThemePackageService.ts";
 
 const {
     Header,
@@ -42,6 +49,8 @@ const AppContent = () => {
     const [isAppViewModelReady, setIsAppViewModelReady] = React.useState(false);
     const [initError, setInitError] = React.useState<Error | null>(null);
     const [showOnboarding, setShowOnboarding] = React.useState(false);
+    const [activeThemePackage, setActiveThemePackage] = React.useState<ThemePackageSummary | null>(null);
+    const [backgroundSettings, setBackgroundSettings] = React.useState<BackgroundSettings>(DEFAULT_BACKGROUND_SETTINGS);
     const onboardingOpenedByUserRef = React.useRef(false);
     const navigate = useNavigate();
     const location = useLocation();
@@ -69,15 +78,50 @@ const AppContent = () => {
     useAppError();
     useDeepLinkHandler(isAppViewModelReady);
     useOAuthCallback();
+
+    const loadThemeRuntime = React.useCallback(async () => {
+        try {
+            const themePackage = await ThemePackageService.getActiveThemePackage();
+            const normalizedBackground = await ThemePackageService.sanitizeBackgroundSettingsForTheme(themePackage);
+            const effectiveBackground = await ThemePackageService.getEffectiveBackgroundSettings(themePackage);
+
+            setActiveThemePackage(themePackage);
+            setBackgroundSettings(normalizedBackground.sourceType === "none" ? effectiveBackground : normalizedBackground);
+        } catch (error) {
+            console.warn("[App] Failed to load theme runtime:", error);
+            setActiveThemePackage(null);
+            setBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS);
+        }
+    }, []);
+
     // 配置导入成功后刷新主题和语言，使界面立即反映迁移后的设置
     useEventListener('config-imported', async () => {
         try {
             const vm = await IoC.get(AppViewModel);
             await vm.loadUserGuiTheme();
             await vm.loadUserLanguages();
+            await loadThemeRuntime();
         } catch (e) {
             console.warn('[App] config-imported refresh theme/language failed', e);
         }
+    });
+    useEventListener("theme-package-change", async (themePackageId) => {
+        const themePackage = await ThemePackageService.getThemePackageById(themePackageId);
+        if (!themePackage) {
+            return;
+        }
+
+        const sanitizedBackground = await ThemePackageService.sanitizeBackgroundSettingsForTheme(themePackage);
+        const effectiveBackground = await ThemePackageService.getEffectiveBackgroundSettings(themePackage);
+        setActiveThemePackage(themePackage);
+        setBackgroundSettings(sanitizedBackground.sourceType === "none" ? effectiveBackground : sanitizedBackground);
+    });
+    useEventListener("background-source-change", async (settings) => {
+        const themePackage = activeThemePackage ?? await ThemePackageService.getActiveThemePackage();
+        const normalized = await ThemePackageService.sanitizeBackgroundSettingsForTheme(themePackage, settings);
+        setBackgroundSettings(normalized.sourceType === "none"
+            ? await ThemePackageService.getEffectiveBackgroundSettings(themePackage)
+            : normalized);
     });
     useKeyboardListener((event) => {
         if (event.ctrlKey && event.key === 'f') {
@@ -122,6 +166,16 @@ const AppContent = () => {
         return () => { unlisten?.(); };
     }, []);
 
+    React.useEffect(() => {
+        if (!isAppViewModelReady) {
+            return;
+        }
+
+        loadThemeRuntime().catch((error) => {
+            console.warn("[App] Failed to initialize theme runtime:", error);
+        });
+    }, [isAppViewModelReady, loadThemeRuntime]);
+
     const handleOnboardingComplete = React.useCallback(async () => {
         setShowOnboarding(false);
         if (!onboardingOpenedByUserRef.current) {
@@ -131,55 +185,58 @@ const AppContent = () => {
     }, []);
 
     return (
-        <Layout className={"app"}>
-            <OnboardingTour open={showOnboarding} onComplete={handleOnboardingComplete}/>
-            <UpdateDialog/>
-            <ConfigManageDialog/>
-            <SelectGameDialog/>
-            <Header className={"app-header"}>
-                <TitleBar/>
-            </Header>
-            <Layout>
-                <Sider width="50px">
-                    <MenuBar onClick={clickMenu} activeKey={activeMenuKey}/>
-                </Sider>
-                <Content>
-                    {initError != null && (
-                        <EmptyPage initError={initError} onRetry={() => {
-                            setInitError(null);
-                            AppInitializer.resetForRetry();
-                            AppInitializer.initializeCore()
-                                .then(async () => {
-                                    setInitError(null);
-                                    setIsAppViewModelReady(true);
-                                    const completed = await DeviceApi.getOnboardingCompleted();
-                                    if (!completed) {
-                                        requestAnimationFrame(() => {
-                                            setTimeout(() => setShowOnboarding(true), 100);
-                                        });
-                                    }
-                                })
-                                .catch((err) => {
-                                    setInitError(err instanceof Error ? err : new Error(String(err)));
-                                    emitEvent('app-error', err.message || 'Application initialization failed').catch(console.error);
-                                });
-                        }}/>
-                    )}
-                    {initError == null && !isAppViewModelReady && <EmptyPage/>}
-                    {initError == null && isAppViewModelReady && (
-                        <Routes>
-                            <Route path="/home" element={<HomePage/>}/>
-                            <Route path="/home/modio" element={<SearchPage/>}/>
-                            <Route path="/home/setting" element={<SettingPage/>}/>
-                            <Route path="*" element={<HomePage/>}/>
-                        </Routes>
-                    )}
-                </Content>
+        <div className="app-shell">
+            <BackgroundLayer themePackage={activeThemePackage} backgroundSettings={backgroundSettings}/>
+            <Layout className={"app"}>
+                <OnboardingTour open={showOnboarding} onComplete={handleOnboardingComplete}/>
+                <UpdateDialog/>
+                <ConfigManageDialog/>
+                <SelectGameDialog/>
+                <Header className={"app-header"}>
+                    <TitleBar/>
+                </Header>
+                <Layout className="app-body">
+                    <Sider width="50px" className="app-sider">
+                        <MenuBar onClick={clickMenu} activeKey={activeMenuKey}/>
+                    </Sider>
+                    <Content className="app-content">
+                        {initError != null && (
+                            <EmptyPage initError={initError} onRetry={() => {
+                                setInitError(null);
+                                AppInitializer.resetForRetry();
+                                AppInitializer.initializeCore()
+                                    .then(async () => {
+                                        setInitError(null);
+                                        setIsAppViewModelReady(true);
+                                        const completed = await DeviceApi.getOnboardingCompleted();
+                                        if (!completed) {
+                                            requestAnimationFrame(() => {
+                                                setTimeout(() => setShowOnboarding(true), 100);
+                                            });
+                                        }
+                                    })
+                                    .catch((err) => {
+                                        setInitError(err instanceof Error ? err : new Error(String(err)));
+                                        emitEvent('app-error', err.message || 'Application initialization failed').catch(console.error);
+                                    });
+                            }}/>
+                        )}
+                        {initError == null && !isAppViewModelReady && <EmptyPage/>}
+                        {initError == null && isAppViewModelReady && (
+                            <Routes>
+                                <Route path="/home" element={<HomePage/>}/>
+                                <Route path="/home/modio" element={<SearchPage/>}/>
+                                <Route path="/home/setting" element={<SettingPage/>}/>
+                                <Route path="*" element={<HomePage/>}/>
+                            </Routes>
+                        )}
+                    </Content>
+                </Layout>
+                <Footer className="app-footer">
+                    <StatusBar/>
+                </Footer>
             </Layout>
-            <Footer className="app-footer" style={{height: "30px", position: "relative", zIndex: 5}}>
-                <StatusBar/>
-            </Footer>
-        </Layout>
+        </div>
     );
 };
 
