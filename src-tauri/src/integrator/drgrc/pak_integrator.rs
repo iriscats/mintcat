@@ -2,7 +2,6 @@
 
 use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::integrator::drg::mod_bundle_writer::ModBundleWriter;
-use zip::read::ZipArchive;
 use crate::integrator::drg::unpacked_mod::UnpackedMod;
 use crate::integrator::ue4ss::ue4ss_integrate::{
     dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
@@ -11,8 +10,12 @@ use crate::integrator::ue4ss::ue4ss_integrate::{
 };
 use crate::integrator::{
     audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
-    verify_audio_only_pak_file, ModInfo, ReadSeek,
+    verify_audio_only_pak_file, zip_contains_file_name, ModInfo, ReadSeek,
 };
+use crate::uasset_utils::asset_registry::{
+    AssetRegistry, Dependencies, Names, Readable as _, Store,
+};
+use crate::uasset_utils::paths::PakPath;
 use anyhow::{Context, Result};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -20,12 +23,9 @@ use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, Read};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
-use crate::uasset_utils::asset_registry::{
-    AssetRegistry, Dependencies, Names, Readable as _, Store,
-};
-use crate::uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
+use zip::read::ZipArchive;
 
 use super::installation::RcInstallation;
 
@@ -75,7 +75,6 @@ fn is_asset_registry_parse_fallback(e: &anyhow::Error) -> bool {
         || msg.contains("unsupported format")
 }
 
-
 pub struct RcPakIntegrator {
     installation: RcInstallation,
     asset_registry: AssetRegistry,
@@ -100,7 +99,11 @@ impl RcPakIntegrator {
             .reader(&mut reader)
             .context("Failed to parse RC game pak")?;
 
-        let file_list: Vec<String> = rc_pak.files().iter().map(|p| p.as_str().to_string()).collect();
+        let file_list: Vec<String> = rc_pak
+            .files()
+            .iter()
+            .map(|p| p.as_str().to_string())
+            .collect();
 
         let asset_registry = match rc_pak.get(ar_path, &mut reader) {
             Ok(ar_bytes) => match AssetRegistry::read(&mut Cursor::new(ar_bytes)) {
@@ -119,7 +122,8 @@ impl RcPakIntegrator {
                 }
             },
             Err(e) => {
-                let err = anyhow::Error::from(e).context("Failed to read AssetRegistry from game pak");
+                let err =
+                    anyhow::Error::from(e).context("Failed to read AssetRegistry from game pak");
                 if is_oodle_or_network_error(&err) {
                     log::warn!(
                         "RC game pak AssetRegistry unavailable (Oodle/network): {:#}. Using empty registry and merging mod assets only.",
@@ -244,12 +248,14 @@ impl RcPakIntegrator {
             .unwrap();
         }
 
-        app.emit("status-bar-log", "backend.install.write_mod").unwrap();
+        app.emit("status-bar-log", "backend.install.write_mod")
+            .unwrap();
         app.emit("status-bar-percent", 90).unwrap();
 
         // RC.zip：将 Paks/ 目录下全部文件写入 mod pak（RogueCore/Content/...）
         if let Some(zip_path) = rc_zip_path {
-            app.emit("status-bar-log", "backend.install.rc_zip").unwrap();
+            app.emit("status-bar-log", "backend.install.rc_zip")
+                .unwrap();
             let mut rc_files = HashMap::new();
             Self::collect_files_from_rc_zip(zip_path, &mut rc_files)?;
             for (pak_path, data) in rc_files {
@@ -262,12 +268,16 @@ impl RcPakIntegrator {
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
-        app.emit("status-bar-log", "backend.install.success").unwrap();
+        app.emit("status-bar-log", "backend.install.success")
+            .unwrap();
         app.emit("status-bar-percent", 100).unwrap();
 
-        let mod_pak_path = self.installation.paks_path().join(self.installation.mod_pak_name());
-        let metadata = fs::metadata(&mod_pak_path)
-            .context("Failed to get mod pak metadata after install")?;
+        let mod_pak_path = self
+            .installation
+            .paks_path()
+            .join(self.installation.mod_pak_name());
+        let metadata =
+            fs::metadata(&mod_pak_path).context("Failed to get mod pak metadata after install")?;
         let mod_pak_timestamp = metadata
             .modified()
             .context("Failed to get mod pak modified time")?
@@ -312,14 +322,16 @@ impl RcPakIntegrator {
             if zip_contains_js_mod(pak_path) {
                 return Ok(false);
             }
+            if zip_contains_file_name(pak_path, "AssetRegistry.bin")? {
+                return Ok(false);
+            }
             if let Ok(paks) = read_files_from_zip_by_extension(pak_path.to_str().unwrap(), "pak") {
                 if let Some((_, pak_data)) = paks.first() {
                     if !verify_audio_only_from_bytes(pak_data)? {
                         return Ok(false);
                     }
-                    fs::write(&target_path, pak_data).with_context(|| {
-                        format!("Failed to write audio pak: {:?}", target_path)
-                    })?;
+                    fs::write(&target_path, pak_data)
+                        .with_context(|| format!("Failed to write audio pak: {:?}", target_path))?;
                     return Ok(true);
                 }
             }
@@ -328,9 +340,8 @@ impl RcPakIntegrator {
             if !verify_audio_only_pak_file(pak_path)? {
                 return Ok(false);
             }
-            fs::copy(pak_path, &target_path).with_context(|| {
-                format!("Failed to copy audio pak to: {:?}", target_path)
-            })?;
+            fs::copy(pak_path, &target_path)
+                .with_context(|| format!("Failed to copy audio pak to: {:?}", target_path))?;
             Ok(true)
         }
     }
@@ -372,11 +383,7 @@ impl RcPakIntegrator {
                 .with_context(|| format!("Failed to process pak for mod: {}", mod_info.name))?;
         }
         if let Some(ref mut dll) = dll_buf {
-            install_ue4ss_mod(
-                &self.installation.binaries_directory(),
-                &mod_info.name,
-                dll,
-            )?;
+            install_ue4ss_mod(&self.installation.binaries_directory(), &mod_info.name, dll)?;
         }
         if zip_contains_js_mod(path) {
             install_ue4ss_js_mod_from_zip_targeted(
@@ -395,8 +402,9 @@ impl RcPakIntegrator {
         let mut processed_any = false;
 
         if UnpackedMod::is_valid_unpacked_mod(path) {
-            self.process_unpacked_mod(path)
-                .with_context(|| format!("Failed to process unpacked content: {}", mod_info.name))?;
+            self.process_unpacked_mod(path).with_context(|| {
+                format!("Failed to process unpacked content: {}", mod_info.name)
+            })?;
             processed_any = true;
         }
 
@@ -484,17 +492,20 @@ impl RcPakIntegrator {
         for asset_base in unpacked_mod.get_asset_names() {
             if let Some((uasset_data, uexp_data)) = unpacked_mod.get_asset_pair(&asset_base) {
                 let normalized_path = PathBuf::from(&asset_base);
-                let asset = AssetBuilder::new(
-                    Cursor::new(uasset_data.clone()),
-                    EngineVersion::VER_UE4_27,
-                )
-                .bulk(Cursor::new(uexp_data.clone()))
-                .skip_data(true)
-                .build()
-                .with_context(|| format!("Failed to build asset: {}", asset_base))?;
+                let asset =
+                    AssetBuilder::new(Cursor::new(uasset_data.clone()), EngineVersion::VER_UE4_27)
+                        .bulk(Cursor::new(uexp_data.clone()))
+                        .skip_data(true)
+                        .build()
+                        .with_context(|| format!("Failed to build asset: {}", asset_base))?;
                 self.asset_registry
                     .populate(normalized_path.to_str().unwrap(), &asset)
-                    .with_context(|| format!("Failed to populate asset registry for: {:?}", normalized_path))?;
+                    .with_context(|| {
+                        format!(
+                            "Failed to populate asset registry for: {:?}",
+                            normalized_path
+                        )
+                    })?;
             }
         }
 
@@ -519,8 +530,8 @@ impl RcPakIntegrator {
         path: &Path,
     ) -> Result<(Option<Box<dyn ReadSeek>>, Option<Box<dyn ReadSeek>>)> {
         let mut buf = [0u8; 4];
-        let mut file = fs::File::open(path)
-            .with_context(|| format!("Failed to open mod file: {:?}", path))?;
+        let mut file =
+            fs::File::open(path).with_context(|| format!("Failed to open mod file: {:?}", path))?;
         file.read_exact(&mut buf)
             .with_context(|| format!("Failed to read mod file header: {:?}", path))?;
 
@@ -605,7 +616,11 @@ impl RcPakIntegrator {
                 let uasset = match pak.get(pak_path, pak_buf) {
                     Ok(d) => d,
                     Err(e) => {
-                        log::warn!("Skip registry for {}: failed to read uasset: {}", pak_path, e);
+                        log::warn!(
+                            "Skip registry for {}: failed to read uasset: {}",
+                            pak_path,
+                            e
+                        );
                         continue;
                     }
                 };
@@ -633,10 +648,10 @@ impl RcPakIntegrator {
                         continue;
                     }
                 };
-                if let Err(e) = self.asset_registry.populate(
-                    normalized.with_extension("").to_str().unwrap(),
-                    &asset,
-                ) {
+                if let Err(e) = self
+                    .asset_registry
+                    .populate(normalized.with_extension("").to_str().unwrap(), &asset)
+                {
                     log::warn!("Skip registry populate for {}: {:#}", pak_path, e);
                 }
             }
@@ -659,7 +674,8 @@ impl RcPakIntegrator {
                 if filename == "AssetRegistry.bin" {
                     continue;
                 }
-                if pak_file.extension().and_then(std::ffi::OsStr::to_str) == Some("ushaderbytecode") {
+                if pak_file.extension().and_then(std::ffi::OsStr::to_str) == Some("ushaderbytecode")
+                {
                     continue;
                 }
             }

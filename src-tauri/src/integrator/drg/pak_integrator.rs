@@ -1,6 +1,5 @@
 use crate::capability::zip::read_files_from_zip_by_extension;
 use crate::integrator::drg::game_pak_patch;
-use zip::read::ZipArchive;
 use crate::integrator::drg::game_pak_patch::{
     get_deferred_paths, ESCAPE_MENU_PATH, MODDING_TAB_PATH, PATCH_PATHS, PCB_PATH,
     SERVER_LIST_ENTRY_PATH,
@@ -16,8 +15,10 @@ use crate::integrator::ue4ss::ue4ss_integrate::{
 };
 use crate::integrator::{
     audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
-    verify_audio_only_pak_file, ModInfo, ReadSeek,
+    verify_audio_only_pak_file, zip_contains_file_name, ModInfo, ReadSeek,
 };
+use crate::uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
+use crate::uasset_utils::paths::PakPath;
 use anyhow::{Context, Result};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -25,10 +26,9 @@ use std::fs;
 use std::io::{BufReader, BufWriter, Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
-use crate::uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
-use crate::uasset_utils::paths::PakPath;
 use unreal_asset::engine_version::EngineVersion;
 use unreal_asset::AssetBuilder;
+use zip::read::ZipArchive;
 
 pub struct PakIntegrator {
     installation: DRGInstallation,
@@ -68,9 +68,12 @@ impl PakIntegrator {
             .context("Failed to parse game pak")?;
 
         let asset_registry = AssetRegistry::read(&mut Cursor::new(
-            fsd_pak
-                .get(ar_path, &mut fsd_pak_reader)
-                .with_context(|| format!("Failed to read AssetRegistry.bin from game pak (path: {})", ar_path))?,
+            fsd_pak.get(ar_path, &mut fsd_pak_reader).with_context(|| {
+                format!(
+                    "Failed to read AssetRegistry.bin from game pak (path: {})",
+                    ar_path
+                )
+            })?,
         ))
         .context("Failed to parse AssetRegistry")?;
 
@@ -124,9 +127,7 @@ impl PakIntegrator {
             asset.uasset = match pak.get(&format!("{path}.uasset"), reader) {
                 Ok(f) => Some(f),
                 Err(repak::Error::MissingEntry(_)) => None,
-                Err(e) => {
-                    return Err(e).with_context(|| format!("Failed to read {}.uasset", path))
-                }
+                Err(e) => return Err(e).with_context(|| format!("Failed to read {}.uasset", path)),
             };
             asset.uexp = match pak.get(&format!("{path}.uexp"), reader) {
                 Ok(f) => Some(f),
@@ -185,7 +186,8 @@ impl PakIntegrator {
         }
 
         if drg_zip_path.is_some() {
-            app.emit("status-bar-log", "backend.install.patch_pak").unwrap();
+            app.emit("status-bar-log", "backend.install.patch_pak")
+                .unwrap();
             app.emit("status-bar-percent", 80).unwrap();
 
             let drg_zip = drg_zip_path
@@ -198,19 +200,22 @@ impl PakIntegrator {
             self.apply_pcb_patch()?;
             self.apply_sandbox_patch()?;
 
-            app.emit("status-bar-log", "backend.install.write_mod").unwrap();
+            app.emit("status-bar-log", "backend.install.write_mod")
+                .unwrap();
             app.emit("status-bar-percent", 90).unwrap();
 
             self.write_mint_files(&mut mint_files)?;
         } else {
-            app.emit("status-bar-log", "backend.install.write_mod").unwrap();
+            app.emit("status-bar-log", "backend.install.write_mod")
+                .unwrap();
             app.emit("status-bar-percent", 90).unwrap();
         }
 
         self.serialize_asset_registry()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
-        app.emit("status-bar-log", "backend.install.success").unwrap();
+        app.emit("status-bar-log", "backend.install.success")
+            .unwrap();
         app.emit("status-bar-percent", 100).unwrap();
 
         let mod_pak_path = self
@@ -268,14 +273,16 @@ impl PakIntegrator {
             if zip_contains_js_mod(pak_path) {
                 return Ok(false);
             }
+            if zip_contains_file_name(pak_path, "AssetRegistry.bin")? {
+                return Ok(false);
+            }
             if let Ok(paks) = read_files_from_zip_by_extension(pak_path.to_str().unwrap(), "pak") {
                 if let Some((_, pak_data)) = paks.first() {
                     if !verify_audio_only_from_bytes(pak_data)? {
                         return Ok(false);
                     }
-                    fs::write(&target_path, pak_data).with_context(|| {
-                        format!("Failed to write audio pak: {:?}", target_path)
-                    })?;
+                    fs::write(&target_path, pak_data)
+                        .with_context(|| format!("Failed to write audio pak: {:?}", target_path))?;
                     return Ok(true);
                 }
             }
@@ -284,9 +291,8 @@ impl PakIntegrator {
             if !verify_audio_only_pak_file(pak_path)? {
                 return Ok(false);
             }
-            fs::copy(pak_path, &target_path).with_context(|| {
-                format!("Failed to copy audio pak to: {:?}", target_path)
-            })?;
+            fs::copy(pak_path, &target_path)
+                .with_context(|| format!("Failed to copy audio pak to: {:?}", target_path))?;
             Ok(true)
         }
     }
@@ -348,8 +354,9 @@ impl PakIntegrator {
         let mut processed_any = false;
 
         if UnpackedMod::is_valid_unpacked_mod(path) {
-            self.process_unpacked_mod(path)
-                .with_context(|| format!("Failed to process unpacked content: {}", mod_info.name))?;
+            self.process_unpacked_mod(path).with_context(|| {
+                format!("Failed to process unpacked content: {}", mod_info.name)
+            })?;
             processed_any = true;
         }
 
@@ -444,15 +451,21 @@ impl PakIntegrator {
                 let normalized_path = PathBuf::from(&asset_base);
 
                 // Build asset for registry population
-                let asset = AssetBuilder::new(Cursor::new(uasset_data.clone()), EngineVersion::VER_UE4_27)
-                    .bulk(Cursor::new(uexp_data.clone()))
-                    .skip_data(true)
-                    .build()
-                    .with_context(|| format!("Failed to build asset: {}", asset_base))?;
+                let asset =
+                    AssetBuilder::new(Cursor::new(uasset_data.clone()), EngineVersion::VER_UE4_27)
+                        .bulk(Cursor::new(uexp_data.clone()))
+                        .skip_data(true)
+                        .build()
+                        .with_context(|| format!("Failed to build asset: {}", asset_base))?;
 
                 self.asset_registry
                     .populate(normalized_path.to_str().unwrap(), &asset)
-                    .with_context(|| format!("Failed to populate asset registry for: {:?}", normalized_path))?;
+                    .with_context(|| {
+                        format!(
+                            "Failed to populate asset registry for: {:?}",
+                            normalized_path
+                        )
+                    })?;
             }
         }
 
@@ -483,8 +496,8 @@ impl PakIntegrator {
         path: &Path,
     ) -> Result<(Option<Box<dyn ReadSeek>>, Option<Box<dyn ReadSeek>>)> {
         let mut buf = [0; 4];
-        let mut file = fs::File::open(path)
-            .with_context(|| format!("Failed to open mod file: {:?}", path))?;
+        let mut file =
+            fs::File::open(path).with_context(|| format!("Failed to open mod file: {:?}", path))?;
         file.read_exact(&mut buf)
             .with_context(|| format!("Failed to read mod file header: {:?}", path))?;
 
@@ -791,9 +804,12 @@ impl PakIntegrator {
             .by_name(HOOK_ENTRY)
             .with_context(|| format!("Missing {} in DRG zip", HOOK_ENTRY))?;
         let mut content = Vec::new();
-        entry.read_to_end(&mut content).context("Failed to read hook dll from zip")?;
+        entry
+            .read_to_end(&mut content)
+            .context("Failed to read hook dll from zip")?;
         let hook_path = binaries_dir.join("x3daudio1_7.dll");
-        fs::write(&hook_path, content).with_context(|| format!("Failed to write hook dll: {:?}", hook_path))?;
+        fs::write(&hook_path, content)
+            .with_context(|| format!("Failed to write hook dll: {:?}", hook_path))?;
         Ok(())
     }
 

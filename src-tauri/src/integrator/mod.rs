@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
+use zip::read::ZipArchive;
 
 pub mod drg;
 pub mod drgrc;
@@ -70,7 +71,7 @@ pub fn cleanup_audio_paks(paks_dir: &Path) -> Result<()> {
 }
 
 /// Verify that pak data contains no blueprint init assets (InitSpaceRig/InitCave)
-/// by reading only the pak index, not file contents.
+/// and no AssetRegistry.bin, by reading only the pak index, not file contents.
 pub fn verify_audio_only_from_bytes(pak_data: &[u8]) -> Result<bool> {
     let mut cursor = Cursor::new(pak_data);
     let pak = repak::PakBuilder::new()
@@ -79,7 +80,10 @@ pub fn verify_audio_only_from_bytes(pak_data: &[u8]) -> Result<bool> {
 
     for file_path in pak.files() {
         let lower = file_path.to_lowercase();
-        if lower.ends_with("initspacerig.uasset") || lower.ends_with("initcave.uasset") {
+        if lower.ends_with("initspacerig.uasset")
+            || lower.ends_with("initcave.uasset")
+            || lower.ends_with("assetregistry.bin")
+        {
             return Ok(false);
         }
     }
@@ -97,9 +101,36 @@ pub fn verify_audio_only_pak_file(path: &Path) -> Result<bool> {
 
     for file_path in pak.files() {
         let lower = file_path.to_lowercase();
-        if lower.ends_with("initspacerig.uasset") || lower.ends_with("initcave.uasset") {
+        if lower.ends_with("initspacerig.uasset")
+            || lower.ends_with("initcave.uasset")
+            || lower.ends_with("assetregistry.bin")
+        {
             return Ok(false);
         }
     }
     Ok(true)
+}
+
+/// Check whether the ZIP contains a specific file name anywhere in its entry list.
+pub fn zip_contains_file_name(path: &Path, file_name: &str) -> Result<bool> {
+    let file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open zip for verification: {:?}", path))?;
+    let mut archive = ZipArchive::new(file).context("Failed to parse zip for verification")?;
+
+    for i in 0..archive.len() {
+        let entry = archive
+            .by_index(i)
+            .with_context(|| format!("Failed to inspect zip entry at index {}", i))?;
+        let entry_name = entry.name().replace('\\', "/");
+        if Path::new(&entry_name)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| name.eq_ignore_ascii_case(file_name))
+            .unwrap_or(false)
+        {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
