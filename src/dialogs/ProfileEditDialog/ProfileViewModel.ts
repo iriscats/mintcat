@@ -89,6 +89,16 @@ export class ProfileViewModel {
         await profileService.setActiveProfileInstallHash(hash);
     }
 
+    public async getActiveGameInstalledHash(): Promise<string> {
+        const profileService = await this.getProfileService();
+        return await profileService.getActiveGameInstalledHash();
+    }
+
+    public async setActiveGameInstalledHash(hash: string): Promise<void> {
+        const profileService = await this.getProfileService();
+        await profileService.setActiveGameInstalledHash(hash);
+    }
+
     // ====================================
     // Profile CRUD Operations
     // Delegated to ProfileService

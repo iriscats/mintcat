@@ -109,17 +109,16 @@ export class HomePage extends BasePage<any, ModListPageState> {
     }
 
     /**
-     * Compare manifest hash of current mod configuration against the saved hash
-     * to determine whether there are unsaved changes since the last installation.
+     * Compare the current manifest hash against both:
+     * 1. the active profile's last successful install hash
+     * 2. the active game's currently installed hash
+     * This keeps the "unsaved" state correct after switching profiles.
      */
     private async refreshUnsavedState(): Promise<void> {
         try {
             const profileVM = await IoC.get(ProfileViewModel);
             const savedHash = await profileVM.getActiveProfileInstallHash();
-            if (!savedHash) {
-                this.setState({ hasUnsavedChanges: true });
-                return;
-            }
+            const installedHash = await profileVM.getActiveGameInstalledHash();
 
             const profilesDAO = await StorageAPI.getProfiles();
             const activeProfile = await profileVM.getActiveProfileData();
@@ -143,7 +142,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             const assetPaths = await getInternalAssetPaths(isRc ? 'rc' : 'drg');
 
             const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
-            const hasUnsaved = currentHash !== savedHash;
+            const hasUnsaved = !savedHash || currentHash !== savedHash || currentHash !== installedHash;
             if (this.state.hasUnsavedChanges !== hasUnsaved) {
                 this.setState({ hasUnsavedChanges: hasUnsaved });
             }
@@ -654,6 +653,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             totalCount: profileMods.length,
             loading: false,
         });
+        await this.refreshUnsavedState();
     }
 
     /**

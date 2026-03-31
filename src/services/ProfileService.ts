@@ -17,6 +17,7 @@ type ProfileRuntimeState = {
  */
 export class ProfileService {
     private runtimeState = new Map<number, ProfileRuntimeState>();
+    private installedHashByGame = new Map<number, string>();
     private treeService: ProfileTreeService;
 
     // 锁机制：防止并发调用 ensureActiveProfile 导致重复创建 profile
@@ -295,22 +296,40 @@ export class ProfileService {
         return `profile_${profileId}_${field}`;
     }
 
-    private async getPersistedString(profileId: number, field: string): Promise<string> {
+    private gameSettingsKey(gameId: number, field: string): string {
+        return `game_${gameId}_${field}`;
+    }
+
+    private async getPersistedValue(key: string): Promise<string> {
         try {
             const settings = await StorageAPI.getSettings();
-            return (await settings.getValue(this.settingsKey(profileId, field))) || "";
+            return (await settings.getValue(key)) || "";
         } catch {
             return "";
         }
     }
 
-    private async persistString(profileId: number, field: string, value: string): Promise<void> {
+    private async persistValue(key: string, value: string): Promise<void> {
         try {
             const settings = await StorageAPI.getSettings();
-            await settings.setValue(this.settingsKey(profileId, field), value);
+            await settings.setValue(key, value);
         } catch (e) {
-            console.error(`[ProfileService] Failed to persist ${field} for profile ${profileId}:`, e);
+            console.error(`[ProfileService] Failed to persist setting ${key}:`, e);
         }
+    }
+
+    private async getPersistedString(profileId: number, field: string): Promise<string> {
+        return await this.getPersistedValue(this.settingsKey(profileId, field));
+    }
+
+    private async persistString(profileId: number, field: string, value: string): Promise<void> {
+        await this.persistValue(this.settingsKey(profileId, field), value);
+    }
+
+    private async getActiveGameId(): Promise<number | null> {
+        const games = await StorageAPI.getGames();
+        const activeGame = await games.getActiveGame();
+        return activeGame?.id ?? null;
     }
 
     public async getActiveProfileLastUpdate(): Promise<number> {
@@ -339,6 +358,32 @@ export class ProfileService {
         const activeProfile = await this.ensureActiveProfile();
         this.updateRuntimeState(activeProfile.id!, { installHash: hash });
         await this.persistString(activeProfile.id!, 'installHash', hash);
+    }
+
+    public async getActiveGameInstalledHash(): Promise<string> {
+        const activeGameId = await this.getActiveGameId();
+        if (!activeGameId) {
+            return "";
+        }
+
+        const cached = this.installedHashByGame.get(activeGameId);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const persisted = await this.getPersistedValue(this.gameSettingsKey(activeGameId, 'installedHash'));
+        this.installedHashByGame.set(activeGameId, persisted);
+        return persisted;
+    }
+
+    public async setActiveGameInstalledHash(hash: string): Promise<void> {
+        const activeGameId = await this.getActiveGameId();
+        if (!activeGameId) {
+            return;
+        }
+
+        this.installedHashByGame.set(activeGameId, hash);
+        await this.persistValue(this.gameSettingsKey(activeGameId, 'installedHash'), hash);
     }
 
     // ====================================

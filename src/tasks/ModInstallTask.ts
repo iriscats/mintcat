@@ -329,7 +329,13 @@ export class ModInstallTask implements ITask {
 
         const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
         const savedHash = await profileVM.getActiveProfileInstallHash();
-        if (!hasUnpackedMod && installType === "mintcat_installed" && currentHash === savedHash) {
+        const installedHash = await profileVM.getActiveGameInstalledHash();
+        if (
+            !hasUnpackedMod &&
+            installType === "mintcat_installed" &&
+            currentHash === savedHash &&
+            currentHash === installedHash
+        ) {
             await context.setMessage(t("Mod Already Install"));
             await context.updateProgress(100);
             return;
@@ -380,6 +386,7 @@ export class ModInstallTask implements ITask {
 
         // Persist manifest hash so the next install can detect "nothing changed"
         await profileVM.setActiveProfileInstallHash(currentHash);
+        await profileVM.setActiveGameInstalledHash(currentHash);
 
         // Complete
         await context.setMessage(t("Installation Finish"));
