@@ -34,6 +34,48 @@ export function getMintcatApiOrigin(): string {
     return getMintcatApiOriginLanguageFallback();
 }
 
+/**
+ * 代理下载域名与 API 节点保持同线路：
+ * - `api.v1st.net` -> `proxy.v1st.net`
+ * - `api.mintcat.work` -> `proxy.mintcat.work`
+ *
+ * 若将来出现非常规源站，则回退到历史的 `/proxy` 路径形式。
+ */
+export function getMintcatProxyOrigin(): string {
+    const origin = getMintcatApiOrigin();
+
+    try {
+        const parsed = new URL(origin);
+        if (parsed.hostname.startsWith('proxy.')) {
+            parsed.pathname = '/';
+            parsed.search = '';
+            parsed.hash = '';
+            return normalizeMintcatApiOrigin(parsed.toString());
+        }
+        if (parsed.hostname.startsWith('api.')) {
+            parsed.hostname = `proxy.${parsed.hostname.slice('api.'.length)}`;
+            parsed.pathname = '/';
+            parsed.search = '';
+            parsed.hash = '';
+            return normalizeMintcatApiOrigin(parsed.toString());
+        }
+    } catch {
+        // Ignore parse failure and fall back to the legacy `/proxy` form below.
+    }
+
+    return `${normalizeMintcatApiOrigin(origin)}/proxy`;
+}
+
+export function mintcatProxyUrl(targetUrl: string, proxyOrigin: string = getMintcatProxyOrigin()): string {
+    const proxyBase = normalizeMintcatApiOrigin(proxyOrigin);
+    const normalizedTargetUrl = targetUrl.trim().replace(/^\/+/, '');
+    return `${proxyBase}/${normalizedTargetUrl}`;
+}
+
+export function isMintcatProxyUrl(url: string, proxyOrigin: string = getMintcatProxyOrigin()): boolean {
+    return url.startsWith(`${normalizeMintcatApiOrigin(proxyOrigin)}/`);
+}
+
 export function normalizeMintcatApiOrigin(url: string): string {
     return url.trim().replace(/\/+$/, '');
 }

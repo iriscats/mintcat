@@ -1,9 +1,7 @@
 import {invoke} from '@tauri-apps/api/core';
 import {listenEvent} from "@/events";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
-
-/** 直连失败时用此代理重试一次（与 NetworkApi 保持一致） */
-const PROXY_API_URL = "https://proxy.mintcat.work/";
+import {isMintcatProxyUrl, mintcatProxyUrl} from "@/apis/mintcat/urls";
 
 export type DownloadProgressCallBack = (downloaded: number, total: number, speed: number, eta: number) => void
 export type DownloadStatusCallBack = (status: string, error?: string, filePath?: string) => void
@@ -115,7 +113,7 @@ export class DownloadApi {
 
     /**
      * Download a file using the backend download manager.
-     * 直连失败时会用 proxy.mintcat.work 重试一次。
+     * 直连失败时会用当前线路对应的代理地址重试一次。
      * @param url - The URL to download from (will be transformed with proxy if needed)
      * @param filePath - The local file path to save to
      * @param options - Download options (checksum, retry, timeout, etc.)
@@ -132,6 +130,7 @@ export class DownloadApi {
     ): Promise<string> {
         const opts = options || null;
         const transformedUrl = NetworkApi.getUrl(url);
+        const fallbackProxyUrl = mintcatProxyUrl(url);
         try {
             return await DownloadApi.downloadFileOnce(
                 transformedUrl,
@@ -141,10 +140,10 @@ export class DownloadApi {
                 statusCallback
             );
         } catch (firstErr) {
-            if (transformedUrl.startsWith(PROXY_API_URL)) throw firstErr;
+            if (isMintcatProxyUrl(transformedUrl)) throw firstErr;
             try {
                 return await DownloadApi.downloadFileOnce(
-                    PROXY_API_URL + url,
+                    fallbackProxyUrl,
                     filePath,
                     opts,
                     progressCallback,

@@ -4,12 +4,20 @@
 
 # 中文
 
+## 新增
+
+1. 新增 API 服务网络节点选择。
+
 ## 修复
 
 1. 修复音频 Mod 中存在蓝图时导致的崩溃。
 2. 修复切换 profile 时不会触发重新打包。
 
 # English
+
+# New
+
+1. Add network node selection for the API service.
 
 ## Fix
 

@@ -1,10 +1,10 @@
 {
   "version": "0.5.3",
-  "notes": "**Full Changelog**: https://github.com/iris-cat-dev/mintcat/compare/v0.5.2...v0.5.3\n\n下载地址 / Download：https://github.com/iris-cat-dev/mintcat/releases\n\n# 中文\n\n## 修复\n\n1. 修复音频 Mod 中存在蓝图时导致的崩溃。\n2. 修复切换 profile 时不会触发重新打包。\n\n# English\n\n## Fix\n\n1. Fix a crash when audio mods contain blueprints.\n2. Fix profile switching not triggering repack.\n",
+  "notes": "**Full Changelog**: https://github.com/iris-cat-dev/mintcat/compare/v0.5.2...v0.5.3\n\n下载地址 / Download：https://github.com/iris-cat-dev/mintcat/releases\n\n# 中文\n\n## 新增\n\n1. 新增 API 服务网络节点选择。\n\n## 修复\n\n1. 修复音频 Mod 中存在蓝图时导致的崩溃。\n2. 修复切换 profile 时不会触发重新打包。\n\n# English\n\n## New\n\n1. Add network node selection for the API service.\n\n## Fix\n\n1. Fix a crash when audio mods contain blueprints.\n2. Fix profile switching not triggering repack.\n",
   "pub_date": "2026-03-31T00:00:00.000Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL1I0RitoVk53WU1GL0cwQkxqOUlTczYrOGxqOC80dUZnTWRxZDBIUGNheVNYZXVYYk1TeG91d0FQMmR4MnBqVnVrQThEMmpuZ0tRU2lGQkNNWDR4RXpxRWJmcjhpakFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0OTcyMjA4CWZpbGU6bWludGNhdF8wLjUuM194NjQtc2V0dXAuZXhlCmJ1dnJ4MXVxbE51eXE0RTB0MWNxc2xUeFNLWHBmQ0lCNFpiNDJyMDhQdUREVU5PVlc0N1BpUlNkQ3lWeDNpUUhKQWM4RGN6S1JLRjQ1Szh2SUJkSkFRPT0K",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUL1I0RitoVk53WVBWM2c0Y1hucXJPMDZGdmMzVHdZcU9FSE9ieENnNHNORU9BbFFWY2JYdHJFcGxXcXp5TU1seTh3QXRDa2Z5Sks3YjFBSTlITlhpOXV6elZqeElJQmc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc1MDAzNzM4CWZpbGU6bWludGNhdF8wLjUuM194NjQtc2V0dXAuZXhlCjRNV3NxRmNuWmVDYi9Xd1BvMkxCaURGQUNIWGNnOUdvQXgyMGJiOXVYckdqUEFLKzVBOUJqK3JXOU5EZzUvNER6UVc4Vi9CS2pjZ0FOdjluYXp6akFRPT0K",
       "url": "https://proxy.mintcat.work/https://github.com/iris-cat-dev/mintcat/releases/download/v0.5.3/mintcat_0.5.3_x64-setup.exe"
     }
   }
