@@ -4,6 +4,18 @@ import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { MigrationBase } from '@/storage/migration';
 import { CloudBackupApi } from '@/apis/mintcat';
+import {
+    getMintcatApiOriginLanguageFallback,
+    getMintcatOriginByPresetId,
+    normalizeMintcatApiOrigin,
+    setMintcatApiResolvedOrigin,
+} from '@/apis/mintcat/urls';
+import {
+    NETWORK_SERVER_AUTO_ORIGIN_KEY,
+    NETWORK_SERVER_MODE_KEY,
+    type MintcatServerMode,
+    refreshAutoMintcatApiRoutingInBackground,
+} from '@/apis/mintcat/routing';
 import { CacheApi } from '@/apis/CacheApi';
 import { closeDb } from '@/storage/db/Client';
 
@@ -84,6 +96,8 @@ export class AppInitializer {
 
             // 应用网络代理设置（使后端下载等请求可走 Clash 等代理）
             await this.applyNetworkProxy();
+
+            await this.initApiServerRouting();
 
             // Clean up orphaned .part files from interrupted downloads
             CacheApi.cleanOrphanedPartFiles().catch(e =>
@@ -187,6 +201,44 @@ export class AppInitializer {
             await invoke('set_network_proxy', { proxy });
         } catch (error) {
             console.warn('[AppInitializer] Failed to apply network proxy:', error);
+        }
+    }
+
+    /**
+     * 根据设置解析 MintCat API 源站（手动线路 / 自动探测）。
+     */
+    private static async initApiServerRouting(): Promise<void> {
+        try {
+            const settings = await StorageAPI.getSettings();
+            const modeRaw = await settings.getValue(NETWORK_SERVER_MODE_KEY);
+            const mode: MintcatServerMode = (modeRaw?.trim() as MintcatServerMode) || 'auto';
+            const autoCached = (await settings.getValue(NETWORK_SERVER_AUTO_ORIGIN_KEY))?.trim() ?? '';
+
+            const applyLanguageFallback = () => {
+                setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
+            };
+
+            if (mode === 'zh') {
+                setMintcatApiResolvedOrigin(getMintcatOriginByPresetId('zh'));
+                return;
+            }
+            if (mode === 'global') {
+                setMintcatApiResolvedOrigin(getMintcatOriginByPresetId('global'));
+                return;
+            }
+
+            // auto（含历史 custom：设置页已迁移为自动）
+            if (autoCached) {
+                setMintcatApiResolvedOrigin(normalizeMintcatApiOrigin(autoCached));
+                void refreshAutoMintcatApiRoutingInBackground();
+                return;
+            }
+
+            applyLanguageFallback();
+            void refreshAutoMintcatApiRoutingInBackground();
+        } catch (error) {
+            console.warn('[AppInitializer] Failed to init API server routing:', error);
+            setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
         }
     }
 }

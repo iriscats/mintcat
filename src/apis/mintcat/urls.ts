@@ -1,14 +1,37 @@
 /**
  * MintCat 后端 API 的默认源站与路径约定（单处维护，避免各文件重复硬编码）。
- * 中文用户走 v1st.net，其余走 mintcat.work。
+ * 解析后的线路由设置页 / AppInitializer 写入 resolvedOrigin；未初始化前回退到语言启发式。
  */
 import i18n from '@/locales/i18n';
 
-const MINTCAT_API_ORIGIN_ZH = 'https://api.v1st.net';
-const MINTCAT_API_ORIGIN_GLOBAL = 'https://api.mintcat.work';
+/** 内置 API 节点（顺序：中国大陆、国际） */
+export const MINTCAT_API_ORIGINS = [
+    { id: 'zh' as const, origin: 'https://api.v1st.net' },
+    { id: 'global' as const, origin: 'https://api.mintcat.work' },
+] as const;
+
+export type MintcatApiOriginId = (typeof MINTCAT_API_ORIGINS)[number]['id'];
+
+let resolvedOrigin: string | null = null;
+
+export function setMintcatApiResolvedOrigin(origin: string | null): void {
+    resolvedOrigin = origin ? normalizeMintcatApiOrigin(origin) : null;
+}
+
+export function getMintcatApiResolvedOrigin(): string | null {
+    return resolvedOrigin;
+}
+
+/** 与历史行为一致：中文界面优先 v1st，否则 mintcat.work */
+export function getMintcatApiOriginLanguageFallback(): string {
+    return i18n.language?.startsWith('zh') ? MINTCAT_API_ORIGINS[0].origin : MINTCAT_API_ORIGINS[1].origin;
+}
 
 export function getMintcatApiOrigin(): string {
-    return i18n.language?.startsWith('zh') ? MINTCAT_API_ORIGIN_ZH : MINTCAT_API_ORIGIN_GLOBAL;
+    if (resolvedOrigin) {
+        return resolvedOrigin;
+    }
+    return getMintcatApiOriginLanguageFallback();
 }
 
 export function normalizeMintcatApiOrigin(url: string): string {
@@ -23,6 +46,7 @@ export function mintcatApiUrl(origin: string, pathnameAndQuery: string): string 
 }
 
 export const MintCatApiPaths = {
+    ping: '/ping',
     validateAccessToken: '/v1/validate-access-token',
     backups: '/v1/backups',
     backupDownload: (backupId: string) => `/v1/backups/${backupId}/download`,
@@ -40,4 +64,9 @@ export function mintcatReleaseDownloadUrl(
     const params = new URLSearchParams({ appType, platform, channel });
     const o = normalizeMintcatApiOrigin(origin);
     return `${o}/releases/${encodeURIComponent(version)}/download?${params.toString()}`;
+}
+
+export function getMintcatOriginByPresetId(id: MintcatApiOriginId): string {
+    const row = MINTCAT_API_ORIGINS.find((o) => o.id === id);
+    return row?.origin ?? MINTCAT_API_ORIGINS[1].origin;
 }

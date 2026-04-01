@@ -443,7 +443,6 @@ fn try_download_dotnet_runtime(
 /// Downloads the .NET runtime ZIP file to the specified path with retry and proxy fallback.
 fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
     let mut last_error: Option<anyhow::Error> = None;
-    let mut use_proxy = false;
 
     for attempt in 0..MAX_DOWNLOAD_RETRIES {
         if attempt > 0 {
@@ -470,13 +469,6 @@ fn download_dotnet_runtime(app: &AppHandle, dest_path: &PathBuf) -> Result<()> {
             Err(e) => {
                 log::warn!("Download attempt {} failed: {}", attempt + 1, e);
                 last_error = Some(e);
-
-                // Switch to proxy on first failure
-                if !use_proxy {
-                    log::info!("Switching to v1st proxy for next attempt");
-                    app.emit("status-bar-log", "backend.dotnet.switching_proxy").unwrap();
-                    use_proxy = true;
-                }
             }
         }
     }
