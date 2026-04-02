@@ -886,8 +886,10 @@ export function TreeViewItem(
     onMenuClick: any, 
     onCountLabelUpdate?: () => Promise<void>,
     folders?: FolderInfo[],
-    onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void
+    onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void,
+    itemOrder?: number
 ) {
+    const {token} = useToken();
     // 构建"移动到"子菜单
     const moveToChildren: MenuProps['items'] = folders
         ?.map(f => ({
@@ -938,6 +940,9 @@ export function TreeViewItem(
                         <ModTreeViewWarring nodeData={nodeData}/>
                     }
 
+                    <span style={{marginRight: "4px", color: token.colorPrimary}}>
+                        {`${itemOrder ?? 1}.`}
+                    </span>
                     {
                         nodeData.sourceType === ModSourceType.Local &&
                         <ModTreeViewLocalTitle nodeData={nodeData} />

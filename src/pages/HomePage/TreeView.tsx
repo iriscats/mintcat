@@ -40,6 +40,8 @@ interface TreeViewState {
 }
 
 export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
+    private folderItemOrderMap = new Map<string, number>();
+
     state: TreeViewState = {
         isDragging: false
     };
@@ -82,6 +84,34 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
         }
 
         return folders;
+    }
+
+    /**
+     * 为每个文件夹下的叶子节点生成从 1 开始的序号
+     */
+    private buildFolderItemOrderMap(): void {
+        this.folderItemOrderMap.clear();
+
+        const assignOrder = (nodes: any[]) => {
+            let currentIndex = 1;
+
+            for (const node of nodes) {
+                if (node.isLeaf) {
+                    this.folderItemOrderMap.set(node.key, currentIndex);
+                    currentIndex += 1;
+                } else if (node.children) {
+                    assignOrder(node.children);
+                }
+            }
+        };
+
+        if (this.props.treeData) {
+            assignOrder(this.props.treeData as any[]);
+        }
+    }
+
+    private getItemOrder(nodeKey: string): number | undefined {
+        return this.folderItemOrderMap.get(nodeKey);
     }
 
     /**
@@ -243,12 +273,14 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
     @autoBind
     private onCustomTitleRender(nodeData: any) {
         const folders = this.getFolderList();
+        const itemOrder = nodeData.isLeaf ? this.getItemOrder(nodeData.key) : undefined;
         return TreeViewItem(
             nodeData, 
             this.props.onMenuClick, 
             this.props.onCountLabelUpdate,
             folders,
-            this.onMoveToFolder
+            this.onMoveToFolder,
+            itemOrder
         );
     }
     /**
@@ -262,6 +294,8 @@ export class TreeView extends React.Component<TreeViewProps, TreeViewState> {
     }
 
     render() {
+        this.buildFolderItemOrderMap();
+
         return (
             <Tree
                 className="ant-tree-content"
