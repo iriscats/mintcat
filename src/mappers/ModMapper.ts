@@ -182,11 +182,26 @@ export class ModMapper {
         return ModMapper.parseTags(rawTags ?? []).tags;
     }
 
+
     /**
-     * 解析标签以提取版本、审核状态、必需标志
-     * 迁移自 HomeViewModel.convertModVersion/Approval/Required()
+     * 从原始标签列表中提取审核状态。
      */
-    private static parseTags(rawTags: string[]): {
+    public static extractApprovalStatus(rawTags: string[]): ModApprovalStatus {
+        return ModMapper.parseTags(rawTags ?? []).approval;
+    }
+
+    /**
+     * 从原始标签列表中提取版本号列表（最新在前）。
+     */
+    public static extractVersions(rawTags: string[]): string[] {
+        return ModMapper.parseTags(rawTags ?? []).versions;
+    }
+
+    /**
+     * 完整解析原始标签，返回 tags、versions、approval。
+     * 供需要同时获取多个结果的调用方使用，避免多次 parseTags。
+     */
+    public static parseTags(rawTags: string[]): {
         tags: string[];
         versions: string[];
         approval: ModApprovalStatus;
@@ -196,25 +211,20 @@ export class ModMapper {
         let approval: ModApprovalStatus = ModApprovalStatus.Unknown;
 
         for (const tag of rawTags) {
-            // 提取版本类标签（如 1.35.0、2.0、v1.2），不再仅用 "1." 前缀，避免版本号被当成普通 tag
             if (ModMapper.VERSION_LIKE_TAG.test(tag.trim())) {
                 versions.push(tag.trim());
-            }
-            // 提取审核状态
-            else if (tag === "Verified" || tag === "Auto-Verified") {
+            } else if (tag === "Verified" || tag === "Auto-Verified") {
                 approval = ModApprovalStatus.Verified;
             } else if (tag === "Approved") {
                 approval = ModApprovalStatus.Approved;
             } else if (tag === "Sandbox") {
                 approval = ModApprovalStatus.Sandbox;
-            }
-            // 保留其他标签（RequiredByAll、Optional 等）
-            else {
+            } else {
                 tags.push(tag);
             }
         }
 
-        versions.reverse();  // 最新版本在前
+        versions.reverse();
 
         return { tags, versions, approval };
     }

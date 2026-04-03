@@ -122,7 +122,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
             confirmLoading={isImporting}
             cancelButtonProps={{ disabled: isImporting }}
             closable={!isImporting}
-            maskClosable={!isImporting}
+            mask={{ closable: !isImporting }}
             width={600}
         >
             <Space orientation="vertical"

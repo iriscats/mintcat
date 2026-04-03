@@ -135,7 +135,7 @@ export function NetworkSettings() {
             <Form {...SettingLayout}>
                 <Form.Item label={t('API Server')}>
                     <Radio.Group onChange={onServerModeChange} value={serverMode}>
-                        <Space direction="vertical">
+                        <Space orientation="vertical">
                             <Radio value="auto">{t('Auto Select')}</Radio>
                             <Radio value="zh">{t('China Mainland Node')}</Radio>
                             <Radio value="global">{t('International Node')}</Radio>
@@ -160,7 +160,7 @@ export function NetworkSettings() {
                                 dataSource={probeResults}
                                 renderItem={(item) => (
                                     <List.Item>
-                                        <Space direction="vertical" style={{ width: '100%' }}>
+                                        <Space orientation="vertical" style={{ width: '100%' }}>
                                             <Text strong>{probeResultLabel(item.key)}</Text>
                                             {item.ok ? (
                                                 <Text type="success">

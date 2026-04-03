@@ -33,7 +33,7 @@ function EmptyPageContent({ initError, onRetry }: EmptyPageProps) {
 
     return (
         <div id="scrollableDiv" style={{ ...emptyPageHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin size="large" tip={t("Loading")} />
+            <Spin size="large" description={t("Loading")} />
         </div>
     );
 }

@@ -881,14 +881,24 @@ function ModTreeViewTitle({nodeData}) {
 }
 
 
-export function TreeViewItem(
-    nodeData: any, 
-    onMenuClick: any, 
-    onCountLabelUpdate?: () => Promise<void>,
-    folders?: FolderInfo[],
-    onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void,
-    itemOrder?: number
-) {
+export interface TreeViewItemProps {
+    nodeData: any;
+    onMenuClick: any;
+    onCountLabelUpdate?: () => Promise<void>;
+    folders?: FolderInfo[];
+    onMoveToFolder?: (sourceKey: string, targetFolderKey: string) => void;
+    itemOrder?: number;
+}
+
+/** 必须用 JSX `<TreeViewItem />` 渲染，勿当作普通函数调用，否则会违反 Hooks 规则（见 TreeView titleRender）。 */
+export function TreeViewItem({
+    nodeData,
+    onMenuClick,
+    onCountLabelUpdate,
+    folders,
+    onMoveToFolder,
+    itemOrder,
+}: TreeViewItemProps) {
     const {token} = useToken();
     // 构建"移动到"子菜单
     const moveToChildren: MenuProps['items'] = folders
@@ -958,7 +968,7 @@ export function TreeViewItem(
                             <Tag key={tagName}>{tagName}</Tag>
                         ))}
 
-                        {nodeData.required === "RequiredByAll" && (
+                        {nodeData.required === true && (
                             <Tag color="orange">RequiredByAll</Tag>)}
 
                         {nodeData.versions.length > 0 && nodeData.versions[0] !== "1.40" && (

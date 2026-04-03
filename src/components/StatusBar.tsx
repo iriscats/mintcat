@@ -145,7 +145,7 @@ function StatusBar() {
                 className="status-bar-progress"
                 strokeColor={ProgressColors}
                 showInfo={false}
-                strokeWidth={1}
+                size={[-1, 1]}
                 percent={percent}
                 style={{
                     width: "100%",

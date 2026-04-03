@@ -124,7 +124,7 @@ export class TreeViewConverter {
             isLeaf: true,
             title,
             url: modItem.url || "",
-            tags: modItem.tags || [],
+            tags: (modItem.tags || []).filter(t => t !== 'RequiredByAll'),
             required: modItem.tags?.includes('RequiredByAll') || false,
             enabled: profileMod?.isEnabled ?? item.enabled,
             sourceType: modItem.sourceType,

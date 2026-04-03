@@ -41,7 +41,7 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
             {
                 title: t('onboarding.configImport.title'),
                 description: (
-                    <Space direction="vertical" size="middle">
+                    <Space orientation="vertical" size="middle">
                         <span>{t('onboarding.configImport.description')}</span>
                         <Button
                             type="primary"

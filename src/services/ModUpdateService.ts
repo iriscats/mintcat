@@ -291,23 +291,42 @@ export class ModUpdateService {
         // 获取远程名称
         const remoteName = modInfo.name || "";
 
-        const rawTagNames = modInfo.tags ? modInfo.tags.map((tag: any) => tag.name) : modData.tags ?? [];
+        const platformId = modInfo.id || modData.platformId || 0;
+        // 优先使用 API 返回的原始标签；若 API 未返回则尝试单独拉取
+        const hasApiTags = modInfo.tags && Array.isArray(modInfo.tags) && modInfo.tags.length > 0;
+        let rawTagNames: string[] = hasApiTags
+            ? modInfo.tags.map((tag: any) => tag.name)
+            : [];
+        if (rawTagNames.length === 0 && platformId > 0) {
+            const tagList = await ModioApi.getModTags(platformId);
+            if (tagList.length > 0) {
+                rawTagNames = tagList.map(tag => tag.name);
+            }
+        }
         const updatePayload: any = {
-            platformId: modInfo.id || modData.platformId,
+            platformId,
             nameId: modInfo.name_id || modData.nameId,
             url: modInfo.profile_url || modData.url,
-            tags: ModMapper.filterTagsForStorage(Array.isArray(rawTagNames) ? rawTagNames : []),
-            originalName: remoteName || modData.originalName,  // 始终更新 originalName
+            originalName: remoteName || modData.originalName,
         };
+        // 只有拿到原始标签（含审核/版本信息）时才更新 tags 和 approvalStatus，避免用已过滤的 DB tags 覆盖
+        if (rawTagNames.length > 0) {
+            const parsed = ModMapper.parseTags(rawTagNames);
+            updatePayload.tags = parsed.tags;
+            updatePayload.approvalStatus = parsed.approval;
+        }
 
         // Update basic mod info
         await modsApi.updateMod(modId, updatePayload);
 
-        // Update version info
+        // Update version info — 从原始标签中提取版本列表，不再硬编码为空
+        const extractedVersions = rawTagNames.length > 0
+            ? ModMapper.extractVersions(rawTagNames)
+            : (modData as any).version?.availableVersions || [];
         await modsApi.upsertModVersion({
             modId: modId,
             currentVersion: modInfo.modfile?.version || modInfo.modfile?.filename || "-",
-            availableVersions: []
+            availableVersions: extractedVersions
         });
 
         // Update download info (only URL and fileSize, preserve downloadProgress)
@@ -433,10 +452,15 @@ export class ModUpdateService {
                 const dateB = new Date(b.CreatedAt || 0).getTime();
                 return dateB - dateA;
             })[0];
+        // ModCat 版本列表
+        const modcatVersions = modDetail.ModVersionEntities
+            ?.filter(v => v.FilesId)
+            .map(v => v.VersionNumber || "")
+            .filter(Boolean) || [];
         await modsApi.upsertModVersion({
             modId: mod.modId!,
             currentVersion: latestVersion?.VersionNumber || mod.version?.currentVersion || "-",
-            availableVersions: []
+            availableVersions: modcatVersions
         });
         if (latestVersion?.FilesId) {
             await modsApi.upsertModDownload({
@@ -453,10 +477,14 @@ export class ModUpdateService {
             onlineUpdateDate,
             isOnlineAvailable: true
         });
-        // 刷新标签信息（issue #62），并过滤掉版本号类避免写入 tags
         const rawTags = modDetail.ModTypeEntities?.map(t => t.Types?.TypeName).filter(Boolean) as string[] ?? [];
-        const tags = ModMapper.filterTagsForStorage(rawTags);
-        await modsApi.updateMod(mod.modId!, { tags });
+        if (rawTags.length > 0) {
+            const parsed = ModMapper.parseTags(rawTags);
+            await modsApi.updateMod(mod.modId!, {
+                tags: parsed.tags,
+                approvalStatus: parsed.approval
+            });
+        }
     }
 
     /**
