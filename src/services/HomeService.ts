@@ -345,6 +345,15 @@ export class HomeService {
 
     }
 
+    /**
+     * 批量设置 mod 启用状态（单条 SQL）
+     */
+    public async batchSetModEnabled(modIds: number[], enable: boolean): Promise<void> {
+        const profiles = await StorageAPI.getProfiles();
+        const profile = await this.getActiveProfile();
+        await profiles.batchSetModEnabled(profile.id!, modIds, enable);
+    }
+
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
         const profiles = await StorageAPI.getProfiles();
         await profiles.updateProfileMod(profileModId, { usedVersion: version });

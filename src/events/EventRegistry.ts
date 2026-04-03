@@ -159,6 +159,15 @@ export interface EventPayloads {
   };
 
   /**
+   * 批量 Mod 启用状态变更
+   * 用于批量启用/禁用后一次性通知所有相关 Switch 和标题组件
+   */
+  'mod-batch-enabled-change': {
+    modIds: number[];
+    enabled: boolean;
+  };
+
+  /**
    * Mod 冲突状态更新
    * 用于在冲突检测完成后通知单个 mod 更新显示
    */

@@ -382,13 +382,23 @@ export class HomePage extends BasePage<any, ModListPageState> {
             return;
         }
 
+        const modIds: number[] = [];
         for (const key of this.getBulkOpKeys()) {
             const modId = this.extractModIdFromKey(key);
             if (modId === null) continue;
-            await vm.setModEnabled(modId, isEnable);
+            modIds.push(modId);
         }
+
+        // 单条 SQL 批量更新，避免逐条调用导致连接池争抢
+        await vm.batchSetModEnabled(modIds, isEnable);
+
+        // 单次批量事件通知所有 Switch 组件更新状态
+        await emitEvent("mod-batch-enabled-change", { modIds, enabled: isEnable });
+
+        clearPendingEnabled();
         await this.updateTreeView();
         await this.updateCountLabel();
+        this.refreshUnsavedState();
     }
 
     @autoBind

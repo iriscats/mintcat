@@ -75,6 +75,13 @@ export class HomeViewModel extends BaseViewModel {
         await this.homeService.setModEnabled(modId, enable, profileModId);
     }
 
+    /**
+     * 批量设置 mod 启用状态（单条 SQL）
+     */
+    public async batchSetModEnabled(modIds: number[], enable: boolean): Promise<void> {
+        await this.homeService.batchSetModEnabled(modIds, enable);
+    }
+
     public async setModUsedVersion(profileModId: number, version: string): Promise<void> {
         await this.homeService.setModUsedVersion(profileModId, version);
     }

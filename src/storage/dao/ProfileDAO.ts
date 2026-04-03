@@ -1,5 +1,5 @@
 import {profiles, profileFolders, profileMods} from '@/storage/db/Schema';
-import {eq, ne, and, desc, asc, like} from 'drizzle-orm';
+import {eq, ne, and, desc, asc, like, inArray} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
 import {StorageAPI} from "@/storage";
 
@@ -483,6 +483,29 @@ export class ProfileDAO {
             return true;
         } catch (error) {
             console.error(`设置配置文件模组启用状态失败 [配置ID: ${profileId}, 模组ID: ${modId}]:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * 批量设置配置文件中多个模组的启用状态（单条 SQL，避免连接池争抢）
+     */
+    public async batchSetModEnabled(profileId: number, modIds: number[], enabled: boolean): Promise<boolean> {
+        if (modIds.length === 0) return true;
+        try {
+            const db = await getDb();
+            await db.update(profileMods)
+                .set({
+                    isEnabled: enabled,
+                    updatedAt: new Date()
+                })
+                .where(and(
+                    eq(profileMods.profileId, profileId),
+                    inArray(profileMods.modId, modIds)
+                ));
+            return true;
+        } catch (error) {
+            console.error(`批量设置模组启用状态失败 [配置ID: ${profileId}, 模组数: ${modIds.length}]:`, error);
             return false;
         }
     }

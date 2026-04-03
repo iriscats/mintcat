@@ -243,6 +243,17 @@ function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
         }
     }, [nodeData.enabled, nodeData.modId]);
 
+    // 监听批量启用/禁用事件
+    useFilteredEventListener(
+        'mod-batch-enabled-change',
+        (payload) => payload.modIds.includes(nodeData.modId),
+        (payload) => {
+            setChecked(payload.enabled);
+            setPendingEnabled(nodeData.modId, payload.enabled);
+        },
+        [nodeData.modId]
+    );
+
     const onSwitchChange = async (newChecked: boolean) => {
         // 1. 立即更新本地状态和模块缓存（乐观更新）
         setChecked(newChecked);
@@ -811,10 +822,20 @@ function ModTreeViewLocalTitle({nodeData}) {
         setEnabled(cachedValue);
     }, [nodeData.enabled, nodeData.modId]);
 
-    // 监听 enabled 状态变化事件
+    // 监听单个 enabled 状态变化事件
     useFilteredEventListener(
         'mod-enabled-change',
         (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setEnabled(payload.enabled);
+        },
+        [nodeData.modId]
+    );
+
+    // 监听批量 enabled 状态变化事件
+    useFilteredEventListener(
+        'mod-batch-enabled-change',
+        (payload) => payload.modIds.includes(nodeData.modId),
         (payload) => {
             setEnabled(payload.enabled);
         },
@@ -855,10 +876,20 @@ function ModTreeViewTitle({nodeData}) {
         [nodeData.modId]
     );
 
-    // 监听 enabled 状态变化事件
+    // 监听单个 enabled 状态变化事件
     useFilteredEventListener(
         'mod-enabled-change',
         (payload) => payload.modId === nodeData.modId,
+        (payload) => {
+            setEnabled(payload.enabled);
+        },
+        [nodeData.modId]
+    );
+
+    // 监听批量 enabled 状态变化事件
+    useFilteredEventListener(
+        'mod-batch-enabled-change',
+        (payload) => payload.modIds.includes(nodeData.modId),
         (payload) => {
             setEnabled(payload.enabled);
         },
@@ -900,6 +931,26 @@ export function TreeViewItem({
     itemOrder,
 }: TreeViewItemProps) {
     const {token} = useToken();
+
+    const [enabled, setEnabled] = useState(() =>
+        getPendingEnabled(nodeData.modId, nodeData.enabled)
+    );
+    React.useEffect(() => {
+        setEnabled(getPendingEnabled(nodeData.modId, nodeData.enabled));
+    }, [nodeData.enabled, nodeData.modId]);
+    useFilteredEventListener(
+        'mod-enabled-change',
+        (payload) => payload.modId === nodeData.modId,
+        (payload) => { setEnabled(payload.enabled); },
+        [nodeData.modId]
+    );
+    useFilteredEventListener(
+        'mod-batch-enabled-change',
+        (payload) => payload.modIds.includes(nodeData.modId),
+        (payload) => { setEnabled(payload.enabled); },
+        [nodeData.modId]
+    );
+
     // 构建"移动到"子菜单
     const moveToChildren: MenuProps['items'] = folders
         ?.map(f => ({
@@ -950,8 +1001,24 @@ export function TreeViewItem({
                         <ModTreeViewWarring nodeData={nodeData}/>
                     }
 
-                    <span style={{marginRight: "4px", color: token.colorPrimary}}>
-                        {`${itemOrder ?? 1}.`}
+                    <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: "20px",
+                        height: "18px",
+                        borderRadius: "9px",
+                        backgroundColor: enabled ? token.colorPrimaryBg : token.colorBgTextHover,
+                        color: enabled ? token.colorPrimary : token.colorTextDisabled,
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        marginRight: "6px",
+                        padding: "0 5px",
+                        lineHeight: 1,
+                        fontVariantNumeric: "tabular-nums",
+                        flexShrink: 0,
+                    }}>
+                        {itemOrder ?? 1}
                     </span>
                     {
                         nodeData.sourceType === ModSourceType.Local &&
