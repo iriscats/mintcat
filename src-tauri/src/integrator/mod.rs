@@ -70,8 +70,9 @@ pub fn cleanup_audio_paks(paks_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Verify that pak data contains no blueprint init assets (InitSpaceRig/InitCave)
-/// and no AssetRegistry.bin, by reading only the pak index, not file contents.
+/// Verify that pak data contains no blueprint init assets (InitSpaceRig/InitCave),
+/// no AssetRegistry.bin, and no shader bytecode (`.ushaderbytecode`), by reading only
+/// the pak index, not file contents.
 pub fn verify_audio_only_from_bytes(pak_data: &[u8]) -> Result<bool> {
     let mut cursor = Cursor::new(pak_data);
     let pak = repak::PakBuilder::new()
@@ -83,6 +84,7 @@ pub fn verify_audio_only_from_bytes(pak_data: &[u8]) -> Result<bool> {
         if lower.ends_with("initspacerig.uasset")
             || lower.ends_with("initcave.uasset")
             || lower.ends_with("assetregistry.bin")
+            || lower.ends_with(".ushaderbytecode")
         {
             return Ok(false);
         }
@@ -104,6 +106,7 @@ pub fn verify_audio_only_pak_file(path: &Path) -> Result<bool> {
         if lower.ends_with("initspacerig.uasset")
             || lower.ends_with("initcave.uasset")
             || lower.ends_with("assetregistry.bin")
+            || lower.ends_with(".ushaderbytecode")
         {
             return Ok(false);
         }
