@@ -535,12 +535,22 @@ function ModTreeViewVersionSelect({nodeData}) {
         }
     }
 
+    const {token} = useToken();
+
     return (
-        <>
+        <Tooltip title={isVersionLocked ? t("Version locked, switch to latest version to unlock") : ""}>
             <Select size={"small"}
-                    suffixIcon={null}
+                    suffixIcon={isVersionLocked
+                        ? <LockOutlined style={{color: token.colorWarning, fontSize: "10px"}}/>
+                        : null}
                     popupMatchSelectWidth={false}
-                    style={{marginRight: "4px", width: "80px"}}
+                    variant="filled"
+                    style={{
+                        marginRight: "4px",
+                        maxWidth: "80px",
+                        fontSize: "12px",
+                        color: token.colorTextSecondary,
+                    }}
                     value={selectedVersion}
                     notFoundContent={fetching ? <Spin size="small"/> : null}
                     options={options}
@@ -549,14 +559,7 @@ function ModTreeViewVersionSelect({nodeData}) {
                     disabled={isProcessing}
                     loading={isProcessing}
             />
-            {isVersionLocked && (
-                <Tooltip title={t("Version locked, switch to latest version to unlock")}>
-                    <span style={{color: "orange", marginRight: "4px", cursor: "pointer"}}>
-                        <LockOutlined/>
-                    </span>
-                </Tooltip>
-            )}
-        </>
+        </Tooltip>
     );
 }
 
@@ -990,22 +993,12 @@ export function TreeViewItem({
                           }
                       }}>
                 <ModTreeViewProgressBackground nodeData={nodeData}>
-                    <ModTreeViewSwitch nodeData={nodeData} onCountLabelUpdate={onCountLabelUpdate}/>
-
-                    {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
-                        <ModTreeViewVersionSelect nodeData={nodeData}/>
-                    }
-
-                    {
-                        //nodeData.sourceType === ModSourceType.Modio &&
-                        <ModTreeViewWarring nodeData={nodeData}/>
-                    }
-
-                    <span style={{
+  
+                <span style={{
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        minWidth: "20px",
+                        minWidth: "40px",
                         height: "18px",
                         borderRadius: "9px",
                         backgroundColor: enabled ? token.colorPrimaryBg : token.colorBgTextHover,
@@ -1020,13 +1013,26 @@ export function TreeViewItem({
                     }}>
                         {itemOrder ?? 1}
                     </span>
-                    {
-                        nodeData.sourceType === ModSourceType.Local &&
-                        <ModTreeViewLocalTitle nodeData={nodeData} />
+
+                    <ModTreeViewSwitch nodeData={nodeData} onCountLabelUpdate={onCountLabelUpdate}/>
+
+                    {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
+                        <ModTreeViewVersionSelect nodeData={nodeData}/>
                     }
+
                     {
                         (nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
                         <ModTreeViewTitle nodeData={nodeData}/>
+                    }
+
+                    {
+                        //nodeData.sourceType === ModSourceType.Modio &&
+                        <ModTreeViewWarring nodeData={nodeData}/>
+                    }
+
+                    {
+                        nodeData.sourceType === ModSourceType.Local &&
+                        <ModTreeViewLocalTitle nodeData={nodeData} />
                     }
 
                     {/* 右侧区域：tags 靠右 */}
