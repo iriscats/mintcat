@@ -6,7 +6,15 @@ import { StorageAPI } from "@/storage";
 import { ModService } from "@/services/ModService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
 import { IoC } from "@/core/IoC";
-import type { ProfileData } from "@/storage/dao/ProfileDAO";
+import type { ProfileData, ProfileFolderData } from "@/storage/dao/ProfileDAO";
+
+/** 删除分组时若会清空配置下的全部分组则抛出 */
+export class LastGroupCannotDeleteError extends Error {
+    constructor() {
+        super("LastGroupCannotDeleteError");
+        this.name = "LastGroupCannotDeleteError";
+    }
+}
 import type { ModInfo } from "@/apis/modio/ModInfo.ts";
 import { asyncPoolAll } from "@/utils/AsyncPool";
 
@@ -371,8 +379,35 @@ export class HomeService {
         });
     }
 
+    /**
+     * 本次删除涉及的文件夹 id（含自身及所有子文件夹）
+     */
+    private collectFolderSubtreeIds(rootId: number, allFolders: ProfileFolderData[]): Set<number> {
+        const ids = new Set<number>();
+        const queue: number[] = [rootId];
+        while (queue.length > 0) {
+            const id = queue.shift()!;
+            if (ids.has(id)) {
+                continue;
+            }
+            ids.add(id);
+            for (const f of allFolders) {
+                if (f.parentFolderId === id && f.id != null) {
+                    queue.push(f.id);
+                }
+            }
+        }
+        return ids;
+    }
+
     public async removeGroup(groupId: number): Promise<void> {
+        const profile = await this.getActiveProfile();
         const profiles = await StorageAPI.getProfiles();
+        const allFolders = await profiles.getProfileFolders(profile.id!);
+        const subtreeIds = this.collectFolderSubtreeIds(groupId, allFolders);
+        if (subtreeIds.size >= allFolders.length) {
+            throw new LastGroupCannotDeleteError();
+        }
         await profiles.deleteFolder(groupId);
     }
 

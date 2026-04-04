@@ -6,7 +6,13 @@ import { IoC } from "@/core/IoC.ts";
 import {BaseViewModel} from "@/core/BaseViewModel";
 import {ProfileService} from "@/services/ProfileService.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
-import {HomeService, type AddModFromUrlResult, type AddModFromPathResult, type BatchAddModResult} from "@/services/HomeService.ts";
+import {
+    HomeService,
+    LastGroupCannotDeleteError,
+    type AddModFromUrlResult,
+    type AddModFromPathResult,
+    type BatchAddModResult,
+} from "@/services/HomeService.ts";
 import type {ModInfo} from "@/apis/modio/ModInfo.ts";
 
 /**
@@ -107,6 +113,9 @@ export class HomeViewModel extends BaseViewModel {
         try {
             await this.homeService.removeGroup(groupId);
         } catch (error) {
+            if (error instanceof LastGroupCannotDeleteError) {
+                throw error;
+            }
             console.error(`[HomeViewModel] Error removing group ${groupId}:`, error);
             throw error;
         }

@@ -27,6 +27,7 @@ import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {autoBind} from "@/utils/ReactUtils.ts";
 import {HomeViewModel} from "./HomeViewModel.ts";
+import {LastGroupCannotDeleteError} from "@/services/HomeService.ts";
 import {TreeViewModel} from "./TreeViewModel.ts";
 import {ProfileViewModel} from "@/dialogs/ProfileEditDialog/ProfileViewModel.ts";
 import {CountLabel} from "./CountLabel.tsx";
@@ -881,7 +882,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     await vm.removeGroup(id);
                     shouldUpdateTree = true;
                 } catch (error) {
-                    console.error(`[HomePage] Delete group failed for id=${id}:`, error);
+                    if (error instanceof LastGroupCannotDeleteError) {
+                        message.warning(t("Cannot delete the last group"));
+                    } else {
+                        console.error(`[HomePage] Delete group failed for id=${id}:`, error);
+                    }
                 }
                 break;
             case "rename_group":

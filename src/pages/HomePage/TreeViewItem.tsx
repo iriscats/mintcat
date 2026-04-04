@@ -963,6 +963,7 @@ export function TreeViewItem({
         })) || [];
 
     const contextMenus: MenuProps['items'] = [
+        {label: t('Add New Group'), key: 'add_new_group', icon: <FolderAddOutlined />},
         {label: t('Rename'), key: 'rename', icon: <EditOutlined />},
         {label: t('Update'), key: 'update', icon: <SyncOutlined />},
         {label: t('Pin to Top'), key: 'pin_to_top', icon: <VerticalAlignTopOutlined />},
