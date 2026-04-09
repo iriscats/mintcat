@@ -7,7 +7,9 @@
 
 import { message } from "antd";
 import { t } from "i18next";
+import { NetworkApi } from "@/apis/NetworkApi";
 import { StorageAPI } from "@/storage";
+import { AuthResolver } from "@/services/network";
 import { CacheApi } from "@/apis/CacheApi";
 import { DownloadApi } from "@/apis/DownloadApi";
 import { IntegrateApi } from "@/apis/IntegrateApi";
@@ -29,6 +31,7 @@ const MODCAT_API_BASE_URL = "https://modcat.top:8089";
 
 /** OAuth 平台标识 */
 export const MODCAT_PLATFORM = "modcat";
+const authResolver = new AuthResolver();
 
 /**
  * ModCat API 客户端类
@@ -42,40 +45,17 @@ export class ModcatApi {
     }
 
     /**
-     * 获取认证头
-     */
-    private static async getHeaders(): Promise<HeadersInit> {
-        const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform(MODCAT_PLATFORM);
-        
-        const headers: HeadersInit = {
-            "Content-Type": "application/json",
-        };
-        
-        if (oAuthData?.oauth) {
-            // 按照 API 文档要求，格式为 "Bearer xxxxxxxx"
-            headers["Authorization"] = `Bearer ${oAuthData.oauth}`;
-        }
-        
-        return headers;
-    }
-
-    /**
      * 检查是否已登录
      */
     public static async isAuthenticated(): Promise<boolean> {
-        const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform(MODCAT_PLATFORM);
-        return !!oAuthData?.oauth;
+        return !!(await ModcatApi.getToken());
     }
 
     /**
      * 获取当前 Token
      */
     public static async getToken(): Promise<string | null> {
-        const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform(MODCAT_PLATFORM);
-        return oAuthData?.oauth || null;
+        return (await authResolver.getModcatToken()) || null;
     }
 
     /**
@@ -115,15 +95,20 @@ export class ModcatApi {
         includeAuth: boolean = true
     ): Promise<ModcatResultEntity<T>> {
         const url = `${ModcatApi.getBaseUrl()}${path}`;
-        const headers = includeAuth ? await ModcatApi.getHeaders() : {
+        const headers = {
             "Content-Type": "application/json",
         };
-        
-        const resp = await fetch(url, {
+
+        const resp = (await NetworkApi.request<Response>({
+            service: 'modcat.request',
+            url,
             method: "POST",
             headers,
             body: body ? JSON.stringify(body) : undefined,
-        });
+            authPolicy: includeAuth ? 'modcatToken' : 'none',
+            proxyPolicy: 'mintcatProxyFallback',
+            parseAs: 'response',
+        })).response;
         
         if (!resp.ok) {
             throw new Error(`Request failed: ${resp.status}`);

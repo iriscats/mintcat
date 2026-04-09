@@ -7,6 +7,7 @@ import { CloudBackupApi } from '@/apis/mintcat';
 import {
     getMintcatApiOriginLanguageFallback,
     getMintcatOriginByPresetId,
+    isMintcatApiOriginId,
     normalizeMintcatApiOrigin,
     setMintcatApiResolvedOrigin,
 } from '@/apis/mintcat/urls';
@@ -14,10 +15,12 @@ import {
     NETWORK_SERVER_AUTO_ORIGIN_KEY,
     NETWORK_SERVER_MODE_KEY,
     type MintcatServerMode,
+    probeOrigin,
     refreshAutoMintcatApiRoutingInBackground,
 } from '@/apis/mintcat/routing';
 import { CacheApi } from '@/apis/CacheApi';
 import { closeDb } from '@/storage/db/Client';
+import { setMintcatProxyModeResolved } from '@/services/network';
 
 /**
  * Application initialization phases
@@ -96,6 +99,7 @@ export class AppInitializer {
 
             // 应用网络代理设置（使后端下载等请求可走 Clash 等代理）
             await this.applyNetworkProxy();
+            await this.applyMintcatProxyMode();
 
             await this.initApiServerRouting();
 
@@ -196,11 +200,24 @@ export class AppInitializer {
     private static async applyNetworkProxy(): Promise<void> {
         try {
             const settings = await StorageAPI.getSettings();
-            const raw = await settings.getValue('network.proxy');
+            const raw = await settings.getNetworkProxy();
             const proxy = raw?.trim() ? raw.trim() : null;
             await invoke('set_network_proxy', { proxy });
         } catch (error) {
             console.warn('[AppInitializer] Failed to apply network proxy:', error);
+        }
+    }
+
+    /**
+     * 从 settings 读取 MintCat 反代模式并写入运行时缓存。
+     * 该设置仅影响外部请求是否借助 MintCat /proxy，不影响 MintCat 自身 API。
+     */
+    private static async applyMintcatProxyMode(): Promise<void> {
+        try {
+            const settings = await StorageAPI.getSettings();
+            setMintcatProxyModeResolved(await settings.getMintcatProxyMode());
+        } catch (error) {
+            console.warn('[AppInitializer] Failed to apply MintCat proxy mode:', error);
         }
     }
 
@@ -218,20 +235,21 @@ export class AppInitializer {
                 setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
             };
 
-            if (mode === 'zh') {
-                setMintcatApiResolvedOrigin(getMintcatOriginByPresetId('zh'));
-                return;
-            }
-            if (mode === 'global') {
-                setMintcatApiResolvedOrigin(getMintcatOriginByPresetId('global'));
+            if (isMintcatApiOriginId(mode)) {
+                setMintcatApiResolvedOrigin(getMintcatOriginByPresetId(mode));
                 return;
             }
 
             // auto（含历史 custom：设置页已迁移为自动）
             if (autoCached) {
-                setMintcatApiResolvedOrigin(normalizeMintcatApiOrigin(autoCached));
-                void refreshAutoMintcatApiRoutingInBackground();
-                return;
+                const normalizedCached = normalizeMintcatApiOrigin(autoCached);
+                const probe = await probeOrigin(normalizedCached, 1500);
+                if (probe.ok) {
+                    setMintcatApiResolvedOrigin(normalizedCached);
+                    void refreshAutoMintcatApiRoutingInBackground();
+                    return;
+                }
+                console.warn('[AppInitializer] Cached API origin failed validation:', normalizedCached, probe.error);
             }
 
             applyLanguageFallback();

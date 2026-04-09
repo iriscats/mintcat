@@ -2,14 +2,16 @@ import { readFile, writeFile, exists, stat, remove, copyFile } from "@tauri-apps
 import { path } from "@tauri-apps/api";
 import { configDir } from "@tauri-apps/api/path";
 import { getVersion } from "@tauri-apps/api/app";
-import { StorageAPI } from "@/storage";
+import { NetworkApi } from "@/apis/NetworkApi";
+import { AuthResolver, type NetworkProxyPolicy } from "@/services/network";
 import i18n from "@/locales/i18n";
 import type { CloudBackupConfig, CloudBackupMetadata, CloudBackupRecord } from "./types";
-import { getMintcatApiOrigin, MintCatApiPaths, mintcatApiUrl, normalizeMintcatApiOrigin } from "./urls";
+import { getMintcatApiOrigin, MintCatApiUrls, normalizeMintcatApiOrigin } from "./urls";
 
 const DB_FILE_NAME = "mintcat.sqlite";
 const RESTORE_SUFFIX = ".restore";
 const BACKUP_SUFFIX = ".bak";
+const authResolver = new AuthResolver();
 
 async function getDatabasePath(): Promise<string> {
     return await path.join(await configDir(), "com.mint.cat", DB_FILE_NAME);
@@ -23,7 +25,7 @@ async function getBackupPath(): Promise<string> {
     return `${await getDatabasePath()}${BACKUP_SUFFIX}`;
 }
 
-function buildAuthHeaders(accessToken: string): HeadersInit {
+function buildAuthHeaders(accessToken: string): Record<string, string> {
     if (!accessToken) {
         return {};
     }
@@ -65,8 +67,38 @@ async function throwIfNotOk(response: Response): Promise<void> {
     throw new Error(msg);
 }
 
-async function fetchBytes(url: string, headers?: HeadersInit): Promise<Uint8Array> {
-    const response = await fetch(url, { headers });
+async function requestResponse(
+    url: string,
+    options: {
+        service: string;
+        method?: string;
+        headers?: Record<string, string>;
+        body?: BodyInit | null;
+        proxyPolicy?: NetworkProxyPolicy;
+    },
+): Promise<Response> {
+    const result = await NetworkApi.request<Response>({
+        service: options.service,
+        url,
+        method: options.method,
+        headers: options.headers,
+        body: options.body,
+        proxyPolicy: options.proxyPolicy ?? 'direct',
+        parseAs: 'response',
+    });
+    return result.response;
+}
+
+async function fetchBytes(
+    url: string,
+    headers?: Record<string, string>,
+    proxyPolicy: NetworkProxyPolicy = 'direct',
+): Promise<Uint8Array> {
+    const response = await requestResponse(url, {
+        service: 'mintcat.cloudBackup.fetchBytes',
+        headers,
+        proxyPolicy,
+    });
     await throwIfNotOk(response);
     const buffer = await response.arrayBuffer();
     return new Uint8Array(buffer);
@@ -77,12 +109,9 @@ async function fetchBytes(url: string, headers?: HeadersInit): Promise<Uint8Arra
  */
 export class CloudBackupApi {
     public static async getConfig(): Promise<CloudBackupConfig> {
-        const oauthDAO = await StorageAPI.getOAuths();
-        const mintcatOAuth = await oauthDAO.getActiveUserOAuthByPlatform("mintcat");
-
         return {
             baseUrl: getMintcatApiOrigin(),
-            accessToken: mintcatOAuth?.oauth ?? "",
+            accessToken: await authResolver.getMintcatToken(),
         };
     }
 
@@ -95,10 +124,12 @@ export class CloudBackupApi {
         if (!config.accessToken) {
             return [];
         }
-        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backups), {
+        const response = await requestResponse(MintCatApiUrls.cloudBackup.list(baseUrl), {
+            service: 'mintcat.cloudBackup.listBackups',
             headers: {
                 ...buildAuthHeaders(config.accessToken),
             },
+            proxyPolicy: 'direct',
         });
         await throwIfNotOk(response);
         const data = await parseResponseJson<{ items?: CloudBackupRecord[] } | CloudBackupRecord[]>(response);
@@ -145,12 +176,14 @@ export class CloudBackupApi {
             DB_FILE_NAME,
         );
 
-        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backups), {
+        const response = await requestResponse(MintCatApiUrls.cloudBackup.list(baseUrl), {
+            service: 'mintcat.cloudBackup.createBackup',
             method: "POST",
             headers: {
                 ...buildAuthHeaders(config.accessToken),
             },
             body: formData,
+            proxyPolicy: 'direct',
         });
 
         await throwIfNotOk(response);
@@ -175,11 +208,13 @@ export class CloudBackupApi {
         if (!baseUrl) {
             throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
-        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backupDownload(backupId)), {
+        const response = await requestResponse(MintCatApiUrls.cloudBackup.download(backupId, baseUrl), {
+            service: 'mintcat.cloudBackup.downloadBackup',
             headers: {
                 ...buildAuthHeaders(config.accessToken),
                 Accept: "application/octet-stream",
             },
+            proxyPolicy: 'direct',
         });
         await throwIfNotOk(response);
         const contentType = response.headers.get("content-type") ?? "";
@@ -212,11 +247,13 @@ export class CloudBackupApi {
         if (!baseUrl) {
             throw new Error(i18n.t("cloudBackup.error.endpoint_empty"));
         }
-        const response = await fetch(mintcatApiUrl(baseUrl, MintCatApiPaths.backupById(backupId)), {
+        const response = await requestResponse(MintCatApiUrls.cloudBackup.byId(backupId, baseUrl), {
+            service: 'mintcat.cloudBackup.deleteBackup',
             method: "DELETE",
             headers: {
                 ...buildAuthHeaders(config.accessToken),
             },
+            proxyPolicy: 'direct',
         });
         await throwIfNotOk(response);
     }

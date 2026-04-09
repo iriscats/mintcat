@@ -10,36 +10,34 @@ import {NetworkApi} from "@/apis/NetworkApi.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {ModFile, ModInfo, Tags} from "@/apis/modio/ModInfo.ts";
 import {TimeUtils} from "@/utils/TimeUtils.ts";
-import {StorageAPI} from "@/storage";
+import {AuthResolver} from "@/services/network";
 
 //const MODIO_API_URL = "https://api.mod.io/v1";
 const MODIO_GAME_ID = 2475;
 const MODIO_UID = "13595141";
+const authResolver = new AuthResolver();
 
 export class ModioApi {
     private static platformIdByNameIdCache = new Map<string, number>();
     private static platformIdByNameIdInFlight = new Map<string, Promise<number>>();
 
     private static async getHost() {
-        const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
-        const modioUid = oAuthData?.uid ?? MODIO_UID;
+        const modioUid = await authResolver.getModioUid(MODIO_UID);
         return `https://u-${modioUid}.modapi.io/v1`;
-    }
-
-    private static async getHeaders() {
-        const oAuthDAO = await StorageAPI.getOAuths();
-        const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
-        return {
-            Authorization: `Bearer ${oAuthData?.oauth ?? ""}`,
-        }
     }
 
     private static async getRequest(path: string) {
         let host = await ModioApi.getHost();
         let url = host + path;
 
-        let resp: Response = await NetworkApi.get(url, await ModioApi.getHeaders());
+        let resp = (await NetworkApi.request<Response>({
+            service: 'modio.request',
+            url,
+            method: 'GET',
+            authPolicy: 'modioToken',
+            proxyPolicy: 'mintcatProxyFallback',
+            parseAs: 'response',
+        })).response;
 
         switch (resp.status) {
             case 200:
@@ -81,9 +79,7 @@ export class ModioApi {
 
     public static async getUserInfo() {
         try {
-            const oAuthDAO = await StorageAPI.getOAuths();
-            const oAuthData = await oAuthDAO.getActiveUserOAuthByPlatform('mod.io');
-            if (!oAuthData?.oauth?.trim()) {
+            if (!(await authResolver.getModioToken())) {
                 return undefined;
             }
             const path = "/me";

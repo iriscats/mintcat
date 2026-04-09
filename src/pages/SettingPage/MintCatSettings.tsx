@@ -5,6 +5,7 @@ import {open} from "@tauri-apps/plugin-dialog";
 import i18n from "@/locales/i18n.ts";
 import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
+import {DEFAULT_RELEASE_CHANNEL, RELEASE_CHANNELS, type ReleaseChannel} from "@/apis/mintcat";
 import {StorageAPI} from "@/storage";
 import {Button, Card, Flex, Form, Input, message, Modal, Select, Switch} from "antd";
 import {ExclamationCircleFilled} from "@ant-design/icons";
@@ -35,7 +36,13 @@ export function MintCatSettings() {
     const [configDirectory, setConfigDirectory] = React.useState<string>("");
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
     const [ue4ss, setUe4ss] = React.useState<string>("");
+    const [releaseChannel, setReleaseChannel] = React.useState<ReleaseChannel>(DEFAULT_RELEASE_CHANNEL);
     const [clipboardMonitor, setClipboardMonitor] = React.useState<boolean>(true);
+
+    const releaseChannelOptions = RELEASE_CHANNELS.map((value) => ({
+        value,
+        label: t(`Release channel option ${value}`),
+    }));
 
     const onOpenConfigDirClick = async () => {
         const settings = await StorageAPI.getSettings();
@@ -106,6 +113,13 @@ export function MintCatSettings() {
         await emitEvent("theme-change", value);
     }
 
+    const onReleaseChannelChange = async (value: ReleaseChannel) => {
+        setReleaseChannel(value);
+        const settings = await StorageAPI.getSettings();
+        await settings.setReleaseChannel(value);
+        message.success(t("Release channel saved"));
+    };
+
     const onUe4ssChange = async (value: string) => {
         setUe4ss(value);
         if (value === "Custom") {
@@ -165,6 +179,7 @@ export function MintCatSettings() {
         setCacheDirectory(await settings.getCachePath());
         const ue4ssValue = await settings.getValue('ue4ss');
         setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
+        setReleaseChannel(await settings.getReleaseChannel());
         setClipboardMonitor(await settings.getClipboardMonitorEnabled());
     }, []);
 
@@ -196,6 +211,15 @@ export function MintCatSettings() {
                             <Select value={theme}
                                     options={themeOptions}
                                     onChange={onThemeChange}/>
+                        </Flex>
+                    </Form.Item>
+                    <Form.Item label={t("Release channel")}
+                               extra={t("Release channel description")}>
+                        <Flex>
+                            <Select value={releaseChannel}
+                                    options={releaseChannelOptions}
+                                    onChange={onReleaseChannelChange}
+                            />
                         </Flex>
                     </Form.Item>
                     <Form.Item label={t("Config Directory")}>

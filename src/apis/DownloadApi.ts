@@ -1,7 +1,8 @@
 import {invoke} from '@tauri-apps/api/core';
 import {listenEvent} from "@/events";
 import {NetworkApi} from "@/apis/NetworkApi.ts";
-import {isMintcatProxyUrl, mintcatProxyUrl} from "@/apis/mintcat/urls";
+import { IoC } from "@/core/IoC";
+import { RequestLogger, type NetworkResolvedRoute } from "@/services/network";
 
 export type DownloadProgressCallBack = (downloaded: number, total: number, speed: number, eta: number) => void
 export type DownloadStatusCallBack = (status: string, error?: string, filePath?: string) => void
@@ -36,6 +37,19 @@ export type DownloadOptions = {
 }
 
 export class DownloadApi {
+    private static fallbackLogger = new RequestLogger();
+
+    private static buildRequestId(): string {
+        return `download-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    private static async getLogger(): Promise<RequestLogger> {
+        try {
+            return await IoC.get(RequestLogger);
+        } catch {
+            return this.fallbackLogger;
+        }
+    }
 
     /**
      * Single download attempt: register event listeners BEFORE invoking the
@@ -129,30 +143,64 @@ export class DownloadApi {
         statusCallback?: DownloadStatusCallBack
     ): Promise<string> {
         const opts = options || null;
-        const transformedUrl = NetworkApi.getUrl(url);
-        const fallbackProxyUrl = mintcatProxyUrl(url);
-        try {
-            return await DownloadApi.downloadFileOnce(
-                transformedUrl,
-                filePath,
-                opts,
-                progressCallback,
-                statusCallback
-            );
-        } catch (firstErr) {
-            if (isMintcatProxyUrl(transformedUrl)) throw firstErr;
+        const logger = await DownloadApi.getLogger();
+        const requestId = DownloadApi.buildRequestId();
+        const plan = await NetworkApi.resolveRoutePlan(url, 'mintcatProxyFallback');
+        const routes = [plan.primary, plan.fallback].filter(Boolean) as NetworkResolvedRoute[];
+        let firstErr: unknown;
+
+        for (let i = 0; i < routes.length; i++) {
+            const route = routes[i];
+            const startedAt = Date.now();
+            logger.logAttemptStart({
+                requestId,
+                service: 'download.file',
+                method: 'DOWNLOAD',
+                attempt: i + 1,
+                route,
+                headers: opts?.headers,
+            });
             try {
-                return await DownloadApi.downloadFileOnce(
-                    fallbackProxyUrl,
+                const result = await DownloadApi.downloadFileOnce(
+                    route.resolvedUrl,
                     filePath,
                     opts,
                     progressCallback,
                     statusCallback
                 );
-            } catch (_) {
-                throw firstErr;
+                logger.logAttemptSuccess({
+                    requestId,
+                    service: 'download.file',
+                    method: 'DOWNLOAD',
+                    attempt: i + 1,
+                    route,
+                    durationMs: Date.now() - startedAt,
+                    status: 200,
+                    headers: opts?.headers,
+                });
+                return result;
+            } catch (error) {
+                if (firstErr === undefined) {
+                    firstErr = error;
+                }
+                logger.logAttemptFailure({
+                    requestId,
+                    service: 'download.file',
+                    method: 'DOWNLOAD',
+                    attempt: i + 1,
+                    route,
+                    durationMs: Date.now() - startedAt,
+                    error,
+                    final: i >= routes.length - 1,
+                    headers: opts?.headers,
+                });
+                if (i >= routes.length - 1) {
+                    throw firstErr;
+                }
             }
         }
+
+        throw firstErr instanceof Error ? firstErr : new Error('Download failed');
     }
 
     /**

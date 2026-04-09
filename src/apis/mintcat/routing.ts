@@ -1,63 +1,83 @@
 import { StorageAPI } from '@/storage';
+import { NetworkApi } from '@/apis/NetworkApi';
+import { NetworkRequestError } from '@/services/network';
 import {
-    mintcatApiUrl,
-    MintCatApiPaths,
+    MintCatApiUrls,
     MINTCAT_API_ORIGINS,
+    type MintcatApiOriginId,
     normalizeMintcatApiOrigin,
     setMintcatApiResolvedOrigin,
 } from './urls';
 
-export type MintcatServerMode = 'auto' | 'zh' | 'global' | 'custom';
+export type MintcatServerMode = 'auto' | MintcatApiOriginId | 'custom';
 
 export const NETWORK_SERVER_MODE_KEY = 'network.server_mode';
 /** 自动模式下上次探测选中的最优 origin */
 export const NETWORK_SERVER_AUTO_ORIGIN_KEY = 'network.auto_best_origin';
 
 export interface ProbeResult {
-    /** 用于展示：zh | global */
-    key: string;
+    /** 用于展示：内置节点 id；单点探测时初始化为 unknown */
+    key: MintcatApiOriginId | 'unknown';
     origin: string;
     ok: boolean;
     latencyMs?: number;
     error?: string;
 }
 
-function withTimeoutSignal(timeoutMs: number): { signal: AbortSignal; cancel: () => void } {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-    return {
-        signal: controller.signal,
-        cancel: () => clearTimeout(id),
-    };
-}
-
 /**
- * GET /ping on a single API origin.
+ * 使用 release check 做真实探测，避免只 ping 成功但业务接口已异常的节点被误判为可用。
  */
 export async function probeOrigin(origin: string, timeoutMs = 4000): Promise<ProbeResult> {
     const normalized = normalizeMintcatApiOrigin(origin);
-    const url = mintcatApiUrl(normalized, MintCatApiPaths.ping);
-    const { signal, cancel } = withTimeoutSignal(timeoutMs);
+    const url = buildReleaseProbeUrl(normalized);
     const started = performance.now();
     try {
-        const response = await fetch(url, { method: 'GET', signal });
+        const result = await NetworkApi.request<unknown>({
+            service: 'mintcat.routing.probeOrigin',
+            url,
+            method: 'GET',
+            timeoutMs,
+            proxyPolicy: 'direct',
+            parseAs: 'json',
+        });
+        const response = result.response;
         const latencyMs = Math.round(performance.now() - started);
         if (!response.ok) {
             return { key: 'unknown', origin: normalized, ok: false, error: `HTTP ${response.status}` };
         }
+        if (!isReleaseProbeResponse(result.data)) {
+            return { key: 'unknown', origin: normalized, ok: false, error: 'Invalid release response' };
+        }
         return { key: 'unknown', origin: normalized, ok: true, latencyMs };
     } catch (e) {
         const err = e instanceof Error ? e.message : String(e);
-        const aborted = err.includes('abort') || err === 'AbortError';
+        const aborted = e instanceof NetworkRequestError
+            ? e.code === 'timeout'
+            : err.includes('abort') || err === 'AbortError';
         return {
             key: 'unknown',
             origin: normalized,
             ok: false,
             error: aborted ? 'timeout' : err,
         };
-    } finally {
-        cancel();
     }
+}
+
+function buildReleaseProbeUrl(origin: string): string {
+    const params = new URLSearchParams({
+        currentVersion: '0',
+        appType: 'mintcat',
+        platform: 'windows',
+        channel: 'stable',
+    });
+    return `${MintCatApiUrls.releases.checkUpdate(origin)}?${params.toString()}`;
+}
+
+function isReleaseProbeResponse(value: unknown): value is { hasUpdate: boolean } {
+    if (typeof value !== 'object' || value == null) {
+        return false;
+    }
+    return typeof (value as { hasUpdate?: unknown }).hasUpdate === 'boolean';
 }
 
 /** 并行探测全部内置 API 节点 */

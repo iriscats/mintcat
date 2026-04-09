@@ -1,15 +1,22 @@
 import { exists, readTextFile, writeFile, remove } from '@tauri-apps/plugin-fs';
 import { t } from 'i18next';
-import { checkUpdatesBatch, getDownloadUrl, getReleaseDownloadUrl } from '@/apis/mintcat';
+import {
+    checkUpdatesBatch,
+    DEFAULT_RELEASE_CHANNEL,
+    getDownloadUrl,
+    getReleaseDownloadUrl,
+    normalizeReleaseChannel,
+    type ReleaseChannel,
+} from '@/apis/mintcat';
 import { DownloadApi } from '@/apis/DownloadApi';
 import { CacheApi } from '@/apis/CacheApi';
 import { IntegrateApi } from '@/apis/IntegrateApi';
+import { StorageAPI } from '@/storage';
 
 const ASSET_UE4SSL = 'UE4SSL.zip';
 const ASSET_DRG = 'DRG.zip';
 const ASSET_RC = 'RC.zip';
 const PLATFORM = 'windows';
-const CHANNEL = 'stable';
 const MANIFEST_FILENAME = 'assets_manifest.json';
 
 function joinPath(cacheDir: string, name: string): string {
@@ -39,12 +46,32 @@ interface AssetManifest {
     ue4ssl: string;
     drg: string;
     rc: string;
+    /** 与设置中发布渠道一致；旧 manifest 无此字段时视为 stable */
+    channel: ReleaseChannel;
 }
 
-const DEFAULT_MANIFEST: AssetManifest = { ue4ssl: '0', drg: '0', rc: '0' };
+const DEFAULT_MANIFEST: AssetManifest = {
+    ue4ssl: '0',
+    drg: '0',
+    rc: '0',
+    channel: DEFAULT_RELEASE_CHANNEL,
+};
 const MAX_DOWNLOAD_RETRIES = 3;
 const RETRY_BACKOFF_MS = 1200;
 const PROGRESS_MESSAGE_INTERVAL_MS = 1000;
+
+async function removeInternalAssetZips(cacheDir: string): Promise<void> {
+    for (const name of [ASSET_UE4SSL, ASSET_DRG, ASSET_RC]) {
+        const zipPath = joinPath(cacheDir, name);
+        try {
+            if (await exists(zipPath)) {
+                await remove(zipPath);
+            }
+        } catch (_) {
+            /* best effort */
+        }
+    }
+}
 
 /** 读取 manifest；若文件缺失或解析错误则返回默认值并标记 invalid */
 async function readManifest(cacheDir: string): Promise<{ manifest: AssetManifest; valid: boolean }> {
@@ -52,12 +79,23 @@ async function readManifest(cacheDir: string): Promise<{ manifest: AssetManifest
     try {
         if (await exists(path)) {
             const content = await readTextFile(path);
-            const data = JSON.parse(content) as { ue4ssl?: string; drg?: string; rc?: string };
+            const data = JSON.parse(content) as {
+                ue4ssl?: string;
+                drg?: string;
+                rc?: string;
+                channel?: string;
+            };
+            const channelRaw = data.channel;
+            const channel =
+                channelRaw != null && String(channelRaw).trim() !== ''
+                    ? normalizeReleaseChannel(String(channelRaw))
+                    : DEFAULT_RELEASE_CHANNEL;
             return {
                 manifest: {
                     ue4ssl: data.ue4ssl ?? '0',
                     drg: data.drg ?? '0',
                     rc: data.rc ?? '0',
+                    channel,
                 },
                 valid: true,
             };
@@ -81,7 +119,7 @@ async function writeManifest(cacheDir: string, updates: Partial<AssetManifest>):
 async function validateAndCleanZip(
     zipPath: string,
     cacheDir: string,
-    manifestKey: keyof AssetManifest,
+    manifestKey: 'ue4ssl' | 'drg' | 'rc',
     manifest: AssetManifest,
 ): Promise<boolean> {
     if (!(await exists(zipPath))) return false;
@@ -140,15 +178,35 @@ export async function ensureInternalAssets(
     const checkCancelled = opts.checkCancelled ?? (() => false);
     const game: InternalAssetGame = opts.game ?? 'drg';
 
+    const settings = await StorageAPI.getSettings();
+    const channel = await settings.getReleaseChannel();
+
     const cacheDir = await CacheApi.getCacheDir();
     const ue4ssZipPath = joinPath(cacheDir, ASSET_UE4SSL);
     const drgZipPath = joinPath(cacheDir, ASSET_DRG);
     const rcZipPath = joinPath(cacheDir, ASSET_RC);
 
-    const { manifest, valid: manifestValid } = await readManifest(cacheDir);
+    let { manifest, valid: manifestValid } = await readManifest(cacheDir);
 
     // manifest 缺失或解析错误时强制重新下载并生成 manifest
-    const forceRedownload = !manifestValid;
+    let forceRedownload = !manifestValid;
+
+    if (manifestValid && manifest.channel !== channel) {
+        await removeInternalAssetZips(cacheDir);
+        manifest = {
+            ue4ssl: '0',
+            drg: '0',
+            rc: '0',
+            channel,
+        };
+        await writeManifest(cacheDir, {
+            ue4ssl: '0',
+            drg: '0',
+            rc: '0',
+            channel,
+        });
+        forceRedownload = true;
+    }
 
     // 校验已缓存的 ZIP 文件完整性，损坏的文件会被删除并重置 manifest
     const ue4ssValid = forceRedownload ? false : await validateAndCleanZip(ue4ssZipPath, cacheDir, 'ue4ssl', manifest);
@@ -174,8 +232,8 @@ export async function ensureInternalAssets(
     let results;
     try {
         results = await checkUpdatesBatch([
-            { currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel: CHANNEL },
-            { currentVersion: secondVersionForCheck, appType: secondAppType, platform: PLATFORM, channel: CHANNEL },
+            { currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel },
+            { currentVersion: secondVersionForCheck, appType: secondAppType, platform: PLATFORM, channel },
         ]);
     } catch (error) {
         console.error('[InternalAssets] Failed to check update metadata:', error);
@@ -195,7 +253,7 @@ export async function ensureInternalAssets(
         result: { latestVersion?: string; md5?: string; downloadUrl?: string };
         appType: string;
         destPath: string;
-        manifestKey: keyof AssetManifest;
+        manifestKey: 'ue4ssl' | 'drg' | 'rc';
     }> = [];
 
     if (needUe4ssl) {
@@ -237,6 +295,7 @@ export async function ensureInternalAssets(
                 item.destPath,
                 cacheDir,
                 item.manifestKey,
+                channel,
                 setMessage,
                 checkCancelled,
                 (percent) => {
@@ -273,7 +332,8 @@ async function downloadAndValidateZip(
     appType: string,
     destPath: string,
     cacheDir: string,
-    manifestKey: keyof AssetManifest,
+    manifestKey: 'ue4ssl' | 'drg' | 'rc',
+    channel: ReleaseChannel,
     setMessage: (msg: string, level?: 'info' | 'warning' | 'error') => Promise<void>,
     checkCancelled: () => boolean,
     onProgress: (percent: number) => void,
@@ -304,7 +364,7 @@ async function downloadAndValidateZip(
 
         const downloadUrl = result.downloadUrl
             ? getDownloadUrl(result.downloadUrl)
-            : getReleaseDownloadUrl(result.latestVersion!, appType, PLATFORM, CHANNEL);
+            : getReleaseDownloadUrl(result.latestVersion!, appType, PLATFORM, channel);
 
         let lastReportedPercent = -1;
         let lastReportedAt = 0;
@@ -374,7 +434,7 @@ async function downloadAndValidateZip(
         onProgress(100);
 
         if (await IntegrateApi.validateZipFile(destPath)) {
-            await writeManifest(cacheDir, { [manifestKey]: result.latestVersion! });
+            await writeManifest(cacheDir, { [manifestKey]: result.latestVersion!, channel });
             await setMessage(t('Downloaded {{name}} successfully.', { name: fileName }));
             return;
         }
@@ -403,7 +463,13 @@ async function downloadAndValidateZip(
  * - game 'rc': requires UE4SSL.zip + RC.zip
  */
 export async function getInternalAssetPaths(game: InternalAssetGame = 'drg'): Promise<InternalAssetPaths | null> {
+    const settings = await StorageAPI.getSettings();
+    const channel = await settings.getReleaseChannel();
     const cacheDir = await CacheApi.getCacheDir();
+    const { manifest } = await readManifest(cacheDir);
+    if (manifest.channel !== channel) {
+        return null;
+    }
     const ue4ssZipPath = joinPath(cacheDir, ASSET_UE4SSL);
     const drgZipPath = joinPath(cacheDir, ASSET_DRG);
     const rcZipPath = joinPath(cacheDir, ASSET_RC);

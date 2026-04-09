@@ -1,6 +1,16 @@
 import {settings} from '@/storage/db/Schema';
 import {eq, and, desc, asc} from 'drizzle-orm';
 import {getDb} from "@/storage/db/Client.ts";
+import {
+    DEFAULT_RELEASE_CHANNEL,
+    normalizeReleaseChannel,
+    type ReleaseChannel,
+} from '@/apis/mintcat/releaseChannel';
+import {
+    NETWORK_MINTCAT_PROXY_MODE_KEY,
+    normalizeMintcatProxyMode,
+    type MintcatProxyMode,
+} from '@/services/network';
 
 
 export interface SettingData {
@@ -63,6 +73,35 @@ export class SettingDAO {
 
     public async setClipboardMonitorEnabled(enabled: boolean): Promise<void> {
         await this.setValue('clipboardMonitor', enabled ? 'true' : 'false');
+    }
+
+    public async getReleaseChannel(): Promise<ReleaseChannel> {
+        const value = await this.getValue('releaseChannel');
+        if (value === '') {
+            return DEFAULT_RELEASE_CHANNEL;
+        }
+        return normalizeReleaseChannel(value);
+    }
+
+    public async setReleaseChannel(value: ReleaseChannel | string): Promise<void> {
+        await this.setValue('releaseChannel', normalizeReleaseChannel(value));
+    }
+
+    public async getNetworkProxy(): Promise<string> {
+        return this.getValue('network.proxy');
+    }
+
+    public async setNetworkProxy(value: string): Promise<void> {
+        await this.setValue('network.proxy', value);
+    }
+
+    public async getMintcatProxyMode(): Promise<MintcatProxyMode> {
+        const value = await this.getValue(NETWORK_MINTCAT_PROXY_MODE_KEY);
+        return normalizeMintcatProxyMode(value);
+    }
+
+    public async setMintcatProxyMode(value: MintcatProxyMode | string): Promise<void> {
+        await this.setValue(NETWORK_MINTCAT_PROXY_MODE_KEY, normalizeMintcatProxyMode(value));
     }
 
     public async getValue(name: string): Promise<string> {

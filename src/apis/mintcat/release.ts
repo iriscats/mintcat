@@ -1,7 +1,10 @@
 import type { UpdateCheckItem, UpdateCheckResult } from './types';
+import { NetworkApi } from '@/apis/NetworkApi';
+import { NetworkRequestError } from '@/services/network';
+import { DEFAULT_RELEASE_CHANNEL } from './releaseChannel';
 import {
     getMintcatApiOrigin,
-    MintCatApiPaths,
+    MintCatApiUrls,
     mintcatApiUrl,
     mintcatReleaseDownloadUrl,
     normalizeMintcatApiOrigin,
@@ -26,7 +29,7 @@ export function getReleaseDownloadUrl(
     version: string,
     appType: string,
     platform: string = 'windows',
-    channel: string = 'beta',
+    channel: string = DEFAULT_RELEASE_CHANNEL,
     baseUrl?: string,
 ): string {
     return mintcatReleaseDownloadUrl(baseUrl ?? getMintcatApiOrigin(), version, appType, platform, channel);
@@ -44,15 +47,26 @@ export async function checkUpdatesBatch(
     baseUrl?: string,
 ): Promise<UpdateCheckResult[]> {
     const origin = normalizeMintcatApiOrigin(baseUrl ?? getMintcatApiOrigin());
-    const url = mintcatApiUrl(origin, MintCatApiPaths.releasesCheckUpdate);
+    const url = MintCatApiUrls.releases.checkUpdate(origin);
     let response: Response;
     try {
-        response = await fetch(url, {
+        const result = await NetworkApi.request<Response>({
+            service: 'mintcat.release.checkUpdatesBatch',
+            url,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items }),
+            proxyPolicy: 'direct',
+            parseAs: 'response',
         });
+        response = result.response;
     } catch (e) {
+        if (
+            e instanceof NetworkRequestError &&
+            (e.code === 'network' || e.code === 'timeout')
+        ) {
+            throw new Error(RELEASE_CHECK_NETWORK_ERROR_KEY);
+        }
         throw new Error(RELEASE_CHECK_NETWORK_ERROR_KEY);
     }
     if (!response.ok) {

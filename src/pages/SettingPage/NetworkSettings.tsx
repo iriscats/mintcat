@@ -8,8 +8,15 @@ import { StorageAPI } from '@/storage';
 import { ButtonLayout, SettingLayout } from '@/pages/SettingPage/Layout.ts';
 import { useEventListener } from '@/events';
 import {
+    setMintcatProxyModeResolved,
+    type MintcatProxyMode,
+} from '@/services/network';
+import {
     getMintcatApiOriginLanguageFallback,
     getMintcatOriginByPresetId,
+    getMintcatOriginLabelKey,
+    isMintcatApiOriginId,
+    MINTCAT_API_ORIGINS,
     normalizeMintcatApiOrigin,
     setMintcatApiResolvedOrigin,
 } from '@/apis/mintcat/urls';
@@ -17,6 +24,7 @@ import {
     NETWORK_SERVER_AUTO_ORIGIN_KEY,
     NETWORK_SERVER_MODE_KEY,
     type MintcatServerMode,
+    probeOrigin,
     type ProbeResult,
     probeAllOrigins,
     refreshAutoMintcatApiRoutingInBackground,
@@ -24,17 +32,11 @@ import {
 
 const { Text } = Typography;
 
-/** 设置界面仅保留 auto / zh / global；历史 custom 迁移为 auto */
-type ServerModeUi = 'auto' | 'zh' | 'global';
+/** 设置界面仅保留 auto / 内置节点；历史 custom 迁移为 auto */
+type ServerModeUi = Exclude<MintcatServerMode, 'custom'>;
 
-function probeResultLabel(key: string): string {
-    if (key === 'zh') {
-        return t('China Mainland Node');
-    }
-    if (key === 'global') {
-        return t('International Node');
-    }
-    return key;
+function probeResultLabel(key: ProbeResult['key']): string {
+    return key === 'unknown' ? key : t(getMintcatOriginLabelKey(key));
 }
 
 function formatProbeError(err?: string): string {
@@ -50,24 +52,25 @@ function formatProbeError(err?: string): string {
 export function NetworkSettings() {
     const [serverMode, setServerMode] = React.useState<ServerModeUi>('auto');
     const [networkProxy, setNetworkProxy] = React.useState('');
+    const [mintcatProxyMode, setMintcatProxyMode] = React.useState<MintcatProxyMode>('auto');
     const [probeResults, setProbeResults] = React.useState<ProbeResult[]>([]);
     const [probing, setProbing] = React.useState(false);
 
     const applyRuntimeForMode = React.useCallback(async (mode: ServerModeUi) => {
         const settings = await StorageAPI.getSettings();
-        if (mode === 'zh') {
-            setMintcatApiResolvedOrigin(getMintcatOriginByPresetId('zh'));
-            return;
-        }
-        if (mode === 'global') {
-            setMintcatApiResolvedOrigin(getMintcatOriginByPresetId('global'));
+        if (mode !== 'auto') {
+            setMintcatApiResolvedOrigin(getMintcatOriginByPresetId(mode));
             return;
         }
         const cached = (await settings.getValue(NETWORK_SERVER_AUTO_ORIGIN_KEY))?.trim() ?? '';
         if (cached) {
-            setMintcatApiResolvedOrigin(normalizeMintcatApiOrigin(cached));
-            void refreshAutoMintcatApiRoutingInBackground();
-            return;
+            const normalizedCached = normalizeMintcatApiOrigin(cached);
+            const probe = await probeOrigin(normalizedCached, 1500);
+            if (probe.ok) {
+                setMintcatApiResolvedOrigin(normalizedCached);
+                void refreshAutoMintcatApiRoutingInBackground();
+                return;
+            }
         }
         setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
         void refreshAutoMintcatApiRoutingInBackground();
@@ -81,9 +84,10 @@ export function NetworkSettings() {
             await settings.setValue(NETWORK_SERVER_MODE_KEY, 'auto');
             mode = 'auto';
         }
-        const uiMode: ServerModeUi = mode === 'zh' || mode === 'global' ? mode : 'auto';
+        const uiMode: ServerModeUi = mode === 'auto' ? 'auto' : isMintcatApiOriginId(mode) ? mode : 'auto';
         setServerMode(uiMode);
-        setNetworkProxy((await settings.getValue('network.proxy')) || '');
+        setNetworkProxy(await settings.getNetworkProxy());
+        setMintcatProxyMode(await settings.getMintcatProxyMode());
     }, []);
 
     React.useEffect(() => {
@@ -112,8 +116,16 @@ export function NetworkSettings() {
         const trimmed = value?.trim() ?? '';
         setNetworkProxy(trimmed);
         const settings = await StorageAPI.getSettings();
-        await settings.setValue('network.proxy', trimmed);
+        await settings.setNetworkProxy(trimmed);
         await invoke('set_network_proxy', { proxy: trimmed || null });
+    };
+
+    const onMintcatProxyModeChange = async (e: any) => {
+        const mode = e.target.value as MintcatProxyMode;
+        setMintcatProxyMode(mode);
+        setMintcatProxyModeResolved(mode);
+        const settings = await StorageAPI.getSettings();
+        await settings.setMintcatProxyMode(mode);
     };
 
     const onTestConnection = async () => {
@@ -137,8 +149,11 @@ export function NetworkSettings() {
                     <Radio.Group onChange={onServerModeChange} value={serverMode}>
                         <Space orientation="vertical">
                             <Radio value="auto">{t('Auto Select')}</Radio>
-                            <Radio value="zh">{t('China Mainland Node')}</Radio>
-                            <Radio value="global">{t('International Node')}</Radio>
+                            {MINTCAT_API_ORIGINS.map((origin) => (
+                                <Radio key={origin.id} value={origin.id}>
+                                    {t(origin.labelKey)}
+                                </Radio>
+                            ))}
                         </Space>
                     </Radio.Group>
                 </Form.Item>
@@ -184,6 +199,17 @@ export function NetworkSettings() {
                         onChange={(e) => setNetworkProxy(e.target.value)}
                         onBlur={(e) => void onNetworkProxyChange(e.target.value)}
                     />
+                </Form.Item>
+                <Form.Item label={t('MintCat Proxy')}>
+                    <Flex vertical gap={8}>
+                        <Radio.Group onChange={onMintcatProxyModeChange} value={mintcatProxyMode}>
+                            <Space orientation="vertical">
+                                <Radio value="auto">{t('MintCat Proxy Auto')}</Radio>
+                                <Radio value="enabled">{t('MintCat Proxy Enabled')}</Radio>
+                                <Radio value="disabled">{t('MintCat Proxy Disabled')}</Radio>
+                            </Space>
+                        </Radio.Group>
+                    </Flex>
                 </Form.Item>
             </Form>
         </Card>

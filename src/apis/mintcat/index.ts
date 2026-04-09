@@ -6,6 +6,13 @@ export type {
     CloudBackupRecord,
     VipInfo,
 } from './types';
+export {
+    DEFAULT_RELEASE_CHANNEL,
+    RELEASE_CHANNELS,
+    isReleaseChannel,
+    normalizeReleaseChannel,
+    type ReleaseChannel,
+} from './releaseChannel';
 export { checkUpdatesBatch, getDownloadUrl, getReleaseDownloadUrl } from './release';
 export { CloudBackupApi } from './cloudBackup';
 export { validateVipStatus } from './vip';

@@ -1,53 +1,68 @@
-import {retry} from "ts-retry";
-import {t} from "i18next";
-import {mintcatProxyUrl} from "@/apis/mintcat/urls";
+import { t } from "i18next";
+import { IoC } from "@/core/IoC";
+import {
+    AuthResolver,
+    NetworkClient,
+    NetworkRequestError,
+    RequestLogger,
+    RoutePolicy,
+    type NetworkProxyPolicy,
+    type NetworkRequestConfig,
+    type NetworkResponse,
+    type NetworkRoutePlan,
+} from "@/services/network";
 
 export class NetworkApi {
+    private static fallbackClient = new NetworkClient(
+        new AuthResolver(),
+        new RoutePolicy(),
+        new RequestLogger(),
+    );
 
-    static IS_PROXY = false;
-
-    public static getUrl(path: string, forceProxy?: boolean) {
-        const useProxy = forceProxy ?? NetworkApi.IS_PROXY;
-        return useProxy ? mintcatProxyUrl(path) : path;
-    }
-
-    private static async fetchWithTimeout(url, options = {}, timeout = 5000) {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
-
-        return fetch(url, {
-            ...options,
-            signal: controller.signal
-        }).finally(() => clearTimeout(id));
-    }
-
-    private static async retryFetch(url: string, headers?: Record<string, string>, forceProxy?: boolean) {
-        let resp: Response;
+    private static async getClient(): Promise<NetworkClient> {
         try {
-            resp = await retry(
-                async () => {
-                    try {
-                        return await NetworkApi.fetchWithTimeout(NetworkApi.getUrl(url, forceProxy), {
-                            headers: headers,
-                        });
-                    } catch (e) {
-                        if (!forceProxy) {
-                            NetworkApi.IS_PROXY = true;
-                        }
-                        throw e;
-                    }
-                },
-                {delay: 10, maxTry: 2}
-            );
-        } catch (e) {
-            throw Error(`${t("Network Error")}`);
+            return await IoC.get(NetworkClient);
+        } catch {
+            return this.fallbackClient;
         }
-        return resp;
     }
 
-    public static async get(url: string, headers?: Record<string, string>, forceProxy?: boolean): Promise<Response> {
-        return await NetworkApi.retryFetch(url, headers, forceProxy);
+    public static async resolveRoutePlan(
+        url: string,
+        proxyPolicy: NetworkProxyPolicy = 'mintcatProxyFallback',
+    ): Promise<NetworkRoutePlan> {
+        const client = await this.getClient();
+        return await client.resolveRoutePlan(url, { proxyPolicy });
     }
 
+    public static async request<T = Response>(config: NetworkRequestConfig): Promise<NetworkResponse<T>> {
+        const client = await this.getClient();
+        return await client.request<T>(config);
+    }
 
+    public static async get(
+        url: string,
+        headers?: Record<string, string>,
+        forceProxy?: boolean,
+    ): Promise<Response> {
+        try {
+            const result = await this.request<Response>({
+                service: 'network.get',
+                url,
+                method: 'GET',
+                headers,
+                proxyPolicy: forceProxy ? 'forceMintcatProxy' : 'mintcatProxyFallback',
+                parseAs: 'response',
+            });
+            return result.response;
+        } catch (error) {
+            if (
+                error instanceof NetworkRequestError &&
+                (error.code === 'network' || error.code === 'timeout')
+            ) {
+                throw new Error(`${t("Network Error")}`);
+            }
+            throw error;
+        }
+    }
 }
