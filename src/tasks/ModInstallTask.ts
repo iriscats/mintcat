@@ -178,6 +178,22 @@ export class ModInstallTask implements ITask {
         // Step 3: Check and update mods (parallel download)
         await context.setStep(t('Check Mod Updates'), 3, TOTAL_STEPS);
         const totalMods = enabledMods.length;
+        const onlineEnabledMods = enabledMods.filter(mod => ModUpdateService.isOnlineMod(mod));
+
+        if (onlineEnabledMods.length > 0) {
+            await ModUpdateService.refreshOnlineMetadata(onlineEnabledMods, 3, { showStatus: false });
+
+            for (let i = 0; i < enabledMods.length; i++) {
+                if (!ModUpdateService.isOnlineMod(enabledMods[i])) {
+                    continue;
+                }
+
+                const refreshed = await modsDAO.getCompleteModData(enabledMods[i].modId!);
+                if (refreshed) {
+                    enabledMods[i] = refreshed;
+                }
+            }
+        }
 
         // First pass: check mod path existence and identify mods that need re-download
         const modsNeedingDownload: CompleteModData[] = [];
@@ -194,32 +210,19 @@ export class ModInstallTask implements ITask {
             const pathExists = cachePath ? await exists(cachePath) : false;
 
             // Check if mod path exists: non-existent or empty path needs re-download (Modio/ModCat) or error (Local)
-            const isOnlineMod = item.sourceType === ModSourceType.Modio || item.sourceType === MODCAT_PLATFORM;
-            
-            if (!cachePath || !pathExists) {
-                if (isOnlineMod) {
+            const isOnlineMod = ModUpdateService.isOnlineMod(item);
+
+            if (isOnlineMod) {
+                if (await ModUpdateService.needsOnlineModDownload(item)) {
                     modsNeedingDownload.push(item);
-                } else if (cachePath) {
+                }
+            } else if (!cachePath || !pathExists) {
+                if (cachePath) {
                     throw new Error(
                         `${t("File Not Found")}: ${item.displayName}\n${t("Local mod path does not exist, please re-add the mod")}: ${cachePath}`
                     );
-                } else {
-                    throw new Error(`${t("File Not Found")}: ${item.displayName}`);
                 }
-            }
-
-            // Check if this mod needs downloading (online mods only): path exists but outdated
-            if (isOnlineMod && pathExists) {
-                const onlineUpdateDate = item.status?.onlineUpdateDate || 0;
-                const lastUpdateDate = item.status?.lastUpdateDate || 0;
-                const downloadProgress = item.download?.downloadProgress || 0;
-
-                if (
-                    onlineUpdateDate > lastUpdateDate ||
-                    downloadProgress != 100
-                ) {
-                    modsNeedingDownload.push(item);
-                }
+                throw new Error(`${t("File Not Found")}: ${item.displayName}`);
             }
 
             // Check if mod was modified (for local mods) — updates DB timestamps

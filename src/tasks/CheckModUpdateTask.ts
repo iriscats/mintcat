@@ -9,6 +9,7 @@ import type { ModcatModVersionEntity } from '@/apis/modcat/types';
 import { ModSourceType } from '@/models/mod/types';
 import { t } from 'i18next';
 import { ensureInternalAssets } from '@/services/InternalAssetService';
+import { emitEvent } from '@/events';
 
 /** 将秒级时间戳格式化为 ModCat API Since 参数格式 "YYYY-MM-DD HH:mm:ss" */
 function formatSinceForModcat(seconds: number): string {
@@ -63,6 +64,15 @@ export class CheckModUpdateTask implements ITask {
 
         const modsApi = await StorageAPI.getMods();
         const profilesApi = await StorageAPI.getProfiles();
+        const emitModTreeUpdate = async (modId: number) => {
+            const updatedMod = await modsApi.getCompleteModData(modId);
+            if (updatedMod) {
+                await emitEvent("mod-treeview-update", {
+                    modId: updatedMod.modId!,
+                    data: updatedMod
+                });
+            }
+        };
         
         // 只获取当前活跃 profile 下的 mod，而不是全部 mod
         const activeProfile = await profilesApi.getActiveProfile();
@@ -126,6 +136,7 @@ export class CheckModUpdateTask implements ITask {
                                     modId: mod.modId!,
                                     onlineUpdateDate: TimeUtils.fromModio(event.date_added),
                                 });
+                                await emitModTreeUpdate(mod.modId!);
                             }
                             break;
                         }
@@ -139,6 +150,7 @@ export class CheckModUpdateTask implements ITask {
                                     lastUpdateDate: TimeUtils.fromModio(event.date_added),
                                     onlineUpdateDate: TimeUtils.fromModio(event.date_added)
                                 });
+                                await emitModTreeUpdate(mod.modId!);
                             }
                             break;
                         }
@@ -196,11 +208,13 @@ export class CheckModUpdateTask implements ITask {
                             onlineUpdateDate: onlineUpdateDate,
                             isOnlineAvailable: true
                         });
+                        await emitModTreeUpdate(mod.modId!);
                     } else {
                         await modsApi.upsertModStatus({
                             modId: mod.modId!,
                             isOnlineAvailable: true
                         });
+                        await emitModTreeUpdate(mod.modId!);
                     }
                 }
                 // 若批量结果中无该 mod 的新版本，不修改状态（表示自 Since 以来无新版本）

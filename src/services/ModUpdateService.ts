@@ -28,6 +28,25 @@ export class ModUpdateService {
     private static loading = false;
     private static lastEmittedProgress = new Map<number, number>();
 
+    public static isOnlineMod(mod: CompleteModData): boolean {
+        return mod.sourceType === ModSourceType.Modio ||
+            mod.sourceType === MODCAT_PLATFORM ||
+            mod.sourceType === "modcat";
+    }
+
+    public static async needsOnlineModDownload(mod: CompleteModData): Promise<boolean> {
+        const cachePath = mod.download?.cachePath || "";
+        const pathExists = cachePath ? await exists(cachePath) : false;
+        const onlineUpdateDate = mod.status?.onlineUpdateDate || 0;
+        const lastUpdateDate = mod.status?.lastUpdateDate || 0;
+        const downloadProgress = mod.download?.downloadProgress || 0;
+
+        return !cachePath ||
+            !pathExists ||
+            onlineUpdateDate > lastUpdateDate ||
+            downloadProgress !== 100;
+    }
+
     private static async emitDownloadProgress(mod: CompleteModData, loaded: number, total: number): Promise<void> {
         if (!mod.modId) return;
 
@@ -393,7 +412,8 @@ export class ModUpdateService {
      */
     public static async refreshOnlineMetadata(
         mods: CompleteModData[],
-        concurrency: number = 3
+        concurrency: number = 3,
+        options: { fetchTags?: boolean; showStatus?: boolean } = {}
     ): Promise<{ successCount: number; errors: Array<{ mod: CompleteModData; error: Error }> }> {
         const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
         const modcatMods = mods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
@@ -402,14 +422,18 @@ export class ModUpdateService {
             return { successCount: 0, errors: [] };
         }
 
-        await StatusBar.info(t("Batch updating mod count", { count: totalOnlineCount }));
+        const { fetchTags = false, showStatus = true } = options;
+
+        if (showStatus) {
+            await StatusBar.info(t("Batch updating mod count", { count: totalOnlineCount }));
+        }
 
         const collectedErrors: Array<{ mod: CompleteModData; error: Error }> = [];
 
         if (modioMods.length > 0) {
             const { errors } = await this.refreshModioMetadataBatch(modioMods, {
-                fetchTags: false,
-                showStatus: true
+                fetchTags,
+                showStatus
             });
             collectedErrors.push(...errors);
         }
@@ -418,7 +442,9 @@ export class ModUpdateService {
             const { errors } = await asyncPoolAll(
                 modcatMods,
                 async (mod) => {
-                    await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
+                    if (showStatus) {
+                        await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
+                    }
                     await this.updateModMetadataOnly(mod);
                     return mod;
                 },
@@ -589,22 +615,17 @@ export class ModUpdateService {
      * 支持 Modio 和 ModCat 两种在线来源
      */
     public static async checkOnlineModAndUpdate(modItem: CompleteModData, isEnabled: boolean) {
-        const isOnlineMod = modItem.sourceType === ModSourceType.Modio || 
-                           modItem.sourceType === MODCAT_PLATFORM || 
-                           modItem.sourceType === "modcat";
-        
-        if (isOnlineMod && isEnabled) {
-            const cachePath = modItem.download?.cachePath || "";
-            const onlineUpdateDate = modItem.status?.onlineUpdateDate || 0;
-            const lastUpdateDate = modItem.status?.lastUpdateDate || 0;
-            const downloadProgress = modItem.download?.downloadProgress || 0;
+        if (!isEnabled || !this.isOnlineMod(modItem)) {
+            return;
+        }
 
-            if (!await exists(cachePath) ||
-                onlineUpdateDate > lastUpdateDate ||
-                downloadProgress != 100
-            ) {
-                await ModUpdateService.updateMod(modItem);
-            }
+        const refreshedMod = await this.updateModMetadataOnly(modItem);
+        if (!refreshedMod || refreshedMod.status?.isOnlineAvailable === false) {
+            return;
+        }
+
+        if (await this.needsOnlineModDownload(refreshedMod)) {
+            await this.updateModFile(refreshedMod);
         }
     }
 
