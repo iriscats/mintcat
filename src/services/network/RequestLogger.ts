@@ -22,22 +22,6 @@ type FailureContext = LogContext & {
 };
 
 export class RequestLogger {
-    private sanitizeUrl(url: string): string {
-        try {
-            const parsed = new URL(url);
-            if (!parsed.search) {
-                return url;
-            }
-            const sanitized = new URL(parsed.toString());
-            for (const key of new Set(sanitized.searchParams.keys())) {
-                sanitized.searchParams.set(key, '[REDACTED]');
-            }
-            return sanitized.toString();
-        } catch {
-            return url;
-        }
-    }
-
     private sanitizeHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
         if (!headers) {
             return undefined;
@@ -70,8 +54,8 @@ export class RequestLogger {
             attempt: ctx.attempt,
             routeKind: ctx.route.kind,
             proxyMode: ctx.route.proxyMode,
-            originalUrl: this.sanitizeUrl(ctx.route.originalUrl),
-            resolvedUrl: this.sanitizeUrl(ctx.route.resolvedUrl),
+            originalUrl: ctx.route.originalUrl,
+            resolvedUrl: ctx.route.resolvedUrl,
             headers: this.sanitizeHeaders(ctx.headers),
         });
     }
@@ -86,7 +70,7 @@ export class RequestLogger {
             proxyMode: ctx.route.proxyMode,
             status: ctx.status,
             durationMs: ctx.durationMs,
-            resolvedUrl: this.sanitizeUrl(ctx.route.resolvedUrl),
+            resolvedUrl: ctx.route.resolvedUrl,
         });
     }
 
@@ -102,7 +86,7 @@ export class RequestLogger {
             status: ctx.status,
             durationMs: ctx.durationMs,
             final: ctx.final ?? false,
-            resolvedUrl: this.sanitizeUrl(ctx.route.resolvedUrl),
+            resolvedUrl: ctx.route.resolvedUrl,
             error: this.formatError(ctx.error),
         });
     }

@@ -21,18 +21,6 @@ export const MINTCAT_API_ORIGINS = [
         proxyPresetId: 'zh',
     },
     {
-        id: 'zh2',
-        origin: 'https://yuri-proxy-bepsbmlopo.cn-hangzhou.fcapp.run',
-        labelKey: 'China Mainland Node Hangzhou',
-        proxyPresetId: 'zh',
-    },
-    {
-        id: 'zh-sz',
-        origin: 'https://yuri-proxy-bepsbmlopo.cn-shenzhen.fcapp.run',
-        labelKey: 'China Mainland Node Shenzhen',
-        proxyPresetId: 'zh',
-    },
-    {
         id: 'global',
         origin: 'https://api.mintcat.work',
         labelKey: 'International Node',
