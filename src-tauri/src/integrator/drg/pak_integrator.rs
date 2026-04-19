@@ -194,6 +194,7 @@ impl PakIntegrator {
                 .ok_or_else(|| anyhow::anyhow!("DRG asset zip path is required (DRG.zip)"))?;
             let mut mint_files = HashMap::new();
             Self::collect_mint_files_from_drg_zip(drg_zip, &mut mint_files)?;
+            self.process_loose_asset_files(&mint_files)?;
             Self::write_hook_dll_from_drg_zip(drg_zip, &self.installation.binaries_directory())?;
 
             self.apply_mint_patch(&mut mint_files)?;
@@ -436,38 +437,8 @@ impl PakIntegrator {
             .load_files(self.installation.content_prefix())
             .with_context(|| format!("Failed to load unpacked mod files: {:?}", mod_path))?;
 
-        // Process init assets (InitSpaceRig.uasset, InitCave.uasset)
         let files = unpacked_mod.files();
-        let pak_files: HashMap<PathBuf, String> = files
-            .keys()
-            .map(|p| (PathBuf::from(p), p.clone()))
-            .collect();
-
-        self.process_init_asset(&pak_files)?;
-
-        // Process asset registry for each uasset/uexp pair
-        for asset_base in unpacked_mod.get_asset_names() {
-            if let Some((uasset_data, uexp_data)) = unpacked_mod.get_asset_pair(&asset_base) {
-                let normalized_path = PathBuf::from(&asset_base);
-
-                // Build asset for registry population
-                let asset =
-                    AssetBuilder::new(Cursor::new(uasset_data.clone()), EngineVersion::VER_UE4_27)
-                        .bulk(Cursor::new(uexp_data.clone()))
-                        .skip_data(true)
-                        .build()
-                        .with_context(|| format!("Failed to build asset: {}", asset_base))?;
-
-                self.asset_registry
-                    .populate(normalized_path.to_str().unwrap(), &asset)
-                    .with_context(|| {
-                        format!(
-                            "Failed to populate asset registry for: {:?}",
-                            normalized_path
-                        )
-                    })?;
-            }
-        }
+        self.process_loose_asset_files(files)?;
 
         // Write all files to the bundle
         for (pak_path, data) in unpacked_mod.iter() {
@@ -622,6 +593,45 @@ impl PakIntegrator {
         Ok(())
     }
 
+    fn process_asset_registry_from_files(&mut self, files: &HashMap<String, Vec<u8>>) -> Result<()> {
+        for (path, uasset) in files {
+            let normalized = PathBuf::from(path);
+            if let Some("uasset" | "umap") = normalized.extension().and_then(|e| e.to_str()) {
+                let uexp_path = normalized.with_extension("uexp");
+                let Some(uexp) = files.get(uexp_path.to_str().unwrap()) else {
+                    continue;
+                };
+
+                let asset = AssetBuilder::new(
+                    Cursor::new(uasset.as_slice()),
+                    EngineVersion::VER_UE4_27,
+                )
+                .bulk(Cursor::new(uexp.as_slice()))
+                .skip_data(true)
+                .build()
+                .with_context(|| format!("Failed to build asset: {}", path))?;
+
+                self.asset_registry
+                    .populate(normalized.with_extension("").to_str().unwrap(), &asset)
+                    .with_context(|| {
+                        format!("Failed to populate asset registry for: {:?}", normalized)
+                    })?;
+            }
+        }
+        Ok(())
+    }
+
+    fn process_loose_asset_files(&mut self, files: &HashMap<String, Vec<u8>>) -> Result<()> {
+        let pak_files: HashMap<PathBuf, String> = files
+            .keys()
+            .map(|path| (PathBuf::from(path), path.clone()))
+            .collect();
+
+        self.process_init_asset(&pak_files)?;
+        self.process_asset_registry_from_files(files)?;
+        Ok(())
+    }
+
     fn write_mod_assets(
         &mut self,
         pak: repak::PakReader,
@@ -763,7 +773,6 @@ impl PakIntegrator {
     }
 
     /// 从 DRG.zip 读取 Paks/ 目录下全部文件，映射为 FSD/Content/ 下的 pak 路径。
-    /// 跳过目录条目、__MACOSX、.DS_Store 等无关文件。
     fn collect_mint_files_from_drg_zip(
         zip_path: &Path,
         files: &mut HashMap<String, Vec<u8>>,
@@ -778,9 +787,6 @@ impl PakIntegrator {
             let name = entry.name().to_string();
             let name_normalized = name.replace('\\', "/");
             if !name_normalized.starts_with(ZIP_PREFIX) || name_normalized.ends_with('/') {
-                continue;
-            }
-            if name_normalized.contains("__MACOSX") || name_normalized.contains(".DS_Store") {
                 continue;
             }
             let suffix = name_normalized.trim_start_matches(ZIP_PREFIX);
