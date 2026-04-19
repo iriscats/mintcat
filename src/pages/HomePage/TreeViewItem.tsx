@@ -814,6 +814,7 @@ function ModTreeViewProgressPercent({nodeData}) {
 
 
 function ModTreeViewLocalTitle({nodeData}) {
+    const {token} = useToken();
     // 使用模块级别缓存获取初始 enabled 状态，与 Switch 保持同步
     const [enabled, setEnabled] = useState(() =>
         getPendingEnabled(nodeData.modId, nodeData.enabled)
@@ -846,9 +847,9 @@ function ModTreeViewLocalTitle({nodeData}) {
     );
 
     return (
-        <a style={{color: enabled ? "#403c3c" : "gray"}}>
+        <span style={{color: enabled ? token.colorText : token.colorTextSecondary}}>
             {nodeData.title}
-        </a>
+        </span>
     );
 }
 

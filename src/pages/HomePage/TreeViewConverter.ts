@@ -34,12 +34,13 @@ export class TreeViewConverter {
     /**
      * 根据当前过滤器列表过滤 mod
      */
-    public static filter(modItem: CompleteModData): boolean {
-        if (TreeViewConverter.filterList.length === 0) {
+    public static filter(modItem: CompleteModData, isEnabled: boolean): boolean {
+        const filterList = TreeViewConverter.filterList ?? [];
+        if (filterList.length === 0) {
             return true;
         }
 
-        for (let filter of TreeViewConverter.filterList) {
+        for (let filter of filterList) {
             if (filter === "All") {
                 return true;
             }
@@ -47,6 +48,13 @@ export class TreeViewConverter {
             if (filter.startsWith("source:")) {
                 const sourceType = filter.substring(7); // 去掉 "source:" 前缀
                 if (modItem.sourceType === sourceType) {
+                    return true;
+                }
+                continue;
+            }
+            if (filter.startsWith("enabled:")) {
+                const enabled = filter === "enabled:true";
+                if (isEnabled === enabled) {
                     return true;
                 }
                 continue;
@@ -105,12 +113,13 @@ export class TreeViewConverter {
             return;
         }
 
-        if (!TreeViewConverter.filter(modItem)) {
-            return; // 不满足过滤条件，跳过
-        }
-
         // Find profile-specific data (enabled status, used version)
         const profileMod = this.profileModList?.find(pm => pm.modId === modItem.modId);
+        const isEnabled = profileMod?.isEnabled ?? item.enabled;
+
+        if (!TreeViewConverter.filter(modItem, isEnabled)) {
+            return; // 不满足过滤条件，跳过
+        }
 
         const title = modItem.displayName || modItem.originalName || modItem.url || modItem.nameId || "Unknown";
         const key = `mod-${item.id}`;
@@ -126,7 +135,7 @@ export class TreeViewConverter {
             url: modItem.url || "",
             tags: (modItem.tags || []).filter(t => t !== 'RequiredByAll'),
             required: modItem.tags?.includes('RequiredByAll') || false,
-            enabled: profileMod?.isEnabled ?? item.enabled,
+            enabled: isEnabled,
             sourceType: modItem.sourceType,
             approval: modItem.approvalStatus,
             versions: modItem.version?.availableVersions || [],
