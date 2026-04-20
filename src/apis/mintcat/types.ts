@@ -20,6 +20,18 @@ export interface UpdateCheckResult {
     fileSize?: number;
     checksum?: string;
     md5?: string;
+    /**
+     * Magnet URI for BitTorrent-accelerated download.
+     * When present, the client will try P2P first and fall back to HTTP on failure/timeout.
+     * Should include `xt=urn:btih:<infohash>`, `dn=<filename>`, `tr=<tracker>`, `ws=<https-web-seed>` (BEP 19).
+     */
+    magnet?: string;
+    /**
+     * HTTPS URL to a .torrent file. Used when `magnet` is absent.
+     * The torrent MUST include at least one `url-list` (BEP 19) pointing to the same HTTPS asset
+     * so that clients without peers still complete via Web Seed.
+     */
+    torrentUrl?: string;
 }
 
 /**

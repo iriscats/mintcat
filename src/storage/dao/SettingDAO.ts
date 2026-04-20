@@ -104,6 +104,41 @@ export class SettingDAO {
         await this.setValue(NETWORK_MINTCAT_PROXY_MODE_KEY, normalizeMintcatProxyMode(value));
     }
 
+    // 默认开启 P2P（BitTorrent + Web Seed）以加速资源下载
+    public async getP2PEnabled(): Promise<boolean> {
+        const value = await this.getValue('p2p.enabled');
+        if (value === '') return true;
+        return value === 'true';
+    }
+
+    public async setP2PEnabled(enabled: boolean): Promise<void> {
+        await this.setValue('p2p.enabled', enabled ? 'true' : 'false');
+    }
+
+    // 默认允许做种，回馈带宽；用户隐私/流量敏感时可关闭
+    public async getP2PSeeding(): Promise<boolean> {
+        const value = await this.getValue('p2p.seeding');
+        if (value === '') return true;
+        return value === 'true';
+    }
+
+    public async setP2PSeeding(seed: boolean): Promise<void> {
+        await this.setValue('p2p.seeding', seed ? 'true' : 'false');
+    }
+
+    /** 上传限速，单位字节/秒；0 或空 = 不限速 */
+    public async getP2PUploadLimit(): Promise<number> {
+        const value = await this.getValue('p2p.uploadLimitBytesPerSec');
+        if (!value) return 0;
+        const n = Number(value);
+        return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    }
+
+    public async setP2PUploadLimit(bytesPerSec: number): Promise<void> {
+        const v = Number.isFinite(bytesPerSec) && bytesPerSec > 0 ? Math.floor(bytesPerSec) : 0;
+        await this.setValue('p2p.uploadLimitBytesPerSec', String(v));
+    }
+
     public async getValue(name: string): Promise<string> {
         try {
             const db = await getDb();

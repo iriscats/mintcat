@@ -72,6 +72,9 @@ unicase = "2.7"
 
 steamlocate = "2.0.1"
 
+# P2P (BitTorrent) — 用于加速 UE4SS/DRG/RC 等内部资源下载，支持 magnet / .torrent / Web Seed
+librqbit = { version = "8.1", default-features = false, features = ["default-tls"] }
+
 # 系统代理检测（未手动设置代理时使用），通过注册表读取兼容所有 Win10 版本
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"

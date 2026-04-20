@@ -7,7 +7,8 @@ import {IntegrateApi} from "@/apis/IntegrateApi.ts";
 import {CacheApi} from "@/apis/CacheApi.ts";
 import {DEFAULT_RELEASE_CHANNEL, RELEASE_CHANNELS, type ReleaseChannel} from "@/apis/mintcat";
 import {StorageAPI} from "@/storage";
-import {Button, Card, Flex, Form, Input, message, Modal, Select, Switch} from "antd";
+import {Button, Card, Flex, Form, Input, InputNumber, message, Modal, Select, Switch} from "antd";
+import {DownloadApi} from "@/apis/DownloadApi.ts";
 import {ExclamationCircleFilled} from "@ant-design/icons";
 import {FolderAddOutlined} from "@ant-design/icons";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
@@ -38,6 +39,10 @@ export function MintCatSettings() {
     const [ue4ss, setUe4ss] = React.useState<string>("");
     const [releaseChannel, setReleaseChannel] = React.useState<ReleaseChannel>(DEFAULT_RELEASE_CHANNEL);
     const [clipboardMonitor, setClipboardMonitor] = React.useState<boolean>(true);
+    const [p2pEnabled, setP2pEnabled] = React.useState<boolean>(true);
+    const [p2pSeeding, setP2pSeeding] = React.useState<boolean>(true);
+    // 上传限速以 KB/s 输入，便于用户填写；内部按字节存储
+    const [p2pUploadLimitKBps, setP2pUploadLimitKBps] = React.useState<number | null>(null);
 
     const releaseChannelOptions = RELEASE_CHANNELS.map((value) => ({
         value,
@@ -129,6 +134,45 @@ export function MintCatSettings() {
         await settings.setValue('ue4ss', value);
     }
 
+    const onP2pEnabledChange = async (checked: boolean) => {
+        setP2pEnabled(checked);
+        try {
+            const settings = await StorageAPI.getSettings();
+            await settings.setP2PEnabled(checked);
+            await DownloadApi.setP2PEnabled(checked);
+            message.success(checked ? t("P2P enabled") : t("P2P disabled"));
+        } catch (err) {
+            console.error('[Settings] set P2P enabled failed', err);
+            message.error(t("Failed to update P2P setting"));
+        }
+    };
+
+    const onP2pSeedingChange = async (checked: boolean) => {
+        setP2pSeeding(checked);
+        try {
+            const settings = await StorageAPI.getSettings();
+            await settings.setP2PSeeding(checked);
+            await DownloadApi.setP2PSeeding(checked);
+        } catch (err) {
+            console.error('[Settings] set P2P seeding failed', err);
+            message.error(t("Failed to update P2P seeding"));
+        }
+    };
+
+    const onP2pUploadLimitChange = async (value: number | null) => {
+        const kb = value && value > 0 ? Math.floor(value) : 0;
+        setP2pUploadLimitKBps(kb === 0 ? null : kb);
+        try {
+            const bytesPerSec = kb > 0 ? kb * 1024 : 0;
+            const settings = await StorageAPI.getSettings();
+            await settings.setP2PUploadLimit(bytesPerSec);
+            await DownloadApi.setP2PUploadLimit(bytesPerSec);
+        } catch (err) {
+            console.error('[Settings] set P2P upload limit failed', err);
+            message.error(t("Failed to update P2P upload limit"));
+        }
+    };
+
     const onClipboardMonitorChange = async (checked: boolean) => {
         setClipboardMonitor(checked);
         const settings = await StorageAPI.getSettings();
@@ -181,6 +225,20 @@ export function MintCatSettings() {
         setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
         setReleaseChannel(await settings.getReleaseChannel());
         setClipboardMonitor(await settings.getClipboardMonitorEnabled());
+        const p2pOn = await settings.getP2PEnabled();
+        const seedOn = await settings.getP2PSeeding();
+        const uploadBytes = await settings.getP2PUploadLimit();
+        setP2pEnabled(p2pOn);
+        setP2pSeeding(seedOn);
+        setP2pUploadLimitKBps(uploadBytes > 0 ? Math.floor(uploadBytes / 1024) : null);
+        // 启动时把持久化的 P2P 设置同步到后端，确保会话行为与 UI 一致
+        try {
+            await DownloadApi.setP2PEnabled(p2pOn);
+            await DownloadApi.setP2PSeeding(seedOn);
+            await DownloadApi.setP2PUploadLimit(uploadBytes);
+        } catch (err) {
+            console.warn('[Settings] sync P2P settings to backend failed', err);
+        }
     }, []);
 
     React.useEffect(() => {
@@ -285,6 +343,30 @@ export function MintCatSettings() {
                     <Form.Item label={t("Clipboard Monitor")}>
                         <Switch checked={clipboardMonitor}
                                 onChange={onClipboardMonitorChange}
+                        />
+                    </Form.Item>
+                    <Form.Item label={t("P2P Acceleration")}
+                               extra={t("P2P acceleration description")}>
+                        <Switch checked={p2pEnabled}
+                                onChange={onP2pEnabledChange}
+                        />
+                    </Form.Item>
+                    <Form.Item label={t("P2P Seeding")}
+                               extra={t("P2P seeding description")}>
+                        <Switch checked={p2pSeeding}
+                                disabled={!p2pEnabled}
+                                onChange={onP2pSeedingChange}
+                        />
+                    </Form.Item>
+                    <Form.Item label={t("P2P Upload Limit")}
+                               extra={t("P2P upload limit description")}>
+                        <InputNumber min={0}
+                                     step={128}
+                                     value={p2pUploadLimitKBps ?? undefined}
+                                     placeholder={t("Unlimited")}
+                                     disabled={!p2pEnabled || !p2pSeeding}
+                                     addonAfter="KB/s"
+                                     onChange={onP2pUploadLimitChange}
                         />
                     </Form.Item>
                 </Form>

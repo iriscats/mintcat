@@ -2,6 +2,8 @@ pub mod capability;
 pub mod integrator;
 pub mod uasset_utils;
 
+use std::sync::Arc;
+
 use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 //use tauri_plugin_mcp;
 use tauri_plugin_sentry::{minidump, sentry};
@@ -57,13 +59,33 @@ pub fn run() {
             let proxy_arc = proxy_state.0.clone();
             app.manage(proxy_state);
             app.manage(capability::download::init_download_manager(proxy_arc));
+
+            // P2P（BitTorrent）下载加速：数据存放在应用缓存目录的 p2p_state/ 下；
+            // Session 延迟初始化，不下载时不会占用端口/DHT。
+            let cache_dir = app
+                .path()
+                .app_cache_dir()
+                .unwrap_or_else(|_| std::env::temp_dir().join("mintcat"));
+            let p2p_state = capability::p2p::init_p2p_state(cache_dir);
+            app.manage(p2p_state);
+
             Ok(())
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close(); // 阻止默认关闭行为
-                    window.app_handle().exit(0); // 手动退出应用
+                    // 退出前停止 P2P Session（让 librqbit 关闭监听端口、保存状态）
+                    let app_handle = window.app_handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(p2p) = app_handle
+                            .try_state::<Arc<capability::p2p::P2pState>>()
+                            .map(|s| s.inner().clone())
+                        {
+                            p2p.shutdown().await;
+                        }
+                        app_handle.exit(0);
+                    });
                 }
             }
         })
@@ -115,6 +137,11 @@ pub fn run() {
             capability::download::download_file,
             capability::download::cancel_download,
             capability::network::set_network_proxy,
+            capability::p2p::p2p_download,
+            capability::p2p::p2p_set_enabled,
+            capability::p2p::p2p_set_seeding,
+            capability::p2p::p2p_set_upload_limit,
+            capability::p2p::p2p_stats,
             open_devtools
         ])
         .run(tauri::generate_context!())

@@ -250,7 +250,13 @@ export async function ensureInternalAssets(
         (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null);
 
     const downloadQueue: Array<{
-        result: { latestVersion?: string; md5?: string; downloadUrl?: string };
+        result: {
+            latestVersion?: string;
+            md5?: string;
+            downloadUrl?: string;
+            magnet?: string;
+            torrentUrl?: string;
+        };
         appType: string;
         destPath: string;
         manifestKey: 'ue4ssl' | 'drg' | 'rc';
@@ -326,9 +332,114 @@ export async function ensureInternalAssets(
     return { ue4ssZipPath, drgZipPath };
 }
 
+/**
+ * Progress reporter shared by P2P and HTTP download paths.
+ * Keeps the user-visible message format identical across both transports.
+ */
+function makeProgressReporter(
+    fileName: string,
+    current: number,
+    total: number,
+    setMessage: (msg: string, level?: 'info' | 'warning' | 'error') => Promise<void>,
+    onProgress: (percent: number) => void,
+    transport: 'P2P' | 'HTTP',
+) {
+    let lastReportedPercent = -1;
+    let lastReportedAt = 0;
+    return (downloaded: number, totalBytes: number, speedBytesPerSec: number, etaSecs: number) => {
+        const percent = totalBytes > 0
+            ? Math.min(100, Math.floor((downloaded / totalBytes) * 100))
+            : 0;
+        onProgress(percent);
+
+        const now = Date.now();
+        const shouldReport =
+            percent === 100 ||
+            percent >= lastReportedPercent + 5 ||
+            now - lastReportedAt >= PROGRESS_MESSAGE_INTERVAL_MS;
+        if (!shouldReport) return;
+
+        lastReportedPercent = percent;
+        lastReportedAt = now;
+        const speed = speedBytesPerSec > 0 ? `${formatBytes(speedBytesPerSec)}/s` : '--';
+        const detail = totalBytes > 0
+            ? t('Download detail with total', {
+                downloaded: formatBytes(downloaded),
+                total: formatBytes(totalBytes),
+                speed,
+                eta: formatEta(etaSecs),
+            })
+            : t('Download detail without total', {
+                downloaded: formatBytes(downloaded),
+                speed,
+            });
+        void setMessage(t('Downloading {{name}} ({{current}}/{{total}}) [{{transport}}] {{percent}}% - {{detail}}', {
+            name: fileName,
+            current,
+            total,
+            transport,
+            percent,
+            detail,
+        }));
+    };
+}
+
+/**
+ * Try BitTorrent (librqbit + Web Seed) first. Returns true on success, false on failure or skip.
+ *
+ * Any error is logged and swallowed so that the caller can fall back to HTTP transparently.
+ * MD5 is verified by the backend before resolving; on failure the file is deleted there as well.
+ */
+async function tryDownloadViaP2P(
+    result: { md5?: string; magnet?: string; torrentUrl?: string },
+    destPath: string,
+    fileName: string,
+    current: number,
+    total: number,
+    setMessage: (msg: string, level?: 'info' | 'warning' | 'error') => Promise<void>,
+    onProgress: (percent: number) => void,
+): Promise<boolean> {
+    const source = result.magnet || result.torrentUrl;
+    if (!source) return false;
+
+    try {
+        await setMessage(t('Downloading {{name}} ({{current}}/{{total}}) [P2P]...', {
+            name: fileName,
+            current,
+            total,
+        }));
+
+        const onP2PProgress = makeProgressReporter(
+            fileName,
+            current,
+            total,
+            setMessage,
+            onProgress,
+            'P2P',
+        );
+        await DownloadApi.downloadViaP2P(
+            source,
+            destPath,
+            { checksum: result.md5, firstPieceTimeoutSecs: 20 },
+            onP2PProgress,
+        );
+        return true;
+    } catch (error) {
+        console.warn(`[InternalAssets] P2P failed for ${fileName}, falling back to HTTP:`, error);
+        try { await remove(destPath); } catch (_) { /* best effort */ }
+        return false;
+    }
+}
+
 /** Download a ZIP asset with post-download validation and automatic retry */
 async function downloadAndValidateZip(
-    result: { latestVersion?: string; md5?: string; downloadUrl?: string },
+    result: {
+        latestVersion?: string;
+        md5?: string;
+        downloadUrl?: string;
+        magnet?: string;
+        torrentUrl?: string;
+    },
     appType: string,
     destPath: string,
     cacheDir: string,
@@ -343,6 +454,30 @@ async function downloadAndValidateZip(
     const label = appType.toUpperCase();
     const fileName = `${label}.zip`;
     let lastError = '';
+
+    // 先尝试 P2P（BitTorrent + Web Seed）。成功后进入 ZIP 完整性校验，失败则静默回退 HTTP。
+    // P2P 只尝试一次：失败后 HTTP 路径有自己的重试/回退逻辑，无需再叠加 P2P 重试。
+    if (!checkCancelled()) {
+        const p2pOk = await tryDownloadViaP2P(
+            result,
+            destPath,
+            fileName,
+            current,
+            total,
+            setMessage,
+            onProgress,
+        );
+        if (p2pOk) {
+            onProgress(100);
+            if (await IntegrateApi.validateZipFile(destPath)) {
+                await writeManifest(cacheDir, { [manifestKey]: result.latestVersion!, channel });
+                await setMessage(t('Downloaded {{name}} successfully.', { name: fileName }));
+                return;
+            }
+            console.warn(`[InternalAssets] P2P produced corrupted ZIP for ${fileName}; falling back to HTTP`);
+            try { await remove(destPath); } catch (_) { /* best effort */ }
+        }
+    }
 
     for (let attempt = 0; attempt < MAX_DOWNLOAD_RETRIES; attempt++) {
         if (checkCancelled()) throw new Error(t('Task Cancelled'));
@@ -366,48 +501,20 @@ async function downloadAndValidateZip(
             ? getDownloadUrl(result.downloadUrl)
             : getReleaseDownloadUrl(result.latestVersion!, appType, PLATFORM, channel);
 
-        let lastReportedPercent = -1;
-        let lastReportedAt = 0;
+        const onHttpProgress = makeProgressReporter(
+            fileName,
+            current,
+            total,
+            setMessage,
+            onProgress,
+            'HTTP',
+        );
         try {
             await DownloadApi.downloadFile(
                 downloadUrl,
                 destPath,
                 { checksum: result.md5!, checksumType: 'md5' },
-                (downloaded, totalBytes, speedBytesPerSec, etaSecs) => {
-                    const percent = totalBytes > 0
-                        ? Math.min(100, Math.floor((downloaded / totalBytes) * 100))
-                        : 0;
-                    onProgress(percent);
-
-                    const now = Date.now();
-                    const shouldReport =
-                        percent === 100 ||
-                        percent >= lastReportedPercent + 5 ||
-                        now - lastReportedAt >= PROGRESS_MESSAGE_INTERVAL_MS;
-                    if (!shouldReport) return;
-
-                    lastReportedPercent = percent;
-                    lastReportedAt = now;
-                    const speed = speedBytesPerSec > 0 ? `${formatBytes(speedBytesPerSec)}/s` : '--';
-                    const detail = totalBytes > 0
-                        ? t('Download detail with total', {
-                            downloaded: formatBytes(downloaded),
-                            total: formatBytes(totalBytes),
-                            speed,
-                            eta: formatEta(etaSecs),
-                        })
-                        : t('Download detail without total', {
-                            downloaded: formatBytes(downloaded),
-                            speed,
-                        });
-                    void setMessage(t('Downloading {{name}} ({{current}}/{{total}}) {{percent}}% - {{detail}}', {
-                        name: fileName,
-                        current,
-                        total,
-                        percent,
-                        detail,
-                    }));
-                },
+                onHttpProgress,
                 (status, error) => {
                     if (status === 'failed') {
                         statusError = error || '';
