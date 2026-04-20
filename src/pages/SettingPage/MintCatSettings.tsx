@@ -213,15 +213,6 @@ export function MintCatSettings() {
                                     onChange={onThemeChange}/>
                         </Flex>
                     </Form.Item>
-                    <Form.Item label={t("Release channel")}
-                               extra={t("Release channel description")}>
-                        <Flex>
-                            <Select value={releaseChannel}
-                                    options={releaseChannelOptions}
-                                    onChange={onReleaseChannelChange}
-                            />
-                        </Flex>
-                    </Form.Item>
                     <Form.Item label={t("Config Directory")}>
                         <Flex>
                             <Input value={configDirectory}
@@ -261,12 +252,24 @@ export function MintCatSettings() {
                             {t("Clean")}
                         </Button>
                     </Form.Item>
-                    <Form.Item label={t("Dev Tools")}>
-                        <Button type="dashed"
-                                {...ButtonLayout}
-                                onClick={onDevToolsClick}>
-                            {t("Open Dev Tools")}
-                        </Button>
+                    <Form.Item label={t("Clipboard Monitor")}>
+                        <Switch checked={clipboardMonitor}
+                                onChange={onClipboardMonitorChange}
+                        />
+                    </Form.Item>
+                </Form>
+            </Card>
+            <Card title={t("Framework Settings")}
+                  style={{marginBottom: "10px"}}
+            >
+                <Form {...SettingLayout}>
+                    <Form.Item label={t("Release channel")}>
+                        <Flex>
+                            <Select value={releaseChannel}
+                                    options={releaseChannelOptions}
+                                    onChange={onReleaseChannelChange}
+                            />
+                        </Flex>
                     </Form.Item>
                     <Form.Item label={t("UE4SS")}>
                         <Select onChange={onUe4ssChange}
@@ -282,10 +285,12 @@ export function MintCatSettings() {
                                     },
                                 ]}/>
                     </Form.Item>
-                    <Form.Item label={t("Clipboard Monitor")}>
-                        <Switch checked={clipboardMonitor}
-                                onChange={onClipboardMonitorChange}
-                        />
+                    <Form.Item label={t("Dev Tools")}>
+                        <Button type="dashed"
+                                {...ButtonLayout}
+                                onClick={onDevToolsClick}>
+                            {t("Open Dev Tools")}
+                        </Button>
                     </Form.Item>
                 </Form>
             </Card>
