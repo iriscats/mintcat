@@ -32,7 +32,7 @@ export class HomeViewModel extends BaseViewModel {
             return await this.homeService.addModFromUrl(url, groupId);
         } catch (error) {
             console.error('Failed to add mod from URL:', error);
-            message.error(t("Failed to add mod to database"));
+            message.error(t("error.addModToDatabase"));
             return { status: "invalid" };
         }
     }
@@ -47,8 +47,8 @@ export class HomeViewModel extends BaseViewModel {
             }
             return result;
         } catch (error) {
-            console.error(`[addModFromPath] Failed to add mod to database: ${modPath}`, error);
-            message.error(t("Failed to add mod to database"));
+            console.error(`[addModFromPath] error.addModToDatabase: ${modPath}`, error);
+            message.error(t("error.addModToDatabase"));
             return { status: "missing", modPath };
         }
     }
@@ -59,7 +59,7 @@ export class HomeViewModel extends BaseViewModel {
             return await this.homeService.addModsFromSubscribed(modInfos, groupId);
         } catch (error) {
             console.error('Failed to batch add subscribed mods:', error);
-            message.error(t("Failed to add mod to database"));
+            message.error(t("error.addModToDatabase"));
             return { addedCount: 0, existsCount: 0, errorCount: modInfos.length };
         }
     }
@@ -138,7 +138,7 @@ export class HomeViewModel extends BaseViewModel {
         const urls = await profileService.getActiveProfileModioUrls();
 
         if (urls.length === 0) {
-            message.warning(t("No mod.io mods found in current profile"));
+            message.warning(t("modio.noModsInCurrentProfile"));
             return false;
         }
 

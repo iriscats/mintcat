@@ -63,7 +63,7 @@ export function MintCatSettings() {
             const currentCachePath = await settings.getCachePath();
             
             if (result === currentCachePath) {
-                message.info(t("Same as current cache directory"));
+                message.info(t("cache.sameAsCurrent"));
                 return;
             }
             
@@ -71,7 +71,7 @@ export function MintCatSettings() {
             Modal.confirm({
                 title: t("Change Cache Directory"),
                 icon: <ExclamationCircleFilled />,
-                content: t("Changing the cache directory will require re-downloading all mods from mod.io. Continue?"),
+                content: t("cache.changeDirectoryConfirm"),
                 okText: t("Confirm"),
                 cancelText: t("Cancel"),
                 onOk: async () => {
@@ -87,10 +87,10 @@ export function MintCatSettings() {
                         const modsDAO = await StorageAPI.getMods();
                         await modsDAO.clearAllModioCachePaths();
                         
-                        message.success(t("Cache directory changed successfully"));
+                        message.success(t("cache.directoryChangedSuccess"));
                     } catch (error) {
-                        console.error("Failed to change cache directory:", error);
-                        message.error(t("Failed to change cache directory"));
+                        console.error("error.changeCacheDirectory:", error);
+                        message.error(t("error.changeCacheDirectory"));
                     }
                 }
             });
@@ -123,7 +123,7 @@ export function MintCatSettings() {
     const onUe4ssChange = async (value: string) => {
         setUe4ss(value);
         if (value === "Custom") {
-            message.warning(t("Disclaimer: The installation of the Custom mode UE4SS will be taken over by the user, and all consequences are the user's sole responsibility."));
+            message.warning(t("disclaimer.customUe4ssMode"));
         }
         const settings = await StorageAPI.getSettings();
         await settings.setValue('ue4ss', value);

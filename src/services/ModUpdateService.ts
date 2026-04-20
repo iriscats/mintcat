@@ -265,7 +265,7 @@ export class ModUpdateService {
                 })
             );
         } else {
-            await StatusBar.success(t("Batch Download Finish With Count", { count: mods.length }));
+            await StatusBar.success(t("batch.downloadFinishWithCount", { count: mods.length }));
         }
 
         // 清除进度缓存并通知 UI 刷新，避免虚拟列表下未挂载的组件遗留 "0.00%" 标签

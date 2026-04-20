@@ -129,7 +129,7 @@ export class ProfileViewModel {
         const profileList = await profileService.getProfileList();
 
         if (profileList.length <= 1) {
-            message.error(t("Profile must have at least one profile"));
+            message.error(t("profile.mustKeepAtLeastOne"));
             return;
         }
 
@@ -195,7 +195,7 @@ export class ProfileViewModel {
         }, false);
 
         if (!newProfile || !newProfile.id) {
-            message.error(t("Failed to create new profile"));
+            message.error(t("error.createProfile"));
             return;
         }
 

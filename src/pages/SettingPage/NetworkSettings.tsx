@@ -107,8 +107,8 @@ export function NetworkSettings() {
             await applyRuntimeForMode(mode);
             message.success(t('Server changed'));
         } catch (err) {
-            console.error('[NetworkSettings] Failed to apply server mode', err);
-            message.error(t('Failed to apply server mode'));
+            console.error('[NetworkSettings] network.applyServerModeFailed', err);
+            message.error(t('network.applyServerModeFailed'));
         }
     };
 

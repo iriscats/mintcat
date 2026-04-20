@@ -538,7 +538,7 @@ function ModTreeViewVersionSelect({nodeData}) {
     const {token} = useToken();
 
     return (
-        <Tooltip title={isVersionLocked ? t("Version locked, switch to latest version to unlock") : ""}>
+        <Tooltip title={isVersionLocked ? t("mod.versionLockedUnlockLatest") : ""}>
             <Select size={"small"}
                     suffixIcon={isVersionLocked
                         ? <LockOutlined style={{color: token.colorWarning, fontSize: "10px"}}/>
@@ -677,7 +677,7 @@ function ModTreeViewWarring({nodeData}) {
     // 生成冲突提示信息
     const getConflictTooltip = () => {
         const conflict = ConflictService.getConflict(nodeData.modId);
-        if (!conflict) return t("File conflict with other mods");
+        if (!conflict) return t("conflict.withOtherMods");
         
         const fileCount = conflict.conflictingFiles.length;
         const modCount = conflict.conflictingMods.length;
@@ -706,7 +706,7 @@ function ModTreeViewWarring({nodeData}) {
 
             {
                 isOnlineUnavailable &&
-                <Tooltip title={t("Mod cannot be retrieved or has been deleted by the author")}>
+                <Tooltip title={t("mod.unavailableOrDeletedByAuthor")}>
                                 <span className="text-red mr-4">
                                     <ExclamationCircleOutlined/>
                                 </span>

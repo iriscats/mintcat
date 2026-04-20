@@ -62,7 +62,7 @@ class ProfileEditDialog extends React.Component<any, ProfileEditDialogStates> {
 
     private async checkInput(name: string): Promise<boolean> {
         if (name === "") {
-            message.error(t("Profile Name Cannot Be Empty"));
+            message.error(t("profile.nameEmpty"));
             return false;
         }
 

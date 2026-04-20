@@ -74,7 +74,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                         message.warning(t("Mod Already Exists") + ` (${batchResult.existsCount} ${t("in current list")})`);
                     }
                     if (batchResult.errorCount > 0) {
-                        message.warning(t("Some mods failed to add") + `: ${batchResult.errorCount}/${result.modInfoList.length}`);
+                        message.warning(t("mod.someFailedToAdd") + `: ${batchResult.errorCount}/${result.modInfoList.length}`);
                     }
                 }
                 break;
@@ -91,7 +91,7 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
                     message.warning(t("Mod Already Exists") + ` (${existsCount} ${t("in current list")})`);
                 }
                 if (errors.length > 0) {
-                    message.warning(t("Some mods failed to add") + `: ${errors.length}/${list.length}`);
+                    message.warning(t("mod.someFailedToAdd") + `: ${errors.length}/${list.length}`);
                 }
             }
                 break;

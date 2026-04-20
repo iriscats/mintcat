@@ -43,7 +43,7 @@ export class AppViewModel extends BaseViewModel {
             }
         } catch (err) {
             console.warn(err);
-            await emitEvent("app-error", t("No Permission To Access the Config Folder"));
+            await emitEvent("app-error", t("error.noPermissionConfigFolder"));
         }
     }
 

@@ -227,7 +227,7 @@ export async function ensureInternalAssets(
     const ue4sslVersionForCheck = forceRedownload || !ue4ssValid ? '0' : manifest.ue4ssl;
     const secondVersionForCheck = forceRedownload || !secondValid ? '0' : manifest[secondManifestKey];
 
-    await setMessage(t('Checking internal assets for updates...'));
+    await setMessage(t('status.checkingInternalAssetsForUpdates'));
     const secondAppType = game === 'rc' ? 'rc' : 'drg';
     let results;
     try {
@@ -237,7 +237,7 @@ export async function ensureInternalAssets(
         ]);
     } catch (error) {
         console.error('[InternalAssets] Failed to check update metadata:', error);
-        throw new Error(t('Failed to check internal assets updates. Please check network and retry.'));
+        throw new Error(t('error.checkInternalAssetsUpdates'));
     }
 
     const needUe4ssl =
@@ -259,7 +259,7 @@ export async function ensureInternalAssets(
     if (needUe4ssl) {
         const r = results[0];
         if (!r.latestVersion || !r.md5) {
-            throw new Error(t('Missing version or MD5 for {{name}}', { name: 'UE4SSL' }));
+            throw new Error(t('mod.missingVersionOrMd5', { name: 'UE4SSL' }));
         }
         downloadQueue.push({ result: r, appType: 'ue4ssl', destPath: ue4ssZipPath, manifestKey: 'ue4ssl' });
     }
@@ -268,7 +268,7 @@ export async function ensureInternalAssets(
         const r = results[1];
         const label = game === 'rc' ? 'RC' : 'DRG';
         if (!r.latestVersion || !r.md5) {
-            throw new Error(t('Missing version or MD5 for {{name}}', { name: label }));
+            throw new Error(t('mod.missingVersionOrMd5', { name: label }));
         }
         downloadQueue.push({
             result: r,
@@ -279,7 +279,7 @@ export async function ensureInternalAssets(
     }
 
     if (downloadQueue.length === 0) {
-        await setMessage(t('Internal assets are up to date.'));
+        await setMessage(t('internalAssets.upToDate'));
     } else {
         for (let i = 0; i < downloadQueue.length; i++) {
             if (checkCancelled()) throw new Error(t('Task Cancelled'));
@@ -288,7 +288,7 @@ export async function ensureInternalAssets(
             const current = i + 1;
             const total = downloadQueue.length;
 
-            await setMessage(t('Preparing download {{current}}/{{total}}: {{name}}', { current, total, name: label }));
+            await setMessage(t('download.preparingWithIndex', { current, total, name: label }));
             await downloadAndValidateZip(
                 item.result,
                 item.appType,
@@ -307,7 +307,7 @@ export async function ensureInternalAssets(
             );
             updateProgress(Math.floor((current * 100) / total));
         }
-        await setMessage(t('Internal asset download completed.'));
+        await setMessage(t('internalAssets.downloadCompleted'));
     }
 
     updateProgress(100);
@@ -317,7 +317,7 @@ export async function ensureInternalAssets(
     const secondOk = await exists(secondZipPath) && await IntegrateApi.validateZipFile(secondZipPath);
     if (!ue4ssOk || !secondOk) {
         const missing = [(!ue4ssOk && ASSET_UE4SSL), (!secondOk && (game === 'rc' ? ASSET_RC : ASSET_DRG))].filter(Boolean);
-        throw new Error(t('Internal assets missing after check: {{files}}', { files: missing.join(', ') }));
+        throw new Error(t('internalAssets.missingAfterCheck', { files: missing.join(', ') }));
     }
 
     if (game === 'rc') {
@@ -350,7 +350,7 @@ async function downloadAndValidateZip(
         const attemptNumber = attempt + 1;
 
         if (attemptNumber > 1) {
-            await setMessage(t('Retrying {{name}} ({{current}}/{{total}}), attempt {{n}}/{{max}}...', {
+            await setMessage(t('download.retryingWithAttempt', {
                 name: fileName,
                 current,
                 total,
@@ -359,7 +359,7 @@ async function downloadAndValidateZip(
             }), 'warning');
             console.warn(`[InternalAssets] Retry ${attemptNumber}/${MAX_DOWNLOAD_RETRIES} for ${fileName}`);
         } else {
-            await setMessage(t('Downloading {{name}} ({{current}}/{{total}})...', { name: fileName, current, total }));
+            await setMessage(t('download.progressWithIndex', { name: fileName, current, total }));
         }
 
         const downloadUrl = result.downloadUrl
@@ -400,7 +400,7 @@ async function downloadAndValidateZip(
                             downloaded: formatBytes(downloaded),
                             speed,
                         });
-                    void setMessage(t('Downloading {{name}} ({{current}}/{{total}}) {{percent}}% - {{detail}}', {
+                    void setMessage(t('download.progressWithPercent', {
                         name: fileName,
                         current,
                         total,
@@ -419,14 +419,14 @@ async function downloadAndValidateZip(
             console.error(`[InternalAssets] Download failed for ${fileName} (attempt ${attemptNumber}):`, error);
             try { await remove(destPath); } catch (_) { /* best effort */ }
             if (attemptNumber < MAX_DOWNLOAD_RETRIES) {
-                await setMessage(t('Download failed for {{name}}: {{error}}. Waiting to retry...', {
+                await setMessage(t('download.failedWaitRetry', {
                     name: fileName,
                     error: lastError,
                 }), 'warning');
                 await sleep(RETRY_BACKOFF_MS * attemptNumber);
                 continue;
             }
-            throw new Error(t('Failed to download valid {{name}} after {{n}} attempts', {
+            throw new Error(t('error.downloadValidAfterAttempts', {
                 name: fileName,
                 n: MAX_DOWNLOAD_RETRIES,
             }) + `: ${lastError}`);
@@ -435,7 +435,7 @@ async function downloadAndValidateZip(
 
         if (await IntegrateApi.validateZipFile(destPath)) {
             await writeManifest(cacheDir, { [manifestKey]: result.latestVersion!, channel });
-            await setMessage(t('Downloaded {{name}} successfully.', { name: fileName }));
+            await setMessage(t('download.successWithName', { name: fileName }));
             return;
         }
 
@@ -443,7 +443,7 @@ async function downloadAndValidateZip(
         console.error(`[InternalAssets] Downloaded ${fileName} is corrupted (attempt ${attemptNumber})`);
         try { await remove(destPath); } catch (_) { /* best effort */ }
         if (attemptNumber < MAX_DOWNLOAD_RETRIES) {
-            await setMessage(t('Download failed for {{name}}: {{error}}. Waiting to retry...', {
+            await setMessage(t('download.failedWaitRetry', {
                 name: fileName,
                 error: lastError,
             }), 'warning');
@@ -451,7 +451,7 @@ async function downloadAndValidateZip(
         }
     }
 
-    throw new Error(t('Failed to download valid {{name}} after {{n}} attempts', {
+    throw new Error(t('error.downloadValidAfterAttempts', {
         name: fileName,
         n: MAX_DOWNLOAD_RETRIES,
     }) + (lastError ? `: ${lastError}` : ''));

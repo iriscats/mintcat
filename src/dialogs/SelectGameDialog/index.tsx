@@ -73,8 +73,8 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             setIsModalOpen(false);
             emitVoidEvent("select-game-dialog-closed");
         } catch (error) {
-            console.error('Failed to update active game:', error);
-            message.error(t("Failed to update active game"));
+            console.error('error.updateActiveGame:', error);
+            message.error(t("error.updateActiveGame"));
         }
     };
 
@@ -114,7 +114,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
                 await dialogGameService.updateGameInstallPath(gameId, result);
                 await loadGames();
             } else {
-                message.error(isRc ? t("Please select RogueCore-Windows.pak") : t("Please select FSD-WindowsNoEditor.pak"));
+                message.error(isRc ? t("game.pleaseSelectRoguePak") : t("game.pleaseSelectFsdPak"));
             }
         }
     };
@@ -127,7 +127,7 @@ export const SelectGameDialog = forwardRef<SelectGameDialogRef>((props, ref) => 
             await dialogGameService.updateGameInstallPath(gameId, path);
             await loadGames();
         } else {
-            message.error(gameName === 'rc' ? t("Can't find RogueCore-Windows.pak") : t("Can't find FSD-WindowsNoEditor.pak"));
+            message.error(gameName === 'rc' ? t("game.roguePakNotFound") : t("game.fsdPakNotFound"));
         }
     };
 

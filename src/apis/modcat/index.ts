@@ -410,7 +410,7 @@ export class ModcatApi {
             })[0];
         
         if (!latestVersion?.FilesId) {
-            throw new Error(t("No downloadable version available") || "No downloadable version available");
+            throw new Error(t("mod.noDownloadableVersion") || "mod.noDownloadableVersion");
         }
         
         const fileName = mod.Name || mod.ModId || "unknown";

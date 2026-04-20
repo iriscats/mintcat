@@ -28,7 +28,7 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
 
     // 右键菜单项
     const contextMenuItems: MenuProps['items'] = [
-        {label: t('Translate Into Current Language'), key: 'translate'},
+        {label: t('action.translateToCurrentLanguage'), key: 'translate'},
         {label: t('Restore'), key: 'restore'},
     ];
 

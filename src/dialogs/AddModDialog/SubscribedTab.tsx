@@ -65,7 +65,7 @@ export const SubscribedTab = React.forwardRef((_: any, ref) => {
     if (!loading && mods.length === 0) {
         return (
             <div style={{padding: 24, textAlign: "center"}}>
-                <p>{t("No subscribed mods. Please log in to mod.io and subscribe to mods first.")}</p>
+                <p>{t("modio.noSubscribedModsHint")}</p>
                 <Button type="primary" icon={<ReloadOutlined/>} onClick={loadSubscribed} style={{marginTop: 12}}>
                     {t("Retry")}
                 </Button>

@@ -101,7 +101,7 @@ export async function computeInstallManifestHash(
 @Task({
     type: 'mod_install',
     name: t('Mod installation'),
-    description: t('Install mods to game directory'),
+    description: t('install.modsToGameDir'),
     schema: null,
     estimatedDuration: 120
 })
@@ -123,7 +123,7 @@ export class ModInstallTask implements ITask {
             throw new Error(t('Game Path Not Found'));
         }
 
-        await context.setMessage(t('Checking if game is running...'));
+        await context.setMessage(t('status.checkingGameRunning'));
         if (await IntegrateApi.checkSteamGame()) {
             throw new Error(t('Game Not Closed'));
         }
@@ -135,9 +135,9 @@ export class ModInstallTask implements ITask {
             const { hasForeign, fileNames } = await IntegrateApi.checkForeignPaksInPaksDir(drgPakPath);
             if (hasForeign) {
                 const confirm = await MessageBox.confirm({
-                    title: t('Foreign paks in game dir title'),
+                    title: t('install.foreignPaksTitle'),
                     content: React.createElement(ForeignPaksConfirmContent, {
-                        message: t('Foreign paks in game dir message'),
+                        message: t('install.foreignPaksMessage'),
                         fileNames,
                     }),
                     okText: t('Install anyway'),
@@ -219,7 +219,7 @@ export class ModInstallTask implements ITask {
             } else if (!cachePath || !pathExists) {
                 if (cachePath) {
                     throw new Error(
-                        `${t("File Not Found")}: ${item.displayName}\n${t("Local mod path does not exist, please re-add the mod")}: ${cachePath}`
+                        `${t("File Not Found")}: ${item.displayName}\n${t("mod.localPathMissingReadd")}: ${cachePath}`
                     );
                 }
                 throw new Error(`${t("File Not Found")}: ${item.displayName}`);
@@ -231,7 +231,7 @@ export class ModInstallTask implements ITask {
 
         // Parallel download all mods that need updating
         if (modsNeedingDownload.length > 0) {
-            await context.setMessage(`${t('Downloading mods in parallel...')} (${modsNeedingDownload.length} ${t('mods')})`);
+            await context.setMessage(`${t('download.modsParallel')} (${modsNeedingDownload.length} ${t('mods')})`);
 
             const { errors } = await ModUpdateService.batchDownloadModFiles(modsNeedingDownload, 3);
 
@@ -281,7 +281,7 @@ export class ModInstallTask implements ITask {
 
         // Step 5: Check installation status
         await context.setStep(t('Check installation status'), 5, TOTAL_STEPS);
-        await context.setMessage(t('Checking existing installation...'));
+        await context.setMessage(t('status.checkingExistingInstallation'));
 
         gameDAO = await StorageAPI.getGames();
         activeGame = await gameDAO.getActiveGame();
@@ -296,10 +296,10 @@ export class ModInstallTask implements ITask {
         const installType = await IntegrateApi.checkInstalled(drgPakPath, 0);
 
         if (installType === "old_version_mint_installed") {
-            await context.setMessage(t('Detected old version installation'), 'warning');
+            await context.setMessage(t('migrate.detectedOldInstallation'), 'warning');
             const result = await MessageBox.confirm({
                 title: t("Installation Warning"),
-                content: t("Detected old version MINT(0.2, 0.3) installation file, do you want to uninstall?"),
+                content: t("migrate.confirmUninstallOldMint"),
             });
             if (!result) {
                 throw new Error(t("User Cancels Installation"));

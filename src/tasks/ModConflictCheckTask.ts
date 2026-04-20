@@ -47,7 +47,7 @@ interface ConflictCheckModInfo {
 @Task({
     type: 'mod_conflict_check',
     name: t('Mod conflict check'),
-    description: t('Detect file conflicts between mods'),
+    description: t('conflict.detectBetweenMods'),
     schema: null,
     estimatedDuration: 30
 })
@@ -129,7 +129,7 @@ export class ModConflictCheckTask implements ITask {
         }
 
         if (modInfoList.length < 2) {
-            await context.setMessage(t('Not enough mods to check for conflicts'));
+            await context.setMessage(t('conflict.notEnoughMods'));
             ConflictService.clearAll();
             await context.updateProgress(100);
             return;

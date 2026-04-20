@@ -86,7 +86,7 @@ export class CheckModUpdateTask implements ITask {
         const modIds = profileModList.map(pm => pm.modId!).filter(id => id != null);
         
         if (modIds.length === 0) {
-            await context.setMessage(t('Current profile has no mods'));
+            await context.setMessage(t('profile.currentHasNoMods'));
             await context.updateProgress(100);
             return;
         }
@@ -113,9 +113,9 @@ export class CheckModUpdateTask implements ITask {
             const hasModioAuth = !!(modioOAuth?.oauth);
 
             if (!hasModioAuth) {
-                await context.setMessage(t('No mod.io OAuth, skip Modio update check'));
+                await context.setMessage(t('modio.skipUpdateCheckNoOAuth'));
             } else if (typeof ModioApi?.getEvents !== 'function') {
-                await context.setMessage(t('Mod.io service unavailable, skip Modio update check'));
+                await context.setMessage(t('modio.skipUpdateCheckServiceUnavailable'));
             } else {
                 try {
                     const modIdList = modioMods.map(m => m.platformId);
@@ -158,7 +158,7 @@ export class CheckModUpdateTask implements ITask {
                 }
                 } catch (e) {
                     console.warn('[CheckModUpdateTask] Modio update check failed:', e);
-                    await context.setMessage(t('Mod.io update check failed, skip'));
+                    await context.setMessage(t('modio.skipUpdateCheckFailed'));
                 }
             }
         }

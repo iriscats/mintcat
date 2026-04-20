@@ -122,7 +122,7 @@ export function CloudBackupSettings() {
     const onRestore = async (item: CloudBackupRecord) => {
         const confirmed = await MessageBox.confirm({
             title: t("Restore"),
-            content: t("Restore will replace local data after restart. Continue?"),
+            content: t("dialog.restoreAfterRestart"),
         });
         if (!confirmed) {
             return;
@@ -166,7 +166,7 @@ export function CloudBackupSettings() {
                 <Input
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
-                    placeholder={t("Optional note for this backup")}
+                    placeholder={t("backup.optionalNote")}
                     style={{ flex: 1 }}
                 />
                 <Button

@@ -20,7 +20,7 @@ function EmptyPageContent({ initError, onRetry }: EmptyPageProps) {
         return (
             <div id="scrollableDiv" style={{ ...emptyPageHeight, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                 <Text type="danger" style={{ marginBottom: 16, textAlign: 'center' }}>
-                    {initError.message || t("Application initialization failed")}
+                    {initError.message || t("error.applicationInitFailed")}
                 </Text>
                 {onRetry && (
                     <Button type="primary" onClick={onRetry}>

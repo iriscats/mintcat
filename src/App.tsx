@@ -106,7 +106,7 @@ const AppContent = () => {
             .catch((error) => {
                 console.error('[App] Core initialization failed:', error);
                 setInitError(error instanceof Error ? error : new Error(String(error)));
-                emitEvent('app-error', error.message || 'Application initialization failed').catch(console.error);
+                emitEvent('app-error', error.message || 'error.applicationInitFailed').catch(console.error);
             });
 
         initClipboardWatcher();
@@ -161,7 +161,7 @@ const AppContent = () => {
                                 })
                                 .catch((err) => {
                                     setInitError(err instanceof Error ? err : new Error(String(err)));
-                                    emitEvent('app-error', err.message || 'Application initialization failed').catch(console.error);
+                                    emitEvent('app-error', err.message || 'error.applicationInitFailed').catch(console.error);
                                 });
                         }}/>
                     )}

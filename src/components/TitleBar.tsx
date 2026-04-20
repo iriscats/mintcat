@@ -133,7 +133,7 @@ class TitleBar extends React.Component<any, any> {
         try {
             const config = await CloudBackupApi.getConfig();
             if (!config.baseUrl) {
-                message.warning(t("Please configure cloud backup settings first"));
+                message.warning(t("cloudBackup.configureFirst"));
                 return;
             }
 

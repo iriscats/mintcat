@@ -76,7 +76,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
     const onDeleteClick = async (path: string) => {
         const confirmed = await MessageBox.confirm({
             title: t("Delete Config"),
-            content: t("Are you sure to delete the configuration folder?"),
+            content: t("dialog.confirmDeleteConfigFolder"),
         });
         if (confirmed) {
             await dialogConfigService.deleteConfigPath(path);
@@ -132,7 +132,7 @@ export const ConfigManageDialog = forwardRef((_props, ref) => {
                    }}
             >
                 <div>
-                    {t("Detected the following configurations. Please select the configurations to import")}
+                    {t("migrate.selectConfigsToImport")}
                 </div>
                 <List size="small"
                       bordered={true}

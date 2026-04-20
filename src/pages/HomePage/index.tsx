@@ -250,11 +250,11 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
             if (!cachePath || downloadStatus !== "completed") {
                 if (downloadStatus === "downloading") {
-                    message.warning(t("Mod is downloading, please wait"));
+                    message.warning(t("mod.downloadingPleaseWait"));
                 } else if (downloadStatus === "failed") {
-                    message.error(t("Mod download failed, please click update to download mod try again"));
+                    message.error(t("mod.downloadFailedClickUpdateAgain"));
                 } else {
-                    message.warning(t("Please click update to download mod"));
+                    message.warning(t("mod.pleaseClickUpdateToDownload"));
                 }
                 return;
             }
@@ -355,7 +355,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
         const confirm = await MessageBox.confirm({
             title: t("Delete Mods"),
-            content: t("Are you sure you want to delete the selected mods?"),
+            content: t("dialog.confirmDeleteSelectedMods"),
         });
 
         if (this.getBulkOpKeys().length === 0) {
@@ -525,7 +525,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
     private async onMenuBarCleanMissingLocalModsClick() {
         const confirm = await MessageBox.confirm({
             title: t("Clean Missing Local Mods"),
-            content: t("Are you sure you want to clean local mods with missing files?"),
+            content: t("dialog.confirmCleanMissingLocalMods"),
         });
 
         if (!confirm) {
@@ -540,7 +540,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             await this.updateCountLabel();
             message.success(`${t("Clean Complete")}: ${cleanedCount} ${t("mods removed")}`);
         } else {
-            message.info(t("No missing local mods found"));
+            message.info(t("clean.noMissingLocalModsFound"));
         }
     }
 
@@ -552,8 +552,8 @@ export class HomePage extends BasePage<any, ModListPageState> {
                 params: {},
             });
         } catch (e) {
-            console.error('Failed to start conflict check task:', e);
-            message.error(t("Failed to start conflict check"));
+            console.error('error.startConflictCheck task:', e);
+            message.error(t("error.startConflictCheck"));
         }
     }
 
@@ -563,7 +563,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             const confirm = await MessageBox.confirm({
                 title: t("Uninstall Mods From Game"),
                 content: t(
-                    "Are you sure you want to uninstall mods from the game? This will remove integrated mod files from the game installation.",
+                    "dialog.confirmUninstallModsFromGame",
                 ),
             });
             if (!confirm) {
@@ -883,7 +883,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
                     shouldUpdateTree = true;
                 } catch (error) {
                     if (error instanceof LastGroupCannotDeleteError) {
-                        message.warning(t("Cannot delete the last group"));
+                        message.warning(t("group.cannotDeleteLast"));
                     } else {
                         console.error(`[HomePage] Delete group failed for id=${id}:`, error);
                     }

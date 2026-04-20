@@ -59,7 +59,7 @@ export class IntegrateApi  {
                 return false;
             }
         } catch (e) {
-            await emitEvent("app-error", t("No Permission To Access Game Path"));
+            await emitEvent("app-error", t("error.noPermissionGamePath"));
             return false;
         }
 
