@@ -4,9 +4,31 @@
 
 export interface UpdateCheckItem {
     currentVersion: string;
+    name?: string;
+    type?: string;
     appType?: string;
     platform?: string;
     channel?: string;
+}
+
+export interface UpdateCheckManifestItem {
+    name: string;
+    type: string;
+    channel: string;
+    fileSize?: number;
+    latestVersion: string;
+    md5?: string;
+    sha256?: string;
+    checksum?: string;
+    signature?: string;
+    releaseNotes?: string;
+    downloadUrl?: string;
+    url?: string;
+    path?: string;
+    isMandatory?: boolean;
+    minAppVersion?: string;
+    maxAppVersion?: string;
+    entry?: string;
 }
 
 export interface UpdateCheckResult {
@@ -20,6 +42,11 @@ export interface UpdateCheckResult {
     fileSize?: number;
     checksum?: string;
     md5?: string;
+    sha256?: string;
+    signature?: string;
+    name?: string;
+    type?: string;
+    channel?: string;
 }
 
 /**

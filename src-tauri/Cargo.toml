@@ -5,6 +5,13 @@ description = "Mod Integrate Tool"
 authors = ["iriscat"]
 edition = "2021"
 
+[workspace]
+members = [
+    ".",
+    "crates/mintcat-integrator-core",
+    "crates/mintcat-integrator-ffi",
+]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
@@ -56,6 +63,8 @@ uuid = { version = "1", features = ["v4"] }
 # json
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+mintcat-integrator-core = { path = "crates/mintcat-integrator-core" }
+libloading = "0.8"
 
 # integrate
 zip = { version = "2.2.0", default-features = false, features = ["aes-crypto", "deflate", "time"] }

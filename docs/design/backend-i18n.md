@@ -89,8 +89,7 @@ Tauri command 里尽量返回**错误 key**，而不是整句英文：
 | drg/mod.rs | "Start Install...", "Load Mods ..." | backend.install.start, backend.install.load_mods |
 | drg/pak_integrator.rs | "Installing UE4SS...", "Start Process Mod: {} ...", "Process Mod: {} Success", "Patch Game Pak...", "Write Mod...", "Install Mod Success" | backend.install.ue4ss, backend.install.process_mod_start, backend.install.process_mod_success, backend.install.patch_pak, backend.install.write_mod, backend.install.success |
 | drgrc/pak_integrator.rs | 同上 + "Installing UE4SS..." 等 | 同上 |
-| ue4ss_integrate.rs | "Dotnet runtime already installed", "Using cached .NET Runtime...", "Cached file corrupted, re-downloading...", "Extracting .NET Runtime...", ".NET Runtime installed" 等 | backend.dotnet.already_installed, backend.dotnet.using_cached, backend.dotnet.cached_corrupted, backend.dotnet.extracting, backend.dotnet.installed, ... |
-| lib.rs / command | "Invalid path", "Invalid game path: ...", "Failed to install .NET runtime: ..." | backend.error.invalid_path, backend.error.invalid_game_path, backend.error.dotnet_install_failed |
+| lib.rs / command | "Invalid path", "Invalid game path: ..." | backend.error.invalid_path, backend.error.invalid_game_path |
 | capability/download | DownloadError 的 Display 文案 | 可在前端把常见错误映射成 key，见下 |
 
 下载错误可以有两种做法：
@@ -153,9 +152,7 @@ const displayMessage = typeof errorMsg === 'string' && errorMsg.startsWith('back
   "backend.install.process_mod_success": "Process Mod: {{name}} Success",
   "backend.install.write_mod": "Write Mod...",
   "backend.install.success": "Install Mod Success",
-  "backend.error.invalid_game_path": "Invalid game path",
-  "backend.dotnet.extracting": "Extracting .NET Runtime...",
-  "backend.dotnet.installed": ".NET Runtime installed"
+  "backend.error.invalid_game_path": "Invalid game path"
 }
 ```
 

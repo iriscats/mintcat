@@ -146,12 +146,6 @@ export class IntegrateApi  {
         });
     }
 
-    public static async installDotnetRuntime(gamePath: string): Promise<boolean> {
-        return await invoke('install_dotnet_runtime', {
-            gamePath: gamePath,
-        });
-    }
-
     public static async validateZipFile(path: string): Promise<boolean> {
         return await invoke<boolean>('validate_zip_file', { path });
     }

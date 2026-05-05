@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "gen-sql": "drizzle-kit generate --out migrations-sql --schema ./src/storage/db/Schema.ts --dialect sqlite",
     "package": "./scripts/build-release.sh",
+    "package:frontend": "pnpm build && node scripts/package-frontend-zip.mjs",
+    "package:integrator-runtime": "node scripts/package-integrator-runtime.mjs",
     "package:portable": "node scripts/build-portable.mjs",
     "package:fixed-webview2": "node scripts/build-fixed-webview2.mjs"
   },

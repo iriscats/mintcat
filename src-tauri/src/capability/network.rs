@@ -1,4 +1,4 @@
-//! 网络代理状态，供下载、.NET 运行时等 HTTP 请求走 Clash 等代理。
+//! 网络代理状态，供下载等 HTTP 请求走 Clash 等代理。
 //! 前端通过 set_network_proxy 设置后，所有后端 reqwest 请求会使用该代理。
 //! 若未设置，则回退到系统代理（Windows：IE/系统代理；其他：环境变量 HTTP_PROXY/HTTPS_PROXY）。
 

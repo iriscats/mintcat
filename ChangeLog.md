@@ -24,3 +24,26 @@
 1. Fix a crash when audio mods contain blueprints.
 2. Fix profile switching not triggering repack.
 
+
+
+
+## 新增
+
+1. API 网络节点选择
+2. TreeView 文件夹排序
+3. Mod 批量启停
+4. TreeView 版本选择与样式
+5. 在线 Mod 更新相关增强
+6. 搜索框动态过滤
+7. 框架（Framework）设置
+
+## 改进
+
+1. 分组删除与下载错误处理
+2. 便携版构建
+3. Pak 资源集成流程
+
+## 重构
+
+1. ModMapper
+2. MintCat API 源与请求日志脱敏

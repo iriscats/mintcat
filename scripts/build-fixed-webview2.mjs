@@ -131,6 +131,11 @@ function main() {
 
     try {
       // 4. 构建（与 release.sh 一致：cargo-xwin + target；签名可设 TAURI_SIGNING_PRIVATE_KEY）
+      execSync('pnpm package:integrator-runtime', {
+        cwd: ROOT,
+        stdio: 'inherit',
+        env: { ...process.env, INTEGRATOR_TARGET: 'x86_64-pc-windows-gnu' },
+      });
       const buildCmd = 'pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-gnu';
       execSync(buildCmd, { cwd: ROOT, stdio: 'inherit' });
 

@@ -93,8 +93,7 @@ export async function computeInstallManifestHash(
  * 4. Validate mod files
  * 5. Check installation status
  * 6. Uninstall old versions
- * 7. Install .NET runtime
- * 8. Install mods
+ * 7. Install mods
  *
  * ```
  */
@@ -108,7 +107,7 @@ export async function computeInstallManifestHash(
 export class ModInstallTask implements ITask {
 
     async run(context: ITaskContext): Promise<void> {
-        const TOTAL_STEPS = 10;
+        const TOTAL_STEPS = 9;
         await context.setMessage(t("Start installation"));
 
         // Get profile view model and settings

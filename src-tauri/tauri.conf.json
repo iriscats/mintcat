@@ -36,7 +36,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll"
+      "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll",
+      "assets/integrators/mintcat_integrator.dll": "integrators/mintcat_integrator.dll"
     },
     "createUpdaterArtifacts": true
   },

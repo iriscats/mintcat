@@ -1,5 +1,6 @@
 export type {
     UpdateCheckItem,
+    UpdateCheckManifestItem,
     UpdateCheckResult,
     CloudBackupConfig,
     CloudBackupMetadata,
@@ -13,7 +14,14 @@ export {
     normalizeReleaseChannel,
     type ReleaseChannel,
 } from './releaseChannel';
-export { checkUpdatesBatch, getDownloadUrl, getReleaseDownloadUrl } from './release';
+export {
+    checkUpdatesBatch,
+    fetchUpdateManifest,
+    getDownloadUrl,
+    getReleaseDownloadUrl,
+    MINTCAT_UPDATE_MANIFEST_URL,
+    prefetchUpdateManifest,
+} from './release';
 export { CloudBackupApi } from './cloudBackup';
 export { validateVipStatus } from './vip';
 export {

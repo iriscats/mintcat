@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
-import { MigrationBase } from '@/storage/migration';
 import { CloudBackupApi } from '@/apis/mintcat';
 import {
     getMintcatApiOriginLanguageFallback,
@@ -21,6 +20,7 @@ import {
 import { CacheApi } from '@/apis/CacheApi';
 import { closeDb } from '@/storage/db/Client';
 import { setMintcatProxyModeResolved } from '@/services/network';
+import { taskQueueAPI, TaskPriority } from 'tauri-plugin-task-queue';
 
 /**
  * Application initialization phases
@@ -116,12 +116,26 @@ export class AppInitializer {
             // Complete
             this.currentPhase = InitPhase.Complete;
             console.log('[AppInitializer] Core initialization complete');
+            this.submitStartupUpdateCheckTask();
         } catch (error) {
             this.currentPhase = InitPhase.Failed;
             this.error = error instanceof Error ? error : new Error(String(error));
             console.error('[AppInitializer] Initialization failed:', error);
             throw this.error;
         }
+    }
+
+    /**
+     * 应用启动后提交一次更新检测任务，任务内拉取统一更新清单并写入内存缓存。
+     */
+    private static submitStartupUpdateCheckTask(): void {
+        taskQueueAPI.addTask({
+            taskType: 'startup_update_check',
+            params: {},
+            priority: TaskPriority.Low,
+        }).catch((error) => {
+            console.warn('[AppInitializer] Failed to submit startup update check task:', error);
+        });
     }
 
     /**
@@ -195,7 +209,7 @@ export class AppInitializer {
     }
 
     /**
-     * 从 settings 读取 network.proxy 并同步到后端，使下载、.NET 等请求走 Clash 等代理。
+     * 从 settings 读取 network.proxy 并同步到后端，使下载等请求走 Clash 等代理。
      */
     private static async applyNetworkProxy(): Promise<void> {
         try {

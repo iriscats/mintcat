@@ -1,4 +1,5 @@
 pub mod capability;
+pub mod frontend_update;
 pub mod integrator;
 pub mod uasset_utils;
 
@@ -33,6 +34,9 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
+        .register_uri_scheme_protocol("mintcat-hot", |context, request| {
+            frontend_update::handle_protocol(context.app_handle(), request)
+        })
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 当第二个实例尝试启动时，聚焦到已有窗口
             if let Some(window) = app.get_webview_window("main") {
@@ -52,11 +56,19 @@ pub fn run() {
             }
         }))
         .setup(|app| {
-            // 网络代理状态（前端通过 set_network_proxy 设置，供下载/.NET 等请求走 Clash 等代理）
+            if let Err(error) = frontend_update::rollback_unconfirmed_pending(app.handle()) {
+                log::warn!("[FrontendUpdate] rollback check failed: {}", error);
+            }
+            if let Err(error) = integrator::runtime_loader::ensure_bundled_runtime(app.handle()) {
+                log::warn!("[IntegratorRuntime] bundled runtime init failed: {:#}", error);
+            }
+
+            // 网络代理状态（前端通过 set_network_proxy 设置，供下载等请求走 Clash 等代理）
             let proxy_state = capability::network::NetworkProxyState::new();
             let proxy_arc = proxy_state.0.clone();
             app.manage(proxy_state);
             app.manage(capability::download::init_download_manager(proxy_arc));
+            frontend_update::navigate_to_hot_frontend(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -106,7 +118,6 @@ pub fn run() {
             integrator::drg::check_installed,
             integrator::drg::find_game_pak,
             integrator::drg::check_foreign_paks_in_paks_dir,
-            integrator::drg::install_dotnet_runtime,
             integrator::drg::is_valid_unpacked_mod,
             integrator::drg::check_mod_conflicts,
             integrator::drg::validate_zip_file,
@@ -115,6 +126,12 @@ pub fn run() {
             capability::download::download_file,
             capability::download::cancel_download,
             capability::network::set_network_proxy,
+            frontend_update::install_frontend_update_from_manifest,
+            frontend_update::mark_frontend_update_ok,
+            frontend_update::rollback_frontend_update,
+            frontend_update::get_frontend_update_status,
+            integrator::runtime_loader::install_integrator_runtime_from_manifest,
+            integrator::runtime_loader::get_integrator_runtime_status,
             open_devtools
         ])
         .run(tauri::generate_context!())

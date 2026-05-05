@@ -28,6 +28,7 @@ const SRC_TAURI = join(ROOT, 'src-tauri');
 const TARGET_TRIPLE = 'x86_64-pc-windows-gnu';
 const RELEASE_DIR = join(SRC_TAURI, 'target', TARGET_TRIPLE, 'release');
 const OO2_SRC = join(SRC_TAURI, 'assets', 'oo2core_9_win64.dll');
+const INTEGRATOR_RUNTIME_SRC = join(SRC_TAURI, 'assets', 'integrators', 'mintcat_integrator.dll');
 const PORTABLE_CONFIG = join(SRC_TAURI, 'tauri.portable.windows.conf.json');
 
 function loadSigningKey() {
@@ -51,6 +52,15 @@ function ensureResources(releaseDir) {
   const dest = join(resDir, 'oo2core_9_win64.dll');
   copyFileSync(OO2_SRC, dest);
   console.log('[portable] 已复制:', dest);
+
+  if (!existsSync(INTEGRATOR_RUNTIME_SRC)) {
+    throw new Error(`未找到集成器运行时 DLL: ${INTEGRATOR_RUNTIME_SRC}`);
+  }
+  const integratorDir = join(resDir, 'integrators');
+  mkdirSync(integratorDir, { recursive: true });
+  const integratorDest = join(integratorDir, 'mintcat_integrator.dll');
+  copyFileSync(INTEGRATOR_RUNTIME_SRC, integratorDest);
+  console.log('[portable] 已复制:', integratorDest);
 }
 
 function zipPortable(releaseDir, outZip, rootDirName) {
@@ -79,6 +89,13 @@ function zipPortable(releaseDir, outZip, rootDirName) {
     copyFileSync(oodleDll, join(rootDir, 'oo2core_9_win64.dll'));
   }
 
+  const integratorRuntime = join(releaseDir, 'resources', 'integrators', 'mintcat_integrator.dll');
+  if (existsSync(integratorRuntime)) {
+    const integratorDir = join(rootDir, 'integrators');
+    mkdirSync(integratorDir, { recursive: true });
+    copyFileSync(integratorRuntime, join(integratorDir, 'mintcat_integrator.dll'));
+  }
+
   if (process.platform === 'win32') {
     const psRoot = rootDir.replace(/'/g, "''");
     const psOut = outZip.replace(/'/g, "''");
@@ -104,6 +121,11 @@ function main() {
   }
 
   const buildCmd = `pnpm exec tauri build --runner cargo-xwin --target ${TARGET_TRIPLE} --config ${JSON.stringify(PORTABLE_CONFIG)}`;
+  execSync(`pnpm package:integrator-runtime`, {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, INTEGRATOR_TARGET: TARGET_TRIPLE },
+  });
   console.log('[portable] 构建:', buildCmd);
   execSync(buildCmd, { cwd: ROOT, stdio: 'inherit' });
 

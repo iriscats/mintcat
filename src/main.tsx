@@ -2,6 +2,7 @@ import React, {useEffect} from "react";
 import {I18nextProvider} from "react-i18next"
 import ReactDOM from "react-dom/client";
 import {Routes, Route, HashRouter} from "react-router-dom";
+import {invoke} from "@tauri-apps/api/core";
 
 import {ConfigProvider, App as AntdApp} from "antd";
 import {useEventListener, enableEventDebugger} from "@/events";
@@ -39,6 +40,8 @@ const Main = () => {
     useEffect(() => {
         // Task system initialized at startup
 
+        let cleanupContextMenu: (() => void) | undefined;
+
         if (packageJson.version.indexOf("beta") > 0) {
             // ✅ 启用 EventDebugger (开发模式)
             enableEventDebugger({
@@ -51,10 +54,15 @@ const Main = () => {
         } else {
             const handler = (e: Event) => e.preventDefault();
             document.addEventListener('contextmenu', handler);
-            return () => document.removeEventListener('contextmenu', handler);
+            cleanupContextMenu = () => document.removeEventListener('contextmenu', handler);
         }
 
         renderTheme();
+
+        invoke('mark_frontend_update_ok')
+            .catch((error) => console.warn('[FrontendUpdate] Failed to confirm frontend update:', error));
+
+        return cleanupContextMenu;
 
     }, []);
 

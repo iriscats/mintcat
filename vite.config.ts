@@ -44,6 +44,8 @@ export default defineConfig(async () => ({
         },
     },
 
+    base: './',
+
     build: {
         target: 'esnext' // 添加此配置以支持顶层 await
     },

@@ -1,0 +1,13 @@
+[package]
+name = "mintcat-integrator-ffi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "mintcat_integrator"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1"
+serde_json = "1"
+mintcat-integrator-core = { path = "../mintcat-integrator-core" }
