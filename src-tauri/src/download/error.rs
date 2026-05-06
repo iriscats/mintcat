@@ -17,7 +17,11 @@ impl fmt::Display for DownloadError {
             DownloadError::NetworkError(msg) => write!(f, "Network error: {}", msg),
             DownloadError::FileSystemError(msg) => write!(f, "File system error: {}", msg),
             DownloadError::ChecksumMismatch { expected, actual } => {
-                write!(f, "Checksum mismatch: expected {}, got {}", expected, actual)
+                write!(
+                    f,
+                    "Checksum mismatch: expected {}, got {}",
+                    expected, actual
+                )
             }
             DownloadError::InvalidUrl(url) => write!(f, "Invalid URL: {}", url),
             DownloadError::Cancelled => write!(f, "Download cancelled"),

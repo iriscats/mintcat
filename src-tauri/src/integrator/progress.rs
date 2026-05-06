@@ -1,7 +1,6 @@
 use anyhow::Result;
+use mintcat_integrator_api::{InstallEvent, InstallProgress};
 use tauri::{AppHandle, Emitter};
-
-pub use mintcat_integrator_core::{json_value, text, InstallEvent, InstallProgress};
 
 #[derive(Clone)]
 pub struct TauriInstallProgress {

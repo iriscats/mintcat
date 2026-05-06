@@ -24,7 +24,9 @@ impl RcInstallation {
                     .ok()
                     .flatten()
                     .map(|(app, library)| {
-                        library.resolve_app_dir(&app).join("RogueCore/Content/Paks/RogueCore-Windows.pak")
+                        library
+                            .resolve_app_dir(&app)
+                            .join("RogueCore/Content/Paks/RogueCore-Windows.pak")
                     })
             })
             .and_then(|path| Self::from_pak_path(path).ok())
@@ -38,7 +40,10 @@ impl RcInstallation {
             .and_then(|n| n.to_str())
             .with_context(|| format!("Invalid pak path: {:?}", pak))?;
         if name != "RogueCore-Windows.pak" {
-            anyhow::bail!("Not a Rogue Core pak path (expected RogueCore-Windows.pak): {:?}", pak);
+            anyhow::bail!(
+                "Not a Rogue Core pak path (expected RogueCore-Windows.pak): {:?}",
+                pak
+            );
         }
         let root = pak
             .parent()

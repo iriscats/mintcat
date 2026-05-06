@@ -1,23 +1,9 @@
 use anyhow::Context;
-use serde::{Deserialize, Serialize};
+use mintcat_integrator_api::{ConflictCheckModInfo, ModConflict};
 use std::collections::HashMap;
 use std::fs;
 use std::io::BufReader;
 use walkdir::WalkDir;
-
-#[derive(Debug, Deserialize)]
-pub struct ConflictCheckModInfo {
-    pub mod_id: i64,
-    pub cache_path: String,
-    pub is_unpacked: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ModConflict {
-    pub mod_id: i64,
-    pub conflicting_mods: Vec<i64>,
-    pub conflicting_files: Vec<String>,
-}
 
 fn get_pak_files(pak_path: &str) -> anyhow::Result<Vec<String>> {
     let file = fs::File::open(pak_path)
@@ -89,7 +75,10 @@ fn get_unpacked_mod_files(dir_path: &str, content_prefix: &str) -> anyhow::Resul
     Ok(files)
 }
 
-fn get_directory_mod_pak_files(dir_path: &str, content_prefix: &str) -> anyhow::Result<Vec<String>> {
+fn get_directory_mod_pak_files(
+    dir_path: &str,
+    content_prefix: &str,
+) -> anyhow::Result<Vec<String>> {
     let path = std::path::Path::new(dir_path);
     let mut all_files = Vec::new();
 
@@ -187,10 +176,12 @@ pub fn check_mod_conflicts(
 
     mod_conflicts
         .into_iter()
-        .map(|(mod_id, (conflicting_mods, conflicting_files))| ModConflict {
-            mod_id,
-            conflicting_mods,
-            conflicting_files,
-        })
+        .map(
+            |(mod_id, (conflicting_mods, conflicting_files))| ModConflict {
+                mod_id,
+                conflicting_mods,
+                conflicting_files,
+            },
+        )
         .collect()
 }

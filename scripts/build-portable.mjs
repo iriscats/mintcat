@@ -28,7 +28,7 @@ const SRC_TAURI = join(ROOT, 'src-tauri');
 const TARGET_TRIPLE = 'x86_64-pc-windows-gnu';
 const RELEASE_DIR = join(SRC_TAURI, 'target', TARGET_TRIPLE, 'release');
 const OO2_SRC = join(SRC_TAURI, 'assets', 'oo2core_9_win64.dll');
-const INTEGRATOR_RUNTIME_SRC = join(SRC_TAURI, 'assets', 'integrators', 'mintcat_integrator.dll');
+const INTEGRATOR_RUNTIME_SRC = join(SRC_TAURI, 'assets', 'plugins', 'mintcat_integrator.dll');
 const PORTABLE_CONFIG = join(SRC_TAURI, 'tauri.portable.windows.conf.json');
 
 function loadSigningKey() {
@@ -56,7 +56,7 @@ function ensureResources(releaseDir) {
   if (!existsSync(INTEGRATOR_RUNTIME_SRC)) {
     throw new Error(`未找到集成器运行时 DLL: ${INTEGRATOR_RUNTIME_SRC}`);
   }
-  const integratorDir = join(resDir, 'integrators');
+  const integratorDir = join(resDir, 'plugins');
   mkdirSync(integratorDir, { recursive: true });
   const integratorDest = join(integratorDir, 'mintcat_integrator.dll');
   copyFileSync(INTEGRATOR_RUNTIME_SRC, integratorDest);
@@ -89,9 +89,9 @@ function zipPortable(releaseDir, outZip, rootDirName) {
     copyFileSync(oodleDll, join(rootDir, 'oo2core_9_win64.dll'));
   }
 
-  const integratorRuntime = join(releaseDir, 'resources', 'integrators', 'mintcat_integrator.dll');
+  const integratorRuntime = join(releaseDir, 'resources', 'plugins', 'mintcat_integrator.dll');
   if (existsSync(integratorRuntime)) {
-    const integratorDir = join(rootDir, 'integrators');
+    const integratorDir = join(rootDir, 'plugins');
     mkdirSync(integratorDir, { recursive: true });
     copyFileSync(integratorRuntime, join(integratorDir, 'mintcat_integrator.dll'));
   }

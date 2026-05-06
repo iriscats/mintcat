@@ -1,23 +1,23 @@
 //! Rogue Core (UE 5.6) mod 整合：仅合并 mod pak / unpacked，不做 FSD 专用 patch
 
-use crate::common::zip::read_files_from_zip_by_extension;
+use crate::common::audio_pak::{
+    audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
+    verify_audio_only_pak_file, zip_contains_file_name,
+};
 use crate::common::mod_bundle_writer::ModBundleWriter;
-use crate::common::unpacked_mod::UnpackedMod;
 use crate::common::ue4ss::{
     dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
     install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
     zip_contains_js_mod,
 };
+use crate::common::unpacked_mod::UnpackedMod;
+use crate::common::zip::read_files_from_zip_by_extension;
 use crate::progress::{json_value, text, InstallEvent, InstallProgress};
-use crate::common::audio_pak::{
-    audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
-    verify_audio_only_pak_file, zip_contains_file_name,
-};
-use crate::{ModInfo, ReadSeek};
 use crate::uasset_utils::asset_registry::{
     AssetRegistry, Dependencies, Names, Readable as _, Store,
 };
 use crate::uasset_utils::paths::PakPath;
+use crate::{ModInfo, ReadSeek};
 use anyhow::{Context, Result};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -226,15 +226,21 @@ impl RcPakIntegrator {
         }
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
-            progress.emit(InstallEvent::StatusLog(json_value(json!({ "key": "backend.install.process_mod_start", "name": mod_info.name }))))?;
+            progress.emit(InstallEvent::StatusLog(json_value(
+                json!({ "key": "backend.install.process_mod_start", "name": mod_info.name }),
+            )))?;
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             progress.emit(InstallEvent::Percent(current_percent))?;
 
             if let Err(e) = self.process_mod(mod_info) {
-                progress.emit(InstallEvent::Error(json_value(json!({ "key": "backend.install.mod_failed", "name": mod_info.name }))))?;
+                progress.emit(InstallEvent::Error(json_value(
+                    json!({ "key": "backend.install.mod_failed", "name": mod_info.name }),
+                )))?;
                 return Err(e);
             }
-            progress.emit(InstallEvent::StatusLog(json_value(json!({ "key": "backend.install.process_mod_success", "name": mod_info.name }))))?;
+            progress.emit(InstallEvent::StatusLog(json_value(
+                json!({ "key": "backend.install.process_mod_success", "name": mod_info.name }),
+            )))?;
         }
 
         progress.emit(InstallEvent::StatusLog(text("backend.install.write_mod")))?;

@@ -1,4 +1,4 @@
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub enum ChecksumType {
@@ -68,4 +68,3 @@ pub fn swap_hex_nibbles_per_byte(hex: &str) -> Option<String> {
     }
     Some(out.to_lowercase())
 }
-

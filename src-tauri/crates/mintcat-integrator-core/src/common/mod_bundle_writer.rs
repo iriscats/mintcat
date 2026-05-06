@@ -1,8 +1,8 @@
+use crate::uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
 use anyhow::{Context, Result};
 use repak::PakWriter;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, Write};
-use crate::uasset_utils::paths::{PakPath, PakPathBuf, PakPathComponentTrait};
 use unreal_asset::Asset;
 
 #[derive(Debug, Default)]
@@ -69,8 +69,14 @@ impl<W: Write + Seek> ModBundleWriter<W> {
         asset
             .write_data(&mut data_out.0, Some(&mut data_out.1))
             .with_context(|| format!("Failed to serialize asset: {}", path))?;
-        data_out.0.rewind().context("Failed to rewind uasset buffer")?;
-        data_out.1.rewind().context("Failed to rewind uexp buffer")?;
+        data_out
+            .0
+            .rewind()
+            .context("Failed to rewind uasset buffer")?;
+        data_out
+            .1
+            .rewind()
+            .context("Failed to rewind uexp buffer")?;
 
         self.write_file(&data_out.0.into_inner(), &format!("{path}.uasset"))?;
         self.write_file(&data_out.1.into_inner(), &format!("{path}.uexp"))?;

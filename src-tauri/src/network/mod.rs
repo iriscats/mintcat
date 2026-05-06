@@ -2,8 +2,10 @@
 //! 前端通过 set_network_proxy 设置后，所有后端 reqwest 请求会使用该代理。
 //! 若未设置，则回退到系统代理（Windows：IE/系统代理；其他：环境变量 HTTP_PROXY/HTTPS_PROXY）。
 
-use std::time::Duration;
+mod system_proxy;
+
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::{AppHandle, Manager, State};
 
 const UPDATE_MANIFEST_TIMEOUT_SECS: u64 = 30;
@@ -31,10 +33,7 @@ impl NetworkProxyState {
 
 /// 设置网络代理 URL（如 http://127.0.0.1:7890）。传空字符串或 null 表示不使用代理。
 #[tauri::command]
-pub fn set_network_proxy(
-    state: State<'_, NetworkProxyState>,
-    proxy: Option<String>,
-) {
+pub fn set_network_proxy(state: State<'_, NetworkProxyState>, proxy: Option<String>) {
     let value = proxy.filter(|s| !s.is_empty());
     if let Some(ref u) = value {
         log::info!("Network proxy set to: {}", u);
@@ -73,7 +72,10 @@ pub async fn fetch_update_manifest(
         .await
         .map_err(|error| error.to_string())?;
     if !response.status().is_success() {
-        return Err(format!("update manifest request failed: {}", response.status()));
+        return Err(format!(
+            "update manifest request failed: {}",
+            response.status()
+        ));
     }
 
     let data = response
@@ -92,7 +94,7 @@ pub fn resolve_proxy(manual: Option<String>) -> Option<String> {
     if let Some(ref u) = manual {
         return Some(u.clone());
     }
-    if let Some(system) = crate::capability::system_proxy::get_system_proxy_url() {
+    if let Some(system) = system_proxy::get_system_proxy_url() {
         log::info!("Using system proxy: {}", system);
         return Some(system);
     }

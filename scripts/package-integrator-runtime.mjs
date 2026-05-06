@@ -59,7 +59,7 @@ function packageRuntime() {
     throw new Error(`runtime artifact not found: ${artifact}`);
   }
 
-  const assetDir = path.join(srcTauri, 'assets', 'integrators');
+  const assetDir = path.join(srcTauri, 'assets', 'plugins');
   mkdirSync(assetDir, { recursive: true });
   const assetPath = path.join(assetDir, runtimeFileName);
   copyFileSync(artifact, assetPath);

@@ -1,3 +1,14 @@
+use crate::common::audio_pak::{
+    audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
+    verify_audio_only_pak_file, zip_contains_file_name,
+};
+use crate::common::mod_bundle_writer::ModBundleWriter;
+use crate::common::ue4ss::{
+    dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
+    install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
+    zip_contains_js_mod,
+};
+use crate::common::unpacked_mod::UnpackedMod;
 use crate::common::zip::read_files_from_zip_by_extension;
 use crate::drg::game_pak_patch;
 use crate::drg::game_pak_patch::{
@@ -5,22 +16,11 @@ use crate::drg::game_pak_patch::{
     SERVER_LIST_ENTRY_PATH,
 };
 use crate::drg::installation::DRGInstallation;
-use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::drg::raw_asset::RawAsset;
-use crate::common::unpacked_mod::UnpackedMod;
-use crate::common::ue4ss::{
-    dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
-    install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
-    zip_contains_js_mod,
-};
 use crate::progress::{json_value, text, InstallEvent, InstallProgress};
-use crate::common::audio_pak::{
-    audio_pak_filename, cleanup_audio_paks, verify_audio_only_from_bytes,
-    verify_audio_only_pak_file, zip_contains_file_name,
-};
-use crate::{ModInfo, ReadSeek};
 use crate::uasset_utils::asset_registry::{AssetRegistry, Readable as _, Writable as _};
 use crate::uasset_utils::paths::PakPath;
+use crate::{ModInfo, ReadSeek};
 use anyhow::{Context, Result};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -157,7 +157,9 @@ impl PakIntegrator {
         }
 
         for (current_index, mod_info) in mods.iter_mut().enumerate() {
-            progress.emit(InstallEvent::StatusLog(json_value(json!({ "key": "backend.install.process_mod_start", "name": mod_info.name }))))?;
+            progress.emit(InstallEvent::StatusLog(json_value(
+                json!({ "key": "backend.install.process_mod_start", "name": mod_info.name }),
+            )))?;
 
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             progress.emit(InstallEvent::Percent(current_percent))?;
@@ -168,7 +170,9 @@ impl PakIntegrator {
                     progress.emit(InstallEvent::StatusLog(json_value(json!({ "key": "backend.install.process_mod_success", "name": mod_info.name }))))?;
                 }
                 Err(_) => {
-                    progress.emit(InstallEvent::Error(json_value(json!({ "key": "backend.install.mod_failed", "name": mod_info.name }))))?;
+                    progress.emit(InstallEvent::Error(json_value(
+                        json!({ "key": "backend.install.mod_failed", "name": mod_info.name }),
+                    )))?;
                     return Err(anyhow::anyhow!("Mod install failed: {}", mod_info.name));
                 }
             }
@@ -578,7 +582,10 @@ impl PakIntegrator {
         Ok(())
     }
 
-    fn process_asset_registry_from_files(&mut self, files: &HashMap<String, Vec<u8>>) -> Result<()> {
+    fn process_asset_registry_from_files(
+        &mut self,
+        files: &HashMap<String, Vec<u8>>,
+    ) -> Result<()> {
         for (path, uasset) in files {
             let normalized = PathBuf::from(path);
             if let Some("uasset" | "umap") = normalized.extension().and_then(|e| e.to_str()) {
@@ -587,14 +594,12 @@ impl PakIntegrator {
                     continue;
                 };
 
-                let asset = AssetBuilder::new(
-                    Cursor::new(uasset.as_slice()),
-                    EngineVersion::VER_UE4_27,
-                )
-                .bulk(Cursor::new(uexp.as_slice()))
-                .skip_data(true)
-                .build()
-                .with_context(|| format!("Failed to build asset: {}", path))?;
+                let asset =
+                    AssetBuilder::new(Cursor::new(uasset.as_slice()), EngineVersion::VER_UE4_27)
+                        .bulk(Cursor::new(uexp.as_slice()))
+                        .skip_data(true)
+                        .build()
+                        .with_context(|| format!("Failed to build asset: {}", path))?;
 
                 self.asset_registry
                     .populate(normalized.with_extension("").to_str().unwrap(), &asset)

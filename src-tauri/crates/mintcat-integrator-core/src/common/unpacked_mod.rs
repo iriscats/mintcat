@@ -112,8 +112,8 @@ impl UnpackedMod {
             );
 
             // Read the file content
-            let content = fs::read(path)
-                .with_context(|| format!("Failed to read file: {:?}", path))?;
+            let content =
+                fs::read(path).with_context(|| format!("Failed to read file: {:?}", path))?;
 
             self.files.insert(pak_path, content);
         }

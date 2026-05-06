@@ -1,5 +1,5 @@
-use crate::capability::download::task::DownloadTask;
-use crate::capability::network::{apply_proxy_builder, resolve_proxy};
+use crate::download::task::DownloadTask;
+use crate::network::{apply_proxy_builder, resolve_proxy};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -28,8 +28,8 @@ impl DownloadManager {
             .connect_timeout(Duration::from_secs(30))
             .pool_max_idle_per_host(10)
             .pool_idle_timeout(Duration::from_secs(90));
-        let builder = apply_proxy_builder(builder, proxy_url)
-            .expect("Failed to apply proxy to HTTP client");
+        let builder =
+            apply_proxy_builder(builder, proxy_url).expect("Failed to apply proxy to HTTP client");
         builder.build().expect("Failed to create HTTP client")
     }
 

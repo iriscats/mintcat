@@ -3,13 +3,13 @@ use std::fs;
 
 use anyhow::Context;
 
-use crate::{GameKind, InstallRequest};
 use crate::common::audio_pak::is_mintcat_audio_pak;
 use crate::drg::installation::DRGInstallation;
 use crate::drg::pak_integrator::PakIntegrator;
 use crate::drgrc::installation::RcInstallation;
 use crate::drgrc::pak_integrator::RcPakIntegrator;
 use crate::progress::{text, InstallEvent, InstallProgress};
+use crate::{GameKind, InstallRequest};
 
 pub fn install_mods_with_progress(
     progress: &dyn InstallProgress,
@@ -48,14 +48,20 @@ pub fn install_mods_with_progress(
     Ok(())
 }
 
-pub fn uninstall_mods_by_game_path(game_path: String, is_delete_ue4ss: bool) -> anyhow::Result<bool> {
+pub fn uninstall_mods_by_game_path(
+    game_path: String,
+    is_delete_ue4ss: bool,
+) -> anyhow::Result<bool> {
     match GameKind::from_game_pak_path(&game_path) {
         GameKind::RogueCore => RcPakIntegrator::uninstall(game_path, is_delete_ue4ss).map(|_| true),
         GameKind::Drg => PakIntegrator::uninstall(game_path, is_delete_ue4ss).map(|_| true),
     }
 }
 
-pub fn check_installed_by_game_path(game_path: String, install_time: u64) -> anyhow::Result<String> {
+pub fn check_installed_by_game_path(
+    game_path: String,
+    install_time: u64,
+) -> anyhow::Result<String> {
     match GameKind::from_game_pak_path(&game_path) {
         GameKind::RogueCore => RcPakIntegrator::check_installed(game_path, install_time),
         GameKind::Drg => PakIntegrator::check_installed(game_path, install_time),
@@ -64,8 +70,7 @@ pub fn check_installed_by_game_path(game_path: String, install_time: u64) -> any
 
 pub fn find_game_pak_by_name(game_name: Option<&str>) -> String {
     let path = match game_name {
-        Some("rc") => RcInstallation::find_rc()
-            .and_then(|i| i.pak_path.to_str().map(String::from)),
+        Some("rc") => RcInstallation::find_rc().and_then(|i| i.pak_path.to_str().map(String::from)),
         _ => DRGInstallation::find().and_then(|i| i.pak_path.to_str().map(String::from)),
     };
     path.unwrap_or_default()
@@ -118,4 +123,3 @@ pub fn check_foreign_paks_by_game_path(game_path: &str) -> anyhow::Result<Vec<St
     foreign.sort();
     Ok(foreign)
 }
-

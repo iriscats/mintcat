@@ -1,11 +1,11 @@
+use crate::uasset_utils::splice::{
+    extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement,
+};
 use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::io;
 use std::io::{Read, Seek};
 use tracing::info;
-use crate::uasset_utils::splice::{
-    extract_tracked_statements, inject_tracked_statements, walk, AssetVersion, TrackedStatement,
-};
 use unreal_asset::properties::object_property::{
     SoftObjectPath, SoftObjectProperty, TopLevelAssetPath,
 };

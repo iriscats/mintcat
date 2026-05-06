@@ -24,7 +24,12 @@ fn utf16_lenient(s: &[u16]) -> String {
             if i < s.len() {
                 let low = s[i];
                 if (0xDC00..=0xDFFF).contains(&low) {
-                    out.push(char::from_u32(((high as u32 - 0xD800) << 10 | (low as u32 - 0xDC00)) + 0x1_0000).unwrap_or('\u{FFFD}'));
+                    out.push(
+                        char::from_u32(
+                            ((high as u32 - 0xD800) << 10 | (low as u32 - 0xDC00)) + 0x1_0000,
+                        )
+                        .unwrap_or('\u{FFFD}'),
+                    );
                     i += 1;
                     continue;
                 }

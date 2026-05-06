@@ -1,7 +1,5 @@
-use crate::capability::download::checksum::{
-    swap_hex_nibbles_per_byte, ChecksumCalculator, ChecksumType,
-};
-use crate::capability::download::error::DownloadError;
+use crate::download::checksum::{swap_hex_nibbles_per_byte, ChecksumCalculator, ChecksumType};
+use crate::download::error::DownloadError;
 use futures::StreamExt;
 use rand::Rng;
 use serde::Serialize;
@@ -148,16 +146,15 @@ impl DownloadTask {
     async fn download_with_resume(&self, _attempt: u32) -> Result<(), DownloadError> {
         let part_path = self.file_path.with_extension("part");
         // When verifying checksum, never resume: hash only the bytes we receive in this request.
-        let resume_enabled = self.options.resume.unwrap_or(true)
-            && self.options.checksum.is_none();
-        
+        let resume_enabled = self.options.resume.unwrap_or(true) && self.options.checksum.is_none();
+
         // Ensure parent directory exists before downloading
         if let Some(parent) = self.file_path.parent() {
             if !parent.exists() {
                 tokio::fs::create_dir_all(parent).await?;
             }
         }
-        
+
         let start_byte = if resume_enabled {
             self.get_partial_file_size().await?
         } else {
@@ -170,14 +167,14 @@ impl DownloadTask {
 
         // Build request
         let mut request = self.client.get(&self.url);
-        
+
         // Add custom headers
         if let Some(headers) = &self.options.headers {
             for (key, value) in headers {
                 request = request.header(key, value);
             }
         }
-        
+
         if start_byte > 0 {
             request = request.header("Range", format!("bytes={}-", start_byte));
         }
@@ -188,9 +185,9 @@ impl DownloadTask {
 
         // Send request
         let response = request.send().await?;
-        
+
         let status = response.status();
-        
+
         if !status.is_success() && status.as_u16() != 206 {
             return Err(DownloadError::HttpError(
                 status.as_u16(),
@@ -248,10 +245,7 @@ impl DownloadTask {
 
         // Open file for writing (append when resuming, create fresh otherwise)
         let mut file = if start_byte > 0 {
-            OpenOptions::new()
-                .append(true)
-                .open(&part_path)
-                .await?
+            OpenOptions::new().append(true).open(&part_path).await?
         } else {
             File::create(&part_path).await?
         };
@@ -269,7 +263,7 @@ impl DownloadTask {
 
             let chunk = chunk?;
             file.write_all(&chunk).await?;
-            
+
             if let Some(calculator) = &mut checksum_calculator {
                 calculator.update(&chunk);
             }
@@ -299,16 +293,18 @@ impl DownloadTask {
         drop(file);
 
         // Verify checksum if provided
-        if let (Some(expected_checksum), Some(calculator)) = 
-            (&self.options.checksum, checksum_calculator) {
+        if let (Some(expected_checksum), Some(calculator)) =
+            (&self.options.checksum, checksum_calculator)
+        {
             let actual_checksum = calculator.finalize();
             let expected_normalized = expected_checksum.trim().to_lowercase();
             let actual_normalized = actual_checksum.trim().to_lowercase();
 
-            let md5_nibble_swapped_match = matches!(self.options.checksum_type, Some(ChecksumType::Md5))
-                && swap_hex_nibbles_per_byte(&expected_normalized)
-                    .map(|swapped| swapped == actual_normalized)
-                    .unwrap_or(false);
+            let md5_nibble_swapped_match =
+                matches!(self.options.checksum_type, Some(ChecksumType::Md5))
+                    && swap_hex_nibbles_per_byte(&expected_normalized)
+                        .map(|swapped| swapped == actual_normalized)
+                        .unwrap_or(false);
 
             if expected_normalized != actual_normalized && !md5_nibble_swapped_match {
                 return Err(DownloadError::ChecksumMismatch {
@@ -354,7 +350,7 @@ impl DownloadTask {
                 }
                 Err(e) => {
                     last_error = Some(e.clone());
-                    
+
                     // Don't retry on certain errors
                     match &e {
                         DownloadError::Cancelled => {
@@ -364,7 +360,8 @@ impl DownloadTask {
                         DownloadError::ChecksumMismatch { .. } => {
                             // Delete partial and final file so retry does a full re-download
                             let _ = tokio::fs::remove_file(&self.file_path).await;
-                            let _ = tokio::fs::remove_file(self.file_path.with_extension("part")).await;
+                            let _ =
+                                tokio::fs::remove_file(self.file_path.with_extension("part")).await;
                             self.emit_status("failed", Some(e.to_string()), None);
                             return Err(e);
                         }

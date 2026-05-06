@@ -1,4 +1,8 @@
-use std::{fs::{self, File}, io::Cursor, path::{Component, Path, PathBuf}};
+use std::{
+    fs::{self, File},
+    io::Cursor,
+    path::{Component, Path, PathBuf},
+};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -16,23 +20,35 @@ const HOT_URL: &str = "mintcat-hot://localhost/index.html#/home";
 pub struct FrontendUpdateManifest {
     pub version: String,
     pub url: String,
-    #[serde(default)] pub sha256: Option<String>,
-    #[serde(default)] pub md5: Option<String>,
-    #[serde(default)] pub checksum: Option<String>,
-    #[serde(default)] pub signature: Option<String>,
-    #[serde(default)] pub min_app_version: Option<String>,
-    #[serde(default)] pub max_app_version: Option<String>,
-    #[serde(default = "default_entry")] pub entry: String,
+    #[serde(default)]
+    pub sha256: Option<String>,
+    #[serde(default)]
+    pub md5: Option<String>,
+    #[serde(default)]
+    pub checksum: Option<String>,
+    #[serde(default)]
+    pub signature: Option<String>,
+    #[serde(default)]
+    pub min_app_version: Option<String>,
+    #[serde(default)]
+    pub max_app_version: Option<String>,
+    #[serde(default = "default_entry")]
+    pub entry: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FrontendRuntimeState {
-    #[serde(default)] pub active_version: Option<String>,
-    #[serde(default)] pub previous_version: Option<String>,
-    #[serde(default)] pub pending_version: Option<String>,
-    #[serde(default)] pub last_failed_version: Option<String>,
-    #[serde(default)] pub pending_launch_count: u32,
+    #[serde(default)]
+    pub active_version: Option<String>,
+    #[serde(default)]
+    pub previous_version: Option<String>,
+    #[serde(default)]
+    pub pending_version: Option<String>,
+    #[serde(default)]
+    pub last_failed_version: Option<String>,
+    #[serde(default)]
+    pub pending_launch_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,14 +62,31 @@ pub struct FrontendUpdateStatus {
     pub has_local_bundle: bool,
 }
 
-fn default_entry() -> String { "index.html".into() }
-fn root(app: &AppHandle) -> Result<PathBuf, String> { app.path().app_data_dir().map(|p| p.join("frontend")).map_err(|e| e.to_string()) }
-fn versions(app: &AppHandle) -> Result<PathBuf, String> { Ok(root(app)?.join("versions")) }
-fn pending(app: &AppHandle) -> Result<PathBuf, String> { Ok(root(app)?.join("pending")) }
-fn state_file(app: &AppHandle) -> Result<PathBuf, String> { Ok(root(app)?.join("state.json")) }
+fn default_entry() -> String {
+    "index.html".into()
+}
+fn root(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|p| p.join("frontend"))
+        .map_err(|e| e.to_string())
+}
+fn versions(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(root(app)?.join("versions"))
+}
+fn pending(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(root(app)?.join("pending"))
+}
+fn state_file(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(root(app)?.join("state.json"))
+}
 
 fn read_state(app: &AppHandle) -> FrontendRuntimeState {
-    state_file(app).ok().and_then(|p| fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default()
+    state_file(app)
+        .ok()
+        .and_then(|p| fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
 }
 
 fn write_state(app: &AppHandle, state: &FrontendRuntimeState) -> Result<(), String> {
@@ -63,9 +96,16 @@ fn write_state(app: &AppHandle, state: &FrontendRuntimeState) -> Result<(), Stri
 }
 
 fn valid_version(version: &str) -> Result<(), String> {
-    if version.is_empty() || version.contains("..") || version.contains('/') || version.contains('\\') || version.chars().any(|c| c.is_control()) {
+    if version.is_empty()
+        || version.contains("..")
+        || version.contains('/')
+        || version.contains('\\')
+        || version.chars().any(|c| c.is_control())
+    {
         Err("invalid frontend version".into())
-    } else { Ok(()) }
+    } else {
+        Ok(())
+    }
 }
 
 fn active_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -81,10 +121,14 @@ fn hot_url() -> Url {
 
 fn hot_webview_url() -> WebviewUrl {
     #[cfg(any(target_os = "windows", target_os = "android"))]
-    { WebviewUrl::External(hot_url()) }
+    {
+        WebviewUrl::External(hot_url())
+    }
 
     #[cfg(not(any(target_os = "windows", target_os = "android")))]
-    { WebviewUrl::CustomProtocol(hot_url()) }
+    {
+        WebviewUrl::CustomProtocol(hot_url())
+    }
 }
 
 pub fn startup_webview_url(app: &AppHandle) -> WebviewUrl {
@@ -125,7 +169,9 @@ pub fn navigate_to_hot_frontend(app: &AppHandle) {
     }
     if let Some(window) = app.get_webview_window("main") {
         log::info!("[FrontendUpdate] navigating to hot frontend");
-        if let Err(error) = window.navigate(hot_url()) { log::warn!("[FrontendUpdate] navigate failed: {error}"); }
+        if let Err(error) = window.navigate(hot_url()) {
+            log::warn!("[FrontendUpdate] navigate failed: {error}");
+        }
     } else {
         log::warn!("[FrontendUpdate] main window not found for hot frontend navigation");
     }
@@ -133,18 +179,23 @@ pub fn navigate_to_hot_frontend(app: &AppHandle) {
 
 #[tauri::command]
 pub fn get_frontend_entry_path(app: AppHandle) -> Result<Option<String>, String> {
-    Ok(active_dir(&app).map(|dir| {
-        dir.join("index.html")
-            .to_string_lossy()
-            .replace('\\', "/")
-    }))
+    Ok(active_dir(&app).map(|dir| dir.join("index.html").to_string_lossy().replace('\\', "/")))
 }
 
-pub fn handle_protocol(app: &AppHandle, request: http::Request<Vec<u8>>) -> http::Response<Vec<u8>> {
-    log::info!("[FrontendUpdate] hot asset request: {}", request.uri().path());
+pub fn handle_protocol(
+    app: &AppHandle,
+    request: http::Request<Vec<u8>>,
+) -> http::Response<Vec<u8>> {
+    log::info!(
+        "[FrontendUpdate] hot asset request: {}",
+        request.uri().path()
+    );
     match read_asset(app, request.uri().path()) {
         Ok((body, mime)) => resp(200, mime, body),
-        Err(error) => { log::warn!("[FrontendUpdate] asset request failed: {error}"); resp(404, "text/plain; charset=utf-8", b"not found".to_vec()) }
+        Err(error) => {
+            log::warn!("[FrontendUpdate] asset request failed: {error}");
+            resp(404, "text/plain; charset=utf-8", b"not found".to_vec())
+        }
     }
 }
 
@@ -154,7 +205,9 @@ fn read_asset(app: &AppHandle, uri_path: &str) -> Result<(Vec<u8>, &'static str)
     let file = root.join(rel);
     let canonical_root = root.canonicalize().map_err(|e| e.to_string())?;
     let canonical_file = file.canonicalize().map_err(|e| e.to_string())?;
-    if !canonical_file.starts_with(canonical_root) || !canonical_file.is_file() { return Err("invalid asset path".into()); }
+    if !canonical_file.starts_with(canonical_root) || !canonical_file.is_file() {
+        return Err("invalid asset path".into());
+    }
     let body = fs::read(&canonical_file).map_err(|e| e.to_string())?;
     Ok((body, mime(&canonical_file)))
 }
@@ -162,27 +215,51 @@ fn read_asset(app: &AppHandle, uri_path: &str) -> Result<(Vec<u8>, &'static str)
 fn normalize_path(uri_path: &str) -> Result<PathBuf, String> {
     let mut out = PathBuf::new();
     for component in Path::new(uri_path.trim_start_matches('/')).components() {
-        match component { Component::Normal(part) => out.push(part), Component::CurDir => {}, _ => return Err("unsafe asset path".into()) }
+        match component {
+            Component::Normal(part) => out.push(part),
+            Component::CurDir => {}
+            _ => return Err("unsafe asset path".into()),
+        }
     }
-    if out.as_os_str().is_empty() { out.push("index.html"); }
+    if out.as_os_str().is_empty() {
+        out.push("index.html");
+    }
     Ok(out)
 }
 
 fn resp(status: u16, mime: &'static str, body: Vec<u8>) -> http::Response<Vec<u8>> {
-    http::Response::builder().status(status).header("content-type", mime).header("cache-control", "no-cache").body(body).unwrap_or_else(|_| http::Response::new(Vec::new()))
+    http::Response::builder()
+        .status(status)
+        .header("content-type", mime)
+        .header("cache-control", "no-cache")
+        .body(body)
+        .unwrap_or_else(|_| http::Response::new(Vec::new()))
 }
 
 fn mime(path: &Path) -> &'static str {
     match path.extension().and_then(|s| s.to_str()) {
-        Some("html") => "text/html; charset=utf-8", Some("js") | Some("mjs") => "text/javascript; charset=utf-8", Some("css") => "text/css; charset=utf-8",
-        Some("json") => "application/json; charset=utf-8", Some("svg") => "image/svg+xml", Some("png") => "image/png", Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("gif") => "image/gif", Some("webp") => "image/webp", Some("ico") => "image/x-icon", Some("woff") => "font/woff", Some("woff2") => "font/woff2",
-        Some("ttf") => "font/ttf", _ => "application/octet-stream",
+        Some("html") => "text/html; charset=utf-8",
+        Some("js") | Some("mjs") => "text/javascript; charset=utf-8",
+        Some("css") => "text/css; charset=utf-8",
+        Some("json") => "application/json; charset=utf-8",
+        Some("svg") => "image/svg+xml",
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("ico") => "image/x-icon",
+        Some("woff") => "font/woff",
+        Some("woff2") => "font/woff2",
+        Some("ttf") => "font/ttf",
+        _ => "application/octet-stream",
     }
 }
 
 #[tauri::command]
-pub async fn install_frontend_update_from_manifest(app: AppHandle, manifest: FrontendUpdateManifest) -> Result<FrontendUpdateStatus, String> {
+pub async fn install_frontend_update_from_manifest(
+    app: AppHandle,
+    manifest: FrontendUpdateManifest,
+) -> Result<FrontendUpdateStatus, String> {
     validate_manifest(&manifest)?;
     validate_compatibility(&manifest)?;
     let bytes = download(&manifest.url).await?;
@@ -228,56 +305,116 @@ pub fn rollback_frontend_update(app: AppHandle) -> Result<FrontendUpdateStatus, 
 }
 
 #[tauri::command]
-pub fn get_frontend_update_status(app: AppHandle) -> Result<FrontendUpdateStatus, String> { status(app) }
+pub fn get_frontend_update_status(app: AppHandle) -> Result<FrontendUpdateStatus, String> {
+    status(app)
+}
 
 fn status(app: AppHandle) -> Result<FrontendUpdateStatus, String> {
     let state = read_state(&app);
-    Ok(FrontendUpdateStatus { active_version: state.active_version, previous_version: state.previous_version, pending_version: state.pending_version, last_failed_version: state.last_failed_version, pending_launch_count: state.pending_launch_count, has_local_bundle: active_dir(&app).is_some() })
+    Ok(FrontendUpdateStatus {
+        active_version: state.active_version,
+        previous_version: state.previous_version,
+        pending_version: state.pending_version,
+        last_failed_version: state.last_failed_version,
+        pending_launch_count: state.pending_launch_count,
+        has_local_bundle: active_dir(&app).is_some(),
+    })
 }
 
 fn validate_manifest(manifest: &FrontendUpdateManifest) -> Result<(), String> {
     valid_version(&manifest.version)?;
-    if manifest.url.trim().is_empty() { return Err("manifest url is required".into()); }
-    if manifest.sha256.as_deref().unwrap_or_default().trim().is_empty()
-        && manifest.md5.as_deref().unwrap_or_default().trim().is_empty()
-        && manifest.checksum.as_deref().unwrap_or_default().trim().is_empty() {
+    if manifest.url.trim().is_empty() {
+        return Err("manifest url is required".into());
+    }
+    if manifest
+        .sha256
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .is_empty()
+        && manifest
+            .md5
+            .as_deref()
+            .unwrap_or_default()
+            .trim()
+            .is_empty()
+        && manifest
+            .checksum
+            .as_deref()
+            .unwrap_or_default()
+            .trim()
+            .is_empty()
+    {
         return Err("manifest checksum is required".into());
     }
-    if manifest.entry != "index.html" { return Err("only index.html entry is supported".into()); }
+    if manifest.entry != "index.html" {
+        return Err("only index.html entry is supported".into());
+    }
     Ok(())
 }
 
 fn validate_compatibility(manifest: &FrontendUpdateManifest) -> Result<(), String> {
     let app_version = env!("CARGO_PKG_VERSION");
-    if let Some(min) = &manifest.min_app_version { if cmp_version(app_version, min).is_lt() { return Err(format!("frontend requires app >= {min}")); } }
-    if let Some(max) = &manifest.max_app_version { if cmp_version(app_version, max).is_gt() { return Err(format!("frontend requires app <= {max}")); } }
+    if let Some(min) = &manifest.min_app_version {
+        if cmp_version(app_version, min).is_lt() {
+            return Err(format!("frontend requires app >= {min}"));
+        }
+    }
+    if let Some(max) = &manifest.max_app_version {
+        if cmp_version(app_version, max).is_gt() {
+            return Err(format!("frontend requires app <= {max}"));
+        }
+    }
     Ok(())
 }
 
 fn cmp_version(left: &str, right: &str) -> std::cmp::Ordering {
-    let parse = |value: &str| value.split(|c| c == '.' || c == '-').take(3).map(|p| p.parse::<u64>().unwrap_or(0)).collect::<Vec<_>>();
+    let parse = |value: &str| {
+        value
+            .split(|c| c == '.' || c == '-')
+            .take(3)
+            .map(|p| p.parse::<u64>().unwrap_or(0))
+            .collect::<Vec<_>>()
+    };
     parse(left).cmp(&parse(right))
 }
 
 async fn download(url: &str) -> Result<Vec<u8>, String> {
     let res = reqwest::get(url).await.map_err(|e| e.to_string())?;
-    if !res.status().is_success() { return Err(format!("zip download failed: {}", res.status())); }
-    res.bytes().await.map(|b| b.to_vec()).map_err(|e| e.to_string())
+    if !res.status().is_success() {
+        return Err(format!("zip download failed: {}", res.status()));
+    }
+    res.bytes()
+        .await
+        .map(|b| b.to_vec())
+        .map_err(|e| e.to_string())
 }
 
 fn verify_hash(bytes: &[u8], manifest: &FrontendUpdateManifest) -> Result<(), String> {
-    if let Some(expected) = manifest.sha256.as_deref().filter(|value| !value.trim().is_empty()) {
+    if let Some(expected) = manifest
+        .sha256
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
         let mut hasher = Sha256::new();
         hasher.update(bytes);
         let actual = format!("{:x}", hasher.finalize());
-        return actual.eq_ignore_ascii_case(expected.trim()).then_some(()).ok_or_else(|| format!("sha256 mismatch: expected {expected}, got {actual}"));
+        return actual
+            .eq_ignore_ascii_case(expected.trim())
+            .then_some(())
+            .ok_or_else(|| format!("sha256 mismatch: expected {expected}, got {actual}"));
     }
 
-    let expected = manifest.md5.as_deref()
+    let expected = manifest
+        .md5
+        .as_deref()
         .or(manifest.checksum.as_deref())
         .ok_or_else(|| "manifest checksum is required".to_string())?;
     let actual = format!("{:x}", md5::compute(bytes));
-    actual.eq_ignore_ascii_case(expected.trim()).then_some(()).ok_or_else(|| format!("md5 mismatch: expected {expected}, got {actual}"))
+    actual
+        .eq_ignore_ascii_case(expected.trim())
+        .then_some(())
+        .ok_or_else(|| format!("md5 mismatch: expected {expected}, got {actual}"))
 }
 
 fn verify_signature(manifest: &FrontendUpdateManifest) -> Result<(), String> {
@@ -292,23 +429,43 @@ fn verify_signature(manifest: &FrontendUpdateManifest) -> Result<(), String> {
     Ok(())
 }
 
-fn extract_zip(app: &AppHandle, manifest: &FrontendUpdateManifest, bytes: &[u8]) -> Result<(), String> {
+fn extract_zip(
+    app: &AppHandle,
+    manifest: &FrontendUpdateManifest,
+    bytes: &[u8],
+) -> Result<(), String> {
     let target = versions(app)?.join(&manifest.version);
     let pending = pending(app)?;
-    if pending.exists() { fs::remove_dir_all(&pending).map_err(|e| e.to_string())?; }
+    if pending.exists() {
+        fs::remove_dir_all(&pending).map_err(|e| e.to_string())?;
+    }
     fs::create_dir_all(&pending).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| e.to_string())?;
     for index in 0..archive.len() {
         let mut file = archive.by_index(index).map_err(|e| e.to_string())?;
-        let name = file.enclosed_name().ok_or("zip contains unsafe path")?.to_path_buf();
+        let name = file
+            .enclosed_name()
+            .ok_or("zip contains unsafe path")?
+            .to_path_buf();
         let out = pending.join(name);
-        if file.is_dir() { fs::create_dir_all(&out).map_err(|e| e.to_string())?; continue; }
-        if let Some(parent) = out.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
+        if file.is_dir() {
+            fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+            continue;
+        }
+        if let Some(parent) = out.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
         let mut output = File::create(&out).map_err(|e| e.to_string())?;
         std::io::copy(&mut file, &mut output).map_err(|e| e.to_string())?;
     }
-    if !pending.join("index.html").is_file() { return Err("frontend zip must contain index.html at root".into()); }
-    if target.exists() { fs::remove_dir_all(&target).map_err(|e| e.to_string())?; }
-    if let Some(parent) = target.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
+    if !pending.join("index.html").is_file() {
+        return Err("frontend zip must contain index.html at root".into());
+    }
+    if target.exists() {
+        fs::remove_dir_all(&target).map_err(|e| e.to_string())?;
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
     fs::rename(&pending, &target).map_err(|e| e.to_string())
 }

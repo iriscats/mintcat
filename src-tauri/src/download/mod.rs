@@ -3,9 +3,9 @@ mod error;
 mod manager;
 mod task;
 
-use crate::capability::download::checksum::ChecksumType;
-use crate::capability::download::manager::DownloadManager;
-use crate::capability::download::task::{DownloadOptions, DownloadTask};
+use crate::download::checksum::ChecksumType;
+use crate::download::manager::DownloadManager;
+use crate::download::task::{DownloadOptions, DownloadTask};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -28,9 +28,7 @@ pub struct DownloadOptionsDto {
 
 impl From<DownloadOptionsDto> for DownloadOptions {
     fn from(dto: DownloadOptionsDto) -> Self {
-        let checksum_type = dto
-            .checksum_type
-            .and_then(|t| ChecksumType::from_str(&t));
+        let checksum_type = dto.checksum_type.and_then(|t| ChecksumType::from_str(&t));
 
         DownloadOptions {
             checksum: dto.checksum,
@@ -60,7 +58,7 @@ pub async fn download_file(
 ) -> Result<DownloadResult, String> {
     // Generate unique download ID
     let download_id = uuid::Uuid::new_v4().to_string();
-    
+
     // Convert options
     let download_options = options
         .map(|o| o.into())
@@ -81,7 +79,9 @@ pub async fn download_file(
     ));
 
     // Add to active downloads
-    manager.add_download(download_id.clone(), task.clone()).await;
+    manager
+        .add_download(download_id.clone(), task.clone())
+        .await;
     drop(manager);
 
     // Execute download in background
@@ -118,7 +118,7 @@ pub async fn cancel_download(
 pub fn init_download_manager(
     proxy_arc: std::sync::Arc<std::sync::Mutex<Option<String>>>,
 ) -> DownloadManagerState {
-    DownloadManagerState(Arc::new(Mutex::new(
-        DownloadManager::new_with_proxy_arc(proxy_arc),
-    )))
+    DownloadManagerState(Arc::new(Mutex::new(DownloadManager::new_with_proxy_arc(
+        proxy_arc,
+    ))))
 }

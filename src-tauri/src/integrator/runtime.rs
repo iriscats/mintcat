@@ -5,8 +5,11 @@ use std::ptr;
 
 use anyhow::{Context, Result};
 use libloading::Library;
-use mintcat_integrator_core::{install_mods_with_progress, InstallEvent, InstallProgress, InstallRequest};
-use serde::{Deserialize, Serialize};
+use mintcat_integrator_api::{
+    CheckForeignPaksRequest, CheckInstalledRequest, CheckModConflictsRequest, FindGamePakRequest,
+    InstallEvent, InstallProgress, InstallRequest, PathRequest, UninstallModsRequest,
+};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 const ABI_VERSION: u32 = 1;
@@ -19,6 +22,11 @@ type InstallFn = unsafe extern "C" fn(
     request_json: *const c_char,
     callback: Option<ProgressCallback>,
     user_data: *mut c_void,
+    response_json: *mut *mut c_char,
+    error_message: *mut *mut c_char,
+) -> i32;
+type CommandFn = unsafe extern "C" fn(
+    request_json: *const c_char,
     response_json: *mut *mut c_char,
     error_message: *mut *mut c_char,
 ) -> i32;
@@ -68,25 +76,85 @@ pub fn install_mods_with_runtime(
     progress: &dyn InstallProgress,
     request: InstallRequest,
 ) -> Result<()> {
-    if let Err(error) = ensure_bundled_runtime(app) {
-        log::warn!("[IntegratorRuntime] failed to seed bundled runtime: {:#}", error);
-    }
-    match active_library_path(app) {
-        Some(path) => match unsafe { install_with_library(&path, progress, &request) } {
-            Ok(()) => Ok(()),
-            Err(error) => {
-                log::warn!(
-                    "[IntegratorRuntime] external integrator failed, falling back: {:#}",
-                    error
-                );
-                let _ = progress.emit(InstallEvent::StatusLog(mintcat_integrator_core::text(
-                    "backend.install.runtime_fallback",
-                )));
-                install_mods_with_progress(progress, request)
-            }
+    let path = active_runtime_path(app)?;
+    unsafe { install_with_library(&path, progress, &request) }
+}
+
+pub fn uninstall_mods_with_runtime(
+    app: &AppHandle,
+    game_path: String,
+    is_delete_ue4ss: bool,
+) -> Result<bool> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_uninstall_mods",
+        &UninstallModsRequest {
+            game_path,
+            is_delete_ue4ss,
         },
-        None => install_mods_with_progress(progress, request),
-    }
+    )
+}
+
+pub fn check_installed_with_runtime(
+    app: &AppHandle,
+    game_path: String,
+    install_time: u64,
+) -> Result<String> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_check_installed",
+        &CheckInstalledRequest {
+            game_path,
+            install_time,
+        },
+    )
+}
+
+pub fn find_game_pak_with_runtime(app: &AppHandle, game_name: Option<String>) -> Result<String> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_find_game_pak",
+        &FindGamePakRequest { game_name },
+    )
+}
+
+pub fn check_foreign_paks_with_runtime(app: &AppHandle, game_path: String) -> Result<Vec<String>> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_check_foreign_paks",
+        &CheckForeignPaksRequest { game_path },
+    )
+}
+
+pub fn is_valid_unpacked_mod_with_runtime(app: &AppHandle, path: String) -> Result<bool> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_is_valid_unpacked_mod",
+        &PathRequest { path },
+    )
+}
+
+pub fn check_mod_conflicts_with_runtime(
+    app: &AppHandle,
+    mod_list_json: String,
+    game_name: Option<String>,
+) -> Result<Vec<mintcat_integrator_api::ModConflict>> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_check_mod_conflicts",
+        &CheckModConflictsRequest {
+            mod_list_json,
+            game_name,
+        },
+    )
+}
+
+pub fn validate_zip_file_with_runtime(app: &AppHandle, path: String) -> Result<bool> {
+    call_runtime_command(
+        app,
+        b"mintcat_integrator_validate_zip_file",
+        &PathRequest { path },
+    )
 }
 
 #[tauri::command]
@@ -121,7 +189,10 @@ pub async fn install_integrator_runtime_from_manifest(
 #[tauri::command]
 pub fn get_integrator_runtime_status(app: AppHandle) -> Result<IntegratorRuntimeStatus, String> {
     if let Err(error) = ensure_bundled_runtime(&app) {
-        log::warn!("[IntegratorRuntime] failed to seed bundled runtime: {:#}", error);
+        log::warn!(
+            "[IntegratorRuntime] failed to seed bundled runtime: {:#}",
+            error
+        );
     }
     status(app)
 }
@@ -161,6 +232,83 @@ pub fn ensure_bundled_runtime(app: &AppHandle) -> Result<()> {
     write_state(app, &state).map_err(anyhow::Error::msg)
 }
 
+fn active_runtime_path(app: &AppHandle) -> Result<PathBuf> {
+    if let Err(error) = ensure_bundled_runtime(app) {
+        log::warn!(
+            "[IntegratorRuntime] failed to seed bundled runtime: {:#}",
+            error
+        );
+    }
+    active_library_path(app).context("integrator runtime is not available")
+}
+
+fn call_runtime_command<TRequest, TResponse>(
+    app: &AppHandle,
+    symbol: &[u8],
+    request: &TRequest,
+) -> Result<TResponse>
+where
+    TRequest: Serialize,
+    TResponse: DeserializeOwned,
+{
+    let path = active_runtime_path(app)?;
+    unsafe { call_library_command(&path, symbol, request) }
+}
+
+unsafe fn call_library_command<TRequest, TResponse>(
+    path: &Path,
+    symbol: &[u8],
+    request: &TRequest,
+) -> Result<TResponse>
+where
+    TRequest: Serialize,
+    TResponse: DeserializeOwned,
+{
+    let library = Library::new(path)
+        .with_context(|| format!("failed to load integrator runtime: {:?}", path))?;
+    validate_library_abi(&library)?;
+    let command = *library
+        .get::<CommandFn>(symbol)
+        .with_context(|| format!("missing {}", String::from_utf8_lossy(symbol)))?;
+    let free_string = *library
+        .get::<FreeStringFn>(b"mintcat_integrator_free_string")
+        .context("missing mintcat_integrator_free_string")?;
+
+    let request_json =
+        CString::new(serde_json::to_string(request)?).context("request contains nul byte")?;
+    let mut response_json: *mut c_char = ptr::null_mut();
+    let mut error_message: *mut c_char = ptr::null_mut();
+    let code = command(
+        request_json.as_ptr(),
+        &mut response_json,
+        &mut error_message,
+    );
+
+    let error = read_and_free(error_message, free_string);
+    let response = read_and_free(response_json, free_string);
+    if code != 0 {
+        anyhow::bail!(error.unwrap_or_else(|| {
+            format!(
+                "integrator command {} failed with code {code}",
+                String::from_utf8_lossy(symbol)
+            )
+        }));
+    }
+
+    let response = response.with_context(|| {
+        format!(
+            "integrator command {} returned no response",
+            String::from_utf8_lossy(symbol)
+        )
+    })?;
+    serde_json::from_str(&response).with_context(|| {
+        format!(
+            "failed to parse integrator command {} response",
+            String::from_utf8_lossy(symbol)
+        )
+    })
+}
+
 unsafe fn install_with_library(
     path: &Path,
     progress: &dyn InstallProgress,
@@ -168,12 +316,7 @@ unsafe fn install_with_library(
 ) -> Result<()> {
     let library = Library::new(path)
         .with_context(|| format!("failed to load integrator runtime: {:?}", path))?;
-    let abi_version = *library
-        .get::<AbiVersionFn>(b"mintcat_integrator_abi_version")
-        .context("missing mintcat_integrator_abi_version")?;
-    if abi_version() != ABI_VERSION {
-        anyhow::bail!("integrator ABI mismatch");
-    }
+    validate_library_abi(&library)?;
 
     let install = *library
         .get::<InstallFn>(b"mintcat_integrator_install")
@@ -207,6 +350,10 @@ unsafe fn install_with_library(
 unsafe fn validate_abi(path: &Path) -> Result<()> {
     let library = Library::new(path)
         .with_context(|| format!("failed to load integrator runtime: {:?}", path))?;
+    validate_library_abi(&library)
+}
+
+unsafe fn validate_library_abi(library: &Library) -> Result<()> {
     let abi_version = *library
         .get::<AbiVersionFn>(b"mintcat_integrator_abi_version")
         .context("missing mintcat_integrator_abi_version")?;
@@ -257,7 +404,7 @@ fn runtime_file_name() -> &'static str {
 fn bundled_runtime_path(app: &AppHandle) -> Result<PathBuf> {
     app.path()
         .resolve(
-            format!("integrators/{}", runtime_file_name()),
+            format!("plugins/{}", runtime_file_name()),
             BaseDirectory::Resource,
         )
         .context("failed to resolve bundled integrator runtime")
@@ -266,7 +413,7 @@ fn bundled_runtime_path(app: &AppHandle) -> Result<PathBuf> {
 fn root(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map(|path| path.join("integrators"))
+        .map(|path| path.join("plugins"))
         .map_err(|e| e.to_string())
 }
 
@@ -295,7 +442,10 @@ fn write_state(app: &AppHandle, state: &IntegratorRuntimeState) -> Result<(), St
 fn active_library_path(app: &AppHandle) -> Option<PathBuf> {
     let version = read_state(app).active_version?;
     valid_version(&version).ok()?;
-    let path = versions_dir(app).ok()?.join(version).join(runtime_file_name());
+    let path = versions_dir(app)
+        .ok()?
+        .join(version)
+        .join(runtime_file_name());
     path.is_file().then_some(path)
 }
 
@@ -327,7 +477,13 @@ fn validate_manifest(manifest: &IntegratorRuntimeManifest) -> Result<(), String>
     if manifest.url.trim().is_empty() {
         return Err("integrator runtime url is required".into());
     }
-    if manifest.md5.as_deref().unwrap_or_default().trim().is_empty() {
+    if manifest
+        .md5
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .is_empty()
+    {
         return Err("integrator runtime md5 is required".into());
     }
     Ok(())
@@ -361,11 +517,11 @@ fn cmp_version(left: &str, right: &str) -> std::cmp::Ordering {
 
 async fn download(app: &AppHandle, url: &str) -> Result<Vec<u8>, String> {
     let manual_proxy = app
-        .try_state::<crate::capability::network::NetworkProxyState>()
+        .try_state::<crate::network::NetworkProxyState>()
         .and_then(|state| state.get());
-    let proxy_url = crate::capability::network::resolve_proxy(manual_proxy);
+    let proxy_url = crate::network::resolve_proxy(manual_proxy);
     let builder = reqwest::Client::builder();
-    let client = crate::capability::network::apply_proxy_builder(builder, proxy_url.as_deref())
+    let client = crate::network::apply_proxy_builder(builder, proxy_url.as_deref())
         .map_err(|e| e.to_string())?
         .build()
         .map_err(|e| e.to_string())?;
@@ -401,7 +557,9 @@ fn verify_signature(manifest: &IntegratorRuntimeManifest) -> Result<(), String> 
         return Ok(());
     }
     if PUBLIC_KEY.is_empty() {
-        log::warn!("[IntegratorRuntime] signature is present, but public key is not configured yet");
+        log::warn!(
+            "[IntegratorRuntime] signature is present, but public key is not configured yet"
+        );
         return Ok(());
     }
     Ok(())

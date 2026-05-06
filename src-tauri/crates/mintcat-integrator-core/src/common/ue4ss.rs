@@ -82,9 +82,8 @@ pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> R
 
     log::info!("Installing UE4SS: extracting zip to {:?}", install_path);
 
-    extract_zip_to_directory(zip_path_str, install_path_str).map_err(|e| {
-        anyhow::anyhow!("Failed to extract UE4SSL zip to game directory: {}", e)
-    })?;
+    extract_zip_to_directory(zip_path_str, install_path_str)
+        .map_err(|e| anyhow::anyhow!("Failed to extract UE4SSL zip to game directory: {}", e))?;
 
     let mods_path = install_path.join("ue4ss").join("mods");
     if !mods_path.exists() {
@@ -138,9 +137,8 @@ pub fn install_ue4ss_js_mod(install_path: &PathBuf, zip_path: &Path) -> Result<(
         zip_path,
         mods_dir
     );
-    extract_zip_to_directory(zip_path_str, mods_dir_str).map_err(|e| {
-        anyhow::anyhow!("Failed to extract JS mod zip to ue4ss/mods: {}", e)
-    })?;
+    extract_zip_to_directory(zip_path_str, mods_dir_str)
+        .map_err(|e| anyhow::anyhow!("Failed to extract JS mod zip to ue4ss/mods: {}", e))?;
     Ok(())
 }
 
@@ -155,8 +153,8 @@ pub fn install_ue4ss_js_mod_from_zip_targeted(
     let sanitized = sanitize_dir_name(mod_name);
     let mod_dir = mods_dir.join(&sanitized);
 
-    let file = File::open(zip_path)
-        .with_context(|| format!("Failed to open zip: {:?}", zip_path))?;
+    let file =
+        File::open(zip_path).with_context(|| format!("Failed to open zip: {:?}", zip_path))?;
     let mut archive = ZipArchive::new(file).context("Failed to parse zip")?;
 
     let mut js_base = String::new();

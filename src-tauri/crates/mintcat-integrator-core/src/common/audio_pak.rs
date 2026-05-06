@@ -8,7 +8,13 @@ pub const AUDIO_PAK_SUFFIX: &str = "_P.pak";
 
 pub fn sanitize_mod_name(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -31,8 +37,9 @@ pub fn cleanup_audio_paks(paks_dir: &Path) -> Result<()> {
         for entry in entries.flatten() {
             if let Some(name) = entry.file_name().to_str() {
                 if is_mintcat_audio_pak(name) {
-                    std::fs::remove_file(entry.path())
-                        .with_context(|| format!("Failed to remove audio pak: {:?}", entry.path()))?;
+                    std::fs::remove_file(entry.path()).with_context(|| {
+                        format!("Failed to remove audio pak: {:?}", entry.path())
+                    })?;
                 }
             }
         }

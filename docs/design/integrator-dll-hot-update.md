@@ -175,7 +175,7 @@ src-tauri/src/integrator_runtime
 版本目录示例：
 
 ```text
-AppData/com.mint.cat/integrators/
+AppData/com.mint.cat/plugins/
   0.1.0/mintcat_integrator.dll
   0.1.1/mintcat_integrator.dll
   state.json
