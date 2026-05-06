@@ -2,9 +2,13 @@ use std::{fs::{self, File}, io::Cursor, path::{Component, Path, PathBuf}};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tauri::{http, AppHandle, Manager, Url};
+use tauri::{http, AppHandle, Manager, Url, WebviewUrl};
 
 const PUBLIC_KEY: &str = "";
+const BUNDLED_URL: &str = "index.html#/home";
+#[cfg(any(target_os = "windows", target_os = "android"))]
+const HOT_URL: &str = "http://mintcathot.localhost/index.html#/home";
+#[cfg(not(any(target_os = "windows", target_os = "android")))]
 const HOT_URL: &str = "mintcat-hot://localhost/index.html#/home";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +32,7 @@ pub struct FrontendRuntimeState {
     #[serde(default)] pub previous_version: Option<String>,
     #[serde(default)] pub pending_version: Option<String>,
     #[serde(default)] pub last_failed_version: Option<String>,
+    #[serde(default)] pub pending_launch_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -37,6 +42,7 @@ pub struct FrontendUpdateStatus {
     pub previous_version: Option<String>,
     pub pending_version: Option<String>,
     pub last_failed_version: Option<String>,
+    pub pending_launch_count: u32,
     pub has_local_bundle: bool,
 }
 
@@ -69,29 +75,73 @@ fn active_dir(app: &AppHandle) -> Option<PathBuf> {
     dir.join("index.html").is_file().then_some(dir)
 }
 
+fn hot_url() -> Url {
+    Url::parse(HOT_URL).expect("hot frontend URL must be valid")
+}
+
+fn hot_webview_url() -> WebviewUrl {
+    #[cfg(any(target_os = "windows", target_os = "android"))]
+    { WebviewUrl::External(hot_url()) }
+
+    #[cfg(not(any(target_os = "windows", target_os = "android")))]
+    { WebviewUrl::CustomProtocol(hot_url()) }
+}
+
+pub fn startup_webview_url(app: &AppHandle) -> WebviewUrl {
+    if active_dir(app).is_some() {
+        log::info!("[FrontendUpdate] loading installed frontend at startup");
+        return hot_webview_url();
+    }
+
+    log::info!("[FrontendUpdate] no installed frontend; loading bundled frontend");
+    WebviewUrl::App(BUNDLED_URL.into())
+}
+
 pub fn rollback_unconfirmed_pending(app: &AppHandle) -> Result<(), String> {
     let mut state = read_state(app);
     if let Some(pending) = state.pending_version.clone() {
+        if state.pending_launch_count == 0 {
+            log::warn!("[FrontendUpdate] pending frontend {pending} was not confirmed in current session; trying it once on startup");
+            state.pending_launch_count = 1;
+            write_state(app, &state)?;
+            return Ok(());
+        }
+
         log::warn!("[FrontendUpdate] pending frontend {pending} was not confirmed; rolling back");
         state.last_failed_version = Some(pending);
         state.active_version = state.previous_version.clone();
         state.previous_version = None;
         state.pending_version = None;
+        state.pending_launch_count = 0;
         write_state(app, &state)?;
     }
     Ok(())
 }
 
 pub fn navigate_to_hot_frontend(app: &AppHandle) {
-    if active_dir(app).is_none() { return; }
+    if active_dir(app).is_none() {
+        log::info!("[FrontendUpdate] no active hot frontend to navigate");
+        return;
+    }
     if let Some(window) = app.get_webview_window("main") {
-        if let Ok(url) = Url::parse(HOT_URL) {
-            if let Err(error) = window.navigate(url) { log::warn!("[FrontendUpdate] navigate failed: {error}"); }
-        }
+        log::info!("[FrontendUpdate] navigating to hot frontend");
+        if let Err(error) = window.navigate(hot_url()) { log::warn!("[FrontendUpdate] navigate failed: {error}"); }
+    } else {
+        log::warn!("[FrontendUpdate] main window not found for hot frontend navigation");
     }
 }
 
+#[tauri::command]
+pub fn get_frontend_entry_path(app: AppHandle) -> Result<Option<String>, String> {
+    Ok(active_dir(&app).map(|dir| {
+        dir.join("index.html")
+            .to_string_lossy()
+            .replace('\\', "/")
+    }))
+}
+
 pub fn handle_protocol(app: &AppHandle, request: http::Request<Vec<u8>>) -> http::Response<Vec<u8>> {
+    log::info!("[FrontendUpdate] hot asset request: {}", request.uri().path());
     match read_asset(app, request.uri().path()) {
         Ok((body, mime)) => resp(200, mime, body),
         Err(error) => { log::warn!("[FrontendUpdate] asset request failed: {error}"); resp(404, "text/plain; charset=utf-8", b"not found".to_vec()) }
@@ -143,8 +193,15 @@ pub async fn install_frontend_update_from_manifest(app: AppHandle, manifest: Fro
     state.previous_version = state.active_version.clone();
     state.active_version = Some(manifest.version.clone());
     state.pending_version = Some(manifest.version);
+    state.pending_launch_count = 0;
     state.last_failed_version = None;
     write_state(&app, &state)?;
+    status(app)
+}
+
+#[tauri::command]
+pub fn activate_frontend_update(app: AppHandle) -> Result<FrontendUpdateStatus, String> {
+    navigate_to_hot_frontend(&app);
     status(app)
 }
 
@@ -153,6 +210,7 @@ pub fn mark_frontend_update_ok(app: AppHandle) -> Result<FrontendUpdateStatus, S
     let mut state = read_state(&app);
     state.pending_version = None;
     state.previous_version = None;
+    state.pending_launch_count = 0;
     write_state(&app, &state)?;
     status(app)
 }
@@ -164,6 +222,7 @@ pub fn rollback_frontend_update(app: AppHandle) -> Result<FrontendUpdateStatus, 
     state.active_version = state.previous_version.clone();
     state.previous_version = None;
     state.pending_version = None;
+    state.pending_launch_count = 0;
     write_state(&app, &state)?;
     status(app)
 }
@@ -173,7 +232,7 @@ pub fn get_frontend_update_status(app: AppHandle) -> Result<FrontendUpdateStatus
 
 fn status(app: AppHandle) -> Result<FrontendUpdateStatus, String> {
     let state = read_state(&app);
-    Ok(FrontendUpdateStatus { active_version: state.active_version, previous_version: state.previous_version, pending_version: state.pending_version, last_failed_version: state.last_failed_version, has_local_bundle: active_dir(&app).is_some() })
+    Ok(FrontendUpdateStatus { active_version: state.active_version, previous_version: state.previous_version, pending_version: state.pending_version, last_failed_version: state.last_failed_version, pending_launch_count: state.pending_launch_count, has_local_bundle: active_dir(&app).is_some() })
 }
 
 fn validate_manifest(manifest: &FrontendUpdateManifest) -> Result<(), String> {

@@ -3,7 +3,7 @@ pub mod frontend_update;
 pub mod integrator;
 pub mod uasset_utils;
 
-use tauri::{AppHandle, Emitter, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder, WindowEvent};
 //use tauri_plugin_mcp;
 use tauri_plugin_sentry::{minidump, sentry};
 
@@ -34,6 +34,9 @@ pub fn run() {
     // Everything after here runs in only the app process
 
     tauri::Builder::default()
+        .register_uri_scheme_protocol("mintcathot", |context, request| {
+            frontend_update::handle_protocol(context.app_handle(), request)
+        })
         .register_uri_scheme_protocol("mintcat-hot", |context, request| {
             frontend_update::handle_protocol(context.app_handle(), request)
         })
@@ -43,7 +46,7 @@ pub fn run() {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
             }
-            
+
             // 处理从第二个实例传递过来的 deep link URL
             // 当应用已运行时，通过 deep link 启动的第二个实例会被阻止，
             // 其 URL 参数会传递到这里
@@ -68,7 +71,19 @@ pub fn run() {
             let proxy_arc = proxy_state.0.clone();
             app.manage(proxy_state);
             app.manage(capability::download::init_download_manager(proxy_arc));
-            frontend_update::navigate_to_hot_frontend(app.handle());
+
+            let mut main_window_config = app
+                .config()
+                .app
+                .windows
+                .iter()
+                .find(|window| window.label == "main")
+                .cloned()
+                .ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::NotFound, "main window config missing")
+                })?;
+            main_window_config.url = frontend_update::startup_webview_url(app.handle());
+            WebviewWindowBuilder::from_config(app.handle(), &main_window_config)?.build()?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -126,7 +141,10 @@ pub fn run() {
             capability::download::download_file,
             capability::download::cancel_download,
             capability::network::set_network_proxy,
+            capability::network::fetch_update_manifest,
             frontend_update::install_frontend_update_from_manifest,
+            frontend_update::activate_frontend_update,
+            frontend_update::get_frontend_entry_path,
             frontend_update::mark_frontend_update_ok,
             frontend_update::rollback_frontend_update,
             frontend_update::get_frontend_update_status,

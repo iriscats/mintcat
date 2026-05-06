@@ -2,7 +2,6 @@ import React, {useEffect} from "react";
 import {I18nextProvider} from "react-i18next"
 import ReactDOM from "react-dom/client";
 import {Routes, Route, HashRouter} from "react-router-dom";
-import {invoke} from "@tauri-apps/api/core";
 
 import {ConfigProvider, App as AntdApp} from "antd";
 import {useEventListener, enableEventDebugger} from "@/events";
@@ -16,6 +15,7 @@ import packageJson from '../package.json';
 import {InitLog} from "./apis/LogApi.ts";
 import {initializeTaskSystem} from "@/tasks";
 import {registerIoC} from "@/core/IoCRegistration.ts";
+import {activateInstalledHotFrontend, confirmFrontendUpdateIfHot} from "@/utils/FrontendUpdateRuntime.ts";
 
 InitLog();
 registerIoC();
@@ -59,8 +59,10 @@ const Main = () => {
 
         renderTheme();
 
-        invoke('mark_frontend_update_ok')
+        confirmFrontendUpdateIfHot()
             .catch((error) => console.warn('[FrontendUpdate] Failed to confirm frontend update:', error));
+        activateInstalledHotFrontend('startup')
+            .catch((error) => console.warn('[FrontendUpdate] Failed to activate installed frontend:', error));
 
         return cleanupContextMenu;
 

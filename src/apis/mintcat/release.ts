@@ -1,15 +1,34 @@
+/**
+ * MintCat 发布与更新检查：从静态 manifest（update.json）拉取各组件版本信息，
+ * 解析下载地址、比对 semver 风格版本号，并批量返回是否有更新及下载元数据。
+ * 实际网络请求通过 Tauri `fetch_update_manifest` 在 Rust 侧完成。
+ */
 import type { UpdateCheckItem, UpdateCheckManifestItem, UpdateCheckResult } from './types';
-import { NetworkApi } from '@/apis/NetworkApi';
-import { NetworkRequestError } from '@/services/network';
+import { invoke } from '@tauri-apps/api/core';
+import i18n from '@/locales/i18n';
 import { DEFAULT_RELEASE_CHANNEL } from './releaseChannel';
 
+/** 杭州 OSS 上的 update.json（中文界面默认） */
 export const MINTCAT_UPDATE_MANIFEST_URL = 'https://yuri-oss-hz.oss-cn-hangzhou.aliyuncs.com/update.json';
 
+/** 新加坡 OSS 上的 update.json（非中文界面默认，含英文） */
+export const MINTCAT_UPDATE_MANIFEST_URL_SG = 'https://yuri-oss-sg.oss-ap-southeast-1.aliyuncs.com/update.json';
+
+/** 按当前界面语言选择更新清单：中文 → 杭州，否则 → 新加坡 */
+export function getMintcatUpdateManifestUrl(): string {
+    return i18n.language?.startsWith('zh') ? MINTCAT_UPDATE_MANIFEST_URL : MINTCAT_UPDATE_MANIFEST_URL_SG;
+}
+
+/** 按 manifest URL 缓存进行中的拉取 Promise，避免重复请求 */
 const updateManifestCache = new Map<string, Promise<UpdateCheckManifestItem[]>>();
 
-/** i18n key when network/API fails during update check (avoids raw "Load failed") */
+/**
+ * i18n key when network/API fails during update check (avoids raw "Load failed")
+ * 更新检查失败时抛出的错误 message，UI 侧应翻译此 key 而非展示原始网络错误。
+ */
 export const RELEASE_CHECK_NETWORK_ERROR_KEY = 'error.release_check_network';
 
+/** 组件类型/别名 → 清单中对应的静态文件名（用于拼 OSS 直链） */
 const UPDATE_ASSET_FILE_NAMES: Record<string, string> = {
     ue4ssl: 'UE4SSL.zip',
     ue4ss: 'UE4SSL.zip',
@@ -21,14 +40,17 @@ const UPDATE_ASSET_FILE_NAMES: Record<string, string> = {
     frontend: 'mintcat-frontend.zip',
 };
 
-function getUpdateManifestBaseUrl(manifestUrl: string = MINTCAT_UPDATE_MANIFEST_URL): string {
+/** 从完整 manifest URL 截取目录前缀，用于拼接相对路径资源 */
+function getUpdateManifestBaseUrl(manifestUrl: string = getMintcatUpdateManifestUrl()): string {
     return manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
 }
 
+/** 统一 appType/name/type 等字段的比对键（去空白、小写） */
 function normalizeAssetKey(value: string | undefined): string {
     return (value ?? '').trim().toLowerCase();
 }
 
+/** 根据名称或类型解析清单里的文件名；未知类型则回退为 `{key}.zip` */
 function getAssetFileName(nameOrType: string | undefined): string {
     const key = normalizeAssetKey(nameOrType);
     return UPDATE_ASSET_FILE_NAMES[key] ?? `${key || 'asset'}.zip`;
@@ -36,8 +58,9 @@ function getAssetFileName(nameOrType: string | undefined): string {
 
 /**
  * Build full download URL from relative path returned by update manifest.
+ * 将清单中的相对路径或已是 http(s) 的地址转为最终可下载的绝对 URL。
  */
-export function getDownloadUrl(relativeOrFull: string, manifestUrl: string = MINTCAT_UPDATE_MANIFEST_URL): string {
+export function getDownloadUrl(relativeOrFull: string, manifestUrl: string = getMintcatUpdateManifestUrl()): string {
     if (relativeOrFull.startsWith('http://') || relativeOrFull.startsWith('https://')) {
         return relativeOrFull;
     }
@@ -47,26 +70,35 @@ export function getDownloadUrl(relativeOrFull: string, manifestUrl: string = MIN
 /**
  * Build a static OSS download URL for an internal asset.
  * The new update flow is driven by update.json instead of the legacy Release API download endpoint.
+ * 按 appType 映射文件名后与 manifest 基址拼接；`_platform` / `_channel` 为兼容旧签名的占位参数。
  */
 export function getReleaseDownloadUrl(
     version: string,
     appType: string,
     _platform: string = 'windows',
     _channel: string = DEFAULT_RELEASE_CHANNEL,
-    manifestUrl: string = MINTCAT_UPDATE_MANIFEST_URL,
+    manifestUrl: string = getMintcatUpdateManifestUrl(),
 ): string {
     const fileName = getAssetFileName(appType);
     const versionedFileName = version ? fileName : fileName;
     return getDownloadUrl(versionedFileName, manifestUrl);
 }
 
+/**
+ * 将用户传入的 base（可为目录或完整 json URL）规范为最终的 update.json 地址。
+ */
 function resolveManifestUrl(baseUrl?: string): string {
-    if (!baseUrl || baseUrl.trim() === '') return MINTCAT_UPDATE_MANIFEST_URL;
+    const defaultUrl = getMintcatUpdateManifestUrl();
+    if (!baseUrl || baseUrl.trim() === '') return defaultUrl;
     const value = baseUrl.trim();
     if (value.endsWith('.json')) return value;
-    return new URL('update.json', value.replace(/\/+$/, '/') || MINTCAT_UPDATE_MANIFEST_URL).toString();
+    return new URL('update.json', value.replace(/\/+$/, '/') || defaultUrl).toString();
 }
 
+/**
+ * 语义化版本比较：按 `.`、`-` 分段解析为数字逐段比较；非法段视为 0。
+ * 返回值 > 0 表示 left 新于 right。
+ */
 function compareVersion(left: string, right: string): number {
     const parse = (value: string) => value
         .split(/[.-]/)
@@ -82,6 +114,7 @@ function compareVersion(left: string, right: string): number {
     return 0;
 }
 
+/** 优先使用清单项自带的 url/path，否则按版本与类型拼默认下载地址 */
 function getManifestItemDownloadUrl(item: UpdateCheckManifestItem, manifestUrl: string): string {
     const url = item.downloadUrl ?? item.url ?? item.path;
     if (url && url.trim() !== '') {
@@ -90,6 +123,7 @@ function getManifestItemDownloadUrl(item: UpdateCheckManifestItem, manifestUrl: 
     return getReleaseDownloadUrl(item.latestVersion, item.name || item.type, undefined, item.channel, manifestUrl);
 }
 
+/** 判断清单中的一条是否与本次请求的 appType + channel 匹配（支持 name/type 别名） */
 function matchesRequestedItem(manifestItem: UpdateCheckManifestItem, requestItem: UpdateCheckItem): boolean {
     const requestAppType = normalizeAssetKey(requestItem.appType ?? requestItem.name ?? requestItem.type);
     const manifestName = normalizeAssetKey(manifestItem.name);
@@ -102,38 +136,24 @@ function matchesRequestedItem(manifestItem: UpdateCheckManifestItem, requestItem
     return requestAppType === manifestName || requestAppType === manifestType;
 }
 
+/** 调用后端拉取并校验清单；失败时抛出 RELEASE_CHECK_NETWORK_ERROR_KEY 供 i18n */
 async function requestUpdateManifest(manifestUrl: string): Promise<UpdateCheckManifestItem[]> {
-    let response: Response;
     try {
-        const result = await NetworkApi.request<Response>({
-            service: 'mintcat.release.updateManifest',
+        const data = await invoke<UpdateCheckManifestItem[]>('fetch_update_manifest', {
             url: manifestUrl,
-            method: 'GET',
-            proxyPolicy: 'direct',
-            parseAs: 'response',
         });
-        response = result.response;
-    } catch (e) {
-        if (
-            e instanceof NetworkRequestError &&
-            (e.code === 'network' || e.code === 'timeout')
-        ) {
-            throw new Error(RELEASE_CHECK_NETWORK_ERROR_KEY);
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid response: update manifest array required');
         }
+        return data;
+    } catch {
         throw new Error(RELEASE_CHECK_NETWORK_ERROR_KEY);
     }
-
-    if (!response.ok) {
-        throw new Error(`Release manifest request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!Array.isArray(data)) {
-        throw new Error('Invalid response: update manifest array required');
-    }
-    return data as UpdateCheckManifestItem[];
 }
 
+/**
+ * 获取更新清单（带缓存）。`forceRefresh` 为 true 时丢弃该 URL 的缓存并重新请求。
+ */
 export async function fetchUpdateManifest(baseUrl?: string, forceRefresh = false): Promise<UpdateCheckManifestItem[]> {
     const manifestUrl = resolveManifestUrl(baseUrl);
     if (forceRefresh) {
@@ -151,6 +171,7 @@ export async function fetchUpdateManifest(baseUrl?: string, forceRefresh = false
     return manifestPromise;
 }
 
+/** 主动预热清单：强制刷新并返回最新数据，适合启动时预加载 */
 export function prefetchUpdateManifest(baseUrl?: string): Promise<UpdateCheckManifestItem[]> {
     return fetchUpdateManifest(baseUrl, true);
 }
@@ -158,6 +179,7 @@ export function prefetchUpdateManifest(baseUrl?: string): Promise<UpdateCheckMan
 /**
  * Batch check updates from the unified static update.json manifest.
  * Returns results in same order as items.
+ * 对 `items` 中每一项在清单里找匹配行，比较 `latestVersion` 与 `currentVersion`，输出顺序与输入一致。
  */
 export async function checkUpdatesBatch(
     items: UpdateCheckItem[],
@@ -189,9 +211,8 @@ export async function checkUpdatesBatch(
             releaseNotes: matched.releaseNotes ?? '',
             downloadUrl: getManifestItemDownloadUrl(matched, manifestUrl),
             fileSize: matched.fileSize,
-            checksum: matched.checksum ?? matched.sha256 ?? matched.md5,
-            md5: matched.md5 ?? matched.checksum,
-            sha256: matched.sha256,
+            checksum: matched.md5,
+            md5: matched.md5,
             signature: matched.signature,
             name: matched.name,
             type: matched.type,

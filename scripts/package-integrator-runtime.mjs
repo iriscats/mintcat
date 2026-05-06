@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import crypto from 'node:crypto';
 import {
   copyFileSync,
   existsSync,
@@ -65,8 +64,6 @@ function packageRuntime() {
   const assetPath = path.join(assetDir, runtimeFileName);
   copyFileSync(artifact, assetPath);
 
-  const bytes = readFileSync(assetPath);
-  const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
   const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
   const version = pkg.version || '0.0.0';
 
@@ -75,28 +72,9 @@ function packageRuntime() {
   const releaseName = `mintcat_integrator_${version}_x64.dll`;
   const releasePath = path.join(releaseDir, releaseName);
   copyFileSync(assetPath, releasePath);
-  writeFileSync(`${releasePath}.sha256`, `${sha256}  ${releaseName}\n`);
-
-  const manifest = {
-    name: 'mintcat-integrator',
-    type: 'runtime',
-    platform: isWindowsTarget ? 'windows' : process.platform,
-    channel: 'stable',
-    latestVersion: version,
-    fileSize: statSync(releasePath).size,
-    sha256,
-    signature: '',
-    downloadUrl: releaseName,
-    releaseNotes: 'Update MintCat integrator runtime',
-  };
-  writeFileSync(
-    path.join(releaseDir, `mintcat_integrator_${version}.manifest.example.json`),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-  );
 
   console.log(`[integrator-runtime] bundled resource: ${path.relative(root, assetPath)}`);
-  console.log(`[integrator-runtime] release artifact: ${path.relative(root, releasePath)}`);
-  console.log(`[integrator-runtime] sha256: ${sha256}`);
+  console.log(`[integrator-runtime] release artifact: ${path.relative(root, releasePath)} (${statSync(releasePath).size} bytes)`);
 }
 
 try {

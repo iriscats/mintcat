@@ -7,7 +7,6 @@ use anyhow::{Context, Result};
 use libloading::Library;
 use mintcat_integrator_core::{install_mods_with_progress, InstallEvent, InstallProgress, InstallRequest};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 const ABI_VERSION: u32 = 1;
@@ -31,9 +30,7 @@ pub struct IntegratorRuntimeManifest {
     pub version: String,
     pub url: String,
     #[serde(default)]
-    pub sha256: Option<String>,
-    #[serde(default)]
-    pub checksum: Option<String>,
+    pub md5: Option<String>,
     #[serde(default)]
     pub signature: Option<String>,
     #[serde(default)]
@@ -99,7 +96,7 @@ pub async fn install_integrator_runtime_from_manifest(
 ) -> Result<IntegratorRuntimeStatus, String> {
     validate_manifest(&manifest)?;
     validate_compatibility(&manifest)?;
-    let bytes = download(&manifest.url).await?;
+    let bytes = download(&app, &manifest.url).await?;
     verify_hash(&bytes, &manifest)?;
     verify_signature(&manifest)?;
 
@@ -330,10 +327,8 @@ fn validate_manifest(manifest: &IntegratorRuntimeManifest) -> Result<(), String>
     if manifest.url.trim().is_empty() {
         return Err("integrator runtime url is required".into());
     }
-    if manifest.sha256.as_deref().unwrap_or_default().trim().is_empty()
-        && manifest.checksum.as_deref().unwrap_or_default().trim().is_empty()
-    {
-        return Err("integrator runtime checksum is required".into());
+    if manifest.md5.as_deref().unwrap_or_default().trim().is_empty() {
+        return Err("integrator runtime md5 is required".into());
     }
     Ok(())
 }
@@ -364,8 +359,17 @@ fn cmp_version(left: &str, right: &str) -> std::cmp::Ordering {
     parse(left).cmp(&parse(right))
 }
 
-async fn download(url: &str) -> Result<Vec<u8>, String> {
-    let response = reqwest::get(url).await.map_err(|e| e.to_string())?;
+async fn download(app: &AppHandle, url: &str) -> Result<Vec<u8>, String> {
+    let manual_proxy = app
+        .try_state::<crate::capability::network::NetworkProxyState>()
+        .and_then(|state| state.get());
+    let proxy_url = crate::capability::network::resolve_proxy(manual_proxy);
+    let builder = reqwest::Client::builder();
+    let client = crate::capability::network::apply_proxy_builder(builder, proxy_url.as_deref())
+        .map_err(|e| e.to_string())?
+        .build()
+        .map_err(|e| e.to_string())?;
+    let response = client.get(url).send().await.map_err(|e| e.to_string())?;
     if !response.status().is_success() {
         return Err(format!(
             "integrator runtime download failed: {}",
@@ -381,17 +385,14 @@ async fn download(url: &str) -> Result<Vec<u8>, String> {
 
 fn verify_hash(bytes: &[u8], manifest: &IntegratorRuntimeManifest) -> Result<(), String> {
     let expected = manifest
-        .sha256
+        .md5
         .as_deref()
-        .or(manifest.checksum.as_deref())
-        .ok_or_else(|| "integrator runtime checksum is required".to_string())?;
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    let actual = format!("{:x}", hasher.finalize());
+        .ok_or_else(|| "integrator runtime md5 is required".to_string())?;
+    let actual = format!("{:x}", md5::compute(bytes));
     actual
         .eq_ignore_ascii_case(expected.trim())
         .then_some(())
-        .ok_or_else(|| format!("sha256 mismatch: expected {expected}, got {actual}"))
+        .ok_or_else(|| format!("md5 mismatch: expected {expected}, got {actual}"))
 }
 
 fn verify_signature(manifest: &IntegratorRuntimeManifest) -> Result<(), String> {

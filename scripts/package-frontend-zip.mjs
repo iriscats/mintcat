@@ -1,7 +1,7 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import zlib from 'node:zlib';
 
 const projectRoot = process.cwd();
 const distDir = path.join(projectRoot, 'dist');
@@ -11,7 +11,9 @@ const packageJsonPath = path.join(projectRoot, 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = packageJson.version;
 const outputZip = path.join(outputDir, `mintcat-frontend_${version}.zip`);
-const manifestTemplate = path.join(outputDir, `mintcat-frontend_${version}.manifest.example.json`);
+const ZIP_METHOD_STORE = 0;
+const ZIP_METHOD_DEFLATE = 8;
+const ZIP_UTF8_FLAG = 0x0800;
 
 if (!fs.existsSync(path.join(distDir, 'index.html'))) {
   throw new Error('dist/index.html not found. Run npm run build before packaging frontend zip.');
@@ -73,44 +75,60 @@ function uint32(value) {
   return buffer;
 }
 
+function compressFile(data) {
+  if (data.length === 0) {
+    return { method: ZIP_METHOD_STORE, payload: data };
+  }
+
+  const compressed = zlib.deflateRawSync(data, { level: zlib.constants.Z_BEST_COMPRESSION });
+  return compressed.length < data.length
+    ? { method: ZIP_METHOD_DEFLATE, payload: compressed }
+    : { method: ZIP_METHOD_STORE, payload: data };
+}
+
 const localParts = [];
 const centralParts = [];
 let offset = 0;
+let totalInputSize = 0;
+let totalStoredSize = 0;
 
 for (const file of collectFiles(distDir)) {
   const data = fs.readFileSync(file.fullPath);
+  const { method, payload } = compressFile(data);
   const name = Buffer.from(file.relativePath, 'utf8');
   const stat = fs.statSync(file.fullPath);
   const { dosDate, dosTime } = dosDateTime(stat.mtime);
   const checksum = crc32(data);
+  totalInputSize += data.length;
+  totalStoredSize += payload.length;
 
   const localHeader = Buffer.concat([
     uint32(0x04034b50),
     uint16(20),
-    uint16(0x0800),
-    uint16(0),
+    uint16(ZIP_UTF8_FLAG),
+    uint16(method),
     uint16(dosTime),
     uint16(dosDate),
     uint32(checksum),
-    uint32(data.length),
+    uint32(payload.length),
     uint32(data.length),
     uint16(name.length),
     uint16(0),
     name,
   ]);
 
-  localParts.push(localHeader, data);
+  localParts.push(localHeader, payload);
 
   const centralHeader = Buffer.concat([
     uint32(0x02014b50),
     uint16(20),
     uint16(20),
-    uint16(0x0800),
-    uint16(0),
+    uint16(ZIP_UTF8_FLAG),
+    uint16(method),
     uint16(dosTime),
     uint16(dosDate),
     uint32(checksum),
-    uint32(data.length),
+    uint32(payload.length),
     uint32(data.length),
     uint16(name.length),
     uint16(0),
@@ -123,7 +141,7 @@ for (const file of collectFiles(distDir)) {
   ]);
 
   centralParts.push(centralHeader);
-  offset += localHeader.length + data.length;
+  offset += localHeader.length + payload.length;
 }
 
 const centralDirectory = Buffer.concat(centralParts);
@@ -141,20 +159,5 @@ const endOfCentralDirectory = Buffer.concat([
 const zip = Buffer.concat([...localParts, centralDirectory, endOfCentralDirectory]);
 fs.writeFileSync(outputZip, zip);
 
-const sha256 = crypto.createHash('sha256').update(zip).digest('hex');
-fs.writeFileSync(`${outputZip}.sha256`, `${sha256}  ${path.basename(outputZip)}\n`);
-
-const manifest = {
-  version,
-  url: `https://example.com/mintcat/frontend/${path.basename(outputZip)}`,
-  sha256,
-  signature: '',
-  minAppVersion: version,
-  maxAppVersion: version,
-  entry: 'index.html',
-};
-fs.writeFileSync(manifestTemplate, `${JSON.stringify(manifest, null, 2)}\n`);
-
 console.log(`Frontend zip created: ${path.relative(projectRoot, outputZip)}`);
-console.log(`SHA-256: ${sha256}`);
-console.log(`Manifest template: ${path.relative(projectRoot, manifestTemplate)}`);
+console.log(`Compressed payload: ${totalStoredSize} / ${totalInputSize} bytes (${((totalStoredSize / totalInputSize) * 100).toFixed(2)}%)`);

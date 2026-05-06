@@ -18,6 +18,7 @@ export {
     checkUpdatesBatch,
     fetchUpdateManifest,
     getDownloadUrl,
+    getMintcatUpdateManifestUrl,
     getReleaseDownloadUrl,
     MINTCAT_UPDATE_MANIFEST_URL,
     prefetchUpdateManifest,

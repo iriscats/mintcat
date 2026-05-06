@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "create": false,
         "url": "index.html#/home",
         "title": "mintcat",
         "width": 1200,

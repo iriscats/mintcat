@@ -2,8 +2,12 @@
 //! 前端通过 set_network_proxy 设置后，所有后端 reqwest 请求会使用该代理。
 //! 若未设置，则回退到系统代理（Windows：IE/系统代理；其他：环境变量 HTTP_PROXY/HTTPS_PROXY）。
 
+use std::time::Duration;
 use std::sync::{Arc, Mutex};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
+
+const UPDATE_MANIFEST_TIMEOUT_SECS: u64 = 30;
+const UPDATE_MANIFEST_CONNECT_TIMEOUT_SECS: u64 = 10;
 
 /// 全局网络代理 URL（如 http://127.0.0.1:7890）。
 /// 由前端在应用启动时根据设置调用 set_network_proxy 写入。
@@ -38,6 +42,48 @@ pub fn set_network_proxy(
         log::info!("Network proxy cleared");
     }
     state.set(value);
+}
+
+#[tauri::command]
+pub async fn fetch_update_manifest(
+    app: AppHandle,
+    url: String,
+) -> Result<Vec<serde_json::Value>, String> {
+    let url = url.trim();
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("update manifest url must be http(s)".to_string());
+    }
+
+    let manual_proxy = app
+        .try_state::<NetworkProxyState>()
+        .and_then(|state| state.get());
+    let proxy_url = resolve_proxy(manual_proxy);
+    let builder = reqwest::Client::builder()
+        .timeout(Duration::from_secs(UPDATE_MANIFEST_TIMEOUT_SECS))
+        .connect_timeout(Duration::from_secs(UPDATE_MANIFEST_CONNECT_TIMEOUT_SECS));
+    let client = apply_proxy_builder(builder, proxy_url.as_deref())
+        .map_err(|error| error.to_string())?
+        .build()
+        .map_err(|error| error.to_string())?;
+
+    let response = client
+        .get(url)
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("update manifest request failed: {}", response.status()));
+    }
+
+    let data = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| error.to_string())?;
+    match data {
+        serde_json::Value::Array(items) => Ok(items),
+        _ => Err("update manifest array required".to_string()),
+    }
 }
 
 /// 解析出实际使用的代理 URL：优先使用手动设置的代理，否则尝试系统代理（Windows IE/系统代理或环境变量）。
