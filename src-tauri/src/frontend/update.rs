@@ -10,9 +10,6 @@ use tauri::{http, AppHandle, Manager, Url, WebviewUrl};
 
 const PUBLIC_KEY: &str = "";
 const BUNDLED_URL: &str = "index.html#/home";
-#[cfg(any(target_os = "windows", target_os = "android"))]
-const HOT_URL: &str = "http://mintcathot.localhost/index.html#/home";
-#[cfg(not(any(target_os = "windows", target_os = "android")))]
 const HOT_URL: &str = "mintcat-hot://localhost/index.html#/home";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,15 +117,7 @@ fn hot_url() -> Url {
 }
 
 fn hot_webview_url() -> WebviewUrl {
-    #[cfg(any(target_os = "windows", target_os = "android"))]
-    {
-        WebviewUrl::External(hot_url())
-    }
-
-    #[cfg(not(any(target_os = "windows", target_os = "android")))]
-    {
-        WebviewUrl::CustomProtocol(hot_url())
-    }
+    WebviewUrl::CustomProtocol(hot_url())
 }
 
 pub fn startup_webview_url(app: &AppHandle) -> WebviewUrl {

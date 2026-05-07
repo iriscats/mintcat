@@ -402,12 +402,50 @@ fn runtime_file_name() -> &'static str {
 }
 
 fn bundled_runtime_path(app: &AppHandle) -> Result<PathBuf> {
-    app.path()
+    let resource_path = app
+        .path()
         .resolve(
             format!("plugins/{}", runtime_file_name()),
             BaseDirectory::Resource,
         )
-        .context("failed to resolve bundled integrator runtime")
+        .context("failed to resolve bundled integrator runtime")?;
+    if resource_path.is_file() {
+        return Ok(resource_path);
+    }
+
+    #[cfg(debug_assertions)]
+    if let Some(dev_path) = dev_runtime_candidates()
+        .into_iter()
+        .find(|path| path.is_file())
+    {
+        log::info!(
+            "[IntegratorRuntime] using local dev runtime: {:?}",
+            dev_path
+        );
+        return Ok(dev_path);
+    }
+
+    Ok(resource_path)
+}
+
+#[cfg(debug_assertions)]
+fn dev_runtime_candidates() -> Vec<PathBuf> {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let target_dir = option_env!("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| manifest_dir.join("target"));
+    let profile = option_env!("PROFILE").unwrap_or("debug");
+    let runtime_name = runtime_file_name();
+
+    vec![
+        manifest_dir
+            .join("assets")
+            .join("plugins")
+            .join(runtime_name),
+        target_dir.join(profile).join(runtime_name),
+        target_dir.join("debug").join(runtime_name),
+        target_dir.join("release").join(runtime_name),
+    ]
 }
 
 fn root(app: &AppHandle) -> Result<PathBuf, String> {

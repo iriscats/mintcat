@@ -137,15 +137,61 @@ pub struct CheckModConflictsRequest {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConflictCheckModInfo {
+    #[serde(alias = "mod_id")]
     pub mod_id: i64,
+    #[serde(alias = "cache_path")]
     pub cache_path: String,
+    #[serde(alias = "is_unpacked")]
     pub is_unpacked: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 pub struct ModConflict {
     pub mod_id: i64,
     pub conflicting_mods: Vec<i64>,
     pub conflicting_files: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConflictCheckModInfo, ModConflict};
+
+    #[test]
+    fn conflict_check_mod_info_accepts_snake_case_frontend_payload() {
+        let mods: Vec<ConflictCheckModInfo> = serde_json::from_str(
+            r#"[{"mod_id":1,"cache_path":"C:/mods/a.pak","is_unpacked":false}]"#,
+        )
+        .expect("snake_case conflict mod info should parse");
+
+        assert_eq!(mods[0].mod_id, 1);
+        assert_eq!(mods[0].cache_path, "C:/mods/a.pak");
+        assert!(!mods[0].is_unpacked);
+    }
+
+    #[test]
+    fn conflict_check_mod_info_still_accepts_camel_case_payload() {
+        let mods: Vec<ConflictCheckModInfo> = serde_json::from_str(
+            r#"[{"modId":1,"cachePath":"C:/mods/a.pak","isUnpacked":false}]"#,
+        )
+        .expect("camelCase conflict mod info should parse");
+
+        assert_eq!(mods[0].mod_id, 1);
+        assert_eq!(mods[0].cache_path, "C:/mods/a.pak");
+        assert!(!mods[0].is_unpacked);
+    }
+
+    #[test]
+    fn mod_conflict_serializes_for_existing_frontend_contract() {
+        let value = serde_json::to_value(ModConflict {
+            mod_id: 1,
+            conflicting_mods: vec![2],
+            conflicting_files: vec!["fsd/content/a.uasset".to_string()],
+        })
+        .expect("mod conflict should serialize");
+
+        assert!(value.get("mod_id").is_some());
+        assert!(value.get("conflicting_mods").is_some());
+        assert!(value.get("conflicting_files").is_some());
+    }
 }

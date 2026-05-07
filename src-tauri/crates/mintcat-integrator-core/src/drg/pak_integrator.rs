@@ -190,7 +190,7 @@ impl PakIntegrator {
             Self::write_hook_dll_from_drg_zip(drg_zip, &self.installation.binaries_directory())?;
 
             self.apply_mint_patch(&mut mint_files)?;
-            self.apply_pcb_patch()?;
+            //self.apply_pcb_patch()?;
             self.apply_sandbox_patch()?;
 
             progress.emit(InstallEvent::StatusLog(text("backend.install.write_mod")))?;
@@ -203,6 +203,7 @@ impl PakIntegrator {
         }
 
         self.serialize_asset_registry()?;
+        self.write_ue4ss_mods_config()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
         progress.emit(InstallEvent::StatusLog(text("backend.install.success")))?;
@@ -680,6 +681,38 @@ impl PakIntegrator {
             .write_asset(asset, "FSD/Content/ModIntegration/MI_SpawnMods")
             .context("Failed to write MI_SpawnMods asset")?;
 
+        Ok(())
+    }
+
+    fn ue4ss_mod_entries(assets: &HashSet<String>) -> Vec<serde_json::Value> {
+        let mut class_paths = assets.iter().cloned().collect::<Vec<_>>();
+        class_paths.sort();
+        class_paths
+            .into_iter()
+            .map(|class_path| json!({ "classPath": class_path }))
+            .collect()
+    }
+
+    fn write_ue4ss_mods_config(&self) -> Result<()> {
+        let config_dir = self
+            .installation
+            .binaries_directory()
+            .join("ue4ss")
+            .join("config");
+        fs::create_dir_all(&config_dir)
+            .with_context(|| format!("Failed to create ue4ss config directory: {:?}", config_dir))?;
+
+        let mods_config = json!({
+            "space_rig": Self::ue4ss_mod_entries(&self.init_space_rig_assets),
+            "cave": Self::ue4ss_mod_entries(&self.init_cave_assets),
+        });
+        let mut content = serde_json::to_string_pretty(&mods_config)
+            .context("Failed to serialize ue4ss mods config")?;
+        content.push('\n');
+
+        let mods_json_path = config_dir.join("mods.json");
+        fs::write(&mods_json_path, content)
+            .with_context(|| format!("Failed to write ue4ss mods config: {:?}", mods_json_path))?;
         Ok(())
     }
 
