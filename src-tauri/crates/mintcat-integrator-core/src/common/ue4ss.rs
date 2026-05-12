@@ -94,6 +94,40 @@ pub fn install_ue4ss(install_path: &PathBuf, ue4ss_zip_path: Option<&Path>) -> R
     Ok(())
 }
 
+pub fn ensure_ue4ss_config_directory(install_path: &PathBuf) -> Result<()> {
+    let ue4ss_dir = install_path.join("ue4ss");
+    let config_dir = ue4ss_dir.join("config");
+
+    fs::create_dir_all(&config_dir)
+        .with_context(|| format!("Failed to create ue4ss config directory: {:?}", config_dir))?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ensure_ue4ss_config_directory;
+    use std::fs;
+
+    #[test]
+    fn ensure_ue4ss_config_directory_creates_config_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        ensure_ue4ss_config_directory(&temp_dir.path().to_path_buf()).unwrap();
+
+        assert!(temp_dir.path().join("ue4ss").join("config").is_dir());
+    }
+
+    #[test]
+    fn ensure_ue4ss_config_directory_works_with_existing_ue4ss_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(temp_dir.path().join("ue4ss")).unwrap();
+
+        ensure_ue4ss_config_directory(&temp_dir.path().to_path_buf()).unwrap();
+
+        assert!(temp_dir.path().join("ue4ss").join("config").is_dir());
+    }
+}
+
 /// Returns true if the zip contains a JS script mod (e.g. path ending with `js/main.js`).
 pub fn zip_contains_js_mod(path: &Path) -> bool {
     let file = match File::open(path) {
@@ -261,7 +295,7 @@ pub fn install_ue4ss_mod(
     let mod_path = mods_home_path.join(&sanitized_mod_name);
 
     if !mod_path.exists() {
-        fs::create_dir(&mod_path)
+        fs::create_dir_all(&mod_path)
             .with_context(|| format!("Failed to create mod directory {:?}", mod_path))?;
     }
 

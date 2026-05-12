@@ -1,9 +1,10 @@
 import {t} from "i18next";
-import {emitEvent, emitVoidEvent, onceEvent} from "@/events";
+import {emitVoidEvent, onceEvent} from "@/events";
 import {ModioApi} from "@/apis/modio";
 import {ModcatApi} from "@/apis/modcat";
 import {HomeViewModel} from "@/pages/HomePage/HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
+import {emitTo} from "@tauri-apps/api/event";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import {AddModType} from "@/dialogs/AddModDialog/index.tsx";
@@ -11,10 +12,17 @@ import StatusBar from "@/components/StatusBar.tsx";
 import {StorageAPI} from "@/storage";
 import {asyncPoolAll} from "@/utils/AsyncPool";
 import {message} from "antd";
+import {frontendRouteUrl} from "@/utils/FrontendUpdateRuntime.ts";
 import type {AddModFromUrlResult} from "@/services/HomeService.ts";
 import type {AddModFromPathResult} from "@/services/HomeService.ts";
 
 let windowInstance: WebviewWindow;
+
+type AddModDialogInitData = {
+    text: string;
+    groupId: number;
+    addModType: string;
+};
 
 export async function openWindow(addModType: string = AddModType.LOCAL,
                                  groupId: number = 0,
@@ -23,21 +31,21 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
 
     const vm = await IoC.get(HomeViewModel);
 
-    const setInitData = () => {
-        localStorage.setItem('add-mod-dialog-init-data', JSON.stringify({
-            text: text,
-            groupId:groupId,
-            addModType: addModType,
-        }));
+    const initData: AddModDialogInitData = {
+        text,
+        groupId,
+        addModType,
+    };
+
+    const setInitData = (data: AddModDialogInitData) => {
+        localStorage.setItem('add-mod-dialog-init-data', JSON.stringify(data));
     };
 
     const sendInitData = async () => {
-        await emitEvent("add-mod-dialog-init-data", {
-            text: text,
-            groupId: groupId,
-            addModType: addModType,
-        });
+        await emitTo('add-mod-dialog', "add-mod-dialog-init-data", initData);
     }
+
+    setInitData(initData);
 
     if (windowInstance) {
         await sendInitData();
@@ -46,16 +54,12 @@ export async function openWindow(addModType: string = AddModType.LOCAL,
     }
 
     windowInstance = new WebviewWindow('add-mod-dialog', {
-        url: 'index.html#/add_mod_dialog',
+        url: frontendRouteUrl(`/add_mod_dialog?init=${encodeURIComponent(JSON.stringify(initData))}`),
         width: 400,
         height: 580,
         title: t("Add Mod"),
         dragDropEnabled: true,
     });
-
-    windowInstance.once('tauri://created', () => {
-        setInitData();
-    }).then();
 
     windowInstance.once('tauri://destroyed', () => {
         windowInstance = null;

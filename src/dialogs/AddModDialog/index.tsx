@@ -152,6 +152,30 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         return profileFolderList;
     }
 
+    private getInitDataFromUrl() {
+        try {
+            const queryIndex = window.location.hash.indexOf('?');
+            if (queryIndex < 0) return null;
+
+            const params = new URLSearchParams(window.location.hash.slice(queryIndex + 1));
+            const init = params.get('init');
+            return init ? JSON.parse(init) : null;
+        } catch (error) {
+            console.warn('[AddModDialog] Failed to parse init data from URL:', error);
+            return null;
+        }
+    }
+
+    private getInitDataFromStorage() {
+        try {
+            const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
+            return initDataStr ? JSON.parse(initDataStr) : null;
+        } catch (error) {
+            console.warn('[AddModDialog] Failed to parse init data from storage:', error);
+            return null;
+        }
+    }
+
     async componentDidMount(): Promise<void> {
         // Ensure core is initialized (multi-window support)
         // Register ViewModels if not already registered
@@ -168,8 +192,9 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
         const groupFolders = await this.loadGroupOptions();
 
         // Load dialog data
-        const initDataStr = localStorage.getItem('add-mod-dialog-init-data');
-        const initData = JSON.parse(initDataStr);
+        const initData = this.getInitDataFromUrl()
+            ?? this.getInitDataFromStorage()
+            ?? {addModType: AddModType.LOCAL, groupId: 0, text: ""};
 
         // Resolve groupId: use provided groupId > cached last selection > first folder
         const resolvedGroupId = this.resolveGroupId(initData.groupId, groupFolders);

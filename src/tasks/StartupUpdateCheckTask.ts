@@ -4,9 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import packageJson from '../../package.json';
 import { getDownloadUrl, prefetchUpdateManifest, type UpdateCheckManifestItem } from '@/apis/mintcat';
 import { StorageAPI } from '@/storage';
-import { activateInstalledHotFrontend } from '@/utils/FrontendUpdateRuntime';
-
-const HOT_FRONTEND_ACTIVATION_DELAY_MS = 250;
 
 type IntegratorRuntimeStatus = {
     activeVersion?: string | null;
@@ -45,13 +42,6 @@ function findFrontendUpdate(manifest: UpdateCheckManifestItem[], channel: string
     });
 }
 
-function activateHotFrontend(): void {
-    window.setTimeout(() => {
-        activateInstalledHotFrontend('startup update installed')
-            .catch((error) => console.warn('[FrontendUpdate] Asset activation failed:', error));
-    }, HOT_FRONTEND_ACTIVATION_DELAY_MS);
-}
-
 @Task({
     type: 'startup_update_check',
     name: t('Check Updates'),
@@ -81,7 +71,7 @@ export class StartupUpdateCheckTask implements ITask {
                     const url = frontend.downloadUrl ?? frontend.url ?? frontend.path;
                     const checksum = frontend.sha256 ?? frontend.md5 ?? frontend.checksum;
                     if (url && checksum) {
-                        await context.setMessage(t('Installing frontend update...'));
+                        await context.setMessage(t('Downloading frontend update...'));
                         await invoke('install_frontend_update_from_manifest', {
                             manifest: {
                                 version: frontend.latestVersion,
@@ -95,9 +85,8 @@ export class StartupUpdateCheckTask implements ITask {
                                 entry: frontend.entry ?? 'index.html',
                             },
                         });
-                        await context.setMessage(t('Frontend update installed'));
+                        await context.setMessage(t('Frontend update downloaded; restart to apply'));
                         await context.updateProgress(100);
-                        activateHotFrontend();
                         return;
                     }
                 }

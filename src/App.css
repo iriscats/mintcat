@@ -17,6 +17,19 @@
     --select-game-path-bg: #f9fafb;
 }
 
+/* Tree 虚拟列表滚动条样式 */
+.ant-tree-list-scrollbar {
+    background: transparent !important;
+}
+
+.ant-tree-list-scrollbar-thumb {
+    background: #b8b8b8 !important;
+}
+
+.ant-tree-list-scrollbar-thumb:hover {
+    background: #8c8c8c !important;
+}
+
 /* 全局基础样式 */
 :root {
     width: 100%;

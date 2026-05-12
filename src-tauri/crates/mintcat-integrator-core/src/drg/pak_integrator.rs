@@ -4,7 +4,8 @@ use crate::common::audio_pak::{
 };
 use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::common::ue4ss::{
-    dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
+    dir_contains_js_mod, ensure_ue4ss_config_directory, install_ue4ss,
+    install_ue4ss_js_mod_from_dir,
     install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
     zip_contains_js_mod,
 };
@@ -202,7 +203,9 @@ impl PakIntegrator {
             progress.emit(InstallEvent::Percent(90.0))?;
         }
 
+        let binaries_dir = self.installation.binaries_directory();
         self.serialize_asset_registry()?;
+        ensure_ue4ss_config_directory(&binaries_dir)?;
         self.write_ue4ss_mods_config()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 

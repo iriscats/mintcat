@@ -190,7 +190,7 @@ pub async fn install_integrator_runtime_from_manifest(
 pub fn get_integrator_runtime_status(app: AppHandle) -> Result<IntegratorRuntimeStatus, String> {
     if let Err(error) = ensure_bundled_runtime(&app) {
         log::warn!(
-            "[IntegratorRuntime] failed to seed bundled runtime: {:#}",
+            "[IntegratorRuntime] failed to prepare bundled runtime: {:#}",
             error
         );
     }
@@ -198,7 +198,7 @@ pub fn get_integrator_runtime_status(app: AppHandle) -> Result<IntegratorRuntime
 }
 
 pub fn ensure_bundled_runtime(app: &AppHandle) -> Result<()> {
-    if active_library_path(app).is_some() {
+    if active_downloaded_library_path(app).is_some() {
         return Ok(());
     }
 
@@ -210,32 +210,13 @@ pub fn ensure_bundled_runtime(app: &AppHandle) -> Result<()> {
     unsafe {
         validate_abi(&bundled).context("bundled integrator ABI validation failed")?;
     }
-
-    let target_dir = versions_dir(app)
-        .map_err(anyhow::Error::msg)?
-        .join(BUNDLED_RUNTIME_VERSION);
-    fs::create_dir_all(&target_dir)
-        .with_context(|| format!("failed to create integrator runtime dir: {:?}", target_dir))?;
-    let target = target_dir.join(runtime_file_name());
-    if !target.is_file() {
-        fs::copy(&bundled, &target).with_context(|| {
-            format!(
-                "failed to copy bundled integrator runtime from {:?} to {:?}",
-                bundled, target
-            )
-        })?;
-    }
-
-    let mut state = read_state(app);
-    state.active_version = Some(BUNDLED_RUNTIME_VERSION.to_string());
-    state.previous_version = None;
-    write_state(app, &state).map_err(anyhow::Error::msg)
+    Ok(())
 }
 
 fn active_runtime_path(app: &AppHandle) -> Result<PathBuf> {
     if let Err(error) = ensure_bundled_runtime(app) {
         log::warn!(
-            "[IntegratorRuntime] failed to seed bundled runtime: {:#}",
+            "[IntegratorRuntime] failed to prepare bundled runtime: {:#}",
             error
         );
     }
@@ -478,7 +459,20 @@ fn write_state(app: &AppHandle, state: &IntegratorRuntimeState) -> Result<(), St
 }
 
 fn active_library_path(app: &AppHandle) -> Option<PathBuf> {
+    if let Some(path) = active_downloaded_library_path(app) {
+        return Some(path);
+    }
+
+    bundled_runtime_path(app)
+        .ok()
+        .filter(|path| path.is_file())
+}
+
+fn active_downloaded_library_path(app: &AppHandle) -> Option<PathBuf> {
     let version = read_state(app).active_version?;
+    if version == BUNDLED_RUNTIME_VERSION {
+        return None;
+    }
     valid_version(&version).ok()?;
     let path = versions_dir(app)
         .ok()?
@@ -489,11 +483,23 @@ fn active_library_path(app: &AppHandle) -> Option<PathBuf> {
 
 fn status(app: AppHandle) -> Result<IntegratorRuntimeStatus, String> {
     let state = read_state(&app);
+    let has_downloaded_runtime = active_downloaded_library_path(&app).is_some();
+    let has_bundled_runtime = bundled_runtime_path(&app)
+        .map(|path| path.is_file())
+        .unwrap_or(false);
+    let active_version = if has_downloaded_runtime {
+        state.active_version
+    } else if has_bundled_runtime {
+        Some(BUNDLED_RUNTIME_VERSION.to_string())
+    } else {
+        None
+    };
+
     Ok(IntegratorRuntimeStatus {
-        active_version: state.active_version,
+        active_version,
         previous_version: state.previous_version,
         last_failed_version: state.last_failed_version,
-        has_local_runtime: active_library_path(&app).is_some(),
+        has_local_runtime: has_downloaded_runtime || has_bundled_runtime,
     })
 }
 

@@ -6,7 +6,8 @@ use crate::common::audio_pak::{
 };
 use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::common::ue4ss::{
-    dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
+    dir_contains_js_mod, ensure_ue4ss_config_directory, install_ue4ss,
+    install_ue4ss_js_mod_from_dir,
     install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
     zip_contains_js_mod,
 };
@@ -258,7 +259,10 @@ impl RcPakIntegrator {
             }
         }
 
+        let binaries_dir = self.installation.binaries_directory();
         self.serialize_asset_registry()?;
+        ensure_ue4ss_config_directory(&binaries_dir)?;
+        self.write_ue4ss_mods_config()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
         progress.emit(InstallEvent::StatusLog(text("backend.install.success")))?;
@@ -691,6 +695,38 @@ impl RcPakIntegrator {
         // self.bundle
         //     .write_file(&buf, self.installation.asset_registry_pak_path())
         //     .context("Failed to write asset registry to mod pak")?;
+        Ok(())
+    }
+
+    fn ue4ss_mod_entries(assets: &HashSet<String>) -> Vec<serde_json::Value> {
+        let mut class_paths = assets.iter().cloned().collect::<Vec<_>>();
+        class_paths.sort();
+        class_paths
+            .into_iter()
+            .map(|class_path| json!({ "classPath": class_path }))
+            .collect()
+    }
+
+    fn write_ue4ss_mods_config(&self) -> Result<()> {
+        let config_dir = self
+            .installation
+            .binaries_directory()
+            .join("ue4ss")
+            .join("config");
+        fs::create_dir_all(&config_dir)
+            .with_context(|| format!("Failed to create ue4ss config directory: {:?}", config_dir))?;
+
+        let mods_config = json!({
+            "space_rig": Self::ue4ss_mod_entries(&self.init_space_rig_assets),
+            "cave": Self::ue4ss_mod_entries(&self.init_cave_assets),
+        });
+        let mut content = serde_json::to_string_pretty(&mods_config)
+            .context("Failed to serialize ue4ss mods config")?;
+        content.push('\n');
+
+        let mods_json_path = config_dir.join("mods.json");
+        fs::write(&mods_json_path, content)
+            .with_context(|| format!("Failed to write ue4ss mods config: {:?}", mods_json_path))?;
         Ok(())
     }
 

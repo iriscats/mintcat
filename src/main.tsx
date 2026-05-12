@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import {Routes, Route, HashRouter} from "react-router-dom";
 
 import {ConfigProvider, App as AntdApp} from "antd";
+import {getCurrentWindow} from "@tauri-apps/api/window";
 import {useEventListener, enableEventDebugger} from "@/events";
 
 import App from "@/App";
@@ -15,15 +16,17 @@ import packageJson from '../package.json';
 import {InitLog} from "./apis/LogApi.ts";
 import {initializeTaskSystem} from "@/tasks";
 import {registerIoC} from "@/core/IoCRegistration.ts";
-import {activateInstalledHotFrontend, confirmFrontendUpdateIfHot} from "@/utils/FrontendUpdateRuntime.ts";
+import {confirmFrontendUpdateIfHot} from "@/utils/FrontendUpdateRuntime.ts";
 
 InitLog();
 registerIoC();
-initializeTaskSystem()
-    .then(() => console.log('[Main] Task system initialized (startup)'))
-    .catch((error) => console.error('[Main] Failed to initialize task system (startup):', error));
+const isMainWindow = getCurrentWindow().label === 'main';
 
-// Initialize task system once for all windows
+if (isMainWindow) {
+    initializeTaskSystem()
+        .then(() => console.log('[Main] Task system initialized (startup)'))
+        .catch((error) => console.error('[Main] Failed to initialize task system (startup):', error));
+}
 
 
 const Main = () => {
@@ -61,8 +64,6 @@ const Main = () => {
 
         confirmFrontendUpdateIfHot()
             .catch((error) => console.warn('[FrontendUpdate] Failed to confirm frontend update:', error));
-        activateInstalledHotFrontend('startup')
-            .catch((error) => console.warn('[FrontendUpdate] Failed to activate installed frontend:', error));
 
         return cleanupContextMenu;
 

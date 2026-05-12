@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
@@ -116,7 +117,9 @@ export class AppInitializer {
             // Complete
             this.currentPhase = InitPhase.Complete;
             console.log('[AppInitializer] Core initialization complete');
-            this.submitStartupUpdateCheckTask();
+            if (this.isMainWindow()) {
+                this.submitStartupUpdateCheckTask();
+            }
         } catch (error) {
             this.currentPhase = InitPhase.Failed;
             this.error = error instanceof Error ? error : new Error(String(error));
@@ -136,6 +139,10 @@ export class AppInitializer {
         }).catch((error) => {
             console.warn('[AppInitializer] Failed to submit startup update check task:', error);
         });
+    }
+
+    private static isMainWindow(): boolean {
+        return getCurrentWindow().label === 'main';
     }
 
     /**

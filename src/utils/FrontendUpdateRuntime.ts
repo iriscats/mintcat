@@ -1,11 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
 
-const HOT_FRONTEND_URL = 'mintcat-hot://localhost/index.html#/home';
-
-type FrontendUpdateStatus = {
-    hasLocalBundle: boolean;
-};
-
 function normalizeHref(value: string): string {
     try {
         return decodeURIComponent(value).replace(/\\/g, '/').toLowerCase();
@@ -28,17 +22,14 @@ export async function confirmFrontendUpdateIfHot(): Promise<void> {
     await invoke('mark_frontend_update_ok');
 }
 
-export async function activateInstalledHotFrontend(reason: string): Promise<boolean> {
-    if (isHotFrontendLocation()) return false;
+export function frontendRouteUrl(route: string): string {
+    const hashRoute = route.startsWith('#')
+        ? route
+        : `#${route.startsWith('/') ? route : `/${route}`}`;
 
-    const status = await invoke<FrontendUpdateStatus>('get_frontend_update_status');
-    if (!status.hasLocalBundle) return false;
+    if (isHotFrontendLocation()) {
+        return `mintcat-hot://localhost/index.html${hashRoute}`;
+    }
 
-    console.log('[FrontendUpdate] Activating hot frontend', { reason, url: HOT_FRONTEND_URL });
-    invoke('activate_frontend_update')
-        .catch((error) => console.warn('[FrontendUpdate] Backend activation failed:', error));
-    window.setTimeout(() => {
-        window.location.replace(HOT_FRONTEND_URL);
-    }, 250);
-    return true;
+    return `index.html${hashRoute}`;
 }

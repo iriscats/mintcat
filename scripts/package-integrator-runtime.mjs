@@ -59,19 +59,18 @@ function packageRuntime() {
     throw new Error(`runtime artifact not found: ${artifact}`);
   }
 
-  const assetDir = path.join(srcTauri, 'assets', 'plugins');
-  mkdirSync(assetDir, { recursive: true });
-  const assetPath = path.join(assetDir, runtimeFileName);
-  copyFileSync(artifact, assetPath);
-
   const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
   const version = pkg.version || '0.0.0';
-
   const releaseDir = path.join(root, 'release', 'integrator');
   mkdirSync(releaseDir, { recursive: true });
   const releaseName = `mintcat_integrator_${version}_x64.dll`;
   const releasePath = path.join(releaseDir, releaseName);
-  copyFileSync(assetPath, releasePath);
+  copyFileSync(artifact, releasePath);
+
+  const assetDir = path.join(srcTauri, 'assets', 'plugins');
+  mkdirSync(assetDir, { recursive: true });
+  const assetPath = path.join(assetDir, runtimeFileName);
+  copyFileSync(releasePath, assetPath);
 
   console.log(`[integrator-runtime] bundled resource: ${path.relative(root, assetPath)}`);
   console.log(`[integrator-runtime] release artifact: ${path.relative(root, releasePath)} (${statSync(releasePath).size} bytes)`);
