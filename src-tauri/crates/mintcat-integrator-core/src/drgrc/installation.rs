@@ -3,6 +3,8 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
+
+const STEAM_APP_ID_RC: u32 = 2605790;
 const STEAM_APP_ID_RC_PLAYTEST: u32 = 2860770;
 
 /// Rogue Core 安装目录信息
@@ -13,20 +15,24 @@ pub struct RcInstallation {
 }
 
 impl RcInstallation {
-    /// 通过 Steam 查找 Rogue Core Playtest 安装路径
+    /// 通过 Steam 查找 Rogue Core 安装路径，优先正式版，其次 Playtest
     /// Path: .../Deep Rock Galactic Rogue Core Playtest/RogueCore/Content/Paks/RogueCore-Windows.pak
     pub fn find_rc() -> Option<Self> {
         steamlocate::SteamDir::locate()
             .ok()
             .and_then(|steam_dir| {
-                steam_dir
-                    .find_app(STEAM_APP_ID_RC_PLAYTEST)
-                    .ok()
-                    .flatten()
-                    .map(|(app, library)| {
-                        library
-                            .resolve_app_dir(&app)
-                            .join("RogueCore/Content/Paks/RogueCore-Windows.pak")
+                [STEAM_APP_ID_RC, STEAM_APP_ID_RC_PLAYTEST]
+                    .into_iter()
+                    .find_map(|app_id| {
+                        steam_dir
+                            .find_app(app_id)
+                            .ok()
+                            .flatten()
+                            .map(|(app, library)| {
+                                library
+                                    .resolve_app_dir(&app)
+                                    .join("RogueCore/Content/Paks/RogueCore-Windows.pak")
+                            })
                     })
             })
             .and_then(|path| Self::from_pak_path(path).ok())

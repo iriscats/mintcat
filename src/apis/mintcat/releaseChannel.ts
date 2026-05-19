@@ -1,10 +1,14 @@
 /** MintCat Release API 内置资源发布渠道（与 /releases 查询参数一致） */
 
-export const RELEASE_CHANNELS = ['stable', 'beta'] as const;
+import packageJson from '../../../package.json';
+
+export const RELEASE_CHANNELS = ['stable', 'beta', 'alpha'] as const;
 
 export type ReleaseChannel = (typeof RELEASE_CHANNELS)[number];
 
-export const DEFAULT_RELEASE_CHANNEL: ReleaseChannel = 'stable';
+export const DEFAULT_RELEASE_CHANNEL: ReleaseChannel = isReleaseChannel(packageJson.channel)
+    ? packageJson.channel
+    : 'stable';
 
 export function isReleaseChannel(value: string): value is ReleaseChannel {
     return (RELEASE_CHANNELS as readonly string[]).includes(value);

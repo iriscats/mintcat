@@ -127,7 +127,17 @@ export class StartupUpdateCheckTask implements ITask {
             }
         }
 
-        await context.setMessage(t('Update manifest loaded', { count: manifest.length }));
+        const proxyRuntime = manifest.find((item) => {
+            const name = item.name?.toLowerCase();
+            const type = item.type?.toLowerCase();
+            return name === 'mintcat-proxy'
+                || (name === 'proxy' && (!type || type === 'runtime' || type === 'proxy'));
+        });
+        if (proxyRuntime?.latestVersion) {
+            localStorage.setItem('mintcat_proxy_latest_version', proxyRuntime.latestVersion);
+        }
+
+        await context.setMessage(t('Check Updates Finished'));
         await context.updateProgress(100);
     }
 }

@@ -4,8 +4,7 @@ use crate::common::audio_pak::{
 };
 use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::common::ue4ss::{
-    dir_contains_js_mod, ensure_ue4ss_config_directory, install_ue4ss,
-    install_ue4ss_js_mod_from_dir,
+    dir_contains_js_mod, install_ue4ss, install_ue4ss_js_mod_from_dir,
     install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
     zip_contains_js_mod,
 };
@@ -150,9 +149,10 @@ impl PakIntegrator {
     ) -> Result<()> {
         let total_percent = 70.0;
         let mods_size = mods.len();
+        let ue4ss_enabled = !skip_ue4ss;
 
         // Install UE4SS once before processing mods (unless skipped)
-        if !skip_ue4ss {
+        if ue4ss_enabled {
             progress.emit(InstallEvent::StatusLog(text("backend.install.ue4ss")))?;
             install_ue4ss(&self.installation.binaries_directory(), ue4ss_zip_path)?;
         }
@@ -165,7 +165,7 @@ impl PakIntegrator {
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             progress.emit(InstallEvent::Percent(current_percent))?;
 
-            let result = self.process_mod(mod_info);
+            let result = self.process_mod(mod_info, ue4ss_enabled);
             match result {
                 Ok(_) => {
                     progress.emit(InstallEvent::StatusLog(json_value(json!({ "key": "backend.install.process_mod_success", "name": mod_info.name }))))?;
@@ -191,7 +191,7 @@ impl PakIntegrator {
             Self::write_hook_dll_from_drg_zip(drg_zip, &self.installation.binaries_directory())?;
 
             self.apply_mint_patch(&mut mint_files)?;
-            //self.apply_pcb_patch()?;
+            self.apply_pcb_patch()?;
             self.apply_sandbox_patch()?;
 
             progress.emit(InstallEvent::StatusLog(text("backend.install.write_mod")))?;
@@ -203,10 +203,9 @@ impl PakIntegrator {
             progress.emit(InstallEvent::Percent(90.0))?;
         }
 
-        let binaries_dir = self.installation.binaries_directory();
         self.serialize_asset_registry()?;
-        ensure_ue4ss_config_directory(&binaries_dir)?;
-        self.write_ue4ss_mods_config()?;
+        //ensure_ue4ss_config_directory(&binaries_dir)?;
+        //self.write_ue4ss_mods_config()?;
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
         progress.emit(InstallEvent::StatusLog(text("backend.install.success")))?;
@@ -291,13 +290,13 @@ impl PakIntegrator {
         }
     }
 
-    fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
+    fn process_mod(&mut self, mod_info: &mut ModInfo, ue4ss_enabled: bool) -> Result<()> {
         let pak_path_str = mod_info.pak_path.clone();
         let pak_path = Path::new(&pak_path_str);
 
         if mod_info.is_unpacked {
             return self
-                .process_directory_mod(mod_info, pak_path)
+                .process_directory_mod(mod_info, pak_path, ue4ss_enabled)
                 .with_context(|| format!("Failed to process directory mod: {}", mod_info.name));
         }
 
@@ -327,11 +326,13 @@ impl PakIntegrator {
             self.process_pak_files(pak)
                 .with_context(|| format!("Failed to process pak for mod: {}", mod_info.name))?;
         }
-        if let Some(ref mut dll) = dll_buf {
-            self.process_dll_files(mod_info, dll)
-                .with_context(|| format!("Failed to process dll for mod: {}", mod_info.name))?;
+        if ue4ss_enabled {
+            if let Some(ref mut dll) = dll_buf {
+                self.process_dll_files(mod_info, dll)
+                    .with_context(|| format!("Failed to process dll for mod: {}", mod_info.name))?;
+            }
         }
-        if zip_contains_js_mod(pak_path) {
+        if ue4ss_enabled && zip_contains_js_mod(pak_path) {
             install_ue4ss_js_mod_from_zip_targeted(
                 &self.installation.binaries_directory(),
                 &mod_info.name,
@@ -344,7 +345,12 @@ impl PakIntegrator {
 
     /// Process a directory-based mod that may contain multiple content types:
     /// Content/ (unpacked UE assets), pak/ (.pak files), js/ (UE4SS scripts), dll/ (UE4SS native mods)
-    fn process_directory_mod(&mut self, mod_info: &mut ModInfo, path: &Path) -> Result<()> {
+    fn process_directory_mod(
+        &mut self,
+        mod_info: &mut ModInfo,
+        path: &Path,
+        ue4ss_enabled: bool,
+    ) -> Result<()> {
         let mut processed_any = false;
 
         if UnpackedMod::is_valid_unpacked_mod(path) {
@@ -378,17 +384,22 @@ impl PakIntegrator {
         }
 
         if dir_contains_js_mod(path) {
-            install_ue4ss_js_mod_from_dir(
-                &self.installation.binaries_directory(),
-                &mod_info.name,
-                path,
-            )
-            .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+            if ue4ss_enabled {
+                install_ue4ss_js_mod_from_dir(
+                    &self.installation.binaries_directory(),
+                    &mod_info.name,
+                    path,
+                )
+                .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+            }
             processed_any = true;
         }
 
         let dll_dir = path.join("dll");
         if dll_dir.is_dir() {
+            if !ue4ss_enabled {
+                return Ok(());
+            }
             for entry in fs::read_dir(&dll_dir)
                 .with_context(|| format!("Failed to read dll directory: {:?}", dll_dir))?
             {
@@ -662,8 +673,8 @@ impl PakIntegrator {
 
     fn apply_mint_patch(&mut self, mint_files: &mut HashMap<String, Vec<u8>>) -> Result<()> {
         let mint_path = (
-            "FSD/Content/ModIntegration/MI_SpawnMods.uasset",
-            "FSD/Content/ModIntegration/MI_SpawnMods.uexp",
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uasset",
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uexp",
         );
 
         let mut asset = unreal_asset::Asset::new(
@@ -681,7 +692,10 @@ impl PakIntegrator {
             self.init_cave_assets.clone(),
         );
         self.bundle
-            .write_asset(asset, "FSD/Content/ModIntegration/MI_SpawnMods")
+            .write_asset(
+                asset,
+                "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods",
+            )
             .context("Failed to write MI_SpawnMods asset")?;
 
         Ok(())
@@ -702,8 +716,9 @@ impl PakIntegrator {
             .binaries_directory()
             .join("ue4ss")
             .join("config");
-        fs::create_dir_all(&config_dir)
-            .with_context(|| format!("Failed to create ue4ss config directory: {:?}", config_dir))?;
+        fs::create_dir_all(&config_dir).with_context(|| {
+            format!("Failed to create ue4ss config directory: {:?}", config_dir)
+        })?;
 
         let mods_config = json!({
             "space_rig": Self::ue4ss_mod_entries(&self.init_space_rig_assets),
@@ -785,8 +800,8 @@ impl PakIntegrator {
 
     fn write_mint_files(&mut self, mint_files: &mut HashMap<String, Vec<u8>>) -> Result<()> {
         let mint_path = (
-            "FSD/Content/ModIntegration/MI_SpawnMods.uasset",
-            "FSD/Content/ModIntegration/MI_SpawnMods.uexp",
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uasset",
+            "FSD/Content/_AssemblyStorm/ModIntegration/MI_SpawnMods.uexp",
         );
         mint_files.remove(mint_path.0);
         mint_files.remove(mint_path.1);

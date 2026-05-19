@@ -22,6 +22,8 @@ export interface UpdateCheckManifestItem {
     checksum?: string;
     signature?: string;
     releaseNotes?: string;
+    platform?: string;
+    arch?: string;
     downloadUrl?: string;
     url?: string;
     path?: string;

@@ -30,12 +30,13 @@ export interface EnsureInternalAssetsOptions {
     setMessage?: (msg: string, level?: 'info' | 'warning' | 'error') => Promise<void>;
     updateProgress?: (p: number) => void;
     checkCancelled?: () => boolean;
-    /** 'drg' 下载 ue4ssl + DRG.zip，'rc' 下载 ue4ssl + RC.zip */
+    /** 'drg' 下载 DRG.zip，'rc' 下载 RC.zip；includeUe4ss=true 时额外下载 UE4SSL.zip */
     game?: InternalAssetGame;
+    includeUe4ss?: boolean;
 }
 
 export interface InternalAssetPaths {
-    ue4ssZipPath: string;
+    ue4ssZipPath?: string;
     drgZipPath?: string;
     rcZipPath?: string;
 }
@@ -164,8 +165,9 @@ function formatEta(seconds: number): string {
 /**
  * Ensure internal asset zips exist in cache, downloading with MD5 check if missing or outdated.
  * Validates cached ZIP integrity; corrupted files are removed and re-downloaded automatically.
- * - game 'drg': UE4SSL.zip + DRG.zip
- * - game 'rc': UE4SSL.zip + RC.zip
+ * - game 'drg': DRG.zip
+ * - game 'rc': RC.zip
+ * - includeUe4ss: additionally requires UE4SSL.zip
  * Used by CheckModUpdateTask and ModInstallTask.
  */
 export async function ensureInternalAssets(
@@ -177,6 +179,7 @@ export async function ensureInternalAssets(
     const updateProgress = opts.updateProgress ?? (() => {});
     const checkCancelled = opts.checkCancelled ?? (() => false);
     const game: InternalAssetGame = opts.game ?? 'drg';
+    const includeUe4ss = opts.includeUe4ss ?? true;
 
     const settings = await StorageAPI.getSettings();
     const channel = await settings.getReleaseChannel();
@@ -209,13 +212,15 @@ export async function ensureInternalAssets(
     }
 
     // 校验已缓存的 ZIP 文件完整性，损坏的文件会被删除并重置 manifest
-    const ue4ssValid = forceRedownload ? false : await validateAndCleanZip(ue4ssZipPath, cacheDir, 'ue4ssl', manifest);
+    const ue4ssValid = includeUe4ss
+        ? (forceRedownload ? false : await validateAndCleanZip(ue4ssZipPath, cacheDir, 'ue4ssl', manifest))
+        : true;
     const secondZipPath = game === 'rc' ? rcZipPath : drgZipPath;
     const secondManifestKey: keyof AssetManifest = game === 'rc' ? 'rc' : 'drg';
     const secondValid = forceRedownload ? false : await validateAndCleanZip(secondZipPath, cacheDir, secondManifestKey, manifest);
 
     // 缓存文件缺失时与 manifest 同步
-    if (!forceRedownload && !ue4ssValid && manifest.ue4ssl !== '0') {
+    if (includeUe4ss && !forceRedownload && !ue4ssValid && manifest.ue4ssl !== '0') {
         await writeManifest(cacheDir, { ue4ssl: '0' });
         manifest.ue4ssl = '0';
     }
@@ -231,23 +236,29 @@ export async function ensureInternalAssets(
     const secondAppType = game === 'rc' ? 'rc' : 'drg';
     let results;
     try {
-        results = await checkUpdatesBatch([
-            { currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel },
+        const updateChecks = [
+            ...(includeUe4ss
+                ? [{ currentVersion: ue4sslVersionForCheck, appType: 'ue4ssl', platform: PLATFORM, channel }]
+                : []),
             { currentVersion: secondVersionForCheck, appType: secondAppType, platform: PLATFORM, channel },
-        ]);
+        ];
+        results = await checkUpdatesBatch(updateChecks);
     } catch (error) {
         console.error('[InternalAssets] Failed to check update metadata:', error);
         throw new Error(t('error.checkInternalAssetsUpdates'));
     }
+    const ue4sslResult = includeUe4ss ? results[0] : null;
+    const secondResult = includeUe4ss ? results[1] : results[0];
 
     const needUe4ssl =
-        forceRedownload ||
-        !ue4ssValid ||
-        (results[0].hasUpdate && results[0].latestVersion != null && results[0].md5 != null);
+        includeUe4ss &&
+        (forceRedownload ||
+            !ue4ssValid ||
+            (ue4sslResult?.hasUpdate && ue4sslResult.latestVersion != null && ue4sslResult.md5 != null));
     const needSecond =
         forceRedownload ||
         !secondValid ||
-        (results[1].hasUpdate && results[1].latestVersion != null && results[1].md5 != null);
+        (secondResult.hasUpdate && secondResult.latestVersion != null && secondResult.md5 != null);
 
     const downloadQueue: Array<{
         result: { latestVersion?: string; md5?: string; downloadUrl?: string };
@@ -257,7 +268,7 @@ export async function ensureInternalAssets(
     }> = [];
 
     if (needUe4ssl) {
-        const r = results[0];
+        const r = ue4sslResult!;
         if (!r.latestVersion || !r.md5) {
             throw new Error(t('mod.missingVersionOrMd5', { name: 'UE4SSL' }));
         }
@@ -265,7 +276,7 @@ export async function ensureInternalAssets(
     }
 
     if (needSecond) {
-        const r = results[1];
+        const r = secondResult;
         const label = game === 'rc' ? 'RC' : 'DRG';
         if (!r.latestVersion || !r.md5) {
             throw new Error(t('mod.missingVersionOrMd5', { name: label }));
@@ -313,7 +324,7 @@ export async function ensureInternalAssets(
     updateProgress(100);
 
     // 最终校验：确认文件存在且为有效 ZIP
-    const ue4ssOk = await exists(ue4ssZipPath) && await IntegrateApi.validateZipFile(ue4ssZipPath);
+    const ue4ssOk = !includeUe4ss || (await exists(ue4ssZipPath) && await IntegrateApi.validateZipFile(ue4ssZipPath));
     const secondOk = await exists(secondZipPath) && await IntegrateApi.validateZipFile(secondZipPath);
     if (!ue4ssOk || !secondOk) {
         const missing = [(!ue4ssOk && ASSET_UE4SSL), (!secondOk && (game === 'rc' ? ASSET_RC : ASSET_DRG))].filter(Boolean);
@@ -321,9 +332,9 @@ export async function ensureInternalAssets(
     }
 
     if (game === 'rc') {
-        return { ue4ssZipPath, rcZipPath };
+        return { ue4ssZipPath: includeUe4ss ? ue4ssZipPath : undefined, rcZipPath };
     }
-    return { ue4ssZipPath, drgZipPath };
+    return { ue4ssZipPath: includeUe4ss ? ue4ssZipPath : undefined, drgZipPath };
 }
 
 /** Download a ZIP asset with post-download validation and automatic retry */
@@ -459,10 +470,14 @@ async function downloadAndValidateZip(
 
 /**
  * Get paths to internal asset zips. Returns null if any required file is missing.
- * - game 'drg': requires UE4SSL.zip + DRG.zip
- * - game 'rc': requires UE4SSL.zip + RC.zip
+ * - game 'drg': requires DRG.zip
+ * - game 'rc': requires RC.zip
+ * - includeUe4ss: additionally requires UE4SSL.zip
  */
-export async function getInternalAssetPaths(game: InternalAssetGame = 'drg'): Promise<InternalAssetPaths | null> {
+export async function getInternalAssetPaths(
+    game: InternalAssetGame = 'drg',
+    includeUe4ss = true,
+): Promise<InternalAssetPaths | null> {
     const settings = await StorageAPI.getSettings();
     const channel = await settings.getReleaseChannel();
     const cacheDir = await CacheApi.getCacheDir();
@@ -473,13 +488,14 @@ export async function getInternalAssetPaths(game: InternalAssetGame = 'drg'): Pr
     const ue4ssZipPath = joinPath(cacheDir, ASSET_UE4SSL);
     const drgZipPath = joinPath(cacheDir, ASSET_DRG);
     const rcZipPath = joinPath(cacheDir, ASSET_RC);
+    const hasUe4ss = !includeUe4ss || (await exists(ue4ssZipPath));
     if (game === 'rc') {
-        if ((await exists(ue4ssZipPath)) && (await exists(rcZipPath))) {
-            return { ue4ssZipPath, rcZipPath };
+        if (hasUe4ss && (await exists(rcZipPath))) {
+            return { ue4ssZipPath: includeUe4ss ? ue4ssZipPath : undefined, rcZipPath };
         }
     } else {
-        if ((await exists(ue4ssZipPath)) && (await exists(drgZipPath))) {
-            return { ue4ssZipPath, drgZipPath };
+        if (hasUe4ss && (await exists(drgZipPath))) {
+            return { ue4ssZipPath: includeUe4ss ? ue4ssZipPath : undefined, drgZipPath };
         }
     }
     return null;

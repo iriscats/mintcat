@@ -1,4 +1,5 @@
 import {load} from '@tauri-apps/plugin-store';
+import {UE4SS_SETTING_ENABLED} from "@/utils/Ue4ssSetting.ts";
 
 type StoreValue = string | number | boolean | object | null;
 
@@ -37,6 +38,6 @@ export const setting = await createStore(
         gui_theme: 'Light',
         cache_path: "",
         config_path: "",
-        ue4ss: 'UE4SS-Lite',
+        ue4ss: UE4SS_SETTING_ENABLED,
     },
     'settings.json');

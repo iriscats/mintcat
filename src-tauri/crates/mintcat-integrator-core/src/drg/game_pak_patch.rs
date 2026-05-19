@@ -35,7 +35,7 @@ pub static PATCH_PATHS: [&str; 6] = [
 pub static ESCAPE_MENU_PATH: &str = "FSD/Content/UI/Menu_EscapeMenu/MENU_EscapeMenu";
 pub static MODDING_TAB_PATH: &str = "FSD/Content/UI/Menu_EscapeMenu/Modding/MENU_Modding";
 pub static SERVER_LIST_ENTRY_PATH: &str = "FSD/Content/UI/Menu_ServerList/ITM_ServerList_Entry";
-pub static MINT_PATH: &str = "/Game/ModIntegration/MI_SpawnMods.MI_SpawnMods_C";
+pub static MINT_PATH: &str = "/Game/_AssemblyStorm/ModIntegration/MI_SpawnMods.MI_SpawnMods_C";
 
 pub fn get_deferred_paths() -> Vec<&'static str> {
     let mut paths = vec![

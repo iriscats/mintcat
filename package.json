@@ -1,7 +1,9 @@
 {
   "name": "mintcat",
   "private": true,
-  "version": "0.5.4-beta.7",
+  "version": "0.5.4",
+  "channel": "stable",
+  "sub-version": "1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +14,8 @@
     "package": "./scripts/build-release.sh",
     "package:frontend": "pnpm build && node scripts/package-frontend-zip.mjs",
     "package:integrator-runtime": "node scripts/package-integrator-runtime.mjs",
+    "package:proxy-runtime:windows": "node scripts/package-proxy-runtime.mjs windows",
+    "package:proxy-runtime:macos-aarch64": "node scripts/package-proxy-runtime.mjs macos-aarch64",
     "package:portable": "node scripts/build-portable.mjs",
     "package:fixed-webview2": "node scripts/build-fixed-webview2.mjs"
   },

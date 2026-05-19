@@ -14,6 +14,12 @@ import {ClipboardApi} from "@/apis/ClipboardApi.ts";
 import Search from "antd/es/input/Search";
 import {ButtonLayout, SettingLayout} from "@/pages/SettingPage/Layout.ts";
 import {emitEvent, emitVoidEvent, useEventListener} from "@/events";
+import {
+    normalizeUe4ssSetting,
+    UE4SS_SETTING_DISABLED,
+    UE4SS_SETTING_ENABLED,
+    type Ue4ssSetting,
+} from "@/utils/Ue4ssSetting.ts";
 
 
 
@@ -35,7 +41,7 @@ export function MintCatSettings() {
     const [theme, setTheme] = React.useState<string>("Light");
     const [configDirectory, setConfigDirectory] = React.useState<string>("");
     const [cacheDirectory, setCacheDirectory] = React.useState<string>("");
-    const [ue4ss, setUe4ss] = React.useState<string>("");
+    const [ue4ss, setUe4ss] = React.useState<Ue4ssSetting>(UE4SS_SETTING_ENABLED);
     const [releaseChannel, setReleaseChannel] = React.useState<ReleaseChannel>(DEFAULT_RELEASE_CHANNEL);
     const [clipboardMonitor, setClipboardMonitor] = React.useState<boolean>(true);
 
@@ -120,11 +126,8 @@ export function MintCatSettings() {
         message.success(t("Release channel saved"));
     };
 
-    const onUe4ssChange = async (value: string) => {
+    const onUe4ssChange = async (value: Ue4ssSetting) => {
         setUe4ss(value);
-        if (value === "Custom") {
-            message.warning(t("disclaimer.customUe4ssMode"));
-        }
         const settings = await StorageAPI.getSettings();
         await settings.setValue('ue4ss', value);
     }
@@ -178,7 +181,7 @@ export function MintCatSettings() {
         setConfigDirectory(await settings.getConfigPath());
         setCacheDirectory(await settings.getCachePath());
         const ue4ssValue = await settings.getValue('ue4ss');
-        setUe4ss(ue4ssValue ? ue4ssValue : "UE4SS-Lite");
+        setUe4ss(normalizeUe4ssSetting(ue4ssValue));
         setReleaseChannel(await settings.getReleaseChannel());
         setClipboardMonitor(await settings.getClipboardMonitorEnabled());
     }, []);
@@ -272,16 +275,16 @@ export function MintCatSettings() {
                         </Flex>
                     </Form.Item>
                     <Form.Item label={t("UE4SS")}>
-                        <Select onChange={onUe4ssChange}
+                        <Select<Ue4ssSetting> onChange={onUe4ssChange}
                                 value={ue4ss}
                                 options={[
                                     {
-                                        value: "UE4SS-Lite",
-                                        label: "UE4SS-Lite",
+                                        value: UE4SS_SETTING_ENABLED,
+                                        label: t("Enable"),
                                     },
                                     {
-                                        value: "Custom",
-                                        label: "Custom",
+                                        value: UE4SS_SETTING_DISABLED,
+                                        label: t("Disable"),
                                     },
                                 ]}/>
                     </Form.Item>

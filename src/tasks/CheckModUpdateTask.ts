@@ -10,6 +10,7 @@ import { ModSourceType } from '@/models/mod/types';
 import { t } from 'i18next';
 import { ensureInternalAssets } from '@/services/InternalAssetService';
 import { emitEvent } from '@/events';
+import { isUe4ssEnabled } from '@/utils/Ue4ssSetting';
 
 /** 将秒级时间戳格式化为 ModCat API Since 参数格式 "YYYY-MM-DD HH:mm:ss" */
 function formatSinceForModcat(seconds: number): string {
@@ -45,13 +46,15 @@ export class CheckModUpdateTask implements ITask {
     async run(context: ITaskContext): Promise<void> {
         const TOTAL_STEPS = 5;
 
-        // Step 1: Check internal assets (UE4SSL.zip, DRG.zip)
+        // Step 1: Check internal assets required by the current UE4SS setting.
         await context.setStep(t('Check internal assets'), 1, TOTAL_STEPS);
+        const settings = await StorageAPI.getSettings();
         await ensureInternalAssets({
             setStep: context.setStep.bind(context),
             setMessage: context.setMessage.bind(context),
             updateProgress: context.updateProgress.bind(context),
             checkCancelled: context.checkCancelled.bind(context),
+            includeUe4ss: isUe4ssEnabled(await settings.getValue('ue4ss')),
         });
 
         // Step 2: Load mod list

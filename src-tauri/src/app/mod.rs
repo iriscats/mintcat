@@ -1,6 +1,6 @@
 pub mod devtools;
 
-use crate::{download, frontend, integrator, network, steam};
+use crate::{download, frontend, integrator, network, proxy, steam};
 use tauri::{Emitter, Manager, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_sentry::{minidump, sentry};
 
@@ -59,7 +59,16 @@ pub fn run() {
             let proxy_state = network::NetworkProxyState::new();
             let proxy_arc = proxy_state.0.clone();
             app.manage(proxy_state);
+            app.manage(proxy::runtime::ProxyChildState::default());
             app.manage(download::init_download_manager(proxy_arc));
+            if proxy::runtime::was_running_dirty(app.handle()) {
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    if let Err(error) = proxy::runtime::sweep_stale_hosts(&app_handle) {
+                        log::warn!("[ProxyRuntime] stale hosts sweep failed: {:#}", error);
+                    }
+                });
+            }
 
             let mut main_window_config = app
                 .config()
@@ -79,7 +88,16 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close(); // 阻止默认关闭行为
-                    window.app_handle().exit(0); // 手动退出应用
+                    let app = window.app_handle().clone();
+                    std::thread::spawn(move || {
+                        if let Err(error) = proxy::runtime::shutdown_blocking(
+                            &app,
+                            std::time::Duration::from_secs(5),
+                        ) {
+                            log::warn!("[ProxyRuntime] shutdown cleanup failed: {:#}", error);
+                        }
+                        app.exit(0); // 手动退出应用
+                    });
                 }
             }
         })
@@ -139,6 +157,11 @@ pub fn run() {
             frontend::update::get_frontend_update_status,
             integrator::runtime::install_integrator_runtime_from_manifest,
             integrator::runtime::get_integrator_runtime_status,
+            proxy::runtime::install_proxy_runtime_from_manifest,
+            proxy::runtime::get_proxy_runtime_status,
+            proxy::runtime::start_proxy_runtime,
+            proxy::runtime::stop_proxy_runtime,
+            proxy::runtime::install_proxy_cert,
             devtools::open_devtools
         ])
         .run(tauri::generate_context!())

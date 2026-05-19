@@ -15,6 +15,7 @@ import { ModSourceType } from '@/models/mod/types';
 import { MODCAT_PLATFORM } from '@/apis/modcat';
 import { ensureInternalAssets } from '@/services/InternalAssetService';
 import { md5 } from '@/utils/CryptApi';
+import { isUe4ssEnabled } from '@/utils/Ue4ssSetting';
 
 /**
  * Check if a path is a valid unpacked mod directory
@@ -51,7 +52,7 @@ async function fileSizeAndMtime(filePath: string): Promise<{ size: number; mtime
 
 export async function computeInstallManifestHash(
     enabledMods: CompleteModData[],
-    isCustomMode: boolean,
+    ue4ssEnabled: boolean,
     assetPaths?: { ue4ssZipPath?: string; drgZipPath?: string; rcZipPath?: string } | null
 ): Promise<string> {
     const modEntries = [];
@@ -68,14 +69,15 @@ export async function computeInstallManifestHash(
         });
     }
 
-    const ue4ssStat = await fileSizeAndMtime(assetPaths?.ue4ssZipPath || "");
+    const ue4ssZipPath = ue4ssEnabled ? assetPaths?.ue4ssZipPath || "" : "";
+    const ue4ssStat = await fileSizeAndMtime(ue4ssZipPath);
     const drgStat   = await fileSizeAndMtime(assetPaths?.drgZipPath || "");
     const rcStat    = await fileSizeAndMtime(assetPaths?.rcZipPath || "");
 
     const manifest = {
         mods: modEntries,
-        ue4ssMode: isCustomMode ? "Custom" : "Normal",
-        ue4ssZip: { path: assetPaths?.ue4ssZipPath || "", ...ue4ssStat },
+        ue4ssMode: ue4ssEnabled ? "Enabled" : "Disabled",
+        ue4ssZip: { path: ue4ssZipPath, ...ue4ssStat },
         drgZip:   { path: assetPaths?.drgZipPath || "",   ...drgStat },
         rcZip:    { path: assetPaths?.rcZipPath || "",     ...rcStat },
     };
@@ -289,8 +291,7 @@ export class ModInstallTask implements ITask {
             throw new Error(t('Game Path Not Found'));
         }
 
-        const ue4ss = await settings.getValue('ue4ss');
-        const isCustomMode = ue4ss === "Custom";
+        const ue4ssEnabled = isUe4ssEnabled(await settings.getValue('ue4ss'));
 
         const installType = await IntegrateApi.checkInstalled(drgPakPath, 0);
 
@@ -315,6 +316,7 @@ export class ModInstallTask implements ITask {
             updateProgress: context.updateProgress.bind(context),
             checkCancelled: context.checkCancelled.bind(context),
             game: assetGame,
+            includeUe4ss: ue4ssEnabled,
         });
 
         // Step 7: Manifest hash comparison — skip only when pak exists AND nothing changed
@@ -329,7 +331,7 @@ export class ModInstallTask implements ITask {
             }
         }
 
-        const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
+        const currentHash = await computeInstallManifestHash(enabledMods, ue4ssEnabled, assetPaths);
         const savedHash = await profileVM.getActiveProfileInstallHash();
         const installedHash = await profileVM.getActiveGameInstalledHash();
         if (
@@ -346,7 +348,7 @@ export class ModInstallTask implements ITask {
         // Step 8: Uninstall old mods
         await context.setStep(t('Uninstall old version'), 8, TOTAL_STEPS);
         await context.setMessage(t('Uninstalling old mods...'));
-        await IntegrateApi.uninstall(drgPakPath, !isCustomMode);
+        await IntegrateApi.uninstall(drgPakPath, true);
 
         // Step 9: Install mods
         await context.setStep(t('Install mods'), 9, TOTAL_STEPS);
@@ -376,8 +378,8 @@ export class ModInstallTask implements ITask {
         const result = await IntegrateApi.install(
             drgPakPath,
             JSON.stringify(installModList),
-            isCustomMode,
-            assetPaths?.ue4ssZipPath,
+            !ue4ssEnabled,
+            ue4ssEnabled ? assetPaths?.ue4ssZipPath : undefined,
             isRc ? undefined : assetPaths?.drgZipPath,
             isRc ? assetPaths?.rcZipPath : undefined
         );

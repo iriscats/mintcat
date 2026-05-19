@@ -7,6 +7,8 @@ src-tauri/Microsoft.WebView2.FixedVersionRuntime.x64
 /result
 .DS_Store
 Cargo.lock
+!mintcat-proxy/Cargo.lock
+mintcat-proxy/target
 pnpm-lock.yaml
 package-lock.json
 

@@ -1,0 +1,12 @@
+[
+  {
+    "name": "mod.io",
+    "domains": ["mod.io", "*.mod.io"],
+    "proxy": "https://api.aaaa.net/"
+  },
+  {
+    "name": "modcdn.io",
+    "domains": ["*.modcdn.io"],
+    "proxy": "https://api.aaaa.net/"
+  }
+]

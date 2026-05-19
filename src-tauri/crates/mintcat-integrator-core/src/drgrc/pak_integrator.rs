@@ -7,9 +7,8 @@ use crate::common::audio_pak::{
 use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::common::ue4ss::{
     dir_contains_js_mod, ensure_ue4ss_config_directory, install_ue4ss,
-    install_ue4ss_js_mod_from_dir,
-    install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod, uninstall_ue4ss,
-    zip_contains_js_mod,
+    install_ue4ss_js_mod_from_dir, install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod,
+    uninstall_ue4ss, zip_contains_js_mod,
 };
 use crate::common::unpacked_mod::UnpackedMod;
 use crate::common::zip::read_files_from_zip_by_extension;
@@ -217,9 +216,10 @@ impl RcPakIntegrator {
     ) -> Result<()> {
         let total_percent = 70.0f32;
         let mods_size = mods.len();
+        let ue4ss_enabled = !skip_ue4ss;
 
         // 有传入 ue4ssl.zip 且未勾选跳过时安装 UE4SS
-        if !skip_ue4ss {
+        if ue4ss_enabled {
             if let Some(zip_path) = ue4ss_zip_path {
                 progress.emit(InstallEvent::StatusLog(text("backend.install.ue4ss")))?;
                 install_ue4ss(&self.installation.binaries_directory(), Some(zip_path))?;
@@ -233,7 +233,7 @@ impl RcPakIntegrator {
             let current_percent = (current_index as f32 / mods_size as f32) * total_percent + 10.0;
             progress.emit(InstallEvent::Percent(current_percent))?;
 
-            if let Err(e) = self.process_mod(mod_info) {
+            if let Err(e) = self.process_mod(mod_info, ue4ss_enabled) {
                 progress.emit(InstallEvent::Error(json_value(
                     json!({ "key": "backend.install.mod_failed", "name": mod_info.name }),
                 )))?;
@@ -261,8 +261,10 @@ impl RcPakIntegrator {
 
         let binaries_dir = self.installation.binaries_directory();
         self.serialize_asset_registry()?;
-        ensure_ue4ss_config_directory(&binaries_dir)?;
-        self.write_ue4ss_mods_config()?;
+        if ue4ss_enabled {
+            ensure_ue4ss_config_directory(&binaries_dir)?;
+            self.write_ue4ss_mods_config()?;
+        }
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
         progress.emit(InstallEvent::StatusLog(text("backend.install.success")))?;
@@ -342,13 +344,13 @@ impl RcPakIntegrator {
         }
     }
 
-    fn process_mod(&mut self, mod_info: &mut ModInfo) -> Result<()> {
+    fn process_mod(&mut self, mod_info: &mut ModInfo, ue4ss_enabled: bool) -> Result<()> {
         let pak_path_str = mod_info.pak_path.clone();
         let path = Path::new(&pak_path_str);
 
         if mod_info.is_unpacked {
             return self
-                .process_directory_mod(mod_info, path)
+                .process_directory_mod(mod_info, path, ue4ss_enabled)
                 .with_context(|| format!("Failed to process directory mod: {}", mod_info.name));
         }
 
@@ -378,10 +380,12 @@ impl RcPakIntegrator {
             self.process_pak_files(pak)
                 .with_context(|| format!("Failed to process pak for mod: {}", mod_info.name))?;
         }
-        if let Some(ref mut dll) = dll_buf {
-            install_ue4ss_mod(&self.installation.binaries_directory(), &mod_info.name, dll)?;
+        if ue4ss_enabled {
+            if let Some(ref mut dll) = dll_buf {
+                install_ue4ss_mod(&self.installation.binaries_directory(), &mod_info.name, dll)?;
+            }
         }
-        if zip_contains_js_mod(path) {
+        if ue4ss_enabled && zip_contains_js_mod(path) {
             install_ue4ss_js_mod_from_zip_targeted(
                 &self.installation.binaries_directory(),
                 &mod_info.name,
@@ -394,7 +398,12 @@ impl RcPakIntegrator {
 
     /// Process a directory-based mod that may contain multiple content types:
     /// Content/ (unpacked UE assets), pak/ (.pak files), js/ (UE4SS scripts), dll/ (UE4SS native mods)
-    fn process_directory_mod(&mut self, mod_info: &mut ModInfo, path: &Path) -> Result<()> {
+    fn process_directory_mod(
+        &mut self,
+        mod_info: &mut ModInfo,
+        path: &Path,
+        ue4ss_enabled: bool,
+    ) -> Result<()> {
         let mut processed_any = false;
 
         if UnpackedMod::is_valid_unpacked_mod(path) {
@@ -428,17 +437,22 @@ impl RcPakIntegrator {
         }
 
         if dir_contains_js_mod(path) {
-            install_ue4ss_js_mod_from_dir(
-                &self.installation.binaries_directory(),
-                &mod_info.name,
-                path,
-            )
-            .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+            if ue4ss_enabled {
+                install_ue4ss_js_mod_from_dir(
+                    &self.installation.binaries_directory(),
+                    &mod_info.name,
+                    path,
+                )
+                .with_context(|| format!("Failed to install JS mod: {}", mod_info.name))?;
+            }
             processed_any = true;
         }
 
         let dll_dir = path.join("dll");
         if dll_dir.is_dir() {
+            if !ue4ss_enabled {
+                return Ok(());
+            }
             for entry in fs::read_dir(&dll_dir)
                 .with_context(|| format!("Failed to read dll directory: {:?}", dll_dir))?
             {
@@ -713,8 +727,9 @@ impl RcPakIntegrator {
             .binaries_directory()
             .join("ue4ss")
             .join("config");
-        fs::create_dir_all(&config_dir)
-            .with_context(|| format!("Failed to create ue4ss config directory: {:?}", config_dir))?;
+        fs::create_dir_all(&config_dir).with_context(|| {
+            format!("Failed to create ue4ss config directory: {:?}", config_dir)
+        })?;
 
         let mods_config = json!({
             "space_rig": Self::ue4ss_mod_entries(&self.init_space_rig_assets),

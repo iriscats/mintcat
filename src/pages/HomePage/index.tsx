@@ -55,6 +55,7 @@ import {
 } from "./TreeViewItem.tsx";
 import { computeInstallManifestHash } from "@/tasks/ModInstallTask";
 import { getInternalAssetPaths, type InternalAssetGame } from "@/services/InternalAssetService";
+import { isUe4ssEnabled } from "@/utils/Ue4ssSetting";
 
 
 interface ModListPageState {
@@ -135,15 +136,14 @@ export class HomePage extends BasePage<any, ModListPageState> {
             }
 
             const settings = await StorageAPI.getSettings();
-            const ue4ss = await settings.getValue('ue4ss');
-            const isCustomMode = ue4ss === "Custom";
+            const ue4ssEnabled = isUe4ssEnabled(await settings.getValue('ue4ss'));
 
             const gamesDAO = await StorageAPI.getGames();
             const activeGame = await gamesDAO.getActiveGame();
             const isRc = activeGame?.name?.toLowerCase() === 'rc';
-            const assetPaths = await getInternalAssetPaths(isRc ? 'rc' : 'drg');
+            const assetPaths = await getInternalAssetPaths(isRc ? 'rc' : 'drg', ue4ssEnabled);
 
-            const currentHash = await computeInstallManifestHash(enabledMods, isCustomMode, assetPaths);
+            const currentHash = await computeInstallManifestHash(enabledMods, ue4ssEnabled, assetPaths);
             const hasUnsaved = !savedHash || currentHash !== savedHash || currentHash !== installedHash;
             if (this.state.hasUnsavedChanges !== hasUnsaved) {
                 this.setState({ hasUnsavedChanges: hasUnsaved });

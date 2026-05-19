@@ -463,9 +463,7 @@ fn active_library_path(app: &AppHandle) -> Option<PathBuf> {
         return Some(path);
     }
 
-    bundled_runtime_path(app)
-        .ok()
-        .filter(|path| path.is_file())
+    bundled_runtime_path(app).ok().filter(|path| path.is_file())
 }
 
 fn active_downloaded_library_path(app: &AppHandle) -> Option<PathBuf> {

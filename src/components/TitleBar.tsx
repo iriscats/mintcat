@@ -49,6 +49,14 @@ class TitleBar extends React.Component<any, any> {
         this.onCloudBackupClick = this.onCloudBackupClick.bind(this);
     }
 
+    private getDisplayVersion() {
+        if (packageJson.channel === "stable") {
+            return `v${packageJson.version}`;
+        }
+
+        return `v${packageJson.version}-${packageJson.channel}-${packageJson["sub-version"]}`;
+    }
+
     private async loadActiveGame() {
         try {
             const gameDAO = await StorageAPI.getGames();
@@ -260,7 +268,7 @@ class TitleBar extends React.Component<any, any> {
                         </b>
                     </h1>
                     <span style={{fontSize: "12px", color: "gray", lineHeight: "54px", verticalAlign: "bottom"}}>
-                        v{packageJson.version}
+                        {this.getDisplayVersion()}
                     </span>
                 </Flex>
                 <Flex gap="small" justify={"flex-end"} wrap>

@@ -171,10 +171,9 @@ mod tests {
 
     #[test]
     fn conflict_check_mod_info_still_accepts_camel_case_payload() {
-        let mods: Vec<ConflictCheckModInfo> = serde_json::from_str(
-            r#"[{"modId":1,"cachePath":"C:/mods/a.pak","isUnpacked":false}]"#,
-        )
-        .expect("camelCase conflict mod info should parse");
+        let mods: Vec<ConflictCheckModInfo> =
+            serde_json::from_str(r#"[{"modId":1,"cachePath":"C:/mods/a.pak","isUnpacked":false}]"#)
+                .expect("camelCase conflict mod info should parse");
 
         assert_eq!(mods[0].mod_id, 1);
         assert_eq!(mods[0].cache_path, "C:/mods/a.pak");

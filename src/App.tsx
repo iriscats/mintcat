@@ -14,6 +14,7 @@ import {initClipboardWatcher} from "@/dialogs/AddModDialog/open.ts";
 import {HomePage} from "@/pages/HomePage";
 import {SearchPage} from "@/pages/SearchPage";
 import {SettingPage} from "@/pages/SettingPage";
+import {AcceleratorPage} from "@/pages/AcceleratorPage";
 import {AppInitializer} from "@/core/AppInitializer";
 
 import './App.css';
@@ -170,6 +171,7 @@ const AppContent = () => {
                         <Routes>
                             <Route path="/home" element={<HomePage/>}/>
                             <Route path="/home/modio" element={<SearchPage/>}/>
+                            <Route path="/home/accelerator" element={<AcceleratorPage/>}/>
                             <Route path="/home/setting" element={<SettingPage/>}/>
                             <Route path="*" element={<HomePage/>}/>
                         </Routes>
