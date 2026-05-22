@@ -1,7 +1,8 @@
 import React from "react";
 import {t} from "i18next";
-import {Modal} from "antd";
-import {check} from "@tauri-apps/plugin-updater";
+import {message, Modal} from "antd";
+import {check, type Update} from "@tauri-apps/plugin-updater";
+import {relaunch} from "@tauri-apps/plugin-process";
 import StatusBar from "@/components/StatusBar.tsx";
 import Markdown from "react-markdown";
 
@@ -11,9 +12,10 @@ class UpdateDialog extends React.Component<any, any> {
         isModalOpen: false,
         version: "",
         changelog: "",
+        isInstalling: false,
     }
 
-    private update ? = undefined;
+    private update?: Update;
 
     public constructor(props: any) {
         super(props);
@@ -23,6 +25,12 @@ class UpdateDialog extends React.Component<any, any> {
     }
 
     private async handleOk() {
+        if (!this.update || this.state.isInstalling) {
+            return;
+        }
+
+        this.setState({isInstalling: true});
+
         try {
             await StatusBar.info(t("MintCat Update"));
 
@@ -45,8 +53,14 @@ class UpdateDialog extends React.Component<any, any> {
                 }
             });
 
-            //await relaunch();
+            await StatusBar.success(t("Update Finish"));
+            await relaunch();
         } catch (e) {
+            console.warn('[UpdateDialog] Update install failed:', e);
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            await StatusBar.error(`${t("Update Failed")}: ${errorMessage}`);
+            message.error(`${t("Update Failed")}: ${errorMessage}`);
+            this.setState({isInstalling: false});
         }
     }
 
@@ -78,6 +92,8 @@ class UpdateDialog extends React.Component<any, any> {
                    open={this.state.isModalOpen}
                    onOk={this.handleOk}
                    onCancel={this.handleCancel}
+                   confirmLoading={this.state.isInstalling}
+                   cancelButtonProps={{disabled: this.state.isInstalling}}
             >
                 <h1>{t("Found Update")}</h1>
                 <h2>{this.state.version}</h2>

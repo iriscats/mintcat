@@ -1,4 +1,4 @@
-**Full Changelog**: https://github.com/iris-cat-dev/mintcat/compare/v0.5.3...v0.5.4
+**Full Changelog**: https://github.com/iris-cat-dev/mintcat/compare/v0.5.3...v0.5.5
 
 下载地址 / Download：https://github.com/iris-cat-dev/mintcat/releases
 
@@ -31,6 +31,7 @@
 2. 修复在线 Mod 更新后版本、下载进度、缓存路径与更新时间戳不同步的问题。
 3. 修复安装前本地缓存缺失或在线版本变化时未自动补齐下载的问题。
 4. 修复部分分组删除和下载失败场景下错误处理不一致的问题。
+5. 修复 RougueCore 启动失败问题。
 
 ## 重构
 
@@ -67,6 +68,7 @@
 2. Fix version, download progress, cache path, and timestamp data not staying in sync after online mod updates.
 3. Fix missing automatic downloads before installation when local cache is missing or the online version has changed.
 4. Fix inconsistent error handling for some group deletion and download failure cases.
+5. Fix RogueCore startup failure.
 
 ## Refactoring
 

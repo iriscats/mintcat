@@ -264,7 +264,7 @@ impl RcPakIntegrator {
         if ue4ss_enabled {
             ensure_rogue_core_ue4ss_settings_file(&binaries_dir)?;
             ensure_ue4ss_config_directory(&binaries_dir)?;
-            self.write_ue4ss_mods_config()?;
+            //self.write_ue4ss_mods_config()?;
         }
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
