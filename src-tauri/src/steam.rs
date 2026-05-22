@@ -48,22 +48,12 @@ pub fn check_steam_game(exe_name: String) -> bool {
     }
 }
 
-/// Steam App ID: DRG = 548430, RC (Rogue Core) = 2605790
-#[cfg(target_os = "windows")]
-const STEAM_APP_ID_DRG: u32 = 548430;
-#[cfg(target_os = "windows")]
-const STEAM_APP_ID_RC: u32 = 2605790;
-
 #[tauri::command]
-pub fn launch_steam_game(_game_name: Option<String>) {
+pub fn launch_steam_game(steam_app_id: u32) {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
-        let game_id = match _game_name.as_deref() {
-            Some("rc") => STEAM_APP_ID_RC,
-            _ => STEAM_APP_ID_DRG,
-        };
-        let url = format!("steam://run/{}", game_id);
+        let url = format!("steam://run/{}", steam_app_id);
         let status = Command::new("cmd")
             .args(&["/C", "start", "", &url])
             .status()
@@ -74,5 +64,9 @@ pub fn launch_steam_game(_game_name: Option<String>) {
         } else {
             println!("游戏启动失败！");
         }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = steam_app_id;
     }
 }

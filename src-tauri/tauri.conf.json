@@ -36,10 +36,6 @@
     "icon": [
       "icons/icon.ico"
     ],
-    "resources": {
-      "assets/oo2core_9_win64.dll": "oo2core_9_win64.dll",
-      "assets/plugins/mintcat_integrator.dll": "plugins/mintcat_integrator.dll"
-    },
     "createUpdaterArtifacts": true
   },
   "plugins": {

@@ -7,6 +7,11 @@ import {exists} from "@tauri-apps/plugin-fs";
 import {StorageAPI} from "@/storage";
 import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue";
 
+const DEFAULT_STEAM_APP_ID = 548430;
+const STEAM_APP_IDS: Record<string, number> = {
+    drg: DEFAULT_STEAM_APP_ID,
+    rc: 2605790,
+};
 
 export class IntegrateApi  {
 
@@ -129,8 +134,9 @@ export class IntegrateApi  {
     public static async launchGame() {
         const gameDAO = await StorageAPI.getGames();
         const activeGame = await gameDAO.getActiveGame();
-        const gameName = activeGame?.name ?? null;
-        return await invoke('launch_steam_game', { gameName });
+        const gameName = activeGame?.name?.toLowerCase();
+        const steamAppId = gameName ? STEAM_APP_IDS[gameName] ?? DEFAULT_STEAM_APP_ID : DEFAULT_STEAM_APP_ID;
+        return await invoke('launch_steam_game', { steamAppId });
     }
 
     public static async checkSteamGame() {
