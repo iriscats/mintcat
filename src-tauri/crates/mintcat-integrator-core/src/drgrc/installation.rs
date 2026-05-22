@@ -3,7 +3,6 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
-
 const STEAM_APP_ID_RC: u32 = 2605790;
 const STEAM_APP_ID_RC_PLAYTEST: u32 = 2860770;
 
