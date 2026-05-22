@@ -6,9 +6,9 @@ use crate::common::audio_pak::{
 };
 use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::common::ue4ss::{
-    dir_contains_js_mod, ensure_ue4ss_config_directory, install_ue4ss,
-    install_ue4ss_js_mod_from_dir, install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod,
-    uninstall_ue4ss, zip_contains_js_mod,
+    dir_contains_js_mod, ensure_rogue_core_ue4ss_settings_file, ensure_ue4ss_config_directory,
+    install_ue4ss, install_ue4ss_js_mod_from_dir, install_ue4ss_js_mod_from_zip_targeted,
+    install_ue4ss_mod, uninstall_ue4ss, zip_contains_js_mod,
 };
 use crate::common::unpacked_mod::UnpackedMod;
 use crate::common::zip::read_files_from_zip_by_extension;
@@ -262,6 +262,7 @@ impl RcPakIntegrator {
         let binaries_dir = self.installation.binaries_directory();
         self.serialize_asset_registry()?;
         if ue4ss_enabled {
+            ensure_rogue_core_ue4ss_settings_file(&binaries_dir)?;
             ensure_ue4ss_config_directory(&binaries_dir)?;
             self.write_ue4ss_mods_config()?;
         }

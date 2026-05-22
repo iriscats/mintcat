@@ -103,9 +103,166 @@ pub fn ensure_ue4ss_config_directory(install_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
+pub fn ensure_rogue_core_ue4ss_settings_file(install_path: &PathBuf) -> Result<()> {
+    ensure_ue4ss_settings_file(
+        install_path,
+        &[
+            (
+                "EngineVersionOverride",
+                &[("MajorVersion", "5"), ("MinorVersion", "6")],
+            ),
+            (
+                "Hooks",
+                &[
+                    ("HookProcessInternal", "1"),
+                    ("HookProcessLocalScriptFunction", "1"),
+                ],
+            ),
+        ],
+    )
+}
+
+pub fn ensure_ue4ss_settings_file(
+    install_path: &PathBuf,
+    required_sections: &[(&str, &[(&str, &str)])],
+) -> Result<()> {
+    let ue4ss_dir = install_path.join("ue4ss");
+    fs::create_dir_all(&ue4ss_dir)
+        .with_context(|| format!("Failed to create ue4ss directory: {:?}", ue4ss_dir))?;
+
+    let settings_path = ue4ss_dir.join("UE4SS-settings.ini");
+    let current = if settings_path.exists() {
+        fs::read_to_string(&settings_path)
+            .with_context(|| format!("Failed to read UE4SS settings file: {:?}", settings_path))?
+    } else {
+        String::new()
+    };
+
+    if let Some(updated) = ensure_ini_entries(&current, required_sections) {
+        fs::write(&settings_path, updated)
+            .with_context(|| format!("Failed to write UE4SS settings file: {:?}", settings_path))?;
+    }
+
+    Ok(())
+}
+
+fn ensure_ini_entries(
+    content: &str,
+    required_sections: &[(&str, &[(&str, &str)])],
+) -> Option<String> {
+    let mut lines = content.lines().map(str::to_string).collect::<Vec<_>>();
+    let mut changed = false;
+
+    for (section, entries) in required_sections {
+        changed |= ensure_ini_section_entries(&mut lines, section, entries);
+    }
+
+    if !changed {
+        return None;
+    }
+
+    let mut updated = lines.join("\n");
+    if !updated.is_empty() {
+        updated.push('\n');
+    }
+    Some(updated)
+}
+
+fn ensure_ini_section_entries(
+    lines: &mut Vec<String>,
+    section: &str,
+    entries: &[(&str, &str)],
+) -> bool {
+    let Some((start, end)) = find_ini_section_bounds(lines, section) else {
+        if !lines.is_empty() && lines.last().is_some_and(|line| !line.trim().is_empty()) {
+            lines.push(String::new());
+        }
+        lines.push(format!("[{}]", section));
+        lines.extend(
+            entries
+                .iter()
+                .map(|(key, value)| format!("{key} = {value}")),
+        );
+        return true;
+    };
+
+    let mut changed = false;
+    let mut missing = Vec::new();
+    for (key, value) in entries {
+        let desired = format!("{key} = {value}");
+        if let Some(index) = find_ini_key_index(&lines[start + 1..end], key) {
+            let line = &mut lines[start + 1 + index];
+            if parse_ini_value(line) != Some(*value) {
+                *line = desired;
+                changed = true;
+            }
+        } else {
+            missing.push(desired);
+        }
+    }
+
+    if !missing.is_empty() {
+        let mut insert_at = end;
+        while insert_at > start + 1 && lines[insert_at - 1].trim().is_empty() {
+            insert_at -= 1;
+        }
+        lines.splice(insert_at..insert_at, missing);
+        changed = true;
+    }
+
+    changed
+}
+
+fn find_ini_section_bounds(lines: &[String], section: &str) -> Option<(usize, usize)> {
+    let start = lines.iter().position(|line| {
+        parse_ini_section(line).is_some_and(|current| current.eq_ignore_ascii_case(section))
+    })?;
+    let end = lines
+        .iter()
+        .enumerate()
+        .skip(start + 1)
+        .find_map(|(index, line)| parse_ini_section(line).map(|_| index))
+        .unwrap_or(lines.len());
+    Some((start, end))
+}
+
+fn find_ini_key_index(lines: &[String], key: &str) -> Option<usize> {
+    lines.iter().position(|line| {
+        parse_ini_key(line).is_some_and(|current| current.eq_ignore_ascii_case(key))
+    })
+}
+
+fn parse_ini_section(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    if trimmed.len() >= 2 && trimmed.starts_with('[') && trimmed.ends_with(']') {
+        Some(trimmed[1..trimmed.len() - 1].trim())
+    } else {
+        None
+    }
+}
+
+fn parse_ini_key(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    if trimmed.starts_with(';') || trimmed.starts_with('#') {
+        return None;
+    }
+    trimmed.split_once('=').map(|(key, _)| key.trim())
+}
+
+fn parse_ini_value(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    if trimmed.starts_with(';') || trimmed.starts_with('#') {
+        return None;
+    }
+    trimmed.split_once('=').map(|(_, value)| value.trim())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::ensure_ue4ss_config_directory;
+    use super::{
+        ensure_rogue_core_ue4ss_settings_file, ensure_ue4ss_config_directory,
+        ensure_ue4ss_settings_file,
+    };
     use std::fs;
 
     #[test]
@@ -125,6 +282,64 @@ mod tests {
         ensure_ue4ss_config_directory(&temp_dir.path().to_path_buf()).unwrap();
 
         assert!(temp_dir.path().join("ue4ss").join("config").is_dir());
+    }
+
+    #[test]
+    fn ensure_rogue_core_ue4ss_settings_file_creates_required_settings() {
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        ensure_rogue_core_ue4ss_settings_file(&temp_dir.path().to_path_buf()).unwrap();
+
+        let settings =
+            fs::read_to_string(temp_dir.path().join("ue4ss").join("UE4SS-settings.ini")).unwrap();
+        assert!(settings.contains("[EngineVersionOverride]"));
+        assert!(settings.contains("MajorVersion = 5"));
+        assert!(settings.contains("MinorVersion = 6"));
+        assert!(settings.contains("[Hooks]"));
+        assert!(settings.contains("HookProcessInternal = 1"));
+        assert!(settings.contains("HookProcessLocalScriptFunction = 1"));
+    }
+
+    #[test]
+    fn ensure_ue4ss_settings_file_updates_managed_values_and_adds_missing_keys() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let ue4ss_dir = temp_dir.path().join("ue4ss");
+        fs::create_dir_all(&ue4ss_dir).unwrap();
+        let settings_path = ue4ss_dir.join("UE4SS-settings.ini");
+        fs::write(
+            &settings_path,
+            "[General]\nConsoleEnabled = 0\n\n[EngineVersionOverride]\nMajorVersion = 4\n\n[Hooks]\nHookProcessInternal = 0\n",
+        )
+        .unwrap();
+
+        ensure_rogue_core_ue4ss_settings_file(&temp_dir.path().to_path_buf()).unwrap();
+
+        let settings = fs::read_to_string(settings_path).unwrap();
+        assert!(settings.contains("ConsoleEnabled = 0"));
+        assert!(settings.contains("MajorVersion = 5"));
+        assert!(settings.contains("MinorVersion = 6"));
+        assert!(settings.contains("HookProcessInternal = 1"));
+        assert!(settings.contains("HookProcessLocalScriptFunction = 1"));
+    }
+
+    #[test]
+    fn ensure_ue4ss_settings_file_does_not_duplicate_existing_keys() {
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        ensure_ue4ss_settings_file(
+            &temp_dir.path().to_path_buf(),
+            &[("Hooks", &[("HookProcessInternal", "1")])],
+        )
+        .unwrap();
+        ensure_ue4ss_settings_file(
+            &temp_dir.path().to_path_buf(),
+            &[("Hooks", &[("HookProcessInternal", "1")])],
+        )
+        .unwrap();
+
+        let settings =
+            fs::read_to_string(temp_dir.path().join("ue4ss").join("UE4SS-settings.ini")).unwrap();
+        assert_eq!(settings.matches("HookProcessInternal").count(), 1);
     }
 }
 

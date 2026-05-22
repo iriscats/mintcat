@@ -48,11 +48,11 @@ pub fn check_steam_game(exe_name: String) -> bool {
     }
 }
 
-/// Steam App ID: DRG = 548430, RC (Rogue Core) = 2860770
+/// Steam App ID: DRG = 548430, RC (Rogue Core) = 2605790
 #[cfg(target_os = "windows")]
 const STEAM_APP_ID_DRG: u32 = 548430;
 #[cfg(target_os = "windows")]
-const STEAM_APP_ID_RC: u32 = 2860770;
+const STEAM_APP_ID_RC: u32 = 2605790;
 
 #[tauri::command]
 pub fn launch_steam_game(_game_name: Option<String>) {
