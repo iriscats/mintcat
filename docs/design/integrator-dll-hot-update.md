@@ -1,5 +1,7 @@
 # MintCat 安装器 DLL 化与热更新设计
 
+> Update: 安装器 DLL 已演进为 **Backend Runtime**。新的边界是稳定的 Tauri **Control Plane** 负责下载、校验、激活、网络/代理、Hot Update Store 与 Safe Mode；可热更新业务能力通过官方签名 Backend Runtime 的动态命令 ABI 暴露。跨前端、Backend Runtime 与资源包的兼容性由 **Release Set** 协调。
+
 ## 背景
 
 当前 DRG / Rogue Core 的安装逻辑位于 `src-tauri/src/integrator/drg` 与 `src-tauri/src/integrator/drgrc`，由 Tauri command `install_mods` 直接调度。安装核心逻辑中大量使用 `tauri::AppHandle` 和 `Emitter` 上报状态栏日志、进度、成功与失败事件。

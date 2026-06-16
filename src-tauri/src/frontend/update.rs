@@ -17,6 +17,14 @@ const HOT_URL: &str = "mintcat-hot://localhost/index.html#/home";
 pub struct FrontendUpdateManifest {
     pub version: String,
     pub url: String,
+    #[serde(default = "default_release_set_id")]
+    pub release_set_id: String,
+    #[serde(default = "default_channel")]
+    pub channel: String,
+    #[serde(default = "default_platform")]
+    pub platform: String,
+    #[serde(default = "default_arch")]
+    pub arch: String,
     #[serde(default)]
     pub sha256: Option<String>,
     #[serde(default)]
@@ -46,6 +54,16 @@ pub struct FrontendRuntimeState {
     pub last_failed_version: Option<String>,
     #[serde(default)]
     pub pending_launch_count: u32,
+    #[serde(default)]
+    pub active_release_set_id: Option<String>,
+    #[serde(default)]
+    pub active_channel: Option<String>,
+    #[serde(default)]
+    pub active_platform: Option<String>,
+    #[serde(default)]
+    pub active_arch: Option<String>,
+    #[serde(default)]
+    pub safe_mode: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -57,10 +75,39 @@ pub struct FrontendUpdateStatus {
     pub last_failed_version: Option<String>,
     pub pending_launch_count: u32,
     pub has_local_bundle: bool,
+    pub active_release_set_id: Option<String>,
+    pub safe_mode: bool,
 }
 
 fn default_entry() -> String {
     "index.html".into()
+}
+
+fn default_release_set_id() -> String {
+    format!("frontend-{}", env!("CARGO_PKG_VERSION"))
+}
+
+fn default_channel() -> String {
+    "stable".to_string()
+}
+
+fn default_platform() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        "windows".to_string()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        "macos".to_string()
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        "linux".to_string()
+    }
+}
+
+fn default_arch() -> String {
+    std::env::consts::ARCH.to_string()
 }
 fn root(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
@@ -105,10 +152,41 @@ fn valid_version(version: &str) -> Result<(), String> {
     }
 }
 
+fn safe_segment(value: &str) -> Result<String, String> {
+    let value = value.trim();
+    if value.is_empty()
+        || value == "."
+        || value == ".."
+        || value.contains('/')
+        || value.contains('\\')
+        || value.chars().any(|c| c.is_control())
+    {
+        Err("invalid frontend update key".into())
+    } else {
+        Ok(value.to_string())
+    }
+}
+
 fn active_dir(app: &AppHandle) -> Option<PathBuf> {
-    let version = read_state(app).active_version?;
+    let state = read_state(app);
+    if state.safe_mode {
+        return None;
+    }
+    let version = state.active_version?;
     valid_version(&version).ok()?;
-    let dir = versions(app).ok()?.join(version);
+    let channel = state.active_channel.unwrap_or_else(default_channel);
+    let platform = state.active_platform.unwrap_or_else(default_platform);
+    let arch = state.active_arch.unwrap_or_else(default_arch);
+    let dir = versions(app)
+        .ok()?
+        .join(safe_segment(&channel).ok()?)
+        .join(format!(
+            "{}-{}",
+            safe_segment(&platform).ok()?,
+            safe_segment(&arch).ok()?
+        ))
+        .join("global")
+        .join(version);
     dir.join("index.html").is_file().then_some(dir)
 }
 
@@ -140,13 +218,15 @@ pub fn rollback_unconfirmed_pending(app: &AppHandle) -> Result<(), String> {
             return Ok(());
         }
 
-        log::warn!("[FrontendUpdate] pending frontend {pending} was not confirmed; rolling back");
+        log::warn!("[FrontendUpdate] pending frontend {pending} was not confirmed; entering bundled safe mode");
         state.last_failed_version = Some(pending);
-        state.active_version = state.previous_version.clone();
+        state.active_version = None;
         state.previous_version = None;
         state.pending_version = None;
         state.pending_launch_count = 0;
+        state.safe_mode = true;
         write_state(app, &state)?;
+        let _ = crate::hot_update::enter_safe_mode(app.clone(), state.active_release_set_id.clone());
     }
     Ok(())
 }
@@ -261,7 +341,32 @@ pub async fn install_frontend_update_from_manifest(
     state.pending_version = Some(manifest.version);
     state.pending_launch_count = 0;
     state.last_failed_version = None;
+    state.active_release_set_id = Some(manifest.release_set_id);
+    state.active_channel = Some(manifest.channel);
+    state.active_platform = Some(manifest.platform);
+    state.active_arch = Some(manifest.arch);
+    state.safe_mode = false;
     write_state(&app, &state)?;
+    let release_set_id = state
+        .active_release_set_id
+        .clone()
+        .unwrap_or_else(default_release_set_id);
+    let version = state.active_version.clone().unwrap_or_default();
+    if let Err(error) = crate::hot_update::activate_release_set(
+        app.clone(),
+        crate::hot_update::ActivateReleaseSetRequest {
+            release_set_id,
+            components: vec![crate::hot_update::ReleaseSetComponent {
+                category: "frontend".to_string(),
+                component: "mintcat-frontend".to_string(),
+                version,
+                game: "global".to_string(),
+            }],
+            capabilities: Vec::new(),
+        },
+    ) {
+        log::warn!("[FrontendUpdate] failed to activate release set: {error}");
+    }
     status(app)
 }
 
@@ -277,6 +382,7 @@ pub fn mark_frontend_update_ok(app: AppHandle) -> Result<FrontendUpdateStatus, S
     state.pending_version = None;
     state.previous_version = None;
     state.pending_launch_count = 0;
+    state.safe_mode = false;
     write_state(&app, &state)?;
     status(app)
 }
@@ -285,11 +391,13 @@ pub fn mark_frontend_update_ok(app: AppHandle) -> Result<FrontendUpdateStatus, S
 pub fn rollback_frontend_update(app: AppHandle) -> Result<FrontendUpdateStatus, String> {
     let mut state = read_state(&app);
     state.last_failed_version = state.active_version.clone();
-    state.active_version = state.previous_version.clone();
+    state.active_version = None;
     state.previous_version = None;
     state.pending_version = None;
     state.pending_launch_count = 0;
+    state.safe_mode = true;
     write_state(&app, &state)?;
+    let _ = crate::hot_update::enter_safe_mode(app.clone(), state.active_release_set_id.clone());
     status(app)
 }
 
@@ -307,11 +415,17 @@ fn status(app: AppHandle) -> Result<FrontendUpdateStatus, String> {
         last_failed_version: state.last_failed_version,
         pending_launch_count: state.pending_launch_count,
         has_local_bundle: active_dir(&app).is_some(),
+        active_release_set_id: state.active_release_set_id,
+        safe_mode: state.safe_mode,
     })
 }
 
 fn validate_manifest(manifest: &FrontendUpdateManifest) -> Result<(), String> {
     valid_version(&manifest.version)?;
+    safe_segment(&manifest.release_set_id)?;
+    safe_segment(&manifest.channel)?;
+    safe_segment(&manifest.platform)?;
+    safe_segment(&manifest.arch)?;
     if manifest.url.trim().is_empty() {
         return Err("manifest url is required".into());
     }
@@ -408,10 +522,14 @@ fn verify_hash(bytes: &[u8], manifest: &FrontendUpdateManifest) -> Result<(), St
 
 fn verify_signature(manifest: &FrontendUpdateManifest) -> Result<(), String> {
     if manifest.signature.as_deref().unwrap_or_default().is_empty() {
+        #[cfg(not(debug_assertions))]
+        return Err("frontend update signature is required".into());
         log::warn!("[FrontendUpdate] unsigned frontend manifest accepted because update URL is still a placeholder");
         return Ok(());
     }
     if PUBLIC_KEY.is_empty() {
+        #[cfg(not(debug_assertions))]
+        return Err("frontend update public key is not configured".into());
         log::warn!("[FrontendUpdate] signature is present, but public key is not configured yet; verification skipped");
         return Ok(());
     }
@@ -423,8 +541,16 @@ fn extract_zip(
     manifest: &FrontendUpdateManifest,
     bytes: &[u8],
 ) -> Result<(), String> {
-    let target = versions(app)?.join(&manifest.version);
-    let pending = pending(app)?;
+    let scope = PathBuf::from(safe_segment(&manifest.channel)?)
+        .join(format!(
+            "{}-{}",
+            safe_segment(&manifest.platform)?,
+            safe_segment(&manifest.arch)?
+        ))
+        .join("global")
+        .join(&manifest.version);
+    let target = versions(app)?.join(&scope);
+    let pending = pending(app)?.join(&scope);
     if pending.exists() {
         fs::remove_dir_all(&pending).map_err(|e| e.to_string())?;
     }

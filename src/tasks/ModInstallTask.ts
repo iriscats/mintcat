@@ -10,12 +10,12 @@ import { ForeignPaksConfirmContent } from '@/components/ForeignPaksConfirmConten
 import React from 'react';
 import { t } from 'i18next';
 import { exists, stat } from '@tauri-apps/plugin-fs';
-import { invoke } from '@tauri-apps/api/core';
 import { ModSourceType } from '@/models/mod/types';
 import { MODCAT_PLATFORM } from '@/apis/modcat';
 import { ensureInternalAssets } from '@/services/InternalAssetService';
 import { md5 } from '@/utils/CryptApi';
 import { isUe4ssEnabled } from '@/utils/Ue4ssSetting';
+import { BackendRuntimeApi } from '@/apis/BackendRuntimeApi';
 
 /**
  * Check if a path is a valid unpacked mod directory
@@ -26,7 +26,7 @@ async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
         if (!fileInfo.isDirectory) {
             return false;
         }
-        return await invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
+        return await BackendRuntimeApi.invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
     } catch (e) {
         return false;
     }

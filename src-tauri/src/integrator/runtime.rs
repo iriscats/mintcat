@@ -6,11 +6,8 @@ use std::ptr;
 
 use anyhow::{Context, Result};
 use libloading::Library;
-use mintcat_integrator_api::{
-    CheckForeignPaksRequest, CheckInstalledRequest, CheckModConflictsRequest, FindGamePakRequest,
-    InstallEvent, InstallProgress, InstallRequest, PathRequest, UninstallModsRequest,
-};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use mintcat_integrator_api::{InstallEvent, InstallProgress, InstallRequest};
+use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 const ABI_VERSION: u32 = 1;
@@ -19,15 +16,10 @@ const PUBLIC_KEY: &str = "";
 
 type ProgressCallback = unsafe extern "C" fn(event_json: *const c_char, user_data: *mut c_void);
 type AbiVersionFn = unsafe extern "C" fn() -> u32;
-type InstallFn = unsafe extern "C" fn(
+type BackendInvokeFn = unsafe extern "C" fn(
     request_json: *const c_char,
     callback: Option<ProgressCallback>,
     user_data: *mut c_void,
-    response_json: *mut *mut c_char,
-    error_message: *mut *mut c_char,
-) -> i32;
-type CommandFn = unsafe extern "C" fn(
-    request_json: *const c_char,
     response_json: *mut *mut c_char,
     error_message: *mut *mut c_char,
 ) -> i32;
@@ -72,90 +64,139 @@ struct ProgressBridge<'a> {
     progress: &'a dyn InstallProgress,
 }
 
-pub fn install_mods_with_runtime(
-    app: &AppHandle,
-    progress: &dyn InstallProgress,
-    request: InstallRequest,
-) -> Result<()> {
-    let path = active_runtime_path(app)?;
-    unsafe { install_with_library(&path, progress, &request) }
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BackendInvokeEnvelope<'a> {
+    command: &'a str,
+    payload: serde_json::Value,
 }
 
-pub fn uninstall_mods_with_runtime(
-    app: &AppHandle,
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallModsInvokePayload {
     game_path: String,
-    is_delete_ue4ss: bool,
-) -> Result<bool> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_uninstall_mods",
-        &UninstallModsRequest {
-            game_path,
-            is_delete_ue4ss,
-        },
+    mod_list_json: Box<str>,
+    #[serde(default)]
+    skip_ue4ss: bool,
+    #[serde(default)]
+    ue4ss_zip_path: Option<String>,
+    #[serde(default)]
+    drg_zip_path: Option<String>,
+    #[serde(default)]
+    rc_zip_path: Option<String>,
+    #[serde(default)]
+    compress_mod_pak: Option<bool>,
+}
+
+#[tauri::command]
+pub async fn backend_invoke(
+    app: AppHandle,
+    command: String,
+    mut payload: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    if is_proxy_backend_command(&command) {
+        payload = inject_proxy_host_context(&app, payload).map_err(|error| format!("{error:#}"))?;
+    }
+
+    if command == "install_mods" {
+        let install_payload = serde_json::from_value::<InstallModsInvokePayload>(payload)
+            .map_err(|error| format!("invalid install_mods payload: {error}"))?;
+        let mods = serde_json::from_str::<Vec<mintcat_integrator_api::ModInfo>>(
+            &install_payload.mod_list_json,
+        )
+        .map_err(|error| format!("invalid mod list JSON: {error:#}"))?;
+        payload = serde_json::to_value(InstallRequest::new(
+            install_payload.game_path,
+            mods,
+            install_payload.skip_ue4ss,
+            install_payload.ue4ss_zip_path,
+            install_payload.drg_zip_path,
+            install_payload.rc_zip_path,
+            install_payload.compress_mod_pak.unwrap_or(false),
+        ))
+        .map_err(|error| error.to_string())?;
+        std::thread::spawn(move || {
+            let progress = crate::integrator::progress::TauriInstallProgress::new(app.clone());
+            if let Err(error) = invoke_backend_runtime_command(&app, &command, payload, Some(&progress)) {
+                let _ = progress.emit(InstallEvent::Error(mintcat_integrator_api::text(format!(
+                    "{error:#}"
+                ))));
+            }
+        });
+        return Ok(serde_json::json!({ "ok": true }));
+    }
+
+    invoke_backend_runtime_command(&app, &command, payload, None).map_err(|error| format!("{error:#}"))
+}
+
+pub fn stop_proxy_runtime_blocking(app: &AppHandle) -> Result<()> {
+    let payload = inject_proxy_host_context(app, serde_json::json!({}))?;
+    let _ = invoke_backend_runtime_command(app, "stop_proxy_runtime", payload, None)?;
+    Ok(())
+}
+
+fn is_proxy_backend_command(command: &str) -> bool {
+    matches!(
+        command,
+        "install_proxy_runtime_from_manifest"
+            | "get_proxy_runtime_status"
+            | "start_proxy_runtime"
+            | "stop_proxy_runtime"
+            | "install_proxy_cert"
     )
 }
 
-pub fn check_installed_with_runtime(
+fn inject_proxy_host_context(
     app: &AppHandle,
-    game_path: String,
-    install_time: u64,
-) -> Result<String> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_check_installed",
-        &CheckInstalledRequest {
-            game_path,
-            install_time,
-        },
-    )
+    mut payload: serde_json::Value,
+) -> Result<serde_json::Value> {
+    let root_dir = app
+        .path()
+        .app_data_dir()
+        .context("failed to resolve app data dir")?
+        .join("plugins")
+        .join("proxy")
+        .to_string_lossy()
+        .to_string();
+    let bundled_runtime_path = app
+        .path()
+        .resolve(
+            format!("plugins/proxy/{}", proxy_runtime_file_name()),
+            BaseDirectory::Resource,
+        )
+        .ok()
+        .map(|path| path.to_string_lossy().to_string());
+    let manual_proxy = app
+        .try_state::<crate::network::NetworkProxyState>()
+        .and_then(|state| state.get());
+    let proxy_url = crate::network::resolve_proxy(manual_proxy);
+    let context = serde_json::json!({
+        "rootDir": root_dir,
+        "appVersion": env!("CARGO_PKG_VERSION"),
+        "bundledRuntimePath": bundled_runtime_path,
+        "proxyUrl": proxy_url,
+    });
+
+    match &mut payload {
+        serde_json::Value::Object(map) => {
+            map.insert("context".to_string(), context);
+            Ok(payload)
+        }
+        _ => Ok(serde_json::json!({
+            "context": context
+        })),
+    }
 }
 
-pub fn find_game_pak_with_runtime(app: &AppHandle, game_name: Option<String>) -> Result<String> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_find_game_pak",
-        &FindGamePakRequest { game_name },
-    )
-}
-
-pub fn check_foreign_paks_with_runtime(app: &AppHandle, game_path: String) -> Result<Vec<String>> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_check_foreign_paks",
-        &CheckForeignPaksRequest { game_path },
-    )
-}
-
-pub fn is_valid_unpacked_mod_with_runtime(app: &AppHandle, path: String) -> Result<bool> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_is_valid_unpacked_mod",
-        &PathRequest { path },
-    )
-}
-
-pub fn check_mod_conflicts_with_runtime(
-    app: &AppHandle,
-    mod_list_json: String,
-    game_name: Option<String>,
-) -> Result<Vec<mintcat_integrator_api::ModConflict>> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_check_mod_conflicts",
-        &CheckModConflictsRequest {
-            mod_list_json,
-            game_name,
-        },
-    )
-}
-
-pub fn validate_zip_file_with_runtime(app: &AppHandle, path: String) -> Result<bool> {
-    call_runtime_command(
-        app,
-        b"mintcat_integrator_validate_zip_file",
-        &PathRequest { path },
-    )
+fn proxy_runtime_file_name() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        "mintcat-proxy.exe"
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        "mintcat-proxy"
+    }
 }
 
 #[tauri::command]
@@ -224,44 +265,46 @@ fn active_runtime_path(app: &AppHandle) -> Result<PathBuf> {
     active_library_path(app).context("integrator runtime is not available")
 }
 
-fn call_runtime_command<TRequest, TResponse>(
+fn invoke_backend_runtime_command(
     app: &AppHandle,
-    symbol: &[u8],
-    request: &TRequest,
-) -> Result<TResponse>
-where
-    TRequest: Serialize,
-    TResponse: DeserializeOwned,
-{
+    command: &str,
+    payload: serde_json::Value,
+    progress: Option<&dyn InstallProgress>,
+) -> Result<serde_json::Value> {
     let path = active_runtime_path(app)?;
-    unsafe { call_library_command(&path, symbol, request) }
+    unsafe { call_backend_runtime_command(&path, command, payload, progress) }
 }
 
-unsafe fn call_library_command<TRequest, TResponse>(
+unsafe fn call_backend_runtime_command(
     path: &Path,
-    symbol: &[u8],
-    request: &TRequest,
-) -> Result<TResponse>
-where
-    TRequest: Serialize,
-    TResponse: DeserializeOwned,
-{
+    command: &str,
+    payload: serde_json::Value,
+    progress: Option<&dyn InstallProgress>,
+) -> Result<serde_json::Value> {
     let library = Library::new(path)
-        .with_context(|| format!("failed to load integrator runtime: {:?}", path))?;
+        .with_context(|| format!("failed to load backend runtime: {:?}", path))?;
     validate_library_abi(&library)?;
-    let command = *library
-        .get::<CommandFn>(symbol)
-        .with_context(|| format!("missing {}", String::from_utf8_lossy(symbol)))?;
+    let invoke = *library
+        .get::<BackendInvokeFn>(b"mintcat_backend_runtime_invoke")
+        .context("missing mintcat_backend_runtime_invoke")?;
     let free_string = *library
         .get::<FreeStringFn>(b"mintcat_integrator_free_string")
         .context("missing mintcat_integrator_free_string")?;
 
+    let envelope = BackendInvokeEnvelope { command, payload };
     let request_json =
-        CString::new(serde_json::to_string(request)?).context("request contains nul byte")?;
+        CString::new(serde_json::to_string(&envelope)?).context("request contains nul byte")?;
     let mut response_json: *mut c_char = ptr::null_mut();
     let mut error_message: *mut c_char = ptr::null_mut();
-    let code = command(
+    let bridge = progress.map(|progress| ProgressBridge { progress });
+    let user_data = bridge
+        .as_ref()
+        .map(|bridge| bridge as *const ProgressBridge<'_> as *mut c_void)
+        .unwrap_or(ptr::null_mut());
+    let code = invoke(
         request_json.as_ptr(),
+        progress.map(|_| progress_callback as ProgressCallback),
+        user_data,
         &mut response_json,
         &mut error_message,
     );
@@ -270,63 +313,11 @@ where
     let response = read_and_free(response_json, free_string);
     if code != 0 {
         anyhow::bail!(error.unwrap_or_else(|| {
-            format!(
-                "integrator command {} failed with code {code}",
-                String::from_utf8_lossy(symbol)
-            )
+            format!("backend runtime command {command} failed with code {code}")
         }));
     }
-
-    let response = response.with_context(|| {
-        format!(
-            "integrator command {} returned no response",
-            String::from_utf8_lossy(symbol)
-        )
-    })?;
-    serde_json::from_str(&response).with_context(|| {
-        format!(
-            "failed to parse integrator command {} response",
-            String::from_utf8_lossy(symbol)
-        )
-    })
-}
-
-unsafe fn install_with_library(
-    path: &Path,
-    progress: &dyn InstallProgress,
-    request: &InstallRequest,
-) -> Result<()> {
-    let library = Library::new(path)
-        .with_context(|| format!("failed to load integrator runtime: {:?}", path))?;
-    validate_library_abi(&library)?;
-
-    let install = *library
-        .get::<InstallFn>(b"mintcat_integrator_install")
-        .context("missing mintcat_integrator_install")?;
-    let free_string = *library
-        .get::<FreeStringFn>(b"mintcat_integrator_free_string")
-        .context("missing mintcat_integrator_free_string")?;
-
-    let request_json = CString::new(serde_json::to_string(request)?)
-        .context("install request contains nul byte")?;
-    let bridge = ProgressBridge { progress };
-    let mut response_json: *mut c_char = ptr::null_mut();
-    let mut error_message: *mut c_char = ptr::null_mut();
-
-    let code = install(
-        request_json.as_ptr(),
-        Some(progress_callback),
-        &bridge as *const ProgressBridge<'_> as *mut c_void,
-        &mut response_json,
-        &mut error_message,
-    );
-
-    let error = read_and_free(error_message, free_string);
-    let _response = read_and_free(response_json, free_string);
-    if code != 0 {
-        anyhow::bail!(error.unwrap_or_else(|| format!("integrator failed with code {code}")));
-    }
-    Ok(())
+    let response = response.context("backend runtime command returned no response")?;
+    serde_json::from_str(&response).context("failed to parse backend runtime response JSON")
 }
 
 unsafe fn validate_abi(path: &Path) -> Result<()> {
@@ -371,15 +362,15 @@ unsafe fn read_and_free(ptr: *mut c_char, free_string: FreeStringFn) -> Option<S
 fn runtime_file_name() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        "mintcat_integrator.dll"
+        "mintcat_backend_runtime.dll"
     }
     #[cfg(target_os = "macos")]
     {
-        "libmintcat_integrator.dylib"
+        "libmintcat_backend_runtime.dylib"
     }
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
-        "libmintcat_integrator.so"
+        "libmintcat_backend_runtime.so"
     }
 }
 
@@ -608,15 +599,21 @@ fn looks_like_runtime_file(name: &str) -> bool {
     let normalized = name.to_ascii_lowercase();
     #[cfg(target_os = "windows")]
     {
-        normalized.starts_with("mintcat_integrator") && normalized.ends_with(".dll")
+        (normalized.starts_with("mintcat_backend_runtime")
+            || normalized.starts_with("mintcat_integrator"))
+            && normalized.ends_with(".dll")
     }
     #[cfg(target_os = "macos")]
     {
-        normalized.starts_with("libmintcat_integrator") && normalized.ends_with(".dylib")
+        (normalized.starts_with("libmintcat_backend_runtime")
+            || normalized.starts_with("libmintcat_integrator"))
+            && normalized.ends_with(".dylib")
     }
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
-        normalized.starts_with("libmintcat_integrator") && normalized.ends_with(".so")
+        (normalized.starts_with("libmintcat_backend_runtime")
+            || normalized.starts_with("libmintcat_integrator"))
+            && normalized.ends_with(".so")
     }
 }
 
@@ -669,10 +666,14 @@ fn verify_hash(bytes: &[u8], manifest: &IntegratorRuntimeManifest) -> Result<(),
 
 fn verify_signature(manifest: &IntegratorRuntimeManifest) -> Result<(), String> {
     if manifest.signature.as_deref().unwrap_or_default().is_empty() {
+        #[cfg(not(debug_assertions))]
+        return Err("backend runtime signature is required".into());
         log::warn!("[IntegratorRuntime] unsigned integrator runtime accepted");
         return Ok(());
     }
     if PUBLIC_KEY.is_empty() {
+        #[cfg(not(debug_assertions))]
+        return Err("backend runtime public key is not configured".into());
         log::warn!(
             "[IntegratorRuntime] signature is present, but public key is not configured yet"
         );

@@ -2,11 +2,11 @@ import { ITask, ITaskContext, Task } from 'tauri-plugin-task-queue';
 import { ProfileViewModel } from '@/dialogs/ProfileEditDialog/ProfileViewModel';
 import { IoC } from '@/core/IoC.ts';
 import { StorageAPI } from '@/storage';
-import { invoke } from '@tauri-apps/api/core';
 import { exists, stat } from '@tauri-apps/plugin-fs';
 import { t } from 'i18next';
 import { ConflictService, ModConflictResponse } from '@/services/ConflictService';
 import { emitEvent } from '@/events';
+import { BackendRuntimeApi } from '@/apis/BackendRuntimeApi';
 
 /**
  * Check if a path is a valid unpacked mod directory
@@ -17,7 +17,7 @@ async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
         if (!fileInfo.isDirectory) {
             return false;
         }
-        return await invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
+        return await BackendRuntimeApi.invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
     } catch (e) {
         return false;
     }
@@ -142,9 +142,9 @@ export class ModConflictCheckTask implements ITask {
         await context.setMessage(`${t('Analyzing')} ${modInfoList.length} ${t('mods')}...`);
 
         try {
-            const conflicts = await invoke<ModConflictResponse[]>('check_mod_conflicts', {
+            const conflicts = await BackendRuntimeApi.invoke<ModConflictResponse[]>('check_mod_conflicts', {
                 modListJson: JSON.stringify(modInfoList),
-                game_name: gameName ?? null,
+                gameName: gameName ?? null,
             });
 
             await context.updateProgress(80);

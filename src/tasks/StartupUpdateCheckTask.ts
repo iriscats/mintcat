@@ -1,6 +1,7 @@
 import { t } from 'i18next';
 import { ITask, ITaskContext, Task } from 'tauri-plugin-task-queue';
 import { invoke } from '@tauri-apps/api/core';
+import { arch, platform } from '@tauri-apps/plugin-os';
 import packageJson from '../../package.json';
 import {
     compareVersion,
@@ -41,6 +42,8 @@ export class StartupUpdateCheckTask implements ITask {
         try {
             const settings = await StorageAPI.getSettings();
             const channel = await settings.getReleaseChannel();
+            const currentPlatform = await platform();
+            const currentArch = await arch();
             const frontend = manifest.find((item) => matchesFrontendUpdate(item, channel));
 
             if (frontend?.latestVersion) {
@@ -55,6 +58,10 @@ export class StartupUpdateCheckTask implements ITask {
                         await invoke('install_frontend_update_from_manifest', {
                             manifest: {
                                 version: frontend.latestVersion,
+                                releaseSetId: frontend.releaseSetId ?? `frontend-${frontend.latestVersion}-${channel}`,
+                                channel,
+                                platform: frontend.platform ?? currentPlatform,
+                                arch: frontend.arch ?? currentArch,
                                 url: getDownloadUrl(url),
                                 sha256: frontend.sha256,
                                 md5: frontend.md5,

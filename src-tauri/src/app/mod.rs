@@ -1,6 +1,6 @@
 pub mod devtools;
 
-use crate::{download, frontend, integrator, network, nexus_webview, proxy, steam};
+use crate::{control_plane, download, frontend, hot_update, integrator, network};
 use tauri::{Emitter, Manager, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_sentry::{minidump, sentry};
 
@@ -64,16 +64,8 @@ pub fn run() {
             let proxy_state = network::NetworkProxyState::new();
             let proxy_arc = proxy_state.0.clone();
             app.manage(proxy_state);
-            app.manage(proxy::runtime::ProxyChildState::default());
+            app.manage(hot_update::HotUpdateStoreState::default());
             app.manage(download::init_download_manager(proxy_arc));
-            if proxy::runtime::was_running_dirty(app.handle()) {
-                let app_handle = app.handle().clone();
-                std::thread::spawn(move || {
-                    if let Err(error) = proxy::runtime::sweep_stale_hosts(&app_handle) {
-                        log::warn!("[ProxyRuntime] stale hosts sweep failed: {:#}", error);
-                    }
-                });
-            }
 
             let mut main_window_config = app
                 .config()
@@ -95,10 +87,7 @@ pub fn run() {
                     api.prevent_close(); // 阻止默认关闭行为
                     let app = window.app_handle().clone();
                     std::thread::spawn(move || {
-                        if let Err(error) = proxy::runtime::shutdown_blocking(
-                            &app,
-                            std::time::Duration::from_secs(5),
-                        ) {
+                        if let Err(error) = integrator::runtime::stop_proxy_runtime_blocking(&app) {
                             log::warn!("[ProxyRuntime] shutdown cleanup failed: {:#}", error);
                         }
                         app.exit(0); // 手动退出应用
@@ -140,34 +129,32 @@ pub fn run() {
         //                 .tcp("127.0.0.1".parse().unwrap(), 9999),
         //         ))
         .invoke_handler(tauri::generate_handler![
-            integrator::commands::install_mods,
-            integrator::commands::uninstall_mods,
-            integrator::commands::check_installed,
-            integrator::commands::find_game_pak,
-            integrator::commands::check_foreign_paks_in_paks_dir,
-            integrator::commands::is_valid_unpacked_mod,
-            integrator::commands::check_mod_conflicts,
-            integrator::commands::validate_zip_file,
-            steam::launch_steam_game,
-            steam::check_steam_game,
             download::download_file,
             download::cancel_download,
             network::set_network_proxy,
             network::fetch_update_manifest,
-            nexus_webview::open_nexus_download_webview,
+            control_plane::control_plane_invoke,
+            hot_update::get_control_plane_status,
+            hot_update::get_hot_update_store_manifest,
+            hot_update::resolve_hot_update_artifact_path,
+            hot_update::resolve_hot_update_staging_path,
+            hot_update::get_hot_update_component_state,
+            hot_update::activate_hot_update_component,
+            hot_update::mark_hot_update_component_failed,
+            hot_update::activate_release_set,
+            hot_update::enter_safe_mode,
+            hot_update::disable_active_release_set,
+            hot_update::hot_update_asset_url,
+            hot_update::activate_optional_asset_pack,
             frontend::update::install_frontend_update_from_manifest,
             frontend::update::activate_frontend_update,
             frontend::update::get_frontend_entry_path,
             frontend::update::mark_frontend_update_ok,
             frontend::update::rollback_frontend_update,
             frontend::update::get_frontend_update_status,
+            integrator::runtime::backend_invoke,
             integrator::runtime::install_integrator_runtime_from_manifest,
             integrator::runtime::get_integrator_runtime_status,
-            proxy::runtime::install_proxy_runtime_from_manifest,
-            proxy::runtime::get_proxy_runtime_status,
-            proxy::runtime::start_proxy_runtime,
-            proxy::runtime::stop_proxy_runtime,
-            proxy::runtime::install_proxy_cert,
             devtools::open_devtools
         ])
         .run(tauri::generate_context!())

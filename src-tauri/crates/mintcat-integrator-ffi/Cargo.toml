@@ -13,3 +13,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 mintcat-integrator-api = { path = "../mintcat-integrator-api" }
 mintcat-integrator-core = { path = "../mintcat-integrator-core" }
+md5 = "0.7"
+reqwest = { version = "0.12", features = ["blocking", "native-tls"] }
+zip = { version = "2.2.0", default-features = false, features = ["aes-crypto", "deflate", "time"] }
+url = "2"

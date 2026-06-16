@@ -6,6 +6,7 @@ import {invoke} from '@tauri-apps/api/core';
 import {exists} from "@tauri-apps/plugin-fs";
 import {StorageAPI} from "@/storage";
 import { taskQueueAPI, TaskPriority } from "tauri-plugin-task-queue";
+import { BackendRuntimeApi } from "@/apis/BackendRuntimeApi";
 
 const DEFAULT_STEAM_APP_ID = 548430;
 const STEAM_APP_IDS: Record<string, number> = {
@@ -81,7 +82,7 @@ export class IntegrateApi  {
         compressModPak: boolean = false
     ) {
         return new Promise<boolean>(async (resolve, reject) => {
-            await invoke('install_mods', {
+            await BackendRuntimeApi.invoke('install_mods', {
                 gamePath: gamePath,
                 modListJson: modListJson,
                 skipUe4ss: skipUe4ss,
@@ -114,14 +115,14 @@ export class IntegrateApi  {
     }
 
     public static async uninstall(gamePath: string, isDeleteUe4ss: boolean = true) {
-        return await invoke('uninstall_mods', {
+        return await BackendRuntimeApi.invoke<boolean>('uninstall_mods', {
             gamePath: gamePath,
             isDeleteUe4ss: isDeleteUe4ss,
         });
     }
 
     public static async findGamePak(gameName?: string): Promise<string> {
-        return await invoke('find_game_pak', { gameName: gameName ?? null });
+        return await BackendRuntimeApi.invoke<string>('find_game_pak', { gameName: gameName ?? null });
     }
 
     /**
@@ -129,7 +130,7 @@ export class IntegrateApi  {
      * @returns { hasForeign: boolean, fileNames: string[] } fileNames are the foreign .pak base names.
      */
     public static async checkForeignPaksInPaksDir(gamePath: string): Promise<{ hasForeign: boolean; fileNames: string[] }> {
-        const fileNames = await invoke<string[]>('check_foreign_paks_in_paks_dir', { gamePath });
+        const fileNames = await BackendRuntimeApi.invoke<string[]>('check_foreign_paks_in_paks_dir', { gamePath });
         return { hasForeign: fileNames.length > 0, fileNames };
     }
 
@@ -138,24 +139,24 @@ export class IntegrateApi  {
         const activeGame = await gameDAO.getActiveGame();
         const gameName = activeGame?.name?.toLowerCase();
         const steamAppId = gameName ? STEAM_APP_IDS[gameName] ?? DEFAULT_STEAM_APP_ID : DEFAULT_STEAM_APP_ID;
-        return await invoke('launch_steam_game', { steamAppId });
+        return await BackendRuntimeApi.invoke<boolean>('launch_steam_game', { steamAppId });
     }
 
     public static async checkSteamGame() {
-        return await invoke('check_steam_game', {
+        return await BackendRuntimeApi.invoke<boolean>('check_steam_game', {
             exeName: "FSD.exe"
         });
     }
 
     public static async checkInstalled(gamePath: string, installTime: number): Promise<string> {
-        return await invoke('check_installed', {
+        return await BackendRuntimeApi.invoke<string>('check_installed', {
             gamePath: gamePath,
             installTime: installTime,
         });
     }
 
     public static async validateZipFile(path: string): Promise<boolean> {
-        return await invoke<boolean>('validate_zip_file', { path });
+        return await BackendRuntimeApi.invoke<boolean>('validate_zip_file', { path });
     }
 
     public static async openDevTools() {

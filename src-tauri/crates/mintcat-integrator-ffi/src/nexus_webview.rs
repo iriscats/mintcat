@@ -1,13 +1,10 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use tauri::{
-    webview::{DownloadEvent, NewWindowResponse},
-    AppHandle, Emitter, Manager, Url, WebviewUrl, WebviewWindowBuilder,
-};
+use serde_json::{json, Value};
 
 const EVENT_NEXUS_DOWNLOAD_CAPTURED: &str = "nexus-download-captured";
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenNexusDownloadWebviewRequest {
     pub page_url: String,
@@ -18,105 +15,93 @@ pub struct OpenNexusDownloadWebviewRequest {
     pub auto_start: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NexusDownloadCapturedPayload {
+pub struct WebviewDecisionRequest {
+    pub event: String,
     pub url: String,
-    pub source: String,
-    pub domain: String,
-    pub mod_id: u32,
-    pub file_id: Option<u32>,
-    pub profile_url: String,
+    pub context: OpenNexusDownloadWebviewRequest,
 }
 
-#[tauri::command]
-pub async fn open_nexus_download_webview(
-    app: AppHandle,
-    request: OpenNexusDownloadWebviewRequest,
-) -> Result<(), String> {
-    let page_url = request
-        .page_url
-        .parse::<Url>()
-        .map_err(|error| format!("invalid Nexus Mods URL: {}", error))?;
-    let label = format!(
-        "nexus-download-{}-{}-{}",
-        sanitize_label_part(&request.domain),
-        request.mod_id,
-        request.file_id.unwrap_or(0)
-    );
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedWebviewRequest {
+    pub label: String,
+    pub url: String,
+    pub title: String,
+    pub initialization_script: String,
+    pub width: f64,
+    pub height: f64,
+    pub decision_command: String,
+    pub context: OpenNexusDownloadWebviewRequest,
+}
 
-    if let Some(window) = app.get_webview_window(&label) {
-        let _ = window.close();
-    }
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebviewDecision {
+    pub allow: bool,
+    pub close: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emit_event: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emit_payload: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub navigate_url: Option<String>,
+}
 
-    let nav_app = app.clone();
-    let nav_label = label.clone();
-    let nav_context = request.clone();
-    let download_context = request.clone();
-    let new_window_app = app.clone();
-    let new_window_label = label.clone();
-    let new_window_context = request.clone();
-    let auto_download_script = build_auto_download_script(&request);
+pub fn open_request(payload: Value) -> Result<Value> {
+    let request: OpenNexusDownloadWebviewRequest = serde_json::from_value(payload)?;
+    let response = ManagedWebviewRequest {
+        label: format!(
+            "nexus-download-{}-{}-{}",
+            sanitize_label_part(&request.domain),
+            request.mod_id,
+            request.file_id.unwrap_or(0)
+        ),
+        url: request.page_url.clone(),
+        title: "Nexus Mods Download".to_string(),
+        initialization_script: build_auto_download_script(&request),
+        width: 1100.0,
+        height: 760.0,
+        decision_command: "nexus_download_webview_decide".to_string(),
+        context: request,
+    };
+    serde_json::to_value(response).map_err(Into::into)
+}
 
-    WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(page_url))
-        .title("Nexus Mods Download")
-        .inner_size(1100.0, 760.0)
-        .decorations(true)
-        .visible(true)
-        .focusable(true)
-        .focused(true)
-        .accept_first_mouse(true)
-        .initialization_script(&auto_download_script)
-        .on_navigation(move |url| {
-            if let Some(source) = capture_source(url) {
-                emit_captured_deferred(
-                    nav_app.clone(),
-                    nav_label.clone(),
-                    nav_context.clone(),
-                    url.to_string(),
-                    source,
-                );
-                return false;
-            }
-            true
+pub fn decide(payload: Value) -> Result<Value> {
+    let request: WebviewDecisionRequest = serde_json::from_value(payload)?;
+    let Some(source) = capture_source(&request.url) else {
+        return serde_json::to_value(WebviewDecision {
+            allow: request.event != "newWindow",
+            close: false,
+            emit_event: None,
+            emit_payload: None,
+            navigate_url: if request.event == "newWindow" {
+                Some(request.url)
+            } else {
+                None
+            },
         })
-        .on_download(move |webview, event| {
-            if let DownloadEvent::Requested { url, .. } = event {
-                if let Some(source) = capture_source(&url) {
-                    emit_captured_deferred(
-                        webview.app_handle().clone(),
-                        webview.label().to_string(),
-                        download_context.clone(),
-                        url.to_string(),
-                        source,
-                    );
-                    return false;
-                }
-            }
-            true
-        })
-        .on_new_window(move |url, _features| {
-            if let Some(source) = capture_source(&url) {
-                emit_captured_deferred(
-                    new_window_app.clone(),
-                    new_window_label.clone(),
-                    new_window_context.clone(),
-                    url.to_string(),
-                    source,
-                );
-                return NewWindowResponse::Deny;
-            }
+        .map_err(Into::into);
+    };
 
-            navigate_deferred(new_window_app.clone(), new_window_label.clone(), url);
-            NewWindowResponse::Deny
-        })
-        .build()
-        .map(|window| {
-            focus_download_window(&app, &window);
-        })
-        .map_err(|error| error.to_string())?;
-
-    Ok(())
+    let payload = json!({
+        "url": request.url,
+        "source": source,
+        "domain": request.context.domain,
+        "modId": request.context.mod_id,
+        "fileId": request.context.file_id,
+        "profileUrl": request.context.profile_url,
+    });
+    serde_json::to_value(WebviewDecision {
+        allow: false,
+        close: true,
+        emit_event: Some(EVENT_NEXUS_DOWNLOAD_CAPTURED.to_string()),
+        emit_payload: Some(payload),
+        navigate_url: None,
+    })
+    .map_err(Into::into)
 }
 
 fn build_auto_download_script(context: &OpenNexusDownloadWebviewRequest) -> String {
@@ -143,14 +128,6 @@ let timer = null;
 let observer = null;
 let generateDownloadUrlStarted = false;
 
-function log(message) {
-    try {
-        console.debug('[MintCat Nexus AutoDownload] ' + message);
-    } catch (_) {
-        // ignore logging failures in external pages
-    }
-}
-
 function getGameId() {
     const candidates = [
         document.querySelector('[data-gameid]'),
@@ -171,7 +148,6 @@ function getGameId() {
             return id;
         }
     }
-
     const html = document.documentElement ? document.documentElement.innerHTML : '';
     const match = html.match(/["']game_id["']\s*:\s*["']?(\d+)/i)
         || html.match(/data-gameid=["'](\d+)/i)
@@ -180,22 +156,13 @@ function getGameId() {
 }
 
 function generateDownloadUrl() {
-    if (generateDownloadUrlStarted || !config.fileId) {
-        return false;
-    }
-
+    if (generateDownloadUrlStarted || !config.fileId) return false;
     const gameId = getGameId();
-    if (!gameId) {
-        return false;
-    }
-
+    if (!gameId) return false;
     generateDownloadUrlStarted = true;
-    log('request GenerateDownloadUrl for file ' + config.fileId + ', game ' + gameId);
-
     const body = new URLSearchParams();
     body.set('fid', String(config.fileId));
     body.set('game_id', String(gameId));
-
     fetch(window.location.origin + '/Core/Libs/Common/Managers/Downloads?GenerateDownloadUrl', {
         method: 'POST',
         credentials: 'include',
@@ -209,25 +176,16 @@ function generateDownloadUrl() {
         .then((text) => {
             const data = JSON.parse(text);
             if (data && data.url) {
-                log('navigate generated download URL');
                 window.location.href = data.url;
-                return;
             }
-            log('GenerateDownloadUrl returned no URL');
         })
-        .catch((error) => {
-            log('GenerateDownloadUrl failed: ' + (error && error.message ? error.message : error));
-        });
-
+        .catch(() => {});
     return true;
 }
 
 function isTargetPage() {
     const host = window.location.hostname.toLowerCase();
-    if (host !== 'www.nexusmods.com' && host !== 'nexusmods.com') {
-        return false;
-    }
-
+    if (host !== 'www.nexusmods.com' && host !== 'nexusmods.com') return false;
     const parts = window.location.pathname.split('/').filter(Boolean);
     const gameOffset = parts[0] && parts[0].toLowerCase() === 'games' ? 1 : 0;
     const domain = (parts[gameOffset] || '').toLowerCase();
@@ -262,12 +220,8 @@ function isVisible(element) {
 }
 
 function matchesFileId(element) {
-    if (!config.fileId) {
-        return true;
-    }
-    if (Date.now() - startedAt > 6000) {
-        return true;
-    }
+    if (!config.fileId) return true;
+    if (Date.now() - startedAt > 6000) return true;
     const fileId = String(config.fileId);
     let current = element;
     for (let depth = 0; current && depth < 5; depth += 1, current = current.parentElement) {
@@ -283,34 +237,22 @@ function canAttempt(element, key, cooldownMs, maxAttempts) {
     const now = Date.now();
     const entry = attempts.get(element) || {};
     const state = entry[key] || { count: 0, lastAt: 0 };
-    if (state.count >= maxAttempts || now - state.lastAt < cooldownMs) {
-        return false;
-    }
+    if (state.count >= maxAttempts || now - state.lastAt < cooldownMs) return false;
     entry[key] = { count: state.count + 1, lastAt: now };
     attempts.set(element, entry);
     return true;
 }
 
 function dispatchSlowDownload(component) {
-    if (!component || !matchesFileId(component)) {
-        return false;
-    }
-    if (!canAttempt(component, 'slowDownloadEvent', 900, 30)) {
-        return false;
-    }
-    log('dispatch slowDownload event');
+    if (!component || !matchesFileId(component)) return false;
+    if (!canAttempt(component, 'slowDownloadEvent', 900, 30)) return false;
     component.dispatchEvent(new CustomEvent('slowDownload', { bubbles: true, composed: true }));
     return true;
 }
 
 function clickElement(element) {
-    if (!element || !isVisible(element) || !matchesFileId(element)) {
-        return false;
-    }
-    if (!canAttempt(element, 'click', 1600, 8)) {
-        return false;
-    }
-    log('click ' + textOf(element).slice(0, 80));
+    if (!element || !isVisible(element) || !matchesFileId(element)) return false;
+    if (!canAttempt(element, 'click', 1600, 8)) return false;
     element.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
     element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
     element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
@@ -322,9 +264,7 @@ function findDownloadButtons() {
     const candidates = Array.from(document.querySelectorAll('a, button, [role="button"]'));
     const buttons = candidates.filter((element) => {
         const text = textOf(element);
-        if (!text) {
-            return false;
-        }
+        if (!text) return false;
         if (text.includes('preview file contents') || text.includes('requirements') || text.includes('changelog')) {
             return false;
         }
@@ -346,14 +286,8 @@ function findDownloadButtons() {
 }
 
 function tick() {
-    if (!isTargetPage()) {
-        return;
-    }
-
-    if (generateDownloadUrl()) {
-        return;
-    }
-
+    if (!isTargetPage()) return;
+    if (generateDownloadUrl()) return;
     const components = Array.from(document.querySelectorAll('mod-file-download'));
     const matchingComponents = components.filter(matchesFileId);
     let dispatchedComponentEvent = false;
@@ -362,19 +296,10 @@ function tick() {
             dispatchedComponentEvent = true;
         }
     }
-
-    // Give Nexus' custom element path a short head start. If it does not work,
-    // continue with visible button clicks such as Manual Download -> Slow Download.
-    if (dispatchedComponentEvent && Date.now() - startedAt < 3500) {
-        return;
-    }
-
+    if (dispatchedComponentEvent && Date.now() - startedAt < 3500) return;
     for (const element of findDownloadButtons()) {
-        if (clickElement(element)) {
-            return;
-        }
+        if (clickElement(element)) return;
     }
-
     if (Date.now() - startedAt > maxRuntimeMs && timer) {
         window.clearInterval(timer);
         timer = null;
@@ -382,9 +307,7 @@ function tick() {
 }
 
 function startObserver() {
-    if (!window.MutationObserver || observer || !document.documentElement) {
-        return;
-    }
+    if (!window.MutationObserver || observer || !document.documentElement) return;
     observer = new MutationObserver(() => window.setTimeout(tick, 50));
     observer.observe(document.documentElement, { childList: true, subtree: true });
 }
@@ -400,12 +323,8 @@ window.addEventListener('DOMContentLoaded', () => {
 }, { once: true });
 window.addEventListener('load', tick, { once: true });
 window.addEventListener('beforeunload', () => {
-    if (timer) {
-        window.clearInterval(timer);
-    }
-    if (observer) {
-        observer.disconnect();
-    }
+    if (timer) window.clearInterval(timer);
+    if (observer) observer.disconnect();
 });
 tick();
 })();"#,
@@ -413,84 +332,16 @@ tick();
     script
 }
 
-fn navigate_deferred(app: AppHandle, window_label: String, url: Url) {
-    tauri::async_runtime::spawn(async move {
-        if let Some(window) = app.get_webview_window(&window_label) {
-            if let Err(error) = window.navigate(url) {
-                log::warn!(
-                    "[NexusWebView] failed to navigate popup in {}: {}",
-                    window_label,
-                    error
-                );
-            }
-        }
-    });
-}
-
-fn focus_download_window(app: &AppHandle, window: &tauri::WebviewWindow) {
-    #[cfg(target_os = "macos")]
-    {
-        let _ = app.show();
-    }
-
-    let _ = window.set_focusable(true);
-    let _ = window.show();
-    let _ = window.set_focus();
-}
-
-fn capture_source(url: &Url) -> Option<&'static str> {
+fn capture_source(value: &str) -> Option<&'static str> {
+    let url = url::Url::parse(value).ok()?;
     if url.scheme().eq_ignore_ascii_case("nxm") {
         return Some("nxm");
     }
-
     let host = url.host_str()?.to_ascii_lowercase();
     if (url.scheme() == "http" || url.scheme() == "https") && host.ends_with("nexus-cdn.com") {
         return Some("cdn");
     }
-
     None
-}
-
-fn emit_captured(
-    app: &AppHandle,
-    window_label: &str,
-    context: &OpenNexusDownloadWebviewRequest,
-    url: &str,
-    source: &str,
-) {
-    log::info!(
-        "[NexusWebView] captured {} download URL for {}/{}: {}",
-        source,
-        context.domain,
-        context.mod_id,
-        sanitize_url_for_log(url)
-    );
-
-    let payload = NexusDownloadCapturedPayload {
-        url: url.to_string(),
-        source: source.to_string(),
-        domain: context.domain.clone(),
-        mod_id: context.mod_id,
-        file_id: context.file_id,
-        profile_url: context.profile_url.clone(),
-    };
-
-    let _ = app.emit(EVENT_NEXUS_DOWNLOAD_CAPTURED, payload);
-    if let Some(window) = app.get_webview_window(window_label) {
-        let _ = window.close();
-    }
-}
-
-fn emit_captured_deferred(
-    app: AppHandle,
-    window_label: String,
-    context: OpenNexusDownloadWebviewRequest,
-    url: String,
-    source: &'static str,
-) {
-    tauri::async_runtime::spawn(async move {
-        emit_captured(&app, &window_label, &context, &url, source);
-    });
 }
 
 fn sanitize_label_part(value: &str) -> String {
@@ -504,31 +355,4 @@ fn sanitize_label_part(value: &str) -> String {
             }
         })
         .collect()
-}
-
-fn sanitize_url_for_log(value: &str) -> String {
-    match value.parse::<Url>() {
-        Ok(mut url) => {
-            let pairs: Vec<(String, String)> = url
-                .query_pairs()
-                .map(|(name, value)| {
-                    let value = if matches!(name.as_ref(), "key" | "expires" | "user_id" | "md5") {
-                        "[REDACTED]".to_string()
-                    } else {
-                        value.into_owned()
-                    };
-                    (name.into_owned(), value)
-                })
-                .collect();
-            if !pairs.is_empty() {
-                let mut query = url.query_pairs_mut();
-                query.clear();
-                for (name, value) in pairs {
-                    query.append_pair(&name, &value);
-                }
-            }
-            url.to_string()
-        }
-        Err(_) => "download-url-[REDACTED]".to_string(),
-    }
 }

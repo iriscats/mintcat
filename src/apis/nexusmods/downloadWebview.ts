@@ -1,10 +1,11 @@
-import { invoke } from '@tauri-apps/api/core';
 import { message } from 'antd';
 import { t } from 'i18next';
 import { listenEvent, type UnlistenFn } from '@/events';
 import { NexusModsApi } from './index';
 import type { EventPayload } from '@/events';
 import type { NexusModsParsedUrl } from './types';
+import { ControlPlaneApi } from '@/apis/ControlPlaneApi';
+import { BackendRuntimeApi } from '@/apis/BackendRuntimeApi';
 
 export type NexusDownloadCapturedPayload = EventPayload<'nexus-download-captured'>;
 
@@ -25,16 +26,15 @@ export interface CaptureNexusDownloadUrlOptions {
 }
 
 export async function openNexusDownloadWebview(options: OpenNexusDownloadWebviewOptions): Promise<void> {
-    await invoke('open_nexus_download_webview', {
-        request: {
-            pageUrl: buildNexusModFilesPageUrl(options.domain, options.modId, options.fileId),
-            profileUrl: options.profileUrl,
-            domain: options.domain,
-            modId: options.modId,
-            fileId: options.fileId,
-            autoStart: options.autoStart ?? true,
-        },
+    const request = await BackendRuntimeApi.invoke<Record<string, unknown>>('open_nexus_download_webview', {
+        pageUrl: buildNexusModFilesPageUrl(options.domain, options.modId, options.fileId),
+        profileUrl: options.profileUrl,
+        domain: options.domain,
+        modId: options.modId,
+        fileId: options.fileId,
+        autoStart: options.autoStart ?? true,
     });
+    await ControlPlaneApi.invoke('open_managed_webview', request);
 }
 
 export async function captureNexusDownloadUrl(

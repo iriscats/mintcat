@@ -18,11 +18,16 @@ const srcTauri = path.join(root, 'src-tauri');
 const cargoTargetDir = process.env.CARGO_TARGET_DIR || path.join(srcTauri, 'target');
 const target = process.env.INTEGRATOR_TARGET || process.argv[2] || '';
 const isWindowsTarget = target.includes('windows');
-const runtimeFileName = isWindowsTarget
+const builtRuntimeFileName = isWindowsTarget
   ? 'mintcat_integrator.dll'
   : process.platform === 'darwin'
     ? 'libmintcat_integrator.dylib'
     : 'libmintcat_integrator.so';
+const bundledRuntimeFileName = isWindowsTarget
+  ? 'mintcat_backend_runtime.dll'
+  : process.platform === 'darwin'
+    ? 'libmintcat_backend_runtime.dylib'
+    : 'libmintcat_backend_runtime.so';
 
 function run(command, args, options = {}) {
   console.log(`[integrator-runtime] ${command} ${args.join(' ')}`);
@@ -50,7 +55,7 @@ function artifactPath() {
   const releaseDir = target
     ? path.join(cargoTargetDir, target, 'release')
     : path.join(cargoTargetDir, 'release');
-  return path.join(releaseDir, runtimeFileName);
+  return path.join(releaseDir, builtRuntimeFileName);
 }
 
 function packageRuntime() {
@@ -61,25 +66,27 @@ function packageRuntime() {
 
   const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
   const version = pkg.version || '0.0.0';
-  const releaseDir = path.join(root, 'release', 'integrator');
+  const releaseDir = path.join(root, 'release', 'backend-runtime');
   mkdirSync(releaseDir, { recursive: true });
-  const releaseName = `mintcat_integrator_${version}_x64.dll`;
+  const releaseName = isWindowsTarget
+    ? `mintcat_backend_runtime_${version}_x64.dll`
+    : bundledRuntimeFileName.replace('backend_runtime', `backend_runtime_${version}_x64`);
   const releasePath = path.join(releaseDir, releaseName);
   copyFileSync(artifact, releasePath);
 
   const assetDir = path.join(srcTauri, 'assets', 'plugins');
   mkdirSync(assetDir, { recursive: true });
-  const assetPath = path.join(assetDir, runtimeFileName);
+  const assetPath = path.join(assetDir, bundledRuntimeFileName);
   copyFileSync(releasePath, assetPath);
 
-  console.log(`[integrator-runtime] bundled resource: ${path.relative(root, assetPath)}`);
-  console.log(`[integrator-runtime] release artifact: ${path.relative(root, releasePath)} (${statSync(releasePath).size} bytes)`);
+  console.log(`[backend-runtime] bundled resource: ${path.relative(root, assetPath)}`);
+  console.log(`[backend-runtime] release artifact: ${path.relative(root, releasePath)} (${statSync(releasePath).size} bytes)`);
 }
 
 try {
   buildRuntime();
   packageRuntime();
 } catch (error) {
-  console.error('[integrator-runtime] error:', error.message || error);
+  console.error('[backend-runtime] error:', error.message || error);
   process.exit(1);
 }

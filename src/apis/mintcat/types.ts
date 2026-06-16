@@ -22,6 +22,9 @@ export interface UpdateCheckManifestItem {
     checksum?: string;
     signature?: string;
     releaseNotes?: string;
+    releaseSetId?: string;
+    minControlPlaneVersion?: string;
+    capabilities?: string[];
     platform?: string;
     arch?: string;
     downloadUrl?: string;

@@ -1,13 +1,13 @@
 import {open} from "@tauri-apps/plugin-dialog";
 import {exists, stat} from "@tauri-apps/plugin-fs";
 import {path} from "@tauri-apps/api";
-import {invoke} from "@tauri-apps/api/core";
 import {useEventListener} from "@/events";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import React, {useEffect, useState} from "react";
 import {Button, Flex, Form, List} from "antd";
 import {t} from "i18next";
 import {CloseOutlined, FilePptOutlined, FileZipOutlined, FolderOutlined, FolderOpenOutlined, InboxOutlined} from "@ant-design/icons";
+import {BackendRuntimeApi} from "@/apis/BackendRuntimeApi";
 
 
 interface FileItem {
@@ -23,7 +23,7 @@ interface FileItem {
  */
 async function isValidUnpackedMod(dirPath: string): Promise<boolean> {
     try {
-        return await invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
+        return await BackendRuntimeApi.invoke<boolean>('is_valid_unpacked_mod', { path: dirPath });
     } catch (e) {
         console.error('Failed to check unpacked mod:', e);
         return false;

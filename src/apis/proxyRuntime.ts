@@ -1,4 +1,3 @@
-import {invoke} from '@tauri-apps/api/core';
 import {arch, platform} from '@tauri-apps/plugin-os';
 import {listen, type UnlistenFn} from '@tauri-apps/api/event';
 import {
@@ -11,6 +10,7 @@ import {
     type UpdateCheckManifestItem,
 } from '@/apis/mintcat';
 import {StorageAPI} from '@/storage';
+import {BackendRuntimeApi} from '@/apis/BackendRuntimeApi';
 
 export interface ProxyRuntimeStatus {
     activeVersion?: string | null;
@@ -63,38 +63,34 @@ export async function installProxyRuntimeFromManifest(item: UpdateCheckManifestI
         throw new Error('proxy runtime md5 is missing');
     }
 
-    return invoke<ProxyRuntimeStatus>('install_proxy_runtime_from_manifest', {
-        manifest: {
-            version: item.latestVersion,
-            url: getDownloadUrl(url),
-            md5: item.md5,
-            signature: item.signature,
-            minAppVersion: item.minAppVersion,
-            maxAppVersion: item.maxAppVersion,
-        },
+    return BackendRuntimeApi.invoke<ProxyRuntimeStatus>('install_proxy_runtime_from_manifest', {
+        version: item.latestVersion,
+        url: getDownloadUrl(url),
+        md5: item.md5,
+        signature: item.signature,
+        minAppVersion: item.minAppVersion,
+        maxAppVersion: item.maxAppVersion,
     });
 }
 
 export function getProxyRuntimeStatus(): Promise<ProxyRuntimeStatus> {
-    return invoke<ProxyRuntimeStatus>('get_proxy_runtime_status');
+    return BackendRuntimeApi.invoke<ProxyRuntimeStatus>('get_proxy_runtime_status');
 }
 
 export function startProxyRuntime(options: StartProxyRuntimeOptions = {}): Promise<ProxyRuntimeStatus> {
-    return invoke<ProxyRuntimeStatus>('start_proxy_runtime', {
-        options: {
-            port: options.port ?? 443,
-            offline: options.offline ?? false,
-            bind: options.bind ?? '0.0.0.0',
-        },
+    return BackendRuntimeApi.invoke<ProxyRuntimeStatus>('start_proxy_runtime', {
+        port: options.port ?? 443,
+        offline: options.offline ?? false,
+        bind: options.bind ?? '0.0.0.0',
     });
 }
 
 export function stopProxyRuntime(): Promise<ProxyRuntimeStatus> {
-    return invoke<ProxyRuntimeStatus>('stop_proxy_runtime');
+    return BackendRuntimeApi.invoke<ProxyRuntimeStatus>('stop_proxy_runtime');
 }
 
 export function installProxyCert(): Promise<ProxyRuntimeStatus> {
-    return invoke<ProxyRuntimeStatus>('install_proxy_cert');
+    return BackendRuntimeApi.invoke<ProxyRuntimeStatus>('install_proxy_cert');
 }
 
 export function listenProxyRuntimeLog(callback: (event: ProxyRuntimeLogEvent) => void): Promise<UnlistenFn> {
