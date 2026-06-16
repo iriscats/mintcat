@@ -2,11 +2,13 @@ import { exists, stat } from "@tauri-apps/plugin-fs";
 import { path } from "@tauri-apps/api";
 import { ModioApi } from "@/apis/modio";
 import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
+import { NexusModsApi, NEXUSMODS_PLATFORM } from "@/apis/nexusmods";
 import { StorageAPI } from "@/storage";
 import { ModService } from "@/services/ModService.ts";
 import { ProfileService } from "@/services/ProfileService.ts";
 import { IoC } from "@/core/IoC";
 import type { ProfileData, ProfileFolderData } from "@/storage/dao/ProfileDAO";
+import type { CompleteModData } from "@/storage/dao/ModDAO";
 
 /** 删除分组时若会清空配置下的全部分组则抛出 */
 export class LastGroupCannotDeleteError extends Error {
@@ -21,6 +23,8 @@ import { asyncPoolAll } from "@/utils/AsyncPool";
 export type AddModFromUrlResult = {
     status: "invalid" | "exists" | "added";
     modName?: string;
+    mod?: CompleteModData;
+    downloadAfterAdd?: boolean;
 };
 
 export type AddModFromPathResult = {
@@ -82,6 +86,10 @@ export class HomeService {
     }
 
     public async addModFromUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
+        if (NexusModsApi.isNexusModsLink(url)) {
+            return await this.addModFromNexusmodsUrl(url, groupId);
+        }
+
         // 检查是否为 ModCat 链接
         if (ModcatApi.isModcatLink(url)) {
             return await this.addModFromModcatUrl(url, groupId);
@@ -89,6 +97,86 @@ export class HomeService {
 
         // 处理 mod.io 链接
         return await this.addModFromModioUrl(url, groupId);
+    }
+
+    /**
+     * 从 Nexus Mods 链接添加 Mod
+     */
+    private async addModFromNexusmodsUrl(url: string, groupId: number): Promise<AddModFromUrlResult> {
+        const parsed = NexusModsApi.parseModLinks(url);
+        if (!parsed) {
+            return { status: "invalid" };
+        }
+        const downloadAfterAdd = NexusModsApi.hasReusableDownloadCredential(url);
+
+        const profile = await this.getActiveProfile();
+        const modsApi = await StorageAPI.getMods();
+        const profiles = await StorageAPI.getProfiles();
+
+        const existingByPlatform = await modsApi.getModByPlatformId(parsed.modId, NEXUSMODS_PLATFORM);
+        if (existingByPlatform) {
+            if (downloadAfterAdd) {
+                await modsApi.upsertModDownload({
+                    modId: existingByPlatform.modId!,
+                    downloadUrl: url,
+                    downloadStatus: "pending",
+                    downloadProgress: 0,
+                });
+            }
+            const mod = downloadAfterAdd
+                ? await modsApi.getCompleteModData(existingByPlatform.modId!) ?? undefined
+                : undefined;
+            const existingProfileMod = await profiles.getProfileMod(profile.id!, existingByPlatform.modId!);
+            if (existingProfileMod) {
+                return { status: "exists", modName: existingByPlatform.displayName, mod, downloadAfterAdd };
+            }
+
+            await this.addModToProfile({
+                profileId: profile.id!,
+                modId: existingByPlatform.modId!,
+                groupId,
+                usedVersion: "",
+            });
+
+            return { status: "added", mod, downloadAfterAdd };
+        }
+
+        const modInfoResp = await NexusModsApi.getModInfoByLink(url);
+        if (!modInfoResp) {
+            return { status: "invalid" };
+        }
+
+        const canonicalUrl = NexusModsApi.getModUrl(modInfoResp.domain, modInfoResp.modId);
+        const existingByUrl = await modsApi.getModByUrl(canonicalUrl);
+        if (existingByUrl) {
+            if (downloadAfterAdd) {
+                await modsApi.upsertModDownload({
+                    modId: existingByUrl.modId!,
+                    downloadUrl: url,
+                    downloadStatus: "pending",
+                    downloadProgress: 0,
+                });
+            }
+            const mod = downloadAfterAdd
+                ? await modsApi.getCompleteModData(existingByUrl.modId!) ?? undefined
+                : undefined;
+            const existingProfileMod = await profiles.getProfileMod(profile.id!, existingByUrl.modId!);
+            if (existingProfileMod) {
+                return { status: "exists", modName: modInfoResp.mod.name || "", mod, downloadAfterAdd };
+            }
+
+            await this.addModToProfile({
+                profileId: profile.id!,
+                modId: existingByUrl.modId!,
+                groupId,
+                usedVersion: "",
+            });
+
+            return { status: "added", mod, downloadAfterAdd };
+        }
+
+        const mod = await ModService.addModFromNexusmods(modInfoResp, profile.id!, groupId);
+        return { status: "added", mod, downloadAfterAdd };
     }
 
     /**

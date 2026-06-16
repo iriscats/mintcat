@@ -44,6 +44,8 @@ pub struct InstallRequest {
     pub drg_zip_path: Option<PathBuf>,
     #[serde(default)]
     pub rc_zip_path: Option<PathBuf>,
+    #[serde(default)]
+    pub compress_mod_pak: bool,
 }
 
 impl InstallRequest {
@@ -54,6 +56,7 @@ impl InstallRequest {
         ue4ss_zip_path: Option<String>,
         drg_zip_path: Option<String>,
         rc_zip_path: Option<String>,
+        compress_mod_pak: bool,
     ) -> Self {
         let game_kind = GameKind::from_game_pak_path(&game_path);
         Self {
@@ -64,6 +67,7 @@ impl InstallRequest {
             ue4ss_zip_path: ue4ss_zip_path.map(PathBuf::from),
             drg_zip_path: drg_zip_path.map(PathBuf::from),
             rc_zip_path: rc_zip_path.map(PathBuf::from),
+            compress_mod_pak,
         }
     }
 }

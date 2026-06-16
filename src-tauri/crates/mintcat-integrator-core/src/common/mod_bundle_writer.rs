@@ -14,10 +14,11 @@ struct Dir {
 pub struct ModBundleWriter<W: Write + Seek> {
     pak_writer: PakWriter<W>,
     directories: HashMap<String, Dir>,
+    compress: bool,
 }
 
 impl<W: Write + Seek> ModBundleWriter<W> {
-    pub fn new(writer: W, fsd_paths: &[String]) -> Result<Self> {
+    pub fn new(writer: W, fsd_paths: &[String], compress: bool) -> Result<Self> {
         let mut directories: HashMap<String, Dir> = HashMap::new();
         for f in fsd_paths {
             let mut dir = &mut directories;
@@ -32,11 +33,21 @@ impl<W: Write + Seek> ModBundleWriter<W> {
             }
         }
 
+        let pak_builder = if compress {
+            repak::PakBuilder::new().compression([repak::Compression::Zlib])
+        } else {
+            repak::PakBuilder::new()
+        };
+
         Ok(Self {
-            pak_writer: repak::PakBuilder::new()
-                .compression([repak::Compression::Zlib])
-                .writer(writer, repak::Version::V11, "../../../".to_string(), None),
+            pak_writer: pak_builder.writer(
+                writer,
+                repak::Version::V11,
+                "../../../".to_string(),
+                None,
+            ),
             directories,
+            compress,
         })
     }
     /// Used to normalize match path case to existing files in the drg pak.
@@ -58,7 +69,7 @@ impl<W: Write + Seek> ModBundleWriter<W> {
     pub fn write_file(&mut self, data: &[u8], path: &str) -> Result<()> {
         let normalized_path = self.normalize_path(path);
         self.pak_writer
-            .write_file(normalized_path.as_str(), true, data)
+            .write_file(normalized_path.as_str(), self.compress, data)
             .with_context(|| format!("Failed to write file to pak: {}", path))?;
         Ok(())
     }

@@ -3,7 +3,11 @@ import {arch, platform} from '@tauri-apps/plugin-os';
 import {listen, type UnlistenFn} from '@tauri-apps/api/event';
 import {
     fetchUpdateManifest,
+    getManifestItemDownloadPath,
     getDownloadUrl,
+    matchesManifestPlatform,
+    matchesProxyRuntime,
+    normalizeManifestKey,
     type UpdateCheckManifestItem,
 } from '@/apis/mintcat';
 import {StorageAPI} from '@/storage';
@@ -34,46 +38,24 @@ export interface ProxyRuntimeStateEvent {
     status: ProxyRuntimeStatus;
 }
 
-function normalize(value?: string | null): string {
-    return (value ?? '').trim().toLowerCase();
-}
-
-function matchesCurrentPlatform(item: UpdateCheckManifestItem, currentPlatform: string, currentArch: string): boolean {
-    const itemPlatform = normalize(item.platform);
-    const itemArch = normalize(item.arch);
-    const platformMatched = !itemPlatform
-        || itemPlatform === currentPlatform
-        || (currentPlatform === 'macos' && ['darwin', 'osx'].includes(itemPlatform))
-        || (currentPlatform === 'windows' && ['win32', 'win'].includes(itemPlatform));
-    const archMatched = !itemArch || itemArch === currentArch || (currentArch === 'x86_64' && itemArch === 'amd64');
-    return platformMatched && archMatched;
-}
-
-function matchesProxyRuntime(item: UpdateCheckManifestItem): boolean {
-    const name = normalize(item.name);
-    const type = normalize(item.type);
-    return name === 'mintcat-proxy'
-        || (name === 'proxy' && (!type || type === 'runtime' || type === 'proxy'));
-}
-
 export async function findProxyRuntimeManifest(forceRefresh = false): Promise<UpdateCheckManifestItem | undefined> {
     const settings = await StorageAPI.getSettings();
     const releaseChannel = await settings.getReleaseChannel();
     const manifest = await fetchUpdateManifest(undefined, forceRefresh);
-    const currentPlatform = normalize(await platform());
-    const currentArch = normalize(await arch());
+    const currentPlatform = normalizeManifestKey(await platform());
+    const currentArch = normalizeManifestKey(await arch());
 
     const candidates = manifest.filter((item) => (
-        matchesCurrentPlatform(item, currentPlatform, currentArch)
+        matchesManifestPlatform(item, currentPlatform, currentArch)
         && matchesProxyRuntime(item)
     ));
-    const requestedChannel = normalize(releaseChannel);
-    return candidates.find((item) => normalize(item.channel) === requestedChannel)
+    const requestedChannel = normalizeManifestKey(releaseChannel);
+    return candidates.find((item) => normalizeManifestKey(item.channel) === requestedChannel)
         ?? candidates[0];
 }
 
 export async function installProxyRuntimeFromManifest(item: UpdateCheckManifestItem): Promise<ProxyRuntimeStatus> {
-    const url = item.downloadUrl ?? item.url ?? item.path;
+    const url = getManifestItemDownloadPath(item);
     if (!url) {
         throw new Error('proxy runtime download url is missing');
     }

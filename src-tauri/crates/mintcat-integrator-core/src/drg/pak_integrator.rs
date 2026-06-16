@@ -54,7 +54,7 @@ impl PakIntegrator {
             .to_string();
         format!("/Game/{}{}_C", relative, name)
     }
-    pub fn new<P: AsRef<Path>>(fsd_path_pak: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(fsd_path_pak: P, compress_mod_pak: bool) -> Result<Self> {
         let pak_path = fsd_path_pak.as_ref();
         let installation = DRGInstallation::from_pak_path(pak_path)
             .context("Failed to determine game installation")?;
@@ -96,6 +96,7 @@ impl PakIntegrator {
                     .with_context(|| format!("Failed to create mod pak: {:?}", mod_pak_path))?,
             ),
             &fsd_pak.files(),
+            compress_mod_pak,
         )
         .context("Failed to initialize mod bundle writer")?;
 

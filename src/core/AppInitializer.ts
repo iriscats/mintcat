@@ -5,18 +5,11 @@ import { StorageAPI } from '@/storage';
 import { AppViewModel } from '@/AppViewModel';
 import { CloudBackupApi } from '@/apis/mintcat';
 import {
-    getMintcatApiOriginLanguageFallback,
-    getMintcatOriginByPresetId,
-    isMintcatApiOriginId,
-    normalizeMintcatApiOrigin,
+    getDefaultMintcatApiOrigin,
     setMintcatApiResolvedOrigin,
 } from '@/apis/mintcat/urls';
 import {
-    NETWORK_SERVER_AUTO_ORIGIN_KEY,
-    NETWORK_SERVER_MODE_KEY,
-    type MintcatServerMode,
-    probeOrigin,
-    refreshAutoMintcatApiRoutingInBackground,
+    applyMintcatApiRoutingFromSettings,
 } from '@/apis/mintcat/routing';
 import { CacheApi } from '@/apis/CacheApi';
 import { closeDb } from '@/storage/db/Client';
@@ -247,37 +240,13 @@ export class AppInitializer {
      */
     private static async initApiServerRouting(): Promise<void> {
         try {
-            const settings = await StorageAPI.getSettings();
-            const modeRaw = await settings.getValue(NETWORK_SERVER_MODE_KEY);
-            const mode: MintcatServerMode = (modeRaw?.trim() as MintcatServerMode) || 'auto';
-            const autoCached = (await settings.getValue(NETWORK_SERVER_AUTO_ORIGIN_KEY))?.trim() ?? '';
-
-            const applyLanguageFallback = () => {
-                setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
-            };
-
-            if (isMintcatApiOriginId(mode)) {
-                setMintcatApiResolvedOrigin(getMintcatOriginByPresetId(mode));
-                return;
-            }
-
-            // auto（含历史 custom：设置页已迁移为自动）
-            if (autoCached) {
-                const normalizedCached = normalizeMintcatApiOrigin(autoCached);
-                const probe = await probeOrigin(normalizedCached, 1500);
-                if (probe.ok) {
-                    setMintcatApiResolvedOrigin(normalizedCached);
-                    void refreshAutoMintcatApiRoutingInBackground();
-                    return;
-                }
-                console.warn('[AppInitializer] Cached API origin failed validation:', normalizedCached, probe.error);
-            }
-
-            applyLanguageFallback();
-            void refreshAutoMintcatApiRoutingInBackground();
+            await applyMintcatApiRoutingFromSettings({
+                cachedProbeTimeoutMs: 1500,
+                logPrefix: '[AppInitializer]',
+            });
         } catch (error) {
             console.warn('[AppInitializer] Failed to init API server routing:', error);
-            setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
+            setMintcatApiResolvedOrigin(getDefaultMintcatApiOrigin());
         }
     }
 }

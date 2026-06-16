@@ -3,6 +3,7 @@ import type { CompleteModData } from '@/storage/dao/ModDAO';
 import { TimeUtils } from '@/utils/TimeUtils';
 import type { ModcatModEntity } from '@/apis/modcat/types';
 import { MODCAT_PLATFORM, ModcatApi } from '@/apis/modcat';
+import { NEXUSMODS_PLATFORM, NexusModsApi, type NexusModsResolvedMod } from '@/apis/nexusmods';
 
 /**
  * ModMapper 映射器
@@ -124,6 +125,54 @@ export class ModMapper {
         };
 
         return dto;
+    }
+
+    /**
+     * 从 Nexus Mods API 响应转换到 CompleteModData
+     */
+    static fromNexusmodsResponse(resolved: NexusModsResolvedMod): CompleteModData {
+        const { domain, modId, mod, file } = resolved;
+        const modName = mod.name || "";
+        const version = file?.version || mod.version || "-";
+        const fileSize = NexusModsApi.getFileSizeBytes(file);
+        const onlineUpdateDate = file?.uploaded_timestamp
+            ? file.uploaded_timestamp * 1000
+            : mod.updated_time
+              ? mod.updated_time * 1000
+              : TimeUtils.now();
+
+        return {
+            modId: undefined,
+            platformId: modId,
+            gameId: 1,
+            nameId: String(modId),
+            displayName: modName,
+            originalName: modName,
+            url: NexusModsApi.getModUrl(domain, modId),
+            sourceType: NEXUSMODS_PLATFORM,
+            tags: [],
+            approvalStatus: ModApprovalStatus.Approved,
+            version: {
+                modId: 0,
+                currentVersion: version,
+                availableVersions: version && version !== "-" ? [version] : []
+            },
+            download: {
+                modId: 0,
+                downloadUrl: resolved.sourceUrl || NexusModsApi.getModFilesUrl(domain, modId),
+                cachePath: "",
+                fileSize,
+                downloadProgress: 0,
+                downloadStatus: "pending"
+            },
+            status: {
+                modId: 0,
+                lastUpdateDate: TimeUtils.now(),
+                onlineUpdateDate,
+                isOnlineAvailable: true,
+                isLocalNotFound: false
+            }
+        };
     }
 
     /**

@@ -332,7 +332,7 @@ export class ModioApi {
      */
     public static async downloadModFile(modInfo: CompleteModData,
                                         onProgress?: (loaded: number, total: number) => void) {
-        const fileName = modInfo.nameId;
+        const fileName = `modio-${modInfo.platformId || modInfo.nameId}-${modInfo.nameId || modInfo.displayName}`;
         const version = modInfo.version?.currentVersion || "-";
         let fileSize = modInfo.download?.fileSize || 0;
         let downloadUrl = modInfo.download?.downloadUrl || "";

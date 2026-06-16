@@ -41,6 +41,7 @@ import type {ProfileData, ProfileModData} from "@/storage/dao/ProfileDAO";
 import type {ProfileTreeItem} from "@/models/profile/ProfileTreeItem";
 import {ModSourceType} from "@/models/mod/types";
 import {MODCAT_PLATFORM} from "@/apis/modcat";
+import {NEXUSMODS_PLATFORM} from "@/apis/nexusmods";
 import {TreeView} from "./TreeView.tsx";
 import {AppInitializer} from "@/core/AppInitializer";
 import {IoC} from "@/core/IoC.ts";
@@ -137,13 +138,19 @@ export class HomePage extends BasePage<any, ModListPageState> {
 
             const settings = await StorageAPI.getSettings();
             const ue4ssEnabled = isUe4ssEnabled(await settings.getValue('ue4ss'));
+            const compressModPak = await settings.getIntegratorCompressModPak();
 
             const gamesDAO = await StorageAPI.getGames();
             const activeGame = await gamesDAO.getActiveGame();
             const isRc = activeGame?.name?.toLowerCase() === 'rc';
             const assetPaths = await getInternalAssetPaths(isRc ? 'rc' : 'drg', ue4ssEnabled);
 
-            const currentHash = await computeInstallManifestHash(enabledMods, ue4ssEnabled, assetPaths);
+            const currentHash = await computeInstallManifestHash(
+                enabledMods,
+                ue4ssEnabled,
+                compressModPak,
+                assetPaths
+            );
             const hasUnsaved = !savedHash || currentHash !== savedHash || currentHash !== installedHash;
             if (this.state.hasUnsavedChanges !== hasUnsaved) {
                 this.setState({ hasUnsavedChanges: hasUnsaved });
@@ -511,7 +518,7 @@ export class HomePage extends BasePage<any, ModListPageState> {
             ? await modsApi.getBatchCompleteModDataOptimized(profileModIds)
             : [];
         const onlineMods = scopedMods.filter(
-            m => m.sourceType === ModSourceType.Modio || m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat"
+            m => m.sourceType === ModSourceType.Modio || m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat" || m.sourceType === NEXUSMODS_PLATFORM
         );
         if (onlineMods.length > 0) {
             await ModUpdateService.refreshOnlineMetadata(onlineMods, 3);

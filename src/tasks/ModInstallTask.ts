@@ -53,6 +53,7 @@ async function fileSizeAndMtime(filePath: string): Promise<{ size: number; mtime
 export async function computeInstallManifestHash(
     enabledMods: CompleteModData[],
     ue4ssEnabled: boolean,
+    compressModPak: boolean = false,
     assetPaths?: { ue4ssZipPath?: string; drgZipPath?: string; rcZipPath?: string } | null
 ): Promise<string> {
     const modEntries = [];
@@ -77,6 +78,7 @@ export async function computeInstallManifestHash(
     const manifest = {
         mods: modEntries,
         ue4ssMode: ue4ssEnabled ? "Enabled" : "Disabled",
+        ...(compressModPak ? { compressModPak } : {}),
         ue4ssZip: { path: ue4ssZipPath, ...ue4ssStat },
         drgZip:   { path: assetPaths?.drgZipPath || "",   ...drgStat },
         rcZip:    { path: assetPaths?.rcZipPath || "",     ...rcStat },
@@ -292,6 +294,7 @@ export class ModInstallTask implements ITask {
         }
 
         const ue4ssEnabled = isUe4ssEnabled(await settings.getValue('ue4ss'));
+        const compressModPak = await settings.getIntegratorCompressModPak();
 
         const installType = await IntegrateApi.checkInstalled(drgPakPath, 0);
 
@@ -331,7 +334,12 @@ export class ModInstallTask implements ITask {
             }
         }
 
-        const currentHash = await computeInstallManifestHash(enabledMods, ue4ssEnabled, assetPaths);
+        const currentHash = await computeInstallManifestHash(
+            enabledMods,
+            ue4ssEnabled,
+            compressModPak,
+            assetPaths
+        );
         const savedHash = await profileVM.getActiveProfileInstallHash();
         const installedHash = await profileVM.getActiveGameInstalledHash();
         if (
@@ -381,7 +389,8 @@ export class ModInstallTask implements ITask {
             !ue4ssEnabled,
             ue4ssEnabled ? assetPaths?.ue4ssZipPath : undefined,
             isRc ? undefined : assetPaths?.drgZipPath,
-            isRc ? assetPaths?.rcZipPath : undefined
+            isRc ? assetPaths?.rcZipPath : undefined,
+            compressModPak
         );
 
         if (!result) {

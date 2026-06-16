@@ -16,9 +16,11 @@ import {getCurrentWindow} from '@tauri-apps/api/window';
 import {SearchResultCard} from './SearchResultCard';
 import {useSearchViewModel} from './useSearchViewModel';
 import type {SearchSortBy, SearchSortOrder} from './SearchViewModel';
-import {SearchSource, initializeSearchProviders} from '@/apis/search';
+import {SearchSource, initializeSearchProviders, type SearchResultItem} from '@/apis/search';
 import {AddModType} from '@/dialogs/AddModDialog';
 import {openWindow} from '@/dialogs/AddModDialog/open';
+import {NexusModsApi} from '@/apis/nexusmods';
+import {captureNexusDownloadUrl} from '@/apis/nexusmods/downloadWebview';
 import './styles.css';
 
 // mod.io 排序选项：value 为 sortBy_sortOrder，便于与 state 同步
@@ -47,6 +49,7 @@ export function SearchPage() {
     const {
         state,
         isInitialized,
+        search,
         searchImmediate,
         loadInitial,
         loadMore,
@@ -113,9 +116,11 @@ export function SearchPage() {
     // 处理输入变化
     const handleSearchInputChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
-            setSearchValue(e.target.value);
+            const value = e.target.value;
+            setSearchValue(value);
+            search(value);
         },
-        []
+        [search]
     );
 
     // 处理重置（点击首页按钮）
@@ -147,9 +152,20 @@ export function SearchPage() {
     );
 
     // 处理添加 mod
-    const handleAdd = useCallback(async (profileUrl: string) => {
+    const handleAdd = useCallback(async (item: SearchResultItem) => {
         try {
-            await openWindow(AddModType.ONLINE, 0, profileUrl);
+            if (item.source === SearchSource.NEXUSMODS) {
+                const parsed = NexusModsApi.parseModLinks(item.profileUrl);
+                if (!parsed) {
+                    message.error(t('Invalid Mod Link'));
+                    return;
+                }
+                const addModUrl = await captureNexusDownloadUrl(item.profileUrl, { parsed });
+                await openWindow(AddModType.ONLINE, 0, addModUrl);
+                return;
+            }
+
+            await openWindow(AddModType.ONLINE, 0, item.profileUrl);
         } catch (error) {
             console.error('Failed to open add mod dialog:', error);
             message.error(t('Add Mod Error'));
@@ -267,7 +283,7 @@ export function SearchPage() {
                         value={searchValue}
                         onChange={handleSearchInputChange}
                         onSearch={handleSearch}
-                        disabled={isLoading}
+                        loading={isLoading}
                         allowClear
                         style={{flex: 1}}
                     />

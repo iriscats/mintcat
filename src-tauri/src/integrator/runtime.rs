@@ -1,5 +1,6 @@
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::fs;
+use std::io::{Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::ptr;
 
@@ -171,7 +172,7 @@ pub async fn install_integrator_runtime_from_manifest(
     let version_dir = versions_dir(&app)?.join(&manifest.version);
     fs::create_dir_all(&version_dir).map_err(|e| e.to_string())?;
     let runtime_path = version_dir.join(runtime_file_name());
-    fs::write(&runtime_path, bytes).map_err(|e| e.to_string())?;
+    install_runtime_payload(&bytes, &runtime_path).map_err(|e| format!("{:#}", e))?;
 
     unsafe {
         validate_abi(&runtime_path).map_err(|e| format!("{:#}", e))?;
@@ -544,6 +545,79 @@ fn validate_compatibility(manifest: &IntegratorRuntimeManifest) -> Result<(), St
         }
     }
     Ok(())
+}
+
+fn install_runtime_payload(bytes: &[u8], runtime_path: &Path) -> Result<()> {
+    if is_zip_payload(bytes) {
+        extract_runtime_from_zip(bytes, runtime_path)?;
+        return Ok(());
+    }
+    fs::write(runtime_path, bytes).context("failed to write integrator runtime")?;
+    Ok(())
+}
+
+fn is_zip_payload(bytes: &[u8]) -> bool {
+    bytes.starts_with(b"PK\x03\x04")
+        || bytes.starts_with(b"PK\x05\x06")
+        || bytes.starts_with(b"PK\x07\x08")
+}
+
+fn extract_runtime_from_zip(bytes: &[u8], runtime_path: &Path) -> Result<()> {
+    let mut archive =
+        zip::ZipArchive::new(Cursor::new(bytes)).context("invalid integrator runtime zip")?;
+    let Some(index) = find_runtime_zip_entry(&mut archive) else {
+        anyhow::bail!("integrator runtime library not found in zip");
+    };
+    let mut file = archive
+        .by_index(index)
+        .context("failed to read integrator runtime from zip")?;
+    let mut library = Vec::new();
+    file.read_to_end(&mut library)
+        .context("failed to extract integrator runtime from zip")?;
+    fs::write(runtime_path, library).context("failed to write integrator runtime library")?;
+    Ok(())
+}
+
+fn find_runtime_zip_entry<R: Read + Seek>(archive: &mut zip::ZipArchive<R>) -> Option<usize> {
+    let expected = runtime_file_name();
+    let mut fallback = None;
+    for index in 0..archive.len() {
+        let Ok(file) = archive.by_index(index) else {
+            continue;
+        };
+        if file.is_dir() {
+            continue;
+        }
+        let Some(path) = file.enclosed_name() else {
+            continue;
+        };
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if name.eq_ignore_ascii_case(expected) {
+            return Some(index);
+        }
+        if fallback.is_none() && looks_like_runtime_file(name) {
+            fallback = Some(index);
+        }
+    }
+    fallback
+}
+
+fn looks_like_runtime_file(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    #[cfg(target_os = "windows")]
+    {
+        normalized.starts_with("mintcat_integrator") && normalized.ends_with(".dll")
+    }
+    #[cfg(target_os = "macos")]
+    {
+        normalized.starts_with("libmintcat_integrator") && normalized.ends_with(".dylib")
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        normalized.starts_with("libmintcat_integrator") && normalized.ends_with(".so")
+    }
 }
 
 fn cmp_version(left: &str, right: &str) -> std::cmp::Ordering {

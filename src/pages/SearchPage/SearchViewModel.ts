@@ -8,6 +8,7 @@ import {
 import {CacheApi} from '@/apis/CacheApi';
 import {TranslateApi} from '@/apis/TranslateApi';
 import {StorageAPI} from '@/storage';
+import {NEXUSMODS_DRG_DOMAIN, NEXUSMODS_ROGUE_CORE_DOMAIN} from '@/apis/nexusmods';
 
 /**
  * 搜索状态
@@ -65,6 +66,7 @@ export class SearchViewModel {
     private state: SearchState;
     private listeners: Set<(state: SearchState) => void> = new Set();
     private abortController: AbortController | null = null;
+    private requestSequence = 0;
     private imageLoadingQueue: Map<string, Promise<string | undefined>> = new Map();
 
     constructor() {
@@ -95,8 +97,17 @@ export class SearchViewModel {
         return undefined;
     }
 
+    private async getNexusmodsDomainForCurrentGame(): Promise<string | undefined> {
+        const gameDAO = await StorageAPI.getGames();
+        const activeGame = await gameDAO.getActiveGame();
+        const name = activeGame?.name?.toLowerCase();
+        if (name === 'drg') return NEXUSMODS_DRG_DOMAIN;
+        if (name === 'rc') return NEXUSMODS_ROGUE_CORE_DOMAIN;
+        return undefined;
+    }
+
     /**
-     * 根据当前游戏得到可用搜索源：DRG 支持 mod.io(2475) + ModCat(drg)，RC 仅支持 ModCat(drgrc)
+     * 根据当前游戏得到可用搜索源：DRG 支持 mod.io + ModCat + Nexus Mods，RC 支持 ModCat + Nexus 跳转入口
      */
     private async getAvailableSourcesForCurrentGame(): Promise<SearchSource[]> {
         const registry = SearchProviderRegistry.getInstance();
@@ -106,10 +117,10 @@ export class SearchViewModel {
         const gameName = activeGame?.name?.toLowerCase();
 
         if (gameName === 'rc') {
-            return allSources.filter((s) => s === SearchSource.MODCAT);
+            return [SearchSource.NEXUSMODS, SearchSource.MODCAT].filter((s) => allSources.includes(s));
         }
         if (gameName === 'drg') {
-            return allSources.filter((s) => s === SearchSource.MODIO || s === SearchSource.MODCAT);
+            return allSources.filter((s) => s === SearchSource.MODIO || s === SearchSource.MODCAT || s === SearchSource.NEXUSMODS);
         }
         return allSources;
     }
@@ -205,6 +216,7 @@ export class SearchViewModel {
     public async search(query: string): Promise<void> {
         this.cancelCurrentRequest();
         this.abortController = new AbortController();
+        const requestId = ++this.requestSequence;
 
         this.setState({
             loading: true,
@@ -221,11 +233,13 @@ export class SearchViewModel {
             }
 
             const modcatGameId = await this.getModcatGameIdForCurrentGame();
+            const nexusmodsGameDomain = await this.getNexusmodsDomainForCurrentGame();
             const params: SearchParams = {
                 query,
                 page: 0,
                 pageSize: this.state.pageSize,
                 modcatGameId,
+                nexusmodsGameDomain,
                 sortBy: this.state.sortBy,
                 sortOrder: this.state.sortOrder,
             };
@@ -233,7 +247,7 @@ export class SearchViewModel {
             const result = await provider.search(params);
 
             // 检查请求是否被取消
-            if (this.abortController?.signal.aborted) return;
+            if (this.isRequestStale(requestId)) return;
 
             this.setState({
                 items: result.items,
@@ -244,7 +258,7 @@ export class SearchViewModel {
             // 异步加载图片缓存
             this.loadImagesAsync(result.items);
         } catch (error) {
-            if (this.abortController?.signal.aborted) return;
+            if (this.isRequestStale(requestId)) return;
 
             this.setState({
                 loading: false,
@@ -267,6 +281,7 @@ export class SearchViewModel {
         if (this.state.loading || !this.state.hasMore) return;
 
         const nextPage = this.state.page + 1;
+        const requestId = this.requestSequence;
         this.setState({loading: true});
 
         try {
@@ -276,16 +291,19 @@ export class SearchViewModel {
             }
 
             const modcatGameId = await this.getModcatGameIdForCurrentGame();
+            const nexusmodsGameDomain = await this.getNexusmodsDomainForCurrentGame();
             const params: SearchParams = {
                 query: this.state.query,
                 page: nextPage,
                 pageSize: this.state.pageSize,
                 modcatGameId,
+                nexusmodsGameDomain,
                 sortBy: this.state.sortBy,
                 sortOrder: this.state.sortOrder,
             };
 
             const result = await provider.search(params);
+            if (this.isRequestStale(requestId)) return;
 
             this.setState({
                 items: [...this.state.items, ...result.items],
@@ -297,6 +315,8 @@ export class SearchViewModel {
             // 异步加载图片缓存
             this.loadImagesAsync(result.items);
         } catch (error) {
+            if (this.isRequestStale(requestId)) return;
+
             this.setState({
                 loading: false,
                 error: String(error),
@@ -344,10 +364,15 @@ export class SearchViewModel {
      * 取消当前请求
      */
     private cancelCurrentRequest(): void {
+        this.requestSequence += 1;
         if (this.abortController) {
             this.abortController.abort();
             this.abortController = null;
         }
+    }
+
+    private isRequestStale(requestId: number): boolean {
+        return requestId !== this.requestSequence || !!this.abortController?.signal.aborted;
     }
 
     /**

@@ -191,7 +191,7 @@ export class CloudBackupApi {
             { backup?: CloudBackupRecord; data?: CloudBackupRecord } | CloudBackupRecord
         >(response);
         if (!data) {
-            return { ...metadata, id: "" };
+            throw new Error(i18n.t("cloudBackup.error.request_failed", { status: response.status }));
         }
         if ("backup" in data && data.backup) {
             return data.backup;

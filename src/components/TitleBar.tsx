@@ -18,8 +18,6 @@ import {StorageAPI} from "@/storage";
 import {emitEvent, emitVoidEvent, listenEvent, UnlistenFn} from "@/events";
 import { taskQueueAPI } from "tauri-plugin-task-queue";
 import UserSettingDialog from "../dialogs/UserSettingDialog/index.tsx";
-import {CacheApi} from "@/apis/CacheApi.ts";
-import {ModioApi} from "@/apis/modio";
 import { CloudBackupApi } from "@/apis/mintcat";
 import StatusBar from "./StatusBar.tsx";
 
@@ -66,20 +64,6 @@ class TitleBar extends React.Component<any, any> {
             }
         } catch (e) {
             console.error("Failed to load active game", e);
-        }
-    }
-
-    private async loadUserAvatar() {
-        try {
-            const userInfo = await ModioApi.getUserInfo();
-            if (userInfo) {
-                const avatarUrl = await CacheApi.cacheAvatar(userInfo.id, userInfo.avatar.thumb_100x100);
-                if (avatarUrl) {
-                    this.setState({ avatarUrl });
-                }
-            }
-        } catch (e) {
-            console.error("Failed to load user avatar", e);
         }
     }
 
@@ -176,7 +160,6 @@ class TitleBar extends React.Component<any, any> {
 
     async componentDidMount() {
         this.loadActiveGame();
-        this.loadUserAvatar();
         this.unlistenActiveGameChange = await listenEvent('active-game-change', (game) => {
             this.setState({ gameName: game.displayName });
         });

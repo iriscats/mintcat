@@ -20,7 +20,7 @@ import {
     stopProxyRuntime,
     type ProxyRuntimeStatus,
 } from '@/apis/proxyRuntime';
-import type {UpdateCheckManifestItem} from '@/apis/mintcat';
+import {compareVersion, type UpdateCheckManifestItem} from '@/apis/mintcat';
 import './styles.css';
 
 const LOG_LIMIT = 200;
@@ -31,21 +31,6 @@ function formatElapsed(seconds: number): string {
     const minutes = Math.floor((safeSeconds % 3600) / 60);
     const secs = safeSeconds % 60;
     return [hours, minutes, secs].map((part) => String(part).padStart(2, '0')).join(':');
-}
-
-function compareVersion(left?: string | null, right?: string | null): number {
-    const parse = (value: string | undefined | null) => (value ?? '')
-        .split(/[.-]/)
-        .map((part) => Number.parseInt(part, 10))
-        .map((part) => (Number.isFinite(part) ? part : 0));
-    const a = parse(left);
-    const b = parse(right);
-    const len = Math.max(a.length, b.length, 3);
-    for (let i = 0; i < len; i++) {
-        const diff = (a[i] ?? 0) - (b[i] ?? 0);
-        if (diff !== 0) return diff;
-    }
-    return 0;
 }
 
 export function AcceleratorPage() {

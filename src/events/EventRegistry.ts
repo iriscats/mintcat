@@ -131,6 +131,16 @@ export interface EventPayloads {
     filePath?: string;
   };
 
+  /** Nexus WebView 捕获到可交给添加流程的下载地址 */
+  'nexus-download-captured': {
+    url: string;
+    source: 'cdn' | 'nxm' | string;
+    domain: string;
+    modId: number;
+    fileId?: number;
+    profileUrl: string;
+  };
+
   // ========================================
   // Mod 更新事件
   // ========================================

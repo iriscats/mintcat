@@ -14,6 +14,7 @@ import {
     type BatchAddModResult,
 } from "@/services/HomeService.ts";
 import type {ModInfo} from "@/apis/modio/ModInfo.ts";
+import {NexusModsApi, showNexusModsApiKeyRequiredMessage} from "@/apis/nexusmods";
 
 /**
  * HomeViewModel handles mod operations and business logic
@@ -32,6 +33,10 @@ export class HomeViewModel extends BaseViewModel {
             return await this.homeService.addModFromUrl(url, groupId);
         } catch (error) {
             console.error('Failed to add mod from URL:', error);
+            if (NexusModsApi.isAuthenticationRequiredError(error)) {
+                showNexusModsApiKeyRequiredMessage();
+                return { status: "invalid" };
+            }
             message.error(t("error.addModToDatabase"));
             return { status: "invalid" };
         }

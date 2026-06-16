@@ -44,6 +44,7 @@ export function MintCatSettings() {
     const [ue4ss, setUe4ss] = React.useState<Ue4ssSetting>(UE4SS_SETTING_ENABLED);
     const [releaseChannel, setReleaseChannel] = React.useState<ReleaseChannel>(DEFAULT_RELEASE_CHANNEL);
     const [clipboardMonitor, setClipboardMonitor] = React.useState<boolean>(true);
+    const [compressModPak, setCompressModPak] = React.useState<boolean>(false);
 
     const releaseChannelOptions = RELEASE_CHANNELS.map((value) => ({
         value,
@@ -143,6 +144,12 @@ export function MintCatSettings() {
         }
     }
 
+    const onCompressModPakChange = async (checked: boolean) => {
+        setCompressModPak(checked);
+        const settings = await StorageAPI.getSettings();
+        await settings.setIntegratorCompressModPak(checked);
+    }
+
     const onDevToolsClick = async () => {
         await IntegrateApi.openDevTools();
     }
@@ -184,6 +191,7 @@ export function MintCatSettings() {
         setUe4ss(normalizeUe4ssSetting(ue4ssValue));
         setReleaseChannel(await settings.getReleaseChannel());
         setClipboardMonitor(await settings.getClipboardMonitorEnabled());
+        setCompressModPak(await settings.getIntegratorCompressModPak());
     }, []);
 
     React.useEffect(() => {
@@ -287,6 +295,11 @@ export function MintCatSettings() {
                                         label: t("Disable"),
                                     },
                                 ]}/>
+                    </Form.Item>
+                    <Form.Item label={t("Compress Mod Pak")}>
+                        <Switch checked={compressModPak}
+                                onChange={onCompressModPakChange}
+                        />
                     </Form.Item>
                     <Form.Item label={t("Dev Tools")}>
                         <Button type="dashed"

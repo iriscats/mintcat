@@ -5,6 +5,7 @@ import { StorageAPI } from '@/storage';
 import { TimeUtils } from '@/utils/TimeUtils';
 import { ModioApi } from '@/apis/modio';
 import { ModcatApi, MODCAT_PLATFORM } from '@/apis/modcat';
+import { NexusModsApi, NEXUSMODS_PLATFORM } from '@/apis/nexusmods';
 import type { ModcatModVersionEntity } from '@/apis/modcat/types';
 import { ModSourceType } from '@/models/mod/types';
 import { t } from 'i18next';
@@ -99,8 +100,9 @@ export class CheckModUpdateTask implements ITask {
         // 分类 mod
         const modioMods = allMods.filter(m => m.sourceType === ModSourceType.Modio);
         const modcatMods = allMods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
+        const nexusMods = allMods.filter(m => m.sourceType === NEXUSMODS_PLATFORM);
 
-        if (modioMods.length === 0 && modcatMods.length === 0) {
+        if (modioMods.length === 0 && modcatMods.length === 0 && nexusMods.length === 0) {
             await context.setMessage(t('No mods to check'));
             await context.updateProgress(100);
             return;
@@ -221,6 +223,36 @@ export class CheckModUpdateTask implements ITask {
                     }
                 }
                 // 若批量结果中无该 mod 的新版本，不修改状态（表示自 Since 以来无新版本）
+            }
+        }
+
+        if (nexusMods.length > 0) {
+            await context.setMessage(`Checking Nexus Mods... (${nexusMods.length} ${t('mods')})`);
+            for (const mod of nexusMods) {
+                if (context.checkCancelled()) {
+                    throw new Error('Task cancelled');
+                }
+                try {
+                    const resolved = await NexusModsApi.refreshResolvedMod(mod);
+                    if (!resolved) {
+                        await modsApi.upsertModStatus({ modId: mod.modId!, isOnlineAvailable: false });
+                        await emitModTreeUpdate(mod.modId!);
+                        continue;
+                    }
+                    const onlineUpdateDate = resolved.file?.uploaded_timestamp
+                        ? resolved.file.uploaded_timestamp * 1000
+                        : resolved.mod.updated_time
+                          ? resolved.mod.updated_time * 1000
+                          : TimeUtils.now();
+                    await modsApi.upsertModStatus({
+                        modId: mod.modId!,
+                        onlineUpdateDate,
+                        isOnlineAvailable: true
+                    });
+                    await emitModTreeUpdate(mod.modId!);
+                } catch (error) {
+                    console.warn('[CheckModUpdateTask] Nexus Mods update check failed:', mod.displayName, error);
+                }
             }
         }
 

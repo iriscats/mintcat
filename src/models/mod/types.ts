@@ -10,6 +10,7 @@
 export enum ModSourceType {
     Local = "Local",
     Modio = "Modio",
+    Nexusmods = "nexusmods",
     Unknown = "Unknown"
 }
 

@@ -5,7 +5,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { IntegrateApi } from "@/apis/IntegrateApi.ts";
 import { ModUpdateService } from "@/services/ModUpdateService.ts";
 import { exists } from "@tauri-apps/plugin-fs";
-import { emitEvent, emitVoidEvent } from "@/events";
+import { emitEvent } from "@/events";
 import { DeviceApi } from "@/apis/DeviceApi.ts";
 import { BaseViewModel } from "@/core/BaseViewModel";
 import { AppService } from "@/services/AppService.ts";
@@ -107,7 +107,6 @@ export class AppViewModel extends BaseViewModel {
         //await IntegrateApi.checkGamePath();
         await this.saveAppVersion();
 
-        await emitVoidEvent("title-bar-load-avatar");
         // 首次启动引导（配置导入→游戏选择→用户设置）由 App 根据 getOnboardingCompleted() 统一触发
 
         this.initialized = true;

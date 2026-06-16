@@ -19,6 +19,7 @@ pub fn install_mods(
     ue4ss_zip_path: Option<String>,
     drg_zip_path: Option<String>,
     rc_zip_path: Option<String>,
+    compress_mod_pak: Option<bool>,
 ) {
     std::thread::spawn(move || {
         let progress = TauriInstallProgress::new(app.clone());
@@ -38,6 +39,7 @@ pub fn install_mods(
             ue4ss_zip_path,
             drg_zip_path,
             rc_zip_path,
+            compress_mod_pak.unwrap_or(false),
         );
         if let Err(e) = install_mods_with_runtime(&app, &progress, request) {
             let error_msg = format!("{:#}", e);

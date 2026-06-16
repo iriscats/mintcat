@@ -12,23 +12,15 @@ import {
     type MintcatProxyMode,
 } from '@/services/network';
 import {
-    getMintcatApiOriginLanguageFallback,
-    getMintcatOriginByPresetId,
-    getMintcatOriginLabelKey,
-    isMintcatApiOriginId,
-    MINTCAT_API_ORIGINS,
-    normalizeMintcatApiOrigin,
-    setMintcatApiResolvedOrigin,
-} from '@/apis/mintcat/urls';
-import {
-    NETWORK_SERVER_AUTO_ORIGIN_KEY,
+    getMintcatReleaseOriginLabelKey,
+    isMintcatReleaseOriginId,
+    MINTCAT_RELEASE_ORIGINS,
     NETWORK_SERVER_MODE_KEY,
     type MintcatServerMode,
-    probeOrigin,
     type ProbeResult,
-    probeAllOrigins,
-    refreshAutoMintcatApiRoutingInBackground,
-} from '@/apis/mintcat/routing';
+    probeAllUpdateManifests,
+    applyMintcatApiRoutingFromSettings,
+} from '@/apis/mintcat';
 
 const { Text } = Typography;
 
@@ -36,7 +28,7 @@ const { Text } = Typography;
 type ServerModeUi = Exclude<MintcatServerMode, 'custom'>;
 
 function probeResultLabel(key: ProbeResult['key']): string {
-    return key === 'unknown' ? key : t(getMintcatOriginLabelKey(key));
+    return key === 'unknown' ? key : t(getMintcatReleaseOriginLabelKey(key));
 }
 
 function formatProbeError(err?: string): string {
@@ -58,22 +50,11 @@ export function NetworkSettings() {
 
     const applyRuntimeForMode = React.useCallback(async (mode: ServerModeUi) => {
         const settings = await StorageAPI.getSettings();
-        if (mode !== 'auto') {
-            setMintcatApiResolvedOrigin(getMintcatOriginByPresetId(mode));
-            return;
-        }
-        const cached = (await settings.getValue(NETWORK_SERVER_AUTO_ORIGIN_KEY))?.trim() ?? '';
-        if (cached) {
-            const normalizedCached = normalizeMintcatApiOrigin(cached);
-            const probe = await probeOrigin(normalizedCached, 1500);
-            if (probe.ok) {
-                setMintcatApiResolvedOrigin(normalizedCached);
-                void refreshAutoMintcatApiRoutingInBackground();
-                return;
-            }
-        }
-        setMintcatApiResolvedOrigin(getMintcatApiOriginLanguageFallback());
-        void refreshAutoMintcatApiRoutingInBackground();
+        await settings.setValue(NETWORK_SERVER_MODE_KEY, mode);
+        await applyMintcatApiRoutingFromSettings({
+            cachedProbeTimeoutMs: 1500,
+            logPrefix: '[NetworkSettings]',
+        });
     }, []);
 
     const fetchSettings = React.useCallback(async () => {
@@ -84,7 +65,7 @@ export function NetworkSettings() {
             await settings.setValue(NETWORK_SERVER_MODE_KEY, 'auto');
             mode = 'auto';
         }
-        const uiMode: ServerModeUi = mode === 'auto' ? 'auto' : isMintcatApiOriginId(mode) ? mode : 'auto';
+        const uiMode: ServerModeUi = mode === 'auto' ? 'auto' : isMintcatReleaseOriginId(mode) ? mode : 'auto';
         setServerMode(uiMode);
         setNetworkProxy(await settings.getNetworkProxy());
         setMintcatProxyMode(await settings.getMintcatProxyMode());
@@ -101,8 +82,6 @@ export function NetworkSettings() {
     const onServerModeChange = async (e: any) => {
         const mode = e.target.value as ServerModeUi;
         setServerMode(mode);
-        const settings = await StorageAPI.getSettings();
-        await settings.setValue(NETWORK_SERVER_MODE_KEY, mode);
         try {
             await applyRuntimeForMode(mode);
             message.success(t('Server changed'));
@@ -132,7 +111,7 @@ export function NetworkSettings() {
         setProbing(true);
         setProbeResults([]);
         try {
-            const results = await probeAllOrigins();
+            const results = await probeAllUpdateManifests();
             setProbeResults(results);
         } catch (e) {
             console.error('[NetworkSettings] Probe failed', e);
@@ -145,11 +124,11 @@ export function NetworkSettings() {
     return (
         <Card title={t('Network Settings')} style={{ marginBottom: '10px' }}>
             <Form {...SettingLayout}>
-                <Form.Item label={t('API Server')}>
+                <Form.Item label={t('Release Resource Server')}>
                     <Radio.Group onChange={onServerModeChange} value={serverMode}>
                         <Space orientation="vertical">
                             <Radio value="auto">{t('Auto Select')}</Radio>
-                            {MINTCAT_API_ORIGINS.map((origin) => (
+                            {MINTCAT_RELEASE_ORIGINS.map((origin) => (
                                 <Radio key={origin.id} value={origin.id}>
                                     {t(origin.labelKey)}
                                 </Radio>

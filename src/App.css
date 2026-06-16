@@ -370,6 +370,30 @@ body::before {
     margin: 0;
 }
 
+.user-settings-tabs .ant-tabs-nav {
+    margin-bottom: 12px;
+}
+
+.user-settings-tab-pane {
+    min-height: 104px;
+}
+
+.user-settings-config-title {
+    font-size: 15px;
+}
+
+.user-settings-link {
+    padding-inline: 0;
+}
+
+.user-settings-input-icon {
+    color: rgba(0,0,0,0.25);
+}
+
+.user-settings-desc {
+    font-size: 12px;
+}
+
 .user-settings-section-title {
     font-size: 15px;
 }

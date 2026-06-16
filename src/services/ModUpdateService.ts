@@ -3,6 +3,8 @@ import { exists, stat, remove } from "@tauri-apps/plugin-fs";
 import { emitEvent } from "@/events";
 import { ModioApi } from "@/apis/modio";
 import { ModcatApi, MODCAT_PLATFORM } from "@/apis/modcat";
+import { NexusModsApi, NEXUSMODS_PLATFORM, NexusModsDownloadRequiresVisitError } from "@/apis/nexusmods";
+import { captureNexusDownloadUrl } from "@/apis/nexusmods/downloadWebview";
 import { ModSourceType } from "@/models/mod/types";
 import { TimeUtils } from "@/utils/TimeUtils.ts";
 import { StorageAPI } from "@/storage";
@@ -31,7 +33,8 @@ export class ModUpdateService {
     public static isOnlineMod(mod: CompleteModData): boolean {
         return mod.sourceType === ModSourceType.Modio ||
             mod.sourceType === MODCAT_PLATFORM ||
-            mod.sourceType === "modcat";
+            mod.sourceType === "modcat" ||
+            mod.sourceType === NEXUSMODS_PLATFORM;
     }
 
     public static async needsOnlineModDownload(mod: CompleteModData): Promise<boolean> {
@@ -227,7 +230,8 @@ export class ModUpdateService {
         // 安装前先刷新元数据（获取最新下载链接）；Modio 批量拉取，ModCat 逐个
         const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
         const modcatMods = mods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
-        const otherMods = mods.filter(m => !modioMods.includes(m) && !modcatMods.includes(m));
+        const nexusMods = mods.filter(m => m.sourceType === NEXUSMODS_PLATFORM);
+        const otherMods = mods.filter(m => !modioMods.includes(m) && !modcatMods.includes(m) && !nexusMods.includes(m));
         const modsToDownload: CompleteModData[] = [];
 
         if (modioMods.length > 0) {
@@ -238,6 +242,11 @@ export class ModUpdateService {
             modsToDownload.push(...refreshedMods);
         }
         for (const mod of modcatMods) {
+            await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
+            const refreshed = await this.updateModMetadataOnly(mod);
+            modsToDownload.push(refreshed ?? mod);
+        }
+        for (const mod of nexusMods) {
             await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
             const refreshed = await this.updateModMetadataOnly(mod);
             modsToDownload.push(refreshed ?? mod);
@@ -384,6 +393,11 @@ export class ModUpdateService {
             const modsApi = await StorageAPI.getMods();
             return modsApi.getCompleteModData(mod.modId!);
         }
+        if (mod.sourceType === NEXUSMODS_PLATFORM) {
+            await this.updateNexusmodsMetadataOnly(mod);
+            const modsApi = await StorageAPI.getMods();
+            return modsApi.getCompleteModData(mod.modId!);
+        }
         const resp = await ModioApi.getModInfoByLink(mod.url || "");
         if (!resp) {
             const modsApi = await StorageAPI.getMods();
@@ -417,7 +431,8 @@ export class ModUpdateService {
     ): Promise<{ successCount: number; errors: Array<{ mod: CompleteModData; error: Error }> }> {
         const modioMods = mods.filter(m => m.sourceType === ModSourceType.Modio);
         const modcatMods = mods.filter(m => m.sourceType === MODCAT_PLATFORM || m.sourceType === "modcat");
-        const totalOnlineCount = modioMods.length + modcatMods.length;
+        const nexusMods = mods.filter(m => m.sourceType === NEXUSMODS_PLATFORM);
+        const totalOnlineCount = modioMods.length + modcatMods.length + nexusMods.length;
         if (totalOnlineCount === 0) {
             return { successCount: 0, errors: [] };
         }
@@ -441,6 +456,21 @@ export class ModUpdateService {
         if (modcatMods.length > 0) {
             const { errors } = await asyncPoolAll(
                 modcatMods,
+                async (mod) => {
+                    if (showStatus) {
+                        await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
+                    }
+                    await this.updateModMetadataOnly(mod);
+                    return mod;
+                },
+                concurrency
+            );
+            collectedErrors.push(...errors.map(e => ({ mod: e.item, error: e.error })));
+        }
+
+        if (nexusMods.length > 0) {
+            const { errors } = await asyncPoolAll(
+                nexusMods,
                 async (mod) => {
                     if (showStatus) {
                         await StatusBar.info(t("Batch updating mod info", { name: mod.displayName }));
@@ -513,17 +543,94 @@ export class ModUpdateService {
         }
     }
 
+    private static async updateNexusmodsMetadataOnly(mod: CompleteModData): Promise<void> {
+        const modsApi = await StorageAPI.getMods();
+        const resolved = await NexusModsApi.refreshResolvedMod(mod);
+        if (!resolved) {
+            await modsApi.upsertModStatus({ modId: mod.modId!, isOnlineAvailable: false });
+            return;
+        }
+
+        const dto = ModMapper.fromNexusmodsResponse(resolved);
+        await modsApi.updateMod(mod.modId!, {
+            platformId: dto.platformId,
+            nameId: dto.nameId,
+            displayName: dto.displayName || mod.displayName,
+            originalName: dto.originalName || mod.originalName,
+            url: dto.url,
+            sourceType: dto.sourceType,
+            tags: dto.tags,
+            approvalStatus: dto.approvalStatus,
+        });
+
+        if (dto.version) {
+            await modsApi.upsertModVersion({ ...dto.version, modId: mod.modId! });
+        }
+        if (dto.download) {
+            const existingDownload = mod.download;
+            const nextVersion = dto.version?.currentVersion || mod.version?.currentVersion || "";
+            const currentVersion = mod.version?.currentVersion || "";
+            const versionChanged = !!currentVersion && !!nextVersion && currentVersion !== nextVersion;
+            const fileSizeChanged = !!existingDownload?.fileSize
+                && !!dto.download.fileSize
+                && existingDownload.fileSize !== dto.download.fileSize;
+            const keepCachedFile = !versionChanged && !fileSizeChanged && !!existingDownload?.cachePath;
+            const downloadUrl = NexusModsApi.hasReusableDownloadCredential(existingDownload?.downloadUrl)
+                ? existingDownload?.downloadUrl
+                : dto.download.downloadUrl;
+
+            await modsApi.upsertModDownload({
+                ...dto.download,
+                modId: mod.modId!,
+                downloadUrl,
+                cachePath: keepCachedFile ? existingDownload?.cachePath : dto.download.cachePath,
+                downloadProgress: keepCachedFile ? existingDownload?.downloadProgress : dto.download.downloadProgress,
+                downloadStatus: keepCachedFile ? existingDownload?.downloadStatus : dto.download.downloadStatus,
+            });
+        }
+        if (dto.status) {
+            await modsApi.upsertModStatus({
+                modId: mod.modId!,
+                onlineUpdateDate: dto.status.onlineUpdateDate,
+                isOnlineAvailable: dto.status.isOnlineAvailable,
+            });
+        }
+    }
+
     /**
      * 更新模组文件（下载）
-     * 支持 Modio 和 ModCat 两种在线来源
+     * 支持 Modio、ModCat 和 Nexus Mods 在线来源
      */
     public static async updateModFile(mod: CompleteModData) {
         let cachePath = "";
+        const modsApi = await StorageAPI.getMods();
+
+        if (mod.modId) {
+            if (mod.version?.currentVersion) {
+                const existingVersion = await modsApi.getModVersion(mod.modId);
+                await modsApi.upsertModVersion({
+                    modId: mod.modId,
+                    currentVersion: mod.version.currentVersion,
+                    availableVersions: mod.version.availableVersions || existingVersion?.availableVersions || []
+                });
+            }
+            if (mod.download) {
+                await modsApi.upsertModDownload({
+                    modId: mod.modId,
+                    downloadUrl: mod.download.downloadUrl,
+                    fileSize: mod.download.fileSize,
+                    downloadProgress: mod.download.downloadProgress,
+                    downloadStatus: mod.download.downloadStatus,
+                });
+            }
+        }
         
         // 根据 sourceType 选择不同的下载方式
         if (mod.sourceType === MODCAT_PLATFORM || mod.sourceType === "modcat") {
             // ModCat 类型的 mod
             cachePath = await this.downloadModcatFile(mod);
+        } else if (mod.sourceType === NEXUSMODS_PLATFORM) {
+            cachePath = await this.downloadNexusmodsFile(mod);
         } else {
             // Modio 类型的 mod (默认)
             const newItem = await ModioApi.downloadModFile(mod, async (loaded: number, total: number) => {
@@ -541,7 +648,6 @@ export class ModUpdateService {
         }
 
         // Update download information in database (cachePath, progress, status)
-        const modsApi = await StorageAPI.getMods();
         await modsApi.upsertModDownload({
             modId: mod.modId!,
             cachePath: cachePath,
@@ -610,9 +716,79 @@ export class ModUpdateService {
         return result.cachePath || "";
     }
 
+    private static async downloadNexusmodsFile(mod: CompleteModData): Promise<string> {
+        const download = async (target: CompleteModData) => {
+            return await NexusModsApi.downloadModFile(target, async (loaded: number, total: number) => {
+                await this.emitDownloadProgress(target, loaded, total);
+            });
+        };
+
+        try {
+            const result = await download(mod);
+            return result.download?.cachePath || "";
+        } catch (error) {
+            if (error instanceof NexusModsDownloadRequiresVisitError) {
+                await StatusBar.info(t("nexusmods.downloadRequiresVisit"));
+                const capturedUrl = await this.captureNexusmodsDownloadUrlForRetry(mod, error);
+                const retryMod = await this.persistNexusmodsCapturedDownloadUrl(mod, capturedUrl);
+                const result = await download(retryMod);
+                return result.download?.cachePath || "";
+            }
+            throw error;
+        }
+    }
+
+    private static async captureNexusmodsDownloadUrlForRetry(
+        mod: CompleteModData,
+        error: NexusModsDownloadRequiresVisitError
+    ): Promise<string> {
+        const credentialUrl = mod.download?.downloadUrl || "";
+        const parsedCredential = NexusModsApi.parseModLinks(credentialUrl);
+        const captureUrl = parsedCredential
+            ? credentialUrl
+            : (error.fallbackUrl || mod.url || "");
+
+        if (!captureUrl) {
+            throw error;
+        }
+
+        return await captureNexusDownloadUrl(captureUrl);
+    }
+
+    private static async persistNexusmodsCapturedDownloadUrl(
+        mod: CompleteModData,
+        downloadUrl: string
+    ): Promise<CompleteModData> {
+        const modsApi = await StorageAPI.getMods();
+        await modsApi.upsertModDownload({
+            modId: mod.modId!,
+            downloadUrl,
+            downloadStatus: "pending",
+            downloadProgress: 0,
+        });
+
+        const refreshed = await modsApi.getCompleteModData(mod.modId!);
+        return refreshed ?? {
+            ...mod,
+            download: {
+                ...(mod.download ?? {
+                    modId: mod.modId!,
+                    downloadUrl: "",
+                    cachePath: "",
+                    downloadProgress: 0,
+                    fileSize: 0,
+                    downloadStatus: "pending",
+                }),
+                downloadUrl,
+                downloadStatus: "pending",
+                downloadProgress: 0,
+            },
+        };
+    }
+
     /**
      * 检查在线模组并更新
-     * 支持 Modio 和 ModCat 两种在线来源
+     * 支持 Modio、ModCat 和 Nexus Mods 在线来源
      */
     public static async checkOnlineModAndUpdate(modItem: CompleteModData, isEnabled: boolean) {
         if (!isEnabled || !this.isOnlineMod(modItem)) {

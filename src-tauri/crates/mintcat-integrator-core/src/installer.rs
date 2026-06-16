@@ -22,7 +22,7 @@ pub fn install_mods_with_progress(
 
     match request.game_kind {
         GameKind::RogueCore => {
-            let integrator = RcPakIntegrator::new(&request.game_path)
+            let integrator = RcPakIntegrator::new(&request.game_path, request.compress_mod_pak)
                 .context("Failed to initialize RC integrator")?;
             integrator.install(
                 progress,
@@ -33,7 +33,7 @@ pub fn install_mods_with_progress(
             )?;
         }
         GameKind::Drg => {
-            let integrator = PakIntegrator::new(&request.game_path)
+            let integrator = PakIntegrator::new(&request.game_path, request.compress_mod_pak)
                 .context("Failed to initialize integrator")?;
             integrator.install(
                 progress,

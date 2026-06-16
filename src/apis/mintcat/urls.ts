@@ -1,10 +1,11 @@
 /**
  * MintCat 后端 API 的源站、代理与服务路由约定（单处维护）。
- * 解析后的线路由设置页 / AppInitializer 写入 resolvedOrigin；未初始化前回退到语言启发式。
+ *
+ * 注意：这里维护的是 mintcat 服务端接口源站（云备份、VIP、反代等）。
+ * release/update.json 与资源下载节点维护在 release.ts。
  */
-import i18n from '@/locales/i18n';
 
-type MintcatProxyPresetId = 'zh' | 'global';
+type MintcatProxyPresetId = 'global';
 type MintcatApiOriginPreset = {
     id: string;
     origin: string;
@@ -12,18 +13,16 @@ type MintcatApiOriginPreset = {
     proxyPresetId: MintcatProxyPresetId;
 };
 
-/** 内置 API 节点（顺序即设置页展示顺序） */
+// ---------------------------------------------------------------------------
+// 后端 API 源站
+// ---------------------------------------------------------------------------
+
+/** 内置后端 API 节点（不要放 release/update.json OSS 节点） */
 export const MINTCAT_API_ORIGINS = [
-    {
-        id: 'zh',
-        origin: 'https://api.v1st.net',
-        labelKey: 'China Mainland Node',
-        proxyPresetId: 'zh',
-    },
     {
         id: 'global',
         origin: 'https://api.mintcat.work',
-        labelKey: 'International Node',
+        labelKey: 'MintCat API Global Node',
         proxyPresetId: 'global',
     },
 ] as const satisfies readonly MintcatApiOriginPreset[];
@@ -34,6 +33,10 @@ let resolvedOrigin: string | null = null;
 
 const MINTCAT_PROXY_PATH = '/proxy';
 
+// ---------------------------------------------------------------------------
+// 运行时 API 源站解析
+// ---------------------------------------------------------------------------
+
 export function setMintcatApiResolvedOrigin(origin: string | null): void {
     resolvedOrigin = origin ? normalizeMintcatApiOrigin(origin) : null;
 }
@@ -42,24 +45,30 @@ export function getMintcatApiResolvedOrigin(): string | null {
     return resolvedOrigin;
 }
 
-/** 与历史行为一致：中文界面优先 v1st，否则 mintcat.work */
+/** 默认统一使用 api.mintcat.work */
+export function getDefaultMintcatApiOrigin(): string {
+    return getMintcatOriginByPresetId('global');
+}
+
+/** @deprecated Use getDefaultMintcatApiOrigin. */
 export function getMintcatApiOriginLanguageFallback(): string {
-    return i18n.language?.startsWith('zh')
-        ? getMintcatOriginByPresetId('zh')
-        : getMintcatOriginByPresetId('global');
+    return getDefaultMintcatApiOrigin();
 }
 
 export function getMintcatApiOrigin(): string {
     if (resolvedOrigin) {
         return resolvedOrigin;
     }
-    return getMintcatApiOriginLanguageFallback();
+    return getDefaultMintcatApiOrigin();
 }
+
+// ---------------------------------------------------------------------------
+// MintCat /proxy URL
+// ---------------------------------------------------------------------------
 
 /**
  * 代理下载统一走固定 `/proxy` 路径：
- * - 大陆节点统一复用 `zh` 的 `/proxy`
- * - 国际节点复用 `global` 的 `/proxy`
+ * - 内置节点统一复用 `global` 的 `/proxy`
  *
  * 其他非常规源站仍回退为当前源站下的 `/proxy`。
  */
@@ -117,9 +126,6 @@ export const MintCatApiPaths = {
         byId: (backupId: string) => `/v1/backups/${backupId}`,
         download: (backupId: string) => `/v1/backups/${backupId}/download`,
     },
-    releases: {
-        checkUpdate: '/releases/check-update',
-    },
 } as const;
 
 /**
@@ -148,35 +154,7 @@ export const MintCatApiUrls = {
             return mintcatApiUrl(origin, MintCatApiPaths.cloudBackup.download(backupId));
         },
     },
-    releases: {
-        checkUpdate(origin: string = getMintcatApiOrigin()): string {
-            return mintcatApiUrl(origin, MintCatApiPaths.releases.checkUpdate);
-        },
-        download(
-            version: string,
-            appType: string,
-            platform: string,
-            channel: string,
-            origin: string = getMintcatApiOrigin(),
-        ): string {
-            const params = new URLSearchParams({ appType, platform, channel });
-            return mintcatApiUrl(
-                origin,
-                `/releases/${encodeURIComponent(version)}/download?${params.toString()}`,
-            );
-        },
-    },
 } as const;
-
-export function mintcatReleaseDownloadUrl(
-    origin: string,
-    version: string,
-    appType: string,
-    platform: string,
-    channel: string,
-): string {
-    return MintCatApiUrls.releases.download(version, appType, platform, channel, origin);
-}
 
 function getMintcatOriginPresetByOrigin(origin: string) {
     const normalizedOrigin = normalizeMintcatApiOrigin(origin);

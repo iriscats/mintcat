@@ -1,5 +1,5 @@
 /**
- * Types for MintCat Release API (see docs/RELEASE_API.md).
+ * Types for the static MintCat update manifest.
  */
 
 export interface UpdateCheckItem {

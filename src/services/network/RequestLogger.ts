@@ -22,6 +22,20 @@ type FailureContext = LogContext & {
 };
 
 export class RequestLogger {
+    private sanitizeUrl(url: string): string {
+        try {
+            const parsed = new URL(url);
+            for (const key of ['key', 'expires', 'user_id', 'md5']) {
+                if (parsed.searchParams.has(key)) {
+                    parsed.searchParams.set(key, '[REDACTED]');
+                }
+            }
+            return parsed.toString();
+        } catch {
+            return url.replace(/([?&](?:key|expires|user_id|md5)=)[^&#]+/gi, '$1[REDACTED]');
+        }
+    }
+
     private sanitizeHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
         if (!headers) {
             return undefined;
@@ -30,7 +44,7 @@ export class RequestLogger {
         const out: Record<string, string> = {};
         for (const [key, value] of Object.entries(headers)) {
             const lowerKey = key.toLowerCase();
-            if (lowerKey === 'authorization' || lowerKey === 'cookie' || lowerKey === 'x-api-key') {
+            if (lowerKey === 'authorization' || lowerKey === 'cookie' || lowerKey === 'x-api-key' || lowerKey === 'apikey') {
                 out[key] = '[REDACTED]';
                 continue;
             }
@@ -54,8 +68,8 @@ export class RequestLogger {
             attempt: ctx.attempt,
             routeKind: ctx.route.kind,
             proxyMode: ctx.route.proxyMode,
-            originalUrl: ctx.route.originalUrl,
-            resolvedUrl: ctx.route.resolvedUrl,
+            originalUrl: this.sanitizeUrl(ctx.route.originalUrl),
+            resolvedUrl: this.sanitizeUrl(ctx.route.resolvedUrl),
             headers: this.sanitizeHeaders(ctx.headers),
         });
     }
@@ -70,7 +84,7 @@ export class RequestLogger {
             proxyMode: ctx.route.proxyMode,
             status: ctx.status,
             durationMs: ctx.durationMs,
-            resolvedUrl: ctx.route.resolvedUrl,
+            resolvedUrl: this.sanitizeUrl(ctx.route.resolvedUrl),
         });
     }
 
@@ -86,7 +100,7 @@ export class RequestLogger {
             status: ctx.status,
             durationMs: ctx.durationMs,
             final: ctx.final ?? false,
-            resolvedUrl: ctx.route.resolvedUrl,
+            resolvedUrl: this.sanitizeUrl(ctx.route.resolvedUrl),
             error: this.formatError(ctx.error),
         });
     }

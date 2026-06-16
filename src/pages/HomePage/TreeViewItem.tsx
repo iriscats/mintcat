@@ -21,6 +21,7 @@ import {open} from "@tauri-apps/plugin-shell";
 import {emitEvent, useFilteredEventListener} from "@/events";
 import {ModSourceType} from "@/storage/db/Schema.ts";
 import {MODCAT_PLATFORM, ModcatApi} from "@/apis/modcat";
+import {NEXUSMODS_PLATFORM, NexusModsApi, type NexusModsFile} from "@/apis/nexusmods";
 import {HomeViewModel} from "./HomeViewModel.ts";
 import { IoC } from "@/core/IoC.ts";
 import {ModioApi} from "@/apis/modio";
@@ -285,6 +286,23 @@ function ModTreeViewSwitch({nodeData, onCountLabelUpdate}) {
 }
 
 
+function buildNexusmodsFileUrl(domain: string, modId: number, fileId: number): string {
+    const url = new URL(NexusModsApi.getModFilesUrl(domain, modId));
+    url.searchParams.set("file_id", String(fileId));
+    return url.toString();
+}
+
+function getNexusmodsFileLabel(file: NexusModsFile, modVersion?: string, latestFileId?: number): string {
+    const fileId = NexusModsApi.getFileId(file);
+    if (file.version) {
+        return file.version;
+    }
+    if (modVersion && latestFileId && fileId === latestFileId) {
+        return modVersion;
+    }
+    return file.name || file.file_name || (fileId ? `#${fileId}` : "-");
+}
+
 function ModTreeViewVersionSelect({nodeData}) {
 
     const [fetching, setFetching] = useState(false);
@@ -349,9 +367,6 @@ function ModTreeViewVersionSelect({nodeData}) {
         [nodeData.modId, isVersionLocked]
     );
 
-    let fileInfos: ModFile[] = [];
-    let modcatVersions: any[] = [];
-    
     const onDropdownVisibleChange = async (visible: boolean) => {
         if (visible) {
             setFetching(true);
@@ -362,7 +377,7 @@ function ModTreeViewVersionSelect({nodeData}) {
                     // ModCat: 通过 getModDetail 获取版本信息
                     const modDetail = await ModcatApi.getModDetail(nodeData.nameId);
                     if (modDetail?.ModVersionEntities) {
-                        modcatVersions = modDetail.ModVersionEntities
+                        const modcatVersions = modDetail.ModVersionEntities
                             .filter(v => v.FilesId) // 只要有文件 ID 就可以
                             .sort((a, b) => {
                                 const dateA = new Date(a.CreatedAt || 0).getTime();
@@ -376,6 +391,37 @@ function ModTreeViewVersionSelect({nodeData}) {
                                 label: version.VersionNumber || version.VersionId
                             });
                         }
+                    }
+                } else if (nodeData.sourceType === NEXUSMODS_PLATFORM) {
+                    const parsed = NexusModsApi.parseModLinks(nodeData.url);
+                    if (!parsed) {
+                        await StatusBar.error(`${t("Fetch Mod Info Error")}: ${nodeData.title}`);
+                        setOptions([]);
+                        return;
+                    }
+
+                    const [modInfo, rawNexusFiles] = await Promise.all([
+                        NexusModsApi.getModInfo(parsed.domain, parsed.modId).catch(() => undefined),
+                        NexusModsApi.getModFiles(parsed.domain, parsed.modId),
+                    ]);
+                    const nexusFiles = (rawNexusFiles || [])
+                        .filter(file => NexusModsApi.getFileId(file) > 0)
+                        .sort((a, b) => (b.uploaded_timestamp ?? 0) - (a.uploaded_timestamp ?? 0));
+                    const latestFileId = NexusModsApi.getFileId(nexusFiles[0]);
+
+                    for (const file of nexusFiles) {
+                        const fileId = NexusModsApi.getFileId(file);
+                        const label = getNexusmodsFileLabel(file, modInfo?.version, latestFileId);
+                        optionList.push({
+                            value: JSON.stringify({
+                                ...file,
+                                fileId,
+                                resolvedVersion: label,
+                                downloadUrl: buildNexusmodsFileUrl(parsed.domain, parsed.modId, fileId),
+                                fileSize: NexusModsApi.getFileSizeBytes(file),
+                            }),
+                            label
+                        });
                     }
                 } else {
                     // mod.io: 使用 platformId 获取版本信息（兼容 v2 导入后的 platformId=0）
@@ -404,7 +450,7 @@ function ModTreeViewVersionSelect({nodeData}) {
                         return;
                     }
 
-                    fileInfos = await ModioApi.getModFiles(platformId) || [];
+                    const fileInfos: ModFile[] = await ModioApi.getModFiles(platformId) || [];
                     for (const fileInfo of fileInfos) {
                         optionList.push({
                             value: JSON.stringify(fileInfo),
@@ -431,8 +477,11 @@ function ModTreeViewVersionSelect({nodeData}) {
         
         // 根据 sourceType 提取版本号
         const isModcat = nodeData.sourceType === MODCAT_PLATFORM;
+        const isNexusmods = nodeData.sourceType === NEXUSMODS_PLATFORM;
         const newVersion = isModcat 
             ? (parsedValue.VersionNumber || parsedValue.VersionId)
+            : isNexusmods
+                ? (parsedValue.resolvedVersion || parsedValue.version || parsedValue.name || parsedValue.file_name || String(parsedValue.fileId || "-"))
             : (parsedValue.version || parsedValue.filename);
         
         // 检查是否有正在进行的版本切换
@@ -490,6 +539,18 @@ function ModTreeViewVersionSelect({nodeData}) {
                     ? `https://modcat.top:8089/api/Files/DownloadFileGet?FileId=${encodeURIComponent(parsedValue.FilesId)}&NoCount=true`
                     : "";
                 fileSize = parseInt(parsedValue.Files?.Size || "0", 10);
+            } else if (isNexusmods) {
+                // Nexus Mods: 使用 file_id 指定版本；需要网页捕获下载凭据时也会打开对应文件页
+                downloadUrl = parsedValue.downloadUrl || (
+                    parsedValue.fileId
+                        ? buildNexusmodsFileUrl(
+                            NexusModsApi.parseModLinks(nodeData.url)?.domain || "",
+                            nodeData.platformId || Number(nodeData.nameId),
+                            parsedValue.fileId
+                        )
+                        : ""
+                );
+                fileSize = parsedValue.fileSize || NexusModsApi.getFileSizeBytes(parsedValue);
             } else {
                 // mod.io: 使用原有的下载信息
                 downloadUrl = parsedValue.download?.binary_url || "";
@@ -571,8 +632,8 @@ function ModTreeViewWarring({nodeData}) {
 
     const checkExpired = () => {
         const data = nodeDataRef.current;
-        // 支持 Modio 和 ModCat 类型的在线 mod
-        if (data.sourceType !== ModSourceType.Modio && data.sourceType !== MODCAT_PLATFORM) {
+        // 支持在线 mod 来源
+        if (data.sourceType !== ModSourceType.Modio && data.sourceType !== MODCAT_PLATFORM && data.sourceType !== NEXUSMODS_PLATFORM) {
             return false;
         }
 
@@ -602,8 +663,8 @@ function ModTreeViewWarring({nodeData}) {
 
     const checkOnlineUnavailable = () => {
         const data = nodeDataRef.current;
-        // 支持 Modio 和 ModCat 类型的在线 mod
-        return (data.sourceType === ModSourceType.Modio || data.sourceType === MODCAT_PLATFORM) &&
+        // 支持在线 mod 来源
+        return (data.sourceType === ModSourceType.Modio || data.sourceType === MODCAT_PLATFORM || data.sourceType === NEXUSMODS_PLATFORM) &&
             data.onlineAvailable === false;
     }
 
@@ -1018,12 +1079,12 @@ export function TreeViewItem({
 
                     <ModTreeViewSwitch nodeData={nodeData} onCountLabelUpdate={onCountLabelUpdate}/>
 
-                    {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
+                    {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM || nodeData.sourceType === NEXUSMODS_PLATFORM) &&
                         <ModTreeViewVersionSelect nodeData={nodeData}/>
                     }
 
                     {
-                        (nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
+                        (nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM || nodeData.sourceType === NEXUSMODS_PLATFORM) &&
                         <ModTreeViewTitle nodeData={nodeData}/>
                     }
 
@@ -1057,7 +1118,7 @@ export function TreeViewItem({
                                         <Tag color="orange" title={t("Sandbox")}>S</Tag>) :
                                     null}
 
-                        {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM) &&
+                        {(nodeData.sourceType === ModSourceType.Modio || nodeData.sourceType === MODCAT_PLATFORM || nodeData.sourceType === NEXUSMODS_PLATFORM) &&
                             <ModTreeViewProgressPercent nodeData={nodeData}/>
                         }
                     </span>

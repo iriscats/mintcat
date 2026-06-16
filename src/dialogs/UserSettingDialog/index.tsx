@@ -1,11 +1,12 @@
 import React from "react";
 import {t} from "i18next";
-import {Avatar, Button, Divider, Flex, Input, message, Modal, Typography} from "antd";
+import {Avatar, Button, Divider, Flex, Input, message, Modal, Tabs, Typography} from "antd";
 import {UserOutlined, LinkOutlined, KeyOutlined, CrownOutlined} from "@ant-design/icons";
 import {open as openShell} from "@tauri-apps/plugin-shell";
 
 import {ModioApi} from "@/apis/modio";
 import {MODCAT_PLATFORM} from "@/apis/modcat";
+import {NEXUSMODS_PLATFORM} from "@/apis/nexusmods";
 import {CacheApi} from "@/apis/CacheApi";
 import {validateVipStatus} from "@/apis/mintcat";
 import {AppViewModel} from "@/AppViewModel";
@@ -25,9 +26,19 @@ interface UserSettingDialogStates {
     modioOAuth?: string;
     mintcatOAuth?: string;
     modcatOAuth?: string;
+    nexusmodsOAuth?: string;
     vipStatus?: 'Active' | 'Expired' | 'None';
     vipType?: string | null;
     vipExpirationTime?: string | null;
+}
+
+interface AccessKeyTabConfig {
+    title: string;
+    value: string;
+    placeholder: string;
+    description: string;
+    onChange: (e: any) => void;
+    onOpen: () => Promise<void>;
 }
 
 class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
@@ -44,6 +55,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             modioOAuth: "",
             mintcatOAuth: "",
             modcatOAuth: "",
+            nexusmodsOAuth: "",
             vipStatus: "None",
             vipType: null,
             vipExpirationTime: null,
@@ -70,6 +82,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
             const mintcatOAuth = await this.appService.getOAuthByPlatform('mintcat');
             const modcatOAuth = await this.appService.getOAuthByPlatform(MODCAT_PLATFORM);
             const modioOAuth = await this.appService.getOAuthByPlatform('mod.io');
+            const nexusmodsOAuth = await this.appService.getOAuthByPlatform(NEXUSMODS_PLATFORM);
 
             // 通过后端接口验证真实 VIP 状态
             const vipInfo = await validateVipStatus();
@@ -85,6 +98,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     modioOAuth: modioOAuth?.oauth || "",
                     mintcatOAuth: mintcatOAuth?.oauth || "",
                     modcatOAuth: modcatOAuth?.oauth || "",
+                    nexusmodsOAuth: nexusmodsOAuth?.oauth || "",
                     vipStatus: vipInfo?.vipStatus ?? "None",
                     vipType: vipInfo?.vipType ?? null,
                     vipExpirationTime: vipInfo?.vipExpirationTime ?? null,
@@ -94,6 +108,7 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
                     modioOAuth: modioOAuth?.oauth || "",
                     mintcatOAuth: mintcatOAuth?.oauth || "",
                     modcatOAuth: modcatOAuth?.oauth || "",
+                    nexusmodsOAuth: nexusmodsOAuth?.oauth || "",
                     vipStatus: vipInfo?.vipStatus ?? "None",
                     vipType: vipInfo?.vipType ?? null,
                     vipExpirationTime: vipInfo?.vipExpirationTime ?? null,
@@ -231,7 +246,120 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
         await openShell("https://modcat.top");
     }
 
+    @autoBind
+    private async onNexusmodsOAuthChange(e: any) {
+        const value = e.target.value;
+        this.setState({
+            nexusmodsOAuth: value
+        });
+
+        if (value.length !== 0 && value.length < 20) {
+            message.error({
+                content: t("userSetting.invalidOAuth"),
+                key: "nexusmods-oauth-invalid"
+            });
+            return;
+        }
+
+        try {
+            const activeUser = await this.appService.getActiveUser();
+            if (activeUser) {
+                await this.appService.setOAuth(activeUser.id, NEXUSMODS_PLATFORM, value);
+            }
+        } catch (error) {
+            console.error('Failed to save Nexus Mods API key:', error);
+            message.error(t("userSetting.saveOAuthFailed"));
+        }
+    }
+
+    @autoBind
+    private async onOpenNexusmodsClick() {
+        await openShell("https://www.nexusmods.com/users/myaccount?tab=api%20access");
+    }
+
+    private renderAccessKeyTab(config: AccessKeyTabConfig) {
+        return (
+            <Flex vertical gap={8} className="user-settings-tab-pane">
+                <Flex justify="space-between" align="center">
+                    <Text strong className="user-settings-config-title">{config.title}</Text>
+                    <Button
+                        color="primary"
+                        variant="link"
+                        size="small"
+                        onClick={config.onOpen}
+                        icon={<LinkOutlined/>}
+                        className="user-settings-link"
+                    >
+                        {t("userSetting.getAccessKey")}
+                    </Button>
+                </Flex>
+
+                <Input
+                    prefix={<KeyOutlined className="user-settings-input-icon" />}
+                    onChange={config.onChange}
+                    allowClear
+                    value={config.value}
+                    placeholder={config.placeholder}
+                />
+                <Text type="secondary" className="user-settings-desc">
+                    {config.description}
+                </Text>
+            </Flex>
+        );
+    }
+
     render() {
+        const accessKeyTabs = [
+            {
+                key: "mintcat",
+                label: "MintCat",
+                children: this.renderAccessKeyTab({
+                    title: t("userSetting.mintcatConfig"),
+                    value: this.state.mintcatOAuth || "",
+                    placeholder: t("userSetting.placeholderMintcatOAuth"),
+                    description: t("userSetting.descMintcatOAuth"),
+                    onChange: this.onMintcatOAuthChange,
+                    onOpen: this.onOpenMintcatClick,
+                }),
+            },
+            {
+                key: "modio",
+                label: "mod.io",
+                children: this.renderAccessKeyTab({
+                    title: t("userSetting.modioConfig"),
+                    value: this.state.modioOAuth || "",
+                    placeholder: t("userSetting.placeholderModioOAuth"),
+                    description: t("userSetting.descModioOAuth"),
+                    onChange: this.onOAuthChange,
+                    onOpen: this.onOpenModioClick,
+                }),
+            },
+            {
+                key: "nexusmods",
+                label: "Nexus Mods",
+                children: this.renderAccessKeyTab({
+                    title: t("userSetting.nexusmodsConfig"),
+                    value: this.state.nexusmodsOAuth || "",
+                    placeholder: t("userSetting.placeholderNexusmodsOAuth"),
+                    description: t("userSetting.descNexusmodsOAuth"),
+                    onChange: this.onNexusmodsOAuthChange,
+                    onOpen: this.onOpenNexusmodsClick,
+                }),
+            },
+            {
+                key: "modcat",
+                label: "ModCat",
+                children: this.renderAccessKeyTab({
+                    title: t("userSetting.modcatConfig"),
+                    value: this.state.modcatOAuth || "",
+                    placeholder: t("userSetting.placeholderModcatOAuth"),
+                    description: t("userSetting.descModcatOAuth"),
+                    onChange: this.onModcatOAuthChange,
+                    onOpen: this.onOpenModcatClick,
+                }),
+            },
+        ];
+
         return (
             <Modal title={t("userSetting.title")}
                    open={this.state.isModalOpen}
@@ -297,93 +425,11 @@ class UserSettingDialog extends React.Component<any, UserSettingDialogStates> {
 
                     <Divider className="user-settings-divider" />
 
-                    {/* MintCat Configuration Section */}
-                    <Flex vertical gap={8}>
-                        <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("userSetting.mintcatConfig")}</Text>
-                            <Button 
-                                color="primary"
-                                variant="link" 
-                                size="small" 
-                                onClick={this.onOpenMintcatClick}
-                                icon={<LinkOutlined/>}
-                                className="user-settings-link"
-                            >
-                                {t("userSetting.getAccessKey")}
-                            </Button>
-                        </Flex>
-                        
-                        <Input 
-                            prefix={<KeyOutlined className="user-settings-input-icon" />}
-                            onChange={this.onMintcatOAuthChange}
-                            allowClear
-                            value={this.state.mintcatOAuth}
-                            placeholder={t("userSetting.placeholderMintcatOAuth")}
-                        />
-                        <Text type="secondary" className="user-settings-desc">
-                            {t("userSetting.descMintcatOAuth")}
-                        </Text>
-                    </Flex>
-
-                    <Divider className="user-settings-divider" />
-
-                    {/* Mod.io Configuration Section */}
-                    <Flex vertical gap={8}>
-                        <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("userSetting.modioConfig")}</Text>
-                            <Button 
-                                color="primary"
-                                variant="link" 
-                                size="small" 
-                                onClick={this.onOpenModioClick}
-                                icon={<LinkOutlined/>}
-                                className="user-settings-link"
-                            >
-                                {t("userSetting.getAccessKey")}
-                            </Button>
-                        </Flex>
-                        
-                        <Input 
-                            prefix={<KeyOutlined className="user-settings-input-icon" />}
-                            onChange={this.onOAuthChange}
-                            allowClear
-                            value={this.state.modioOAuth}
-                            placeholder={t("userSetting.placeholderModioOAuth")}
-                        />
-                        <Text type="secondary" className="user-settings-desc">
-                            {t("userSetting.descModioOAuth")}
-                        </Text>
-                    </Flex>
-
-
-                    {/* ModCat Configuration Section */}
-                    <Flex vertical gap={8}>
-                        <Flex justify="space-between" align="center">
-                            <Text strong className="user-settings-config-title">{t("userSetting.modcatConfig")}</Text>
-                            <Button 
-                                color="primary"
-                                variant="link" 
-                                size="small" 
-                                onClick={this.onOpenModcatClick}
-                                icon={<LinkOutlined/>}
-                                className="user-settings-link"
-                            >
-                                {t("userSetting.getAccessKey")}
-                            </Button>
-                        </Flex>
-                        
-                        <Input 
-                            prefix={<KeyOutlined className="user-settings-input-icon" />}
-                            onChange={this.onModcatOAuthChange}
-                            allowClear
-                            value={this.state.modcatOAuth}
-                            placeholder={t("userSetting.placeholderModcatOAuth")}
-                        />
-                        <Text type="secondary" className="user-settings-desc">
-                            {t("userSetting.descModcatOAuth")}
-                        </Text>
-                    </Flex>
-
+                    <Tabs
+                        size="small"
+                        className="user-settings-tabs"
+                        items={accessKeyTabs}
+                    />
 
                     {/* Footer Actions */}
                     <Button type="primary"

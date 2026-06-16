@@ -108,6 +108,7 @@ export class ProfileViewModel {
         const profileService = await this.getProfileService();
         const profileList = await profileService.getProfileList();
         const isFirstProfile = profileList.length === 0;
+        const activeProfile = await profileService.getActiveProfileData();
 
         if (profileList.some(p => p === name)) {
             message.error(t("Profile Already Exists"));
@@ -117,8 +118,8 @@ export class ProfileViewModel {
         await profileService.createProfile({
             name,
             displayName: name,
-            gameId: 1,
-            userId: 1,
+            gameId: activeProfile.gameId,
+            userId: activeProfile.userId,
             isActive: isFirstProfile
         });
 

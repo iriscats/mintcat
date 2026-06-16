@@ -12,6 +12,8 @@ import {
     type MintcatProxyMode,
 } from '@/services/network';
 
+const INTEGRATOR_COMPRESS_MOD_PAK_KEY = 'integrator.compressModPak';
+
 
 export interface SettingData {
     id?: number;
@@ -102,6 +104,14 @@ export class SettingDAO {
 
     public async setMintcatProxyMode(value: MintcatProxyMode | string): Promise<void> {
         await this.setValue(NETWORK_MINTCAT_PROXY_MODE_KEY, normalizeMintcatProxyMode(value));
+    }
+
+    public async getIntegratorCompressModPak(): Promise<boolean> {
+        return await this.getValue(INTEGRATOR_COMPRESS_MOD_PAK_KEY) === 'true';
+    }
+
+    public async setIntegratorCompressModPak(enabled: boolean): Promise<void> {
+        await this.setValue(INTEGRATOR_COMPRESS_MOD_PAK_KEY, enabled ? 'true' : 'false');
     }
 
     public async getValue(name: string): Promise<string> {

@@ -413,7 +413,7 @@ export class ModcatApi {
             throw new Error(t("mod.noDownloadableVersion") || "mod.noDownloadableVersion");
         }
         
-        const fileName = mod.Name || mod.ModId || "unknown";
+        const fileName = `modcat-${mod.ModId || "unknown"}-${mod.Name || mod.ModId || "unknown"}`;
         const version = latestVersion.VersionNumber || "latest";
         const fileSize = parseInt(latestVersion.Files?.Size || "0", 10);
         

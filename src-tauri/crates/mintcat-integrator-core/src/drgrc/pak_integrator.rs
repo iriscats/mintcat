@@ -6,9 +6,9 @@ use crate::common::audio_pak::{
 };
 use crate::common::mod_bundle_writer::ModBundleWriter;
 use crate::common::ue4ss::{
-    dir_contains_js_mod, ensure_rogue_core_ue4ss_settings_file, ensure_ue4ss_config_directory,
-    install_ue4ss, install_ue4ss_js_mod_from_dir, install_ue4ss_js_mod_from_zip_targeted,
-    install_ue4ss_mod, uninstall_ue4ss, zip_contains_js_mod,
+    dir_contains_js_mod, ensure_rogue_core_ue4ss_settings_file, install_ue4ss,
+    install_ue4ss_js_mod_from_dir, install_ue4ss_js_mod_from_zip_targeted, install_ue4ss_mod,
+    uninstall_ue4ss, zip_contains_js_mod,
 };
 use crate::common::unpacked_mod::UnpackedMod;
 use crate::common::zip::read_files_from_zip_by_extension;
@@ -81,12 +81,10 @@ pub struct RcPakIntegrator {
     asset_registry: AssetRegistry,
     bundle: ModBundleWriter<BufWriter<fs::File>>,
     added_paths: HashSet<String>,
-    init_space_rig_assets: HashSet<String>,
-    init_cave_assets: HashSet<String>,
 }
 
 impl RcPakIntegrator {
-    pub fn new<P: AsRef<Path>>(game_pak_path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(game_pak_path: P, compress_mod_pak: bool) -> Result<Self> {
         let pak_path = game_pak_path.as_ref();
         let installation = RcInstallation::from_pak_path(pak_path)
             .context("Failed to determine RC installation")?;
@@ -148,6 +146,7 @@ impl RcPakIntegrator {
                     .with_context(|| format!("Failed to create mod pak: {:?}", mod_pak_path))?,
             ),
             &file_list,
+            compress_mod_pak,
         )
         .context("Failed to initialize mod bundle writer")?;
 
@@ -156,22 +155,7 @@ impl RcPakIntegrator {
             asset_registry,
             bundle,
             added_paths: HashSet::new(),
-            init_space_rig_assets: HashSet::new(),
-            init_cave_assets: HashSet::new(),
         })
-    }
-
-    fn format_soft_class(&self, path: &Path) -> String {
-        let prefix = self.installation.content_prefix_for_path();
-        let name = path.file_stem().unwrap().to_string_lossy();
-        let relative = path
-            .strip_prefix(prefix)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .strip_suffix("uasset")
-            .unwrap_or(&*path.to_string_lossy())
-            .to_string();
-        format!("/Game/{}{}_C", relative, name)
     }
 
     /// 从 RC.zip 读取 Paks/ 目录下全部文件，映射为 RogueCore/Content/ 下的 pak 路径。
@@ -259,12 +243,9 @@ impl RcPakIntegrator {
             }
         }
 
-        let binaries_dir = self.installation.binaries_directory();
         self.serialize_asset_registry()?;
         if ue4ss_enabled {
-            ensure_rogue_core_ue4ss_settings_file(&binaries_dir)?;
-            ensure_ue4ss_config_directory(&binaries_dir)?;
-            //self.write_ue4ss_mods_config()?;
+            ensure_rogue_core_ue4ss_settings_file(&self.installation.binaries_directory())?;
         }
         self.bundle.finish().context("Failed to finalize mod pak")?;
 
@@ -493,13 +474,6 @@ impl RcPakIntegrator {
             .load_files(self.installation.content_prefix())
             .with_context(|| format!("Failed to load unpacked mod files: {:?}", mod_path))?;
 
-        let files = unpacked_mod.files();
-        let pak_files: HashMap<PathBuf, String> = files
-            .keys()
-            .map(|p| (PathBuf::from(p), p.clone()))
-            .collect();
-        self.process_init_asset(&pak_files)?;
-
         for asset_base in unpacked_mod.get_asset_names() {
             if let Some((uasset_data, uexp_data)) = unpacked_mod.get_asset_pair(&asset_base) {
                 let normalized_path = PathBuf::from(&asset_base);
@@ -571,26 +545,8 @@ impl RcPakIntegrator {
             .context("Failed to parse mod pak")?;
         let mount = PakPath::new(pak.mount_point());
         let pak_files = self.normalize_pak_paths(&pak, &mount)?;
-        self.process_init_asset(&pak_files)?;
         self.process_asset_registry(&pak, &pak_files, pak_buf)?;
         self.write_mod_assets(pak, pak_files, pak_buf)?;
-        Ok(())
-    }
-
-    fn process_init_asset(&mut self, pak_files: &HashMap<PathBuf, String>) -> Result<()> {
-        for pak_file in pak_files {
-            if let Some(filename) = pak_file.0.file_name() {
-                let lower = filename.to_string_lossy().to_lowercase();
-                if lower == "initspacerig.uasset" {
-                    self.init_space_rig_assets
-                        .insert(self.format_soft_class(&*pak_file.0));
-                }
-                if lower == "initcave.uasset" {
-                    self.init_cave_assets
-                        .insert(self.format_soft_class(&*pak_file.0));
-                }
-            }
-        }
         Ok(())
     }
 
@@ -710,39 +666,6 @@ impl RcPakIntegrator {
         // self.bundle
         //     .write_file(&buf, self.installation.asset_registry_pak_path())
         //     .context("Failed to write asset registry to mod pak")?;
-        Ok(())
-    }
-
-    fn ue4ss_mod_entries(assets: &HashSet<String>) -> Vec<serde_json::Value> {
-        let mut class_paths = assets.iter().cloned().collect::<Vec<_>>();
-        class_paths.sort();
-        class_paths
-            .into_iter()
-            .map(|class_path| json!({ "classPath": class_path }))
-            .collect()
-    }
-
-    fn write_ue4ss_mods_config(&self) -> Result<()> {
-        let config_dir = self
-            .installation
-            .binaries_directory()
-            .join("ue4ss")
-            .join("config");
-        fs::create_dir_all(&config_dir).with_context(|| {
-            format!("Failed to create ue4ss config directory: {:?}", config_dir)
-        })?;
-
-        let mods_config = json!({
-            "space_rig": Self::ue4ss_mod_entries(&self.init_space_rig_assets),
-            "cave": Self::ue4ss_mod_entries(&self.init_cave_assets),
-        });
-        let mut content = serde_json::to_string_pretty(&mods_config)
-            .context("Failed to serialize ue4ss mods config")?;
-        content.push('\n');
-
-        let mods_json_path = config_dir.join("mods.json");
-        fs::write(&mods_json_path, content)
-            .with_context(|| format!("Failed to write ue4ss mods config: {:?}", mods_json_path))?;
         Ok(())
     }
 

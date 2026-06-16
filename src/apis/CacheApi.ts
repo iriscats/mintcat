@@ -1,4 +1,4 @@
-import {writeFile, size, exists, mkdir, remove, readDir} from "@tauri-apps/plugin-fs";
+import {writeFile, size, exists, mkdir, remove, readDir, copyFile} from "@tauri-apps/plugin-fs";
 import {cacheDir} from '@tauri-apps/api/path';
 import {path} from "@tauri-apps/api";
 import {convertFileSrc} from "@tauri-apps/api/core";
@@ -10,6 +10,8 @@ import {StorageAPI} from "@/storage";
 export class CacheApi {
 
     private static cachedPath: string | null = null;
+    private static readonly ownedCacheDirectories = new Set(["images", "avatars"]);
+    private static readonly ownedCacheFiles = new Set(["UE4SSL.zip", "DRG.zip", "RC.zip", "assets_manifest.json"]);
 
     public constructor() {
     }
@@ -33,14 +35,41 @@ export class CacheApi {
     }
 
     private static sanitizeFileName(name: string): string {
+        const illegalChars = /[\\/:*?"<>|\u0000-\u001f]/g;
+        const sanitized = name
+            .replace(illegalChars, "_")
+            .replace(/\s+/g, " ")
+            .replace(/[. ]+$/g, "")
+            .trim();
+        return sanitized || "mod";
+    }
+
+    private static legacySanitizeFileName(name: string): string {
         const illegalChars = /[\\/:*?"<>|]/g;
         return name.replace(illegalChars, '');
     }
 
+    private static buildModCacheFileName(modName: string, version: string): string {
+        const rawName = `${modName}-${version}`;
+        const readableName = CacheApi.sanitizeFileName(rawName).slice(0, 120);
+        const fingerprint = md5(rawName).slice(0, 10);
+        return `${readableName}-${fingerprint}.zip`;
+    }
+
+    private static buildLegacyModCacheFileName(modName: string, version: string): string {
+        return CacheApi.legacySanitizeFileName(`${modName}-${version}.zip`);
+    }
+
     public static async getModCachePath(modName: string, version: string) {
         const appCachePath = await this.getCacheDir();
-        const newNodName = CacheApi.sanitizeFileName(`${modName}-${version}.zip`);
+        const newNodName = CacheApi.buildModCacheFileName(modName, version);
         return await path.join(appCachePath, newNodName);
+    }
+
+    private static async getLegacyModCachePath(modName: string, version: string) {
+        const appCachePath = await this.getCacheDir();
+        const legacyName = CacheApi.buildLegacyModCacheFileName(modName, version);
+        return await path.join(appCachePath, legacyName);
     }
 
     public static async getImageCachePath(url: string) {
@@ -57,6 +86,10 @@ export class CacheApi {
             const imgPath = await CacheApi.getImageCachePath(url);
             if (!await exists(imgPath)) {
                 const response = await NetworkApi.get(url);
+                const contentType = response.headers.get("content-type") || "";
+                if (!response.ok || (contentType && !contentType.startsWith("image/"))) {
+                    throw new Error(`Invalid image response: ${response.status} ${contentType}`);
+                }
                 const data = await response.arrayBuffer();
                 const buffer = new Uint8Array(data);
                 await writeFile(imgPath, buffer);
@@ -117,6 +150,27 @@ export class CacheApi {
     public static async checkCacheFile(modName: string, version: string, fileSize: number): Promise<boolean> {
         try {
             const fileName = await CacheApi.getModCachePath(modName, version);
+            if (await CacheApi.isValidCacheFile(fileName, fileSize)) {
+                return true;
+            }
+
+            const legacyFileName = await CacheApi.getLegacyModCachePath(modName, version);
+            if (legacyFileName !== fileName && await CacheApi.isValidCacheFile(legacyFileName, fileSize)) {
+                try {
+                    await copyFile(legacyFileName, fileName);
+                    return true;
+                } catch (error) {
+                    console.warn(`[CacheApi] Failed to migrate legacy cache file: ${legacyFileName}`, error);
+                }
+            }
+        } catch (_) {
+            // File doesn't exist or can't be read
+        }
+        return false;
+    }
+
+    private static async isValidCacheFile(fileName: string, fileSize: number): Promise<boolean> {
+        try {
             const _fileSize = await size(fileName);
             if (_fileSize !== fileSize) {
                 return false;
@@ -129,9 +183,34 @@ export class CacheApi {
             }
             return true;
         } catch (_) {
-            // File doesn't exist or can't be read
+            return false;
         }
-        return false;
+    }
+
+    private static isOwnedCacheEntry(entry: Awaited<ReturnType<typeof readDir>>[number]): boolean {
+        const name = entry.name ?? "";
+        if (!name) {
+            return false;
+        }
+        if (entry.isDirectory) {
+            return CacheApi.ownedCacheDirectories.has(name);
+        }
+        return CacheApi.ownedCacheFiles.has(name) || name.endsWith(".zip") || name.endsWith(".part");
+    }
+
+    private static async removeCacheEntry(cacheDirPath: string, entry: Awaited<ReturnType<typeof readDir>>[number]): Promise<boolean> {
+        const name = entry.name ?? "";
+        if (!name) {
+            return true;
+        }
+        try {
+            const entryPath = await path.join(cacheDirPath, name);
+            await remove(entryPath, { recursive: entry.isDirectory });
+            return true;
+        } catch (error) {
+            console.warn(`[CacheApi] Failed to remove cache entry ${name}:`, error);
+            return false;
+        }
     }
 
     public static async cleanOldCacheFiles(): Promise<boolean> {
@@ -186,13 +265,29 @@ export class CacheApi {
     public static async cleanCurrentCache(): Promise<boolean> {
         try {
             const currentCachePath = await this.getCacheDir();
-            if (await exists(currentCachePath)) {
-                await remove(currentCachePath, {recursive: true});
-                // 重新创建缓存目录
-                await mkdir(currentCachePath);
-                // 清除缓存路径的内存缓存
+            if (!await exists(currentCachePath)) {
+                await mkdir(currentCachePath, { recursive: true });
                 this.clearCache();
+                return true;
             }
+
+            let failedCount = 0;
+            const entries = await readDir(currentCachePath);
+            for (const entry of entries) {
+                if (!CacheApi.isOwnedCacheEntry(entry)) {
+                    continue;
+                }
+                if (!await CacheApi.removeCacheEntry(currentCachePath, entry)) {
+                    failedCount++;
+                }
+            }
+
+            if (failedCount > 0) {
+                console.warn(`[CacheApi] ${failedCount} cache entr${failedCount === 1 ? "y" : "ies"} could not be removed`);
+            }
+
+            // 清除缓存路径的内存缓存
+            this.clearCache();
             return true;
         } catch (error) {
             console.error(`Failed to clean current cache: ${error}`);

@@ -5,6 +5,10 @@ import { MintCatApiUrls } from "./urls";
 
 const authResolver = new AuthResolver();
 
+function normalizeVipStatus(value: unknown): VipInfo['vipStatus'] {
+    return value === 'Active' || value === 'Expired' || value === 'None' ? value : 'None';
+}
+
 export async function validateVipStatus(): Promise<VipInfo | null> {
     const accessToken = await authResolver.getMintcatToken();
 
@@ -29,7 +33,7 @@ export async function validateVipStatus(): Promise<VipInfo | null> {
         const data = await response.json();
         return {
             vipType: data.vipType ?? null,
-            vipStatus: data.vipStatus ?? "None",
+            vipStatus: normalizeVipStatus(data.vipStatus),
             vipExpirationTime: data.vipExpirationTime ?? null,
         };
     } catch {

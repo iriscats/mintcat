@@ -67,6 +67,8 @@ export interface SearchParams {
     pageSize: number;
     /** ModCat 平台游戏 ID（如 "drg" | "rc"），用于按当前游戏筛选 */
     modcatGameId?: string;
+    /** Nexus Mods 游戏域名（如 deeprockgalactic / deeprockgalacticroguecore） */
+    nexusmodsGameDomain?: string;
     /** 排序字段 */
     sortBy?: 'downloads' | 'subscribers' | 'rating' | 'date' | 'name';
     /** 排序方向 */

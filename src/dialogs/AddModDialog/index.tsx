@@ -207,7 +207,10 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
 
         // ✅ Listen for dialog data updates (when window is reused)
         this.unlistenInitData = await listenEvent("add-mod-dialog-init-data", async (payload) => {
-            console.log("AddModDialog init event", payload);
+            console.log("AddModDialog init event", {
+                ...payload,
+                text: sanitizeDownloadTextForLog(payload.text),
+            });
             // Reload group options to ensure they're up-to-date
             const groupFolders = await this.loadGroupOptions();
 
@@ -291,4 +294,9 @@ export class AddModDialog extends BasePage<any, AddModDialogStates> {
             </div>
         );
     }
+}
+
+function sanitizeDownloadTextForLog(text: string | undefined): string {
+    if (!text) return "";
+    return text.replace(/([?&](?:key|expires|user_id|md5)=)[^&#\s]+/gi, '$1[REDACTED]');
 }

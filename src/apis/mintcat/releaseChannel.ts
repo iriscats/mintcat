@@ -1,4 +1,4 @@
-/** MintCat Release API 内置资源发布渠道（与 /releases 查询参数一致） */
+/** MintCat 静态更新清单内置资源发布渠道 */
 
 import packageJson from '../../../package.json';
 

@@ -46,7 +46,7 @@ export const OnlineTab = React.forwardRef(({text}: any, ref) => {
                 <Flex>
                     <TextArea value={url}
                               onChange={onTextChange}
-                              placeholder="https://mod.io/g/drg/m/xxx&#10;https://modcat.top/#/modDetail?ModId=xxx"
+                              placeholder="https://mod.io/g/drg/m/xxx&#10;https://www.nexusmods.com/xxxx/mods/1&#10;https://modcat.top/#/modDetail?ModId=xxx&#10;"
                               rows={6}
                     />
                 </Flex>

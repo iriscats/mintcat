@@ -8,7 +8,7 @@ import {SearchResultItem} from '@/apis/search';
 
 interface SearchResultCardProps {
     item: SearchResultItem;
-    onAdd: (profileUrl: string) => void;
+    onAdd: (item: SearchResultItem) => void;
     onTranslate: (itemId: string) => void;
     onRestore: (itemId: string) => void;
 }
@@ -25,6 +25,8 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
 }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [avatarLoaded, setAvatarLoaded] = useState(false);
+    const [thumbnailCacheFailed, setThumbnailCacheFailed] = useState(false);
+    const [avatarCacheFailed, setAvatarCacheFailed] = useState(false);
 
     // 右键菜单项
     const contextMenuItems: MenuProps['items'] = [
@@ -46,17 +48,21 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
 
     // 处理添加点击
     const handleAddClick = useCallback(() => {
-        onAdd(item.profileUrl);
-    }, [item.profileUrl, onAdd]);
+        onAdd(item);
+    }, [item, onAdd]);
 
     // 处理标题点击
     const handleTitleClick = useCallback(async () => {
         await open(item.profileUrl);
     }, [item.profileUrl]);
 
-    // 获取显示的图片 URL（只使用缓存的本地图片，外部 URL 在 Tauri 中可能无法加载）
-    const displayThumbnail = item.cachedThumbnailUrl;
-    const displayAvatar = item.author.cachedAvatarUrl;
+    // 优先使用缓存图片；如果缓存文件加载失败，回退到远端 URL，避免坏缓存导致图片闪现后消失。
+    const displayThumbnail = !thumbnailCacheFailed && item.cachedThumbnailUrl
+        ? item.cachedThumbnailUrl
+        : item.thumbnailUrl;
+    const displayAvatar = !avatarCacheFailed && item.author.cachedAvatarUrl
+        ? item.author.cachedAvatarUrl
+        : item.author.avatarUrl;
 
     // 显示的名称和摘要
     const displayName = item.nameTrans || item.name;
@@ -88,7 +94,14 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                                         src={displayAvatar}
                                         alt={item.author.name}
                                         onLoad={() => setAvatarLoaded(true)}
-                                        onError={() => setAvatarLoaded(true)}
+                                        onError={() => {
+                                            if (displayAvatar === item.author.cachedAvatarUrl && item.author.avatarUrl) {
+                                                setAvatarCacheFailed(true);
+                                                setAvatarLoaded(false);
+                                                return;
+                                            }
+                                            setAvatarLoaded(true);
+                                        }}
                                     />
                                 }
                             />
@@ -154,7 +167,14 @@ export const SearchResultCard = memo<SearchResultCardProps>(({
                                     display: imageLoaded ? 'block' : 'none',
                                 }}
                                 onLoad={() => setImageLoaded(true)}
-                                onError={() => setImageLoaded(true)}
+                                onError={() => {
+                                    if (displayThumbnail === item.cachedThumbnailUrl && item.thumbnailUrl) {
+                                        setThumbnailCacheFailed(true);
+                                        setImageLoaded(false);
+                                        return;
+                                    }
+                                    setImageLoaded(true);
+                                }}
                             />
                         )}
                     </div>

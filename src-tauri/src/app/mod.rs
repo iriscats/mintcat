@@ -1,6 +1,6 @@
 pub mod devtools;
 
-use crate::{download, frontend, integrator, network, proxy, steam};
+use crate::{download, frontend, integrator, network, nexus_webview, proxy, steam};
 use tauri::{Emitter, Manager, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_sentry::{minidump, sentry};
 
@@ -37,8 +37,13 @@ pub fn run() {
             // 当应用已运行时，通过 deep link 启动的第二个实例会被阻止，
             // 其 URL 参数会传递到这里
             for arg in args {
-                if arg.starts_with("mintcat://") {
-                    log::info!("[SingleInstance] Received deep link: {}", arg);
+                if arg.starts_with("mintcat://") || arg.starts_with("nxm://") {
+                    let log_arg = if arg.starts_with("nxm://") {
+                        "nxm://[REDACTED]"
+                    } else {
+                        arg.as_str()
+                    };
+                    log::info!("[SingleInstance] Received deep link: {}", log_arg);
                     // 发送事件给前端处理
                     let _ = app.emit("single-instance-deep-link", &arg);
                 }
@@ -149,6 +154,7 @@ pub fn run() {
             download::cancel_download,
             network::set_network_proxy,
             network::fetch_update_manifest,
+            nexus_webview::open_nexus_download_webview,
             frontend::update::install_frontend_update_from_manifest,
             frontend::update::activate_frontend_update,
             frontend::update::get_frontend_entry_path,

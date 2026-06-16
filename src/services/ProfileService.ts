@@ -252,8 +252,9 @@ export class ProfileService {
     }
 
     public async getProfileByName(name: string): Promise<ProfileData | undefined> {
-        const profiles = await this.getAllProfiles();
-        return profiles.find(profile => profile.name === name);
+        const profiles = await StorageAPI.getProfiles();
+        const activeProfile = await this.ensureActiveProfile();
+        return await profiles.getProfileByName(name, activeProfile.gameId, activeProfile.userId) ?? undefined;
     }
 
     /**

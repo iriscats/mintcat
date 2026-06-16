@@ -35,6 +35,11 @@ export class AuthResolver {
         return oauth?.oauth?.trim() ?? '';
     }
 
+    public async getNexusmodsToken(): Promise<string> {
+        const oauth = await this.getOAuthByPlatform('nexusmods');
+        return oauth?.oauth?.trim() ?? '';
+    }
+
     public async resolveHeaders(policy: NetworkAuthPolicy = 'none'): Promise<Record<string, string>> {
         switch (policy) {
             case 'mintcatToken': {
