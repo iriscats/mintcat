@@ -83,6 +83,9 @@ export function matchesManifestPlatform(
         || itemPlatform === platform
         || (platform === 'macos' && ['darwin', 'osx'].includes(itemPlatform))
         || (platform === 'windows' && ['win32', 'win'].includes(itemPlatform));
-    const archMatched = !itemArch || itemArch === arch || (arch === 'x86_64' && itemArch === 'amd64');
+    const archMatched = !itemArch
+        || itemArch === arch
+        || (arch === 'x86_64' && itemArch === 'amd64')
+        || (arch === 'aarch64' && itemArch === 'arm64');
     return platformMatched && archMatched;
 }

@@ -5,6 +5,7 @@ import {
     BellOutlined,
     BookOutlined,
     CloudOutlined,
+    DownloadOutlined,
     EllipsisOutlined,
     PlayCircleOutlined,
     SkinOutlined,
@@ -12,6 +13,7 @@ import {
     UserOutlined
 } from '@ant-design/icons';
 import {open} from "@tauri-apps/plugin-shell";
+import {platform} from "@tauri-apps/plugin-os";
 import packageJson from '../../package.json';
 import {IntegrateApi} from "../apis/IntegrateApi.ts";
 import {StorageAPI} from "@/storage";
@@ -30,6 +32,7 @@ class TitleBar extends React.Component<any, any> {
     private unlistenUserSettingOpen: UnlistenFn | undefined;
     private unlistenModioUnauthorized: UnlistenFn | undefined;
     private unlistenInstallFailedGamePath: UnlistenFn | undefined;
+    private readonly supportsGameLaunch = platform() !== 'macos';
 
     public constructor(props: any) {
         super(props);
@@ -81,17 +84,19 @@ class TitleBar extends React.Component<any, any> {
 
     private async onLaunchGameClick() {
         try {
-            // 检查当前 profile 是否有 mod，没有则直接启动游戏
-            const profilesApi = await StorageAPI.getProfiles();
-            const activeProfile = await profilesApi.getActiveProfile();
-            if (!activeProfile?.id) {
-                await IntegrateApi.launchGame();
-                return;
-            }
-            const profileMods = await profilesApi.getProfileMods(activeProfile.id);
-            if (profileMods.length === 0) {
-                await IntegrateApi.launchGame();
-                return;
+            if (this.supportsGameLaunch) {
+                // Windows keeps the existing launch behavior for empty profiles.
+                const profilesApi = await StorageAPI.getProfiles();
+                const activeProfile = await profilesApi.getActiveProfile();
+                if (!activeProfile?.id) {
+                    await IntegrateApi.launchGame();
+                    return;
+                }
+                const profileMods = await profilesApi.getProfileMods(activeProfile.id);
+                if (profileMods.length === 0) {
+                    await IntegrateApi.launchGame();
+                    return;
+                }
             }
 
             // Submit installation task
@@ -101,9 +106,12 @@ class TitleBar extends React.Component<any, any> {
             const result = await taskQueueAPI.waitForTaskCompletion(taskId);
 
             if (result.status === 'completed') {
-                // Installation succeeded, notify HomePage and launch game
                 await emitVoidEvent('mods-installed');
-                await IntegrateApi.launchGame();
+                if (this.supportsGameLaunch) {
+                    await IntegrateApi.launchGame();
+                } else {
+                    message.success(t("Installation Finish"));
+                }
             } else if (result.status === 'failed') {
                 const baseError = t("Installation Failed");
                 const detail = result.error || 'Unknown error';
@@ -261,10 +269,10 @@ class TitleBar extends React.Component<any, any> {
                                 onClick={this.onLaunchGameClick}
                                 className={"ant-header-start-button tour-step-launch"}
                             >
-                                <PlayCircleOutlined/>
+                                {this.supportsGameLaunch ? <PlayCircleOutlined/> : <DownloadOutlined/>}
                                 <span style={{marginTop: "-1px"}}>
                                     <b>
-                                        {this.state.gameName}
+                                        {this.supportsGameLaunch ? this.state.gameName : t("Install mods")}
                                     </b>
                                 </span>
                             </Button>

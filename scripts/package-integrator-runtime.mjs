@@ -16,16 +16,30 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const srcTauri = path.join(root, 'src-tauri');
 const cargoTargetDir = process.env.CARGO_TARGET_DIR || path.join(srcTauri, 'target');
-const target = process.env.INTEGRATOR_TARGET || process.argv[2] || '';
-const isWindowsTarget = target.includes('windows');
-const builtRuntimeFileName = isWindowsTarget
+const target = process.env.BACKEND_RUNTIME_TARGET || process.env.INTEGRATOR_TARGET || process.argv[2] || '';
+const runtimePlatform = target.includes('windows')
+  ? 'windows'
+  : target.includes('apple-darwin')
+    ? 'macos'
+    : target.includes('linux')
+      ? 'linux'
+      : process.platform === 'win32'
+        ? 'windows'
+        : process.platform === 'darwin'
+          ? 'macos'
+          : 'linux';
+const runtimeArch = target.startsWith('aarch64') || (!target && process.arch === 'arm64')
+  ? 'arm64'
+  : 'x64';
+const isWindowsTarget = runtimePlatform === 'windows';
+const builtRuntimeFileName = runtimePlatform === 'windows'
   ? 'mintcat_integrator.dll'
-  : process.platform === 'darwin'
+  : runtimePlatform === 'macos'
     ? 'libmintcat_integrator.dylib'
     : 'libmintcat_integrator.so';
-const bundledRuntimeFileName = isWindowsTarget
+const bundledRuntimeFileName = runtimePlatform === 'windows'
   ? 'mintcat_backend_runtime.dll'
-  : process.platform === 'darwin'
+  : runtimePlatform === 'macos'
     ? 'libmintcat_backend_runtime.dylib'
     : 'libmintcat_backend_runtime.so';
 
@@ -70,9 +84,14 @@ function packageRuntime() {
   mkdirSync(releaseDir, { recursive: true });
   const releaseName = isWindowsTarget
     ? `mintcat_backend_runtime_${version}_x64.dll`
-    : bundledRuntimeFileName.replace('backend_runtime', `backend_runtime_${version}_x64`);
+    : runtimePlatform === 'macos'
+      ? `libmintcat_backend_runtime_${version}_${runtimeArch}.dylib`
+      : `libmintcat_backend_runtime_${version}_${runtimeArch}.so`;
   const releasePath = path.join(releaseDir, releaseName);
   copyFileSync(artifact, releasePath);
+  if (runtimePlatform === 'macos') {
+    run('install_name_tool', ['-id', `@rpath/${bundledRuntimeFileName}`, releasePath], { cwd: root });
+  }
 
   const assetDir = path.join(srcTauri, 'assets', 'plugins');
   mkdirSync(assetDir, { recursive: true });
