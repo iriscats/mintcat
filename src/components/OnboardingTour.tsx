@@ -3,6 +3,7 @@ import { Button, Space, Tour } from 'antd';
 import type { TourProps } from 'antd';
 import { t } from 'i18next';
 import { emitVoidEvent } from '@/events';
+import { platform } from '@tauri-apps/plugin-os';
 
 const TOUR_SELECTORS = {
     welcome: null,
@@ -31,6 +32,7 @@ export interface OnboardingTourProps {
  * 新手指引：初次使用时介绍首页、mod.io、设置等模块
  */
 export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
+    const supportsGameLaunch = platform() !== 'macos';
     const steps: TourProps['steps'] = useMemo(
         () => [
             {
@@ -76,7 +78,9 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
             },
             {
                 title: t('onboarding.save.title'),
-                description: t('onboarding.save.description'),
+                description: t(supportsGameLaunch
+                    ? 'onboarding.save.description'
+                    : 'onboarding.save.installDescription'),
                 target: getTarget(TOUR_SELECTORS.save),
             },
             {
@@ -85,8 +89,8 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
                 target: getTarget(TOUR_SELECTORS.addMod),
             },
             {
-                title: t('onboarding.launch.title'),
-                description: t('onboarding.launch.description'),
+                title: t(supportsGameLaunch ? 'onboarding.launch.title' : 'Install mods'),
+                description: t(supportsGameLaunch ? 'onboarding.launch.description' : 'onboarding.install.description'),
                 target: getTarget(TOUR_SELECTORS.launch),
             },
             {
@@ -105,7 +109,7 @@ export function OnboardingTour({ open, onComplete }: OnboardingTourProps) {
                 target: getTarget(TOUR_SELECTORS.end),
             },
         ],
-        []
+        [supportsGameLaunch]
     );
 
     return (

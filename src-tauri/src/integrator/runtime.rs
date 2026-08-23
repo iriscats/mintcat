@@ -375,6 +375,20 @@ fn runtime_file_name() -> &'static str {
 }
 
 fn bundled_runtime_path(app: &AppHandle) -> Result<PathBuf> {
+    #[cfg(target_os = "macos")]
+    {
+        let resources_dir = app
+            .path()
+            .resource_dir()
+            .context("failed to resolve app resources directory")?;
+        if let Some(contents_dir) = resources_dir.parent() {
+            let framework_path = contents_dir.join("Frameworks").join(runtime_file_name());
+            if framework_path.is_file() {
+                return Ok(framework_path);
+            }
+        }
+    }
+
     let resource_path = app
         .path()
         .resolve(

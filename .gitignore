@@ -26,6 +26,10 @@ dist
 dist-ssr
 *.local
 
+# Generated macOS Backend Runtime (built by `pnpm package:macos-aarch64`)
+/src-tauri/assets/plugins/libmintcat_backend_runtime.dylib
+/release/backend-runtime/*.dylib
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -3,6 +3,7 @@ import {t} from "i18next";
 import {message, Modal} from "antd";
 import {check, type Update} from "@tauri-apps/plugin-updater";
 import {relaunch} from "@tauri-apps/plugin-process";
+import {platform} from "@tauri-apps/plugin-os";
 import StatusBar from "@/components/StatusBar.tsx";
 import Markdown from "react-markdown";
 
@@ -71,6 +72,10 @@ class UpdateDialog extends React.Component<any, any> {
     }
 
     componentDidMount() {
+        if (platform() === 'macos') {
+            return;
+        }
+
         check().then((update) => {
             if (update) {
                 this.update = update;

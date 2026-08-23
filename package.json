@@ -15,6 +15,8 @@
     "package:frontend": "pnpm build && node scripts/package-frontend-zip.mjs",
     "package:integrator-runtime": "node scripts/package-integrator-runtime.mjs",
     "package:backend-runtime": "node scripts/package-integrator-runtime.mjs",
+    "package:backend-runtime:macos-aarch64": "node scripts/package-integrator-runtime.mjs aarch64-apple-darwin",
+    "package:macos-aarch64": "pnpm package:backend-runtime:macos-aarch64 && APPLE_SIGNING_IDENTITY=\"${APPLE_SIGNING_IDENTITY:--}\" pnpm tauri build --target aarch64-apple-darwin",
     "package:proxy-runtime:windows": "node scripts/package-proxy-runtime.mjs windows",
     "package:proxy-runtime:macos-aarch64": "node scripts/package-proxy-runtime.mjs macos-aarch64",
     "package:portable": "node scripts/build-portable.mjs",

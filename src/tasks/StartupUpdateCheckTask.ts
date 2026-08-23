@@ -10,6 +10,7 @@ import {
     getManifestItemDownloadPath,
     matchesFrontendUpdate,
     matchesIntegratorRuntime,
+    matchesManifestPlatform,
     matchesProxyRuntime,
     prefetchUpdateManifest,
 } from '@/apis/mintcat';
@@ -37,13 +38,13 @@ export class StartupUpdateCheckTask implements ITask {
         await context.updateProgress(10);
 
         const manifest = await prefetchUpdateManifest();
+        const currentPlatform = platform();
+        const currentArch = arch();
         await context.updateProgress(30);
 
         try {
             const settings = await StorageAPI.getSettings();
             const channel = await settings.getReleaseChannel();
-            const currentPlatform = await platform();
-            const currentArch = await arch();
             const frontend = manifest.find((item) => matchesFrontendUpdate(item, channel));
 
             if (frontend?.latestVersion) {
@@ -87,7 +88,11 @@ export class StartupUpdateCheckTask implements ITask {
         try {
             const settings = await StorageAPI.getSettings();
             const channel = await settings.getReleaseChannel();
-            const integrator = manifest.find((item) => matchesIntegratorRuntime(item, channel));
+            const integrator = manifest.find((item) => (
+                matchesIntegratorRuntime(item, channel)
+                && matchesManifestPlatform(item, currentPlatform, currentArch)
+                && (currentPlatform !== 'macos' || Boolean(item.platform))
+            ));
             if (integrator?.latestVersion) {
                 const status = await invoke<IntegratorRuntimeStatus>('get_integrator_runtime_status');
                 if (status.activeVersion !== integrator.latestVersion) {
